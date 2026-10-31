@@ -1,10 +1,13 @@
 package com.mirada.ui;
 
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 class CommandTest {
@@ -49,6 +52,53 @@ class CommandTest {
         assertNull(Command.forKey(KeyCode.W, false, false));
         // The shortcut does not turn a navigation key into something else.
         assertNull(Command.forKey(KeyCode.RIGHT, false, true));
+    }
+
+    @Test
+    void thePaletteOpensOnShortcutShiftPAndF1() {
+        assertEquals(Command.PALETTE, Command.forKey(KeyCode.P, true, true));
+        assertEquals(Command.PALETTE, Command.forKey(KeyCode.F1, false, false));
+        assertNull(Command.forKey(KeyCode.P, false, true));
+    }
+
+    /** The chord a command shows, in the palette and the context menu, must be one that runs it. */
+    @Test
+    void everyShownChordRunsItsCommand() {
+        for (Command command : Command.values()) {
+            if (!(command.chord() instanceof KeyCodeCombination chord)) continue; // + and -, by character
+            boolean shift = chord.getShift() == KeyCombination.ModifierValue.DOWN;
+            boolean shortcut = chord.getShortcut() == KeyCombination.ModifierValue.DOWN;
+            assertEquals(command, Command.forKey(chord.getCode(), shift, shortcut), command.name());
+        }
+    }
+
+    @Test
+    void thePaletteListsEveryCommandButItselfAndEscape() {
+        assertFalse(Command.inPalette().contains(Command.PALETTE));
+        assertFalse(Command.inPalette().contains(Command.ESCAPE));
+        assertEquals(Command.values().length - 2, Command.inPalette().size());
+        for (Command command : Command.inPalette()) {
+            assertFalse(command.label().isBlank(), command.name());
+            assertFalse(command.description().isBlank(), command.name());
+        }
+    }
+
+    @Test
+    void steppingNeedsSomewhereToGo() {
+        assertEquals("No folder is open.", Command.NEXT.unavailable(0, 0, false));
+        assertEquals("This is the last image.", Command.NEXT.unavailable(2, 3, true));
+        assertEquals("This is the last image.", Command.LAST.unavailable(2, 3, true));
+        assertEquals("This is the first image.", Command.PREVIOUS.unavailable(0, 3, true));
+        assertNull(Command.NEXT.unavailable(1, 3, true));
+        assertNull(Command.FIRST.unavailable(1, 3, true));
+    }
+
+    @Test
+    void zoomingAndTurningNeedAnImage() {
+        assertEquals("No image is showing.", Command.ZOOM_IN.unavailable(0, 1, false));
+        assertEquals("No image is showing.", Command.ROTATE_CLOCKWISE.unavailable(0, 1, false));
+        assertNull(Command.FIT.unavailable(0, 1, true));
+        assertNull(Command.OPEN.unavailable(0, 0, false));
     }
 
     @Test

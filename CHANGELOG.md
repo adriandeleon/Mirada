@@ -26,5 +26,8 @@ The first version: open a photo, look, arrow through its folder, close.
   screen or close the window.
 - **Stepping is instant** for the image either side: they load once the current image is up, and
   the window keeps the previous image on screen until the next one is ready.
+- **A command palette** (Ctrl+Shift+P or F1; Cmd+Shift+P on macOS): every command by name, with its
+  key and a one-line description, matched as you type. Commands that cannot run right now, such as
+  Next Image on the last image, are greyed with the reason. The same palette as Termina and Editora.
 - **Open with Ctrl+O, or drop a file or folder on the window.**
 - **Light and dark themes** follow the system setting.

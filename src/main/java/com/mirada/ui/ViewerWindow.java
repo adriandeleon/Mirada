@@ -57,6 +57,7 @@ public final class ViewerWindow {
     private final Label shot = new Label();
     private final HBox statusBar;
     private final ImageCache cache = new ImageCache(3);
+    private final CommandPalette palette;
 
     private FolderImages folder = FolderImages.EMPTY;
     /** The image asked for most recently; a load that finishes for any other is dropped. */
@@ -89,7 +90,11 @@ public final class ViewerWindow {
         root.setBottom(statusBar);
         root.getStyleClass().add("mirada");
 
-        Scene scene = new Scene(root, 1100, 760);
+        // The palette lays its card and backdrop over everything, the status bar included.
+        StackPane overlay = new StackPane(root);
+        palette = new CommandPalette(overlay, this::run);
+
+        Scene scene = new Scene(overlay, 1100, 760);
         scene.getStylesheets().add(stylesheet());
         scene.addEventFilter(KeyEvent.KEY_PRESSED, this::onKey);
         scene.setOnDragOver(this::onDragOver);
@@ -186,6 +191,15 @@ public final class ViewerWindow {
 
     private void onKey(KeyEvent e) {
         Command command = Command.forKey(e.getCode(), e.isShiftDown(), e.isShortcutDown());
+        // While the palette is up, keys are its own (typing "r" must not rotate the image); only its
+        // chord reaches here, to close it again.
+        if (palette.isShowing()) {
+            if (command == Command.PALETTE) {
+                palette.hide();
+                e.consume();
+            }
+            return;
+        }
         if (command == null) return;
         run(command);
         e.consume();
@@ -213,7 +227,13 @@ public final class ViewerWindow {
             }
             case OPEN -> chooseFile();
             case CLOSE -> stage.close();
+            case PALETTE -> palette.show(Command.inPalette(), this::unavailable);
         }
+    }
+
+    /** Why {@code command} cannot run right now, or null when it can. */
+    private @Nullable String unavailable(Command command) {
+        return command.unavailable(folder.index(), folder.size(), !placeholder.isVisible());
     }
 
     private void go(FolderImages next) {
@@ -257,21 +277,26 @@ public final class ViewerWindow {
 
     private ContextMenu contextMenu() {
         ContextMenu menu = new ContextMenu(
-                item("Open…", Command.OPEN),
+                item(Command.PALETTE),
                 new SeparatorMenuItem(),
-                item("Zoom to Fit", Command.FIT),
-                item("Actual Size", Command.ACTUAL_SIZE),
-                item("Rotate Right", Command.ROTATE_CLOCKWISE),
-                item("Rotate Left", Command.ROTATE_COUNTERCLOCKWISE),
+                item(Command.OPEN),
                 new SeparatorMenuItem(),
-                item(stage.isFullScreen() ? "Leave Full Screen" : "Full Screen", Command.FULL_SCREEN));
+                item(Command.FIT),
+                item(Command.ACTUAL_SIZE),
+                item(Command.ROTATE_CLOCKWISE),
+                item(Command.ROTATE_COUNTERCLOCKWISE),
+                new SeparatorMenuItem(),
+                item(Command.FULL_SCREEN));
         menu.setAutoHide(true);
         return menu;
     }
 
-    private MenuItem item(String label, Command command) {
+    /** A context-menu row, named as the palette names it and greyed when the palette would grey it. */
+    private MenuItem item(Command command) {
+        String label = command == Command.FULL_SCREEN && stage.isFullScreen() ? "Leave Full Screen" : command.label();
         MenuItem item = new MenuItem(label);
         item.setOnAction(e -> run(command));
+        item.setDisable(unavailable(command) != null);
         return item;
     }
 

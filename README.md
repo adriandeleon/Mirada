@@ -34,6 +34,7 @@ Drag to pan a zoomed image; the wheel zooms about the pointer.
 | `R` / Shift+`R` | Rotate right / left |
 | `F`, F11 | Full screen |
 | Escape | Leave full screen, or close |
+| Ctrl+Shift+P, F1 | Command palette: every command, by name |
 | Ctrl+O | Open |
 | Ctrl+W, Ctrl+Q | Close |
 

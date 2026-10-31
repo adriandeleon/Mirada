@@ -35,7 +35,7 @@ A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an en
 |---|---|
 | `com.mirada.folder` | The "document": the images in one folder, in natural name order, and which one is showing (`FolderImages`, `NaturalOrder`, `ImageFormats`) |
 | `com.mirada.image` | Loading: decoded images cached by path (`ImageCache`), EXIF orientation and the camera line (`Exif`, `Orientation`) |
-| `com.mirada.ui` | The window (`ViewerWindow`), the zoom/pan canvas (`ImageViewport`) and its arithmetic (`Zoom`), the key map (`Command`), the theme |
+| `com.mirada.ui` | The window (`ViewerWindow`), the zoom/pan canvas (`ImageViewport`) and its arithmetic (`Zoom`), every command with its keys, name and description (`Command`), the command palette (`CommandPalette`), the theme |
 
 Four decoders (`ImageFormats.Decoder`, by extension). JavaFX's own `Image` decodes BMP, GIF
 (animated), JPEG and PNG in its background thread. The rest run on two decoder threads in
@@ -111,6 +111,20 @@ naming the library. EXIF is metadata-extractor.
 - **The TwelveMonkeys readers are found by service lookup**, so nothing names their classes.
   `module-info` requires them anyway, or a jlink image would drop them silently, and
   `ImageFormatsTest.everyImageIoExtensionHasAReader` fails if one leaves the pom.
+- **The command palette is a port of Termina's, which is Editora's, and the pure parts are verbatim.**
+  `FuzzyMatch`, `PaletteKeys`, `TextInputKeys`, `KeyChord` and `MatchText` are Termina's files with
+  the package renamed and `PaletteKeys`' localised legend replaced by plain English. A ranking or
+  navigation change belongs in all three projects, or the palettes stop agreeing. One fix went the
+  other way and is not in Termina yet: `TextInputKeys.actionFor` checks for a null chord, because a
+  bare Ctrl or Shift press has none and `Map.ofEntries` throws on a null key.
+- **While the palette is up, the scene's key filter stands aside.** Filters run from the scene down,
+  so `ViewerWindow.onKey` sees every key before the palette's card does; it returns early while the
+  palette shows (or typing "r" would rotate the image) and handles only the palette's own chord, to
+  close it. Escape is the palette's then, not the window's.
+- **Every command has one name and one chord, in `Command`.** The key filter (`forKey`), the
+  palette and the context menu all read from it; `CommandTest.everyShownChordRunsItsCommand` checks
+  the chord a command shows is one that runs it. A command that cannot run (`Command.unavailable`)
+  is greyed with its reason in the palette and disabled in the context menu.
 - **Screenshots on this Wayland desktop go through XWayland.** JavaFX has no Wayland backend, so
   the window is an X window: `xwininfo -root -tree | grep com.mirada.App` finds it and
   `import -window <id>` captures it. Key presses can be sent with XTest.
@@ -141,7 +155,7 @@ Termina and Torrenta. `mvn compile` fails on any null that can reach a type not 
 
 ## Not done
 
-The command palette; a filmstrip; crop; slideshow; a menu bar or settings; tuned startup (AppCDS,
+A filmstrip; crop; slideshow; a menu bar or settings; tuned startup (AppCDS,
 jlink, `-Pdist`), installers and file associations (which copy the codec bundle in and set `mirada.codecs`), with an
 AOT cache. Animated WebP, AVIF and JPEG XL show their first frame.
 JPEG XL is decoded in its own colour space, not converted to sRGB. Opening files from Finder on

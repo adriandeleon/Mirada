@@ -34,3 +34,118 @@
 .mirada .status-bar .name {
     -fx-text-fill: -color-fg-default;
 }
+
+/*
+ * The command palette — Termina's card, which is Editora's: no title, the query row led by a chip
+ * naming the chord that opened it, eight rows with the matched characters emboldened, a
+ * description line and a legend. One surface, no internal rules.
+ */
+.palette-backdrop {
+    -fx-background-color: rgba(0, 0, 0, 0.32);
+}
+
+.command-palette {
+    -fx-background-color: -color-bg-overlay;
+    -fx-background-radius: 12;
+    -fx-border-color: -color-border-default;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-padding: 6;
+    /* The kit layers a tight contact shadow and a wide ambient one; JavaFX takes a single
+       dropshadow, so this is the wide one with a short offset, and the 1px border is the edge. */
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 44, 0.16, 0, 18);
+    /* Near the top, over the image's least-looked-at part rather than its centre. */
+    -fx-translate-y: 48;
+}
+
+.command-palette .palette-input-row {
+    -fx-padding: 4 10 8 10;
+}
+
+/* The chord chip: the palette introduces itself by its keyboard identity. */
+.command-palette .palette-prefix {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-accent-fg;
+    -fx-background-color: -color-accent-subtle;
+    -fx-background-radius: 5;
+    -fx-padding: 2 7 2 7;
+}
+
+/* The query is the first row of the card, not a boxed form field: no border, no focus ring. */
+.command-palette .palette-input,
+.command-palette .palette-input:focused {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-width: 0;
+    -fx-padding: 4 2 4 2;
+    -fx-font-size: 13.5px;
+}
+
+.command-palette .list-view {
+    -fx-border-width: 0;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.command-palette .list-cell {
+    -fx-padding: 7 16 7 16;
+    -fx-font-size: 12.5px;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
+/* The highlighted row: a tint plus an accent bar at the left edge, so it reads against the rows
+   above and below rather than as a faint change of ground. */
+.command-palette .list-cell:filled:selected {
+    -fx-background-color: -color-accent-subtle;
+    -fx-border-color: transparent transparent transparent -color-accent-emphasis;
+    -fx-border-width: 0 0 0 2;
+}
+
+/* Title runs: the default ink, with the query-matched characters in accent bold (the kit's
+   <mark>). Text nodes take -fx-fill, not -fx-text-fill. */
+.command-palette .list-cell .palette-cell-text {
+    -fx-fill: -color-fg-default;
+}
+
+.command-palette .list-cell .palette-match {
+    -fx-fill: -color-accent-fg;
+    -fx-font-weight: bold;
+}
+
+/* The shortcut is a reminder, not the point of the row. */
+.command-palette .list-cell .keybinding {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 11px;
+}
+
+/* A command that cannot run right now: shown, but greyed and inert. */
+.command-palette .list-cell .palette-disabled {
+    -fx-opacity: 0.4;
+}
+
+/* Why that row is greyed. Full opacity on purpose: it explains the dimmed row. */
+.palette-disabled-tooltip {
+    -fx-font-size: 12px;
+    -fx-background-color: -color-bg-overlay;
+    -fx-text-fill: -color-fg-default;
+}
+
+/* One-line description of the highlighted command, between the list and the legend. Weight rather
+   than a tinted band is what sets it apart: the card is one surface. */
+.command-palette .palette-desc {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 11.5px;
+    -fx-font-weight: bold;
+    -fx-background-color: transparent;
+    -fx-padding: 7 10 8 10;
+}
+
+/* The legend of the navigation keys at the bottom of the card. */
+.command-palette .palette-hint {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 11px;
+    -fx-padding: 7 10 2 10;
+}
