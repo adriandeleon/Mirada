@@ -1,0 +1,29 @@
+Mirada
+Copyright 2026 Adrian De Leon
+
+This product includes software from the following projects.
+
+--------------------------------------------------------------------------------
+AtlantaFX — https://github.com/mkpaz/atlantafx
+Copyright mkpaz
+Licensed under MIT. Used as an unmodified dependency for the Cupertino control
+themes.
+
+metadata-extractor — https://github.com/drewnoakes/metadata-extractor
+Copyright Drew Noakes and contributors.
+Licensed under Apache-2.0. Used as an unmodified dependency to read EXIF
+orientation and camera details.
+
+Adobe XMP Core — https://github.com/adobe/XMP-Toolkit-SDK
+Copyright Adobe.
+Licensed under BSD-3-Clause. Unmodified dependency of metadata-extractor.
+
+OpenJFX (JavaFX) — https://openjdk.org/projects/openjfx/
+Copyright Oracle and/or its affiliates.
+Licensed under the GNU General Public License, version 2, with the Classpath
+Exception (GPL-2.0-only WITH Classpath-exception-2.0). The javafx.base,
+javafx.graphics and javafx.controls modules are used unmodified, including
+their native libraries. JavaFX itself contains third-party components (among
+them the Independent JPEG Group's libjpeg) whose notices are published with
+OpenJFX:
+https://github.com/openjdk/jfx/tree/master/modules/javafx.graphics/src/main/legal

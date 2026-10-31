@@ -11,7 +11,10 @@ code with it, but nothing is extracted yet.
 - Everything CI would check (tests, NullAway, format): `./mvnw verify`
 - Format: `./mvnw spotless:apply` (Palantir, as in Termina and Torrenta)
 
-Run Maven from the project root, on JDK 25 (the enforcer refuses others).
+Run Maven from the project root, on JDK 25 (the enforcer refuses others). CI
+(`.github/workflows/ci.yml`) runs `verify` on Linux, macOS and Windows for every push to `main`.
+
+A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an entry in `NOTICE`.
 
 ## Architecture
 
