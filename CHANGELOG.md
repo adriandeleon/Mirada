@@ -9,9 +9,13 @@ The first version: open a photo, look, arrow through its folder, close.
 
 ### Added
 
+- **WebP, TIFF and PSD**, alongside JPEG, PNG, GIF and BMP. An animated WebP shows its first frame.
+- **HEIC, AVIF and JPEG XL**, through libheif and libjxl. JPEG XL decodes on every core. For now
+  these need the libraries installed on the system (apt on Linux, Homebrew on macOS); the installers
+  will bundle them.
 - **Opening a file opens its folder.** The images around it are listed in natural name order, so
   `IMG_9` comes before `IMG_10`, and hidden files are left out. Opening a folder starts at its first
-  image. JPEG, PNG, GIF and BMP.
+  image.
 - **Photos are turned upright from their EXIF orientation**, including the mirrored ones.
 - **The status bar** shows the file name, its place in the folder, its size as displayed, the zoom,
   and the camera and exposure when the file records them.

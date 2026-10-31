@@ -15,8 +15,9 @@ folder as the document: open one photo and the rest of the folder is already the
 you'd number it, one arrow key away. The image fills the window; a single status line under it says
 which file, where it sits in the folder, how large it is, and what took it.
 
-**Status:** early, and unreleased. JPEG, PNG, GIF and BMP, turned upright from their EXIF
-orientation. No installers yet — build it from source. See the [changelog](CHANGELOG.md).
+**Status:** early, and unreleased. JPEG, PNG, GIF, BMP, WebP, TIFF, PSD, HEIC, AVIF and JPEG XL,
+turned upright. HEIC, AVIF and JPEG XL need libheif and libjxl installed until there are installers
+to bundle them. No installers yet — build it from source. See the [changelog](CHANGELOG.md).
 
 ## Using it
 

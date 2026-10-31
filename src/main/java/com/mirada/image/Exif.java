@@ -25,6 +25,11 @@ public record Exif(Orientation orientation, String summary) {
 
     public static final Exif NONE = new Exif(Orientation.NORMAL, "");
 
+    /** The same summary, with the orientation left to a decoder that has already applied it. */
+    public Exif upright() {
+        return new Exif(Orientation.NORMAL, summary);
+    }
+
     public static Exif read(Path file) {
         Metadata metadata;
         try {

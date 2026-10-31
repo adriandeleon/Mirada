@@ -18,6 +18,34 @@ Adobe XMP Core — https://github.com/adobe/XMP-Toolkit-SDK
 Copyright Adobe.
 Licensed under BSD-3-Clause. Unmodified dependency of metadata-extractor.
 
+TwelveMonkeys ImageIO — https://github.com/haraldk/TwelveMonkeys
+Copyright Harald Kuhr.
+Licensed under BSD-3-Clause. The WebP, TIFF and PSD readers and the libraries
+they need (imageio-core, imageio-metadata, common-lang, common-io,
+common-image), unmodified.
+
+Native codecs, loaded at run time from the system or from the installers'
+bundled folder, unmodified:
+
+  libheif — https://github.com/strukturag/libheif
+  Copyright Dirk Farin, struktur AG. Licensed under LGPL-3.0-or-later.
+  Used through its C API as a separate shared library, which can be replaced.
+
+  libde265 — https://github.com/strukturag/libde265
+  Copyright Dirk Farin, struktur AG. Licensed under LGPL-3.0-or-later.
+  HEVC decoding for libheif, as a separate shared library.
+
+  dav1d — https://code.videolan.org/videolan/dav1d
+  Copyright VideoLAN and dav1d authors. Licensed under BSD-2-Clause.
+  AV1 decoding for libheif.
+
+  libjxl — https://github.com/libjxl/libjxl
+  Copyright the JPEG XL Project Authors. Licensed under BSD-3-Clause.
+  With its dependencies Highway (Apache-2.0 or BSD-3-Clause,
+  https://github.com/google/highway), Brotli (MIT,
+  https://github.com/google/brotli) and Little CMS (MIT,
+  https://www.littlecms.com).
+
 OpenJFX (JavaFX) — https://openjdk.org/projects/openjfx/
 Copyright Oracle and/or its affiliates.
 Licensed under the GNU General Public License, version 2, with the Classpath

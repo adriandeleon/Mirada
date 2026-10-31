@@ -16,6 +16,9 @@ import com.mirada.ui.ViewerWindow;
 public final class App extends Application {
 
     public static void main(String[] args) {
+        // First, before any AWT class can load: ImageIO and BufferedImage are java.desktop, and on
+        // macOS an initialised AWT contends with JavaFX for the AppKit run loop (Termina's note).
+        System.setProperty("java.awt.headless", "true");
         launch(args);
     }
 

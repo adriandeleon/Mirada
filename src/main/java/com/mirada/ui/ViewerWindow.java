@@ -15,6 +15,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.image.Image;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
@@ -30,7 +31,6 @@ import javafx.stage.Stage;
 import com.mirada.AppInfo;
 import com.mirada.folder.FolderImages;
 import com.mirada.folder.ImageFormats;
-import com.mirada.image.Exif;
 import com.mirada.image.ImageCache;
 import org.jspecify.annotations.Nullable;
 
@@ -148,21 +148,20 @@ public final class ViewerWindow {
             return;
         }
         ImageCache.Entry entry = cache.get(file);
-        entry.ready().thenAcceptAsync(exif -> display(entry, exif), Platform::runLater);
+        entry.ready().thenAcceptAsync(decoded -> display(file, decoded), Platform::runLater);
     }
 
-    private void display(ImageCache.Entry entry, Exif exif) {
-        if (!entry.file().equals(wanted)) return;
-        if (entry.image().isError()) {
-            Throwable cause = entry.image().getException();
-            showMessage("Couldn't open " + fileName(entry.file())
-                    + (cause == null || cause.getMessage() == null ? "" : ": " + cause.getMessage()));
+    private void display(Path file, ImageCache.Decoded decoded) {
+        if (!file.equals(wanted)) return;
+        Image image = decoded.image();
+        if (image == null) {
+            showMessage("Couldn't open " + fileName(file) + ": " + decoded.error());
             return;
         }
         placeholder.setVisible(false);
-        viewport.show(entry.image(), exif.orientation());
+        viewport.show(image, decoded.exif().orientation());
         dimensions.setText(dimensionsText());
-        shot.setText(exif.summary());
+        shot.setText(decoded.exif().summary());
         for (Path neighbour : folder.neighbours()) {
             if (ImageFormats.isImage(neighbour)) cache.get(neighbour);
         }

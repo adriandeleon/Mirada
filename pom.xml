@@ -27,6 +27,10 @@
              one dependency, Adobe's xmpcore, has no module name and becomes the automatic module
              `xmpcore`. -->
         <metadata-extractor.version>2.22.0</metadata-extractor.version>
+        <!-- The formats JavaFX does not decode, as pure-Java ImageIO plugins: WebP (lossy,
+             lossless, the first frame of an animation), TIFF (beyond the JDK's own reader: JPEG and
+             CMYK variants) and PSD (the flattened image). Read through com.mirada.image.ImageIoDecoder. -->
+        <twelvemonkeys.version>3.15.3</twelvemonkeys.version>
         <spotless.version>3.6.0</spotless.version>
         <palantir.version>2.92.0</palantir.version>
         <javafx.plugin.version>0.0.8</javafx.plugin.version>
@@ -70,6 +74,22 @@
             <groupId>com.drewnoakes</groupId>
             <artifactId>metadata-extractor</artifactId>
             <version>${metadata-extractor.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-webp</artifactId>
+            <version>${twelvemonkeys.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-tiff</artifactId>
+            <version>${twelvemonkeys.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-psd</artifactId>
+            <version>${twelvemonkeys.version}</version>
         </dependency>
 
         <dependency>
@@ -202,7 +222,13 @@
                              reads them once, in static initialisers. -->
                         <glass.platform>Headless</glass.platform>
                         <prism.order>sw</prism.order>
+                        <!-- As App.main does: the decoder tests make BufferedImages, and on macOS
+                             an initialised AWT contends with JavaFX. -->
+                        <java.awt.headless>true</java.awt.headless>
                     </systemPropertyVariables>
+                    <!-- JavaFX loads its native libraries from the classpath here; without this the
+                         JDK warns that it will refuse in a future release. -->
+                    <argLine>--enable-native-access=ALL-UNNAMED</argLine>
                 </configuration>
             </plugin>
 
@@ -213,7 +239,7 @@
                 <configuration>
                     <mainClass>com.mirada/com.mirada.App</mainClass>
                     <options>
-                        <option>--enable-native-access=javafx.graphics</option>
+                        <option>--enable-native-access=javafx.graphics,com.mirada</option>
                         <option>-Dprism.order=${prism.pipeline}</option>
                     </options>
                     <launcher>mirada</launcher>
