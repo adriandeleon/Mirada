@@ -32,6 +32,8 @@ import com.mirada.AppInfo;
 import com.mirada.folder.FolderImages;
 import com.mirada.folder.ImageFormats;
 import com.mirada.image.ImageCache;
+import com.mirada.perf.Startup;
+import com.mirada.perf.Tour;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -58,6 +60,8 @@ public final class ViewerWindow {
     private final HBox statusBar;
     private final ImageCache cache = new ImageCache(3);
     private final CommandPalette palette;
+    /** Steps through the folder on its own when measuring or training the AOT cache; else null. */
+    private final @Nullable Tour tour;
 
     private FolderImages folder = FolderImages.EMPTY;
     /** The image asked for most recently; a load that finishes for any other is dropped. */
@@ -65,6 +69,7 @@ public final class ViewerWindow {
 
     public ViewerWindow(Stage stage) {
         this.stage = stage;
+        this.tour = Tour.start(() -> go(folder.step(1)));
 
         placeholder.getStyleClass().add("placeholder");
         placeholder.setWrapText(true);
@@ -153,6 +158,7 @@ public final class ViewerWindow {
             return;
         }
         ImageCache.Entry entry = cache.get(file);
+        if (tour != null) tour.requested(entry.ready().isDone());
         entry.ready().thenAcceptAsync(decoded -> display(file, decoded), Platform::runLater);
     }
 
@@ -163,8 +169,11 @@ public final class ViewerWindow {
             showMessage("Couldn't open " + fileName(file) + ": " + decoded.error());
             return;
         }
+        Startup.mark("image-decoded");
         placeholder.setVisible(false);
         viewport.show(image, decoded.exif().orientation());
+        Startup.markFirstPaint();
+        if (tour != null) tour.shown(file, folder.index() == folder.size() - 1);
         dimensions.setText(dimensionsText());
         shot.setText(decoded.exif().summary());
         for (Path neighbour : folder.neighbours()) {

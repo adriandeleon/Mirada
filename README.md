@@ -50,7 +50,11 @@ the native codec bundle for your platform from the
 ./mvnw javafx:run                                   # an empty window
 ./mvnw javafx:run -Djavafx.args=/path/to/photo.jpg  # a photo and its folder
 ./mvnw verify                                       # tests, null checks, formatting
+./mvnw clean -Pdist -DskipTests package             # the app, in target/dist
 ```
+
+The app in `target/dist` starts in about a quarter of a second: a jlink runtime with Mirada in it,
+an AOT cache trained by stepping through every format, and the codec bundle.
 
 The project notes for contributors, human or not, are in [AGENTS.md](AGENTS.md).
 

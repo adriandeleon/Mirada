@@ -6,6 +6,7 @@ import java.util.List;
 import javafx.application.Application;
 import javafx.stage.Stage;
 
+import com.mirada.perf.Startup;
 import com.mirada.ui.Theme;
 import com.mirada.ui.ViewerWindow;
 
@@ -19,14 +20,17 @@ public final class App extends Application {
         // First, before any AWT class can load: ImageIO and BufferedImage are java.desktop, and on
         // macOS an initialised AWT contends with JavaFX for the AppKit run loop (Termina's note).
         System.setProperty("java.awt.headless", "true");
+        Startup.mark("main");
         launch(args);
     }
 
     @Override
     public void start(Stage stage) {
+        Startup.mark("fx-start");
         Theme.followSystem();
         ViewerWindow window = new ViewerWindow(stage);
         window.show();
+        Startup.mark("window-shown");
         List<String> args = getParameters().getUnnamed();
         if (!args.isEmpty()) window.open(Path.of(args.getFirst()));
     }

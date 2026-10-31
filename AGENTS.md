@@ -19,6 +19,12 @@ In this order, when they pull against each other:
 - Test: `./mvnw test`
 - Everything CI would check (tests, NullAway, format): `./mvnw verify`
 - Format: `./mvnw spotless:apply` (Palantir, as in Termina and Torrenta)
+- App image: **`./mvnw clean -Pdist -DskipTests package`** ⇒ `target/dist/Mirada{.app}`, with the
+  codec bundle inside and a trained AOT cache. `clean` is required (jlink reads `target/classes`).
+- Run without Maven (any JVM option, no build time counted): `scripts/dev-run.sh [-D…] photo.jpg`
+- Start-up, median of warm runs: `scripts/measure-startup.sh -n 7 target/dist/Mirada/bin/Mirada photo.jpg`
+  (or `MIRADA_NO_BUILD=1 … scripts/dev-run.sh photo.jpg`). Stepping: `MIRADA_PERF=1 MIRADA_PERF_TOUR=1`
+  on any launcher prints each step's time (`MIRADA_PERF_TOUR_PAUSE=0` for the no-prefetch worst case).
 - Codec bundle: the build downloads this platform's zip from the `codecs-N` release into
   `target/codecs` (pom.xml, `codecs-*` profiles, checksums pinned). To build one yourself:
   `scripts/build-codecs.sh` (about 10 minutes; `CODECS_NO_ASM=1` without nasm), then run Maven with
@@ -63,6 +69,23 @@ version means: edit the tags in `build-codecs.sh`, run the workflow with the nex
 new tag and the five checksums from its `SHA256SUMS` in the pom. A missing library is not fatal: its files still list, and open with a message
 naming the library. EXIF is metadata-extractor.
 
+## Start-up, measured
+
+Launch to the first image on screen, Linux x64 (this machine), a small JPEG, median of 6 warm runs.
+Measure again after anything that touches start-up; these are the numbers to beat.
+
+| Build | ms |
+|---|---|
+| `scripts/dev-run.sh` (system JDK, jars on the module path) | 455 |
+| App image, jpackage's launcher, no AOT cache | 812 |
+| App image, jpackage's launcher, AOT cache | 577 |
+| App image, script launcher, no AOT cache | 476 |
+| **App image, script launcher, AOT cache (what `-Pdist` builds)** | **246** |
+
+With everything on, `main` is reached at about 160 ms, the window is up 60 ms later, and the image is
+decoded and painted in the next 30. A HEIC as the first image costs about 60 ms more. Stepping onto
+a prefetched neighbour is 2–8 ms for every format.
+
 ## Things that will bite you
 
 - **JavaFX ignores EXIF orientation.** Phones store pixels as the sensor read them and tag how the
@@ -105,6 +128,27 @@ naming the library. EXIF is metadata-extractor.
   every DLL in the bundle first, retrying until nothing more loads. Linux and macOS libraries carry
   `$ORIGIN` / `@loader_path` rpaths instead, which `check-codecs.sh` asserts on Linux.
 - **libjxl writes to stderr on a bad file** (`decode.cc: invalid signature`). Noise, not a failure.
+- **jpackage's Linux launcher asks dpkg and rpm about itself on every start.** It runs `rpm -qf`
+  and `dpkg -S` on its own path (`JPACKAGE_DEBUG=true` shows it) to learn whether a package
+  installed it; `dpkg -S` searches the whole package database, about 300 ms — more than the rest of
+  start-up. `scripts/linux-launcher.sh` replaces it in the image with a shell script that starts the
+  bundled java with the options copied from `Mirada.cfg`. macOS's and Windows' launchers do not do
+  this and are left alone.
+- **The AOT cache is trained by a tour, not a launch.** Opening one image archives only that
+  decoder's classes. `scripts/aot-train.sh` opens `src/test/resources/com/mirada/image` (one tiny
+  file per format) under `-Dmirada.aotTrain`, and `com.mirada.perf.Tour` steps through all of it and
+  exits, so every decoder, ImageIO's plugins and the FFM bindings are archived. The cache is about
+  35 MB and halves start-up. It is tied to the exact runtime: any change to the image means
+  retraining, which `-Pdist` always does. CI sets `MIRADA_REQUIRE_AOT=1` so a missing cache fails.
+- **jlink compression is not the slow part.** `--compress=zip-6` against `zip-0` measured 577 against
+  563 ms for 44 MB more on disk; zip-6 stays.
+- **Ten dependencies are automatic modules, and jlink links only explicit ones.** moditect writes a
+  descriptor for each in `-Pdist` (TwelveMonkeys' eight, metadata-extractor, xmpcore), keeping the
+  automatic names `module-info` requires. jdeps carries the readers' `provides` over from
+  `META-INF/services`; none of them calls `ServiceLoader` itself, so no `uses` is needed. A new
+  dependency that is an automatic module needs an entry there, or `-Pdist` fails at jlink.
+- **The macOS bundle is changed after jpackage signs it** (codecs, AOT cache, version), so
+  `scripts/fix-mac-bundle.sh` re-signs it ad hoc, last; CI verifies the signature.
 - **AWT is forced headless in `App.main`, as the first statement.** ImageIO and `BufferedImage` are
   `java.desktop`, and on macOS an initialised AWT contends with JavaFX for the AppKit run loop. Tests
   get the same through surefire's `java.awt.headless`.
@@ -155,9 +199,9 @@ Termina and Torrenta. `mvn compile` fails on any null that can reach a type not 
 
 ## Not done
 
-A filmstrip; crop; slideshow; a menu bar or settings; tuned startup (AppCDS,
-jlink, `-Pdist`), installers and file associations (which copy the codec bundle in and set `mirada.codecs`), with an
-AOT cache. Animated WebP, AVIF and JPEG XL show their first frame.
+A filmstrip; crop; slideshow; a menu bar or settings; installers (deb, rpm, dmg, msi) and file
+associations, made from the `-Pdist` image; an icon; a release workflow. Decoding the first image
+while the window is still being built (they run one after the other now, about 50 ms apart). Animated WebP, AVIF and JPEG XL show their first frame.
 JPEG XL is decoded in its own colour space, not converted to sRGB. Opening files from Finder on
 macOS (needs AWT `Desktop`). The app itself has not been run on Windows or macOS; CI only tests
 there.
