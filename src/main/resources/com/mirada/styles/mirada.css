@@ -1,0 +1,36 @@
+/* On top of AtlantaFX's Cupertino theme: its looked-up colours keep light and dark in step. */
+
+.mirada .canvas,
+.mirada .viewport {
+    -fx-background-color: -color-bg-inset;
+}
+
+.mirada:full-screen .canvas,
+.mirada:full-screen .viewport {
+    -fx-background-color: black;
+}
+
+.mirada .placeholder {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 1.15em;
+    -fx-padding: 24;
+    -fx-text-alignment: center;
+}
+
+.mirada .status-bar {
+    -fx-padding: 5 12 5 12;
+    -fx-spacing: 16;
+    -fx-alignment: center-left;
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: -color-border-muted;
+    -fx-border-width: 1 0 0 0;
+}
+
+.mirada .status-bar .label {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 0.92em;
+}
+
+.mirada .status-bar .name {
+    -fx-text-fill: -color-fg-default;
+}

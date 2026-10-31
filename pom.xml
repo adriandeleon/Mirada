@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.mirada</groupId>
+    <artifactId>mirada</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>Mirada</name>
+    <description>A fast, folder-oriented image viewer built on JavaFX</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>25</maven.compiler.release>
+        <!-- Indirected through a property: the format is ignored when maven.build.timestamp is
+             filtered into a resource directly. -->
+        <maven.build.timestamp.format>yyyy-MM-dd HH:mm 'UTC'</maven.build.timestamp.format>
+        <build.timestamp>${maven.build.timestamp}</build.timestamp>
+
+        <javafx.version>27</javafx.version>
+        <atlantafx.version>3.0.0</atlantafx.version>
+        <!-- EXIF: orientation (phone photos are stored sideways and tagged), camera and exposure
+             for the info line. 2.21 and later carry Automatic-Module-Name com.drew.metadata. Its
+             one dependency, Adobe's xmpcore, has no module name and becomes the automatic module
+             `xmpcore`. -->
+        <metadata-extractor.version>2.22.0</metadata-extractor.version>
+        <spotless.version>3.6.0</spotless.version>
+        <palantir.version>2.92.0</palantir.version>
+        <javafx.plugin.version>0.0.8</javafx.plugin.version>
+        <junit.version>5.14.4</junit.version>
+        <junit.platform.version>1.14.4</junit.platform.version>
+        <!-- Null checking (AGENTS.md, "Null annotations"): NullAway, an Error Prone plugin,
+             checks every @NullMarked package of the main compile and fails the build on a null it
+             cannot prove safe. JSpecify supplies the annotations. Error Prone reaches into javac,
+             hence .mvn/jvm.config. Editora's setup. -->
+        <jspecify.version>1.0.1</jspecify.version>
+        <errorprone.version>2.50.0</errorprone.version>
+        <nullaway.version>0.14.2</nullaway.version>
+
+        <!-- Prism pipeline order (-Dprism.order). Set per-OS in the os-* profiles:
+             mac=mtl,es2,sw (Metal), windows=d3d,es2,sw, linux=es2,sw. This default covers
+             profile-less builds (e.g. plain `mvn test`, which doesn't render). -->
+        <prism.pipeline>es2,sw</prism.pipeline>
+    </properties>
+
+    <dependencies>
+        <!-- Compile-time only (`requires static org.jspecify`): the annotations are read by
+             NullAway, and a missing annotation class is ignored by reflection at run time, so
+             nothing ships. -->
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+            <version>${jspecify.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.mkpaz</groupId>
+            <artifactId>atlantafx-base</artifactId>
+            <version>${atlantafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.drewnoakes</groupId>
+            <artifactId>metadata-extractor</artifactId>
+            <version>${metadata-extractor.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <version>${junit.platform.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <!-- build-info.properties is filtered so the version comes from this pom and nowhere
+                 else; every other file reads it through AppInfo. Everything else is copied
+                 verbatim — filtering the CSS would mangle any ${...} it contains. -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes><include>com/mirada/build-info.properties</include></includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes><exclude>com/mirada/build-info.properties</exclude></excludes>
+            </resource>
+        </resources>
+        <plugins>
+            <!-- The JDK this project is built, tested and run on, as in Termina and Torrenta: the
+                 formatter breaks on 27. Pass -Denforcer.skip to try another on purpose. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.6.3</version>
+                <executions>
+                    <execution>
+                        <id>jdk-25</id>
+                        <goals><goal>enforce</goal></goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>[25,26)</version>
+                                    <message>Mirada builds and runs on JDK 25: set JAVA_HOME to a 25 (sdkman: 25.0.4-tem). JDK 27 breaks the formatter.</message>
+                                </requireJavaVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless.version}</version>
+                <configuration>
+                    <java>
+                        <removeUnusedImports/>
+                        <palantirJavaFormat>
+                            <version>${palantir.version}</version>
+                        </palantirJavaFormat>
+                        <!-- importOrder runs AFTER Palantir so it has the final say on grouping:
+                             JDK, then javafx, then everything else, then static imports last. -->
+                        <importOrder>
+                            <order>java|javax,javafx,,\#</order>
+                        </importOrder>
+                        <toggleOffOn/>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <!-- verify, not compile: `mvn javafx:run` and the compile loop stay
+                             untouched, and CI still refuses unformatted code. -->
+                        <id>spotless-check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <executions>
+                    <execution>
+                        <!-- NullAway only: every other Error Prone check is off. OnlyNullMarked
+                             leaves a package unchecked until its package-info.java says
+                             @NullMarked. Tests are not checked. -->
+                        <id>default-compile</id>
+                        <configuration>
+                            <compilerArgs>
+                                <arg>-XDcompilePolicy=simple</arg>
+                                <arg>--should-stop=ifError=FLOW</arg>
+                                <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR -XepOpt:NullAway:OnlyNullMarked=true -XepOpt:NullAway:JSpecifyMode=true</arg>
+                            </compilerArgs>
+                            <annotationProcessorPaths>
+                                <path>
+                                    <groupId>com.google.errorprone</groupId>
+                                    <artifactId>error_prone_core</artifactId>
+                                    <version>${errorprone.version}</version>
+                                </path>
+                                <path>
+                                    <groupId>com.uber.nullaway</groupId>
+                                    <artifactId>nullaway</artifactId>
+                                    <version>${nullaway.version}</version>
+                                </path>
+                            </annotationProcessorPaths>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+                <configuration>
+                    <!-- Tests run on the classpath (unnamed module) so they can reach
+                         package-private members freely. -->
+                    <useModulePath>false</useModulePath>
+                    <systemPropertyVariables>
+                        <!-- JavaFX's headless platform and software rendering, for any test that
+                             makes a Node. Set here, before any test class loads, because Prism
+                             reads them once, in static initialisers. -->
+                        <glass.platform>Headless</glass.platform>
+                        <prism.order>sw</prism.order>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>${javafx.plugin.version}</version>
+                <configuration>
+                    <mainClass>com.mirada/com.mirada.App</mainClass>
+                    <options>
+                        <option>--enable-native-access=javafx.graphics</option>
+                        <option>-Dprism.order=${prism.pipeline}</option>
+                    </options>
+                    <launcher>mirada</launcher>
+                    <jlinkImageName>mirada</jlinkImageName>
+                    <jlinkZipName>mirada</jlinkZipName>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>os-mac</id>
+            <activation><os><family>mac</family></os></activation>
+            <properties>
+                <prism.pipeline>mtl,es2,sw</prism.pipeline>
+            </properties>
+        </profile>
+        <profile>
+            <id>os-windows</id>
+            <activation><os><family>windows</family></os></activation>
+            <properties>
+                <prism.pipeline>d3d,es2,sw</prism.pipeline>
+            </properties>
+        </profile>
+        <profile>
+            <id>os-linux</id>
+            <activation><os><family>unix</family><name>Linux</name></os></activation>
+            <properties>
+                <prism.pipeline>es2,sw</prism.pipeline>
+            </properties>
+        </profile>
+    </profiles>
+</project>
