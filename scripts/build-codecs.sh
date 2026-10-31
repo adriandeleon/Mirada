@@ -70,8 +70,14 @@ ninja -C "$work/dav1d/build" install
 
 echo "== libheif $LIBHEIF_TAG (shared, decoders only)"
 fetch https://github.com/strukturag/libheif.git "$LIBHEIF_TAG" libheif
+# libde265's header declares its functions dllimport on Windows unless told the library is static.
+# Through the environment rather than CMAKE_CXX_FLAGS, which would replace MSVC's defaults (/EHsc).
+heif_flags=""
+[ "$os" = windows ] && heif_flags="-DLIBDE265_STATIC_BUILD"
+CFLAGS="${CFLAGS:-} $heif_flags" CXXFLAGS="${CXXFLAGS:-} $heif_flags" \
 cmake -S "$work/libheif" -B "$work/libheif/build" "${cmake_common[@]}" \
-    -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=OFF -DWITH_EXAMPLES=OFF -DWITH_GDK_PIXBUF=OFF \
+    -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=OFF -DBUILD_DOCUMENTATION=OFF \
+    -DWITH_EXAMPLES=OFF -DWITH_GDK_PIXBUF=OFF \
     -DENABLE_PLUGIN_LOADING=OFF -DWITH_LIBSHARPYUV=OFF \
     -DWITH_LIBDE265=ON -DWITH_LIBDE265_PLUGIN=OFF -DWITH_DAV1D=ON -DWITH_DAV1D_PLUGIN=OFF \
     -DWITH_X265=OFF -DWITH_AOM_DECODER=OFF -DWITH_AOM_ENCODER=OFF -DWITH_RAV1E=OFF \
