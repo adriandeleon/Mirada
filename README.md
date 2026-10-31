@@ -16,8 +16,8 @@ you'd number it, one arrow key away. The image fills the window; a single status
 which file, where it sits in the folder, how large it is, and what took it.
 
 **Status:** early, and unreleased. JPEG, PNG, GIF, BMP, WebP, TIFF, PSD, HEIC, AVIF and JPEG XL,
-turned upright. HEIC, AVIF and JPEG XL need libheif and libjxl installed until there are installers
-to bundle them. No installers yet — build it from source. See the [changelog](CHANGELOG.md).
+turned upright. The HEIC, AVIF and JPEG XL decoders (libheif, libjxl) are built from source and
+bundled; the build downloads them. No installers yet — build it from source. See the [changelog](CHANGELOG.md).
 
 ## Using it
 
@@ -41,7 +41,9 @@ On macOS, Cmd takes Ctrl's place.
 
 ## Building it
 
-JDK 25 is required (the build refuses others). The Maven wrapper fetches everything else.
+JDK 25 is required (the build refuses others). The Maven wrapper fetches everything else, including
+the native codec bundle for your platform from the
+[codecs-1 release](https://github.com/adriandeleon/Mirada/releases/tag/codecs-1).
 
 ```
 ./mvnw javafx:run                                   # an empty window

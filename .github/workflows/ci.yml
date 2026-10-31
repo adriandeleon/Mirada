@@ -46,24 +46,12 @@ jobs:
           java-version: '25'
           cache: maven
 
-      # The native codecs the HEIC, AVIF and JPEG XL tests decode with. Windows has no package
-      # manager copy worth trusting here, so its tests skip until the installers bundle them.
-      - name: Install libheif and libjxl (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq libheif1 libheif-plugin-libde265 libheif-plugin-dav1d libjxl0.7
-
-      - name: Install libheif and libjxl (macOS)
-        if: runner.os == 'macOS'
-        run: brew install libheif jpeg-xl
-
       # Tests, NullAway (in the main compile) and the formatter check. The decoder tests make images
-      # on JavaFX's headless platform, so no display is needed. Where the codecs were installed
-      # above, their tests must run rather than skip.
+      # on JavaFX's headless platform, so no display is needed. The build downloads the codec
+      # bundle (pom.xml, codecs-*), and its tests must run rather than skip, on every platform.
       - name: Verify
         env:
-          MIRADA_REQUIRE_CODECS: ${{ runner.os != 'Windows' && '1' || '' }}
+          MIRADA_REQUIRE_CODECS: '1'
         run: ./mvnw -B --no-transfer-progress verify
 
       - name: Upload test reports

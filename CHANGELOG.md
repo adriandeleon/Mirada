@@ -10,9 +10,9 @@ The first version: open a photo, look, arrow through its folder, close.
 ### Added
 
 - **WebP, TIFF and PSD**, alongside JPEG, PNG, GIF and BMP. An animated WebP shows its first frame.
-- **HEIC, AVIF and JPEG XL**, through libheif and libjxl. JPEG XL decodes on every core. For now
-  these need the libraries installed on the system (apt on Linux, Homebrew on macOS); the installers
-  will bundle them.
+- **HEIC, AVIF and JPEG XL**, through libheif and libjxl, built from source for each platform and
+  bundled (3–4 MB): nothing to install, and the same versions everywhere. JPEG XL decodes on every
+  core.
 - **Opening a file opens its folder.** The images around it are listed in natural name order, so
   `IMG_9` comes before `IMG_10`, and hidden files are left out. Opening a folder starts at its first
   image.

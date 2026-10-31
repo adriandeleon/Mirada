@@ -19,8 +19,10 @@ In this order, when they pull against each other:
 - Test: `./mvnw test`
 - Everything CI would check (tests, NullAway, format): `./mvnw verify`
 - Format: `./mvnw spotless:apply` (Palantir, as in Termina and Torrenta)
-- Codec bundle: `scripts/build-codecs.sh` builds libheif and libjxl from source into `target/codecs`
-  (about 10 minutes; `CODECS_NO_ASM=1` without nasm). Runs and tests load from there first.
+- Codec bundle: the build downloads this platform's zip from the `codecs-N` release into
+  `target/codecs` (pom.xml, `codecs-*` profiles, checksums pinned). To build one yourself:
+  `scripts/build-codecs.sh` (about 10 minutes; `CODECS_NO_ASM=1` without nasm), then run Maven with
+  `-Dcodecs.skip` so the download does not overwrite it.
 
 Run Maven from the project root, on JDK 25 (the enforcer refuses others). CI
 (`.github/workflows/ci.yml`) runs `verify` on Linux, macOS and Windows for every push to `main`.
@@ -56,7 +58,9 @@ with libde265 and dav1d linked in statically (decoders only, no plugin loading) 
 brotli, highway and skcms from its submodules; `scripts/check-codecs.sh` fails the build if any
 library needs something outside the bundle and the system's C/C++ runtime. The **Codecs** workflow
 runs it on all five targets (Linux in an Ubuntu 22.04 container, for the oldest glibc we support)
-and publishes a `codecs-N` release with checksums. Linux x64 is about 9.4 MB, 4.1 MB zipped. A missing library is not fatal: its files still list, and open with a message
+and publishes a `codecs-N` release with checksums; the zips are 3.0–4.2 MB. Changing a library
+version means: edit the tags in `build-codecs.sh`, run the workflow with the next tag, then put the
+new tag and the five checksums from its `SHA256SUMS` in the pom. A missing library is not fatal: its files still list, and open with a message
 naming the library. EXIF is metadata-extractor.
 
 ## Things that will bite you
@@ -139,8 +143,7 @@ Termina and Torrenta. `mvn compile` fails on any null that can reach a type not 
 
 The command palette; a filmstrip; crop; slideshow; a menu bar or settings; tuned startup (AppCDS,
 jlink, `-Pdist`), installers and file associations (which copy the codec bundle in and set `mirada.codecs`), with an
-AOT cache. The build downloading the published codec bundle rather than needing it built locally,
-and CI using it in place of apt and Homebrew: waits for the first `codecs-N` release. Animated WebP, AVIF and JPEG XL show their first frame.
+AOT cache. Animated WebP, AVIF and JPEG XL show their first frame.
 JPEG XL is decoded in its own colour space, not converted to sRGB. Opening files from Finder on
-macOS (needs AWT `Desktop`). Windows has no codec libraries in CI, so its native-decoder tests skip;
-the app itself has not been run on Windows or macOS.
+macOS (needs AWT `Desktop`). The app itself has not been run on Windows or macOS; CI only tests
+there.
