@@ -31,7 +31,7 @@ import static java.lang.foreign.ValueLayout.JAVA_LONG;
  * libjxl's thread runner when {@code libjxl_threads} is found, and runs on one thread when it is
  * not. An animation decodes its first frame.
  *
- * <p>The struct offsets below are libjxl's ABI from 0.7 on: {@code JxlBasicInfo} starts with {@code
+ * <p>The struct offsets below are libjxl's ABI from 0.7 to 0.12: {@code JxlBasicInfo} starts with {@code
  * have_container, xsize, ysize} and has {@code alpha_bits} at byte 60.
  */
 final class JxlDecoder {
@@ -190,8 +190,11 @@ final class JxlDecoder {
             MethodHandle setParallelRunner,
             @Nullable Threads threads) {
 
-        /** The ABI versions tried, newest first; Ubuntu 24.04 ships 0.7, Debian 13 0.11. */
-        static final List<String> VERSIONS = List.of("0.11", "0.10", "0.9", "0.8", "0.7");
+        /**
+         * The ABI versions tried, newest first: Homebrew ships 0.12, Debian 13 0.11, Ubuntu 24.04 0.7.
+         * Add a new one only after checking its headers against the offsets above.
+         */
+        static final List<String> VERSIONS = List.of("0.12", "0.11", "0.10", "0.9", "0.8", "0.7");
 
         static final Optional<Library> INSTANCE =
                 NativeLibraries.load(NativeLibraries.fileNames("jxl", VERSIONS)).flatMap(Library::bind);

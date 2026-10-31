@@ -79,7 +79,7 @@ naming the library. EXIF is metadata-extractor.
 - **The FFM bindings are hand-written against the C headers.** `heif_error` is returned by value (a
   struct; the handle takes a `SegmentAllocator` first), `JxlPixelFormat` has 4 bytes of padding
   before its `size_t`, and `JxlBasicInfo`'s offsets (`xsize` 4, `ysize` 8, `alpha_bits` 60) are
-  libjxl's ABI from 0.7 on. A version that moves them breaks decoding, not the build:
+  libjxl's ABI from 0.7 to 0.12. A version that moves them breaks decoding, not the build:
   `NativeDecodersTest` is what notices. CI sets `MIRADA_REQUIRE_CODECS=1` on Linux and macOS so
   those tests fail rather than skip when a library stops loading.
 - **Native access is enabled for `com.mirada`** in the javafx plugin's options (and for the
