@@ -70,6 +70,12 @@ jobs:
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
 
+      # Git Bash ships coreutils' `link` (hard links) as /usr/bin/link.exe, ahead of MSVC's linker on
+      # the path; meson finds it and refuses to go on. Nothing in the build needs the coreutils one.
+      - name: Hide Git's link.exe (Windows)
+        if: runner.os == 'Windows'
+        run: rm -f /usr/bin/link.exe
+
       - name: Build
         env:
           MACOSX_DEPLOYMENT_TARGET: '12.0'
