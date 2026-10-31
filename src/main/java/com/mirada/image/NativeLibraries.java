@@ -1,5 +1,6 @@
 package com.mirada.image;
 
+import java.io.IOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.SymbolLookup;
 import java.nio.file.Files;
@@ -7,7 +8,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 /**
  * Finds a native codec library: first in the folder an installer bundles them in, then wherever the
@@ -27,20 +31,34 @@ final class NativeLibraries {
     private static final List<Path> EXTRA_DIRECTORIES =
             List.of(Path.of("/opt/homebrew/lib"), Path.of("/usr/local/lib"));
 
+    /** Where each library was found, by the first file name asked for: for diagnostics and tests. */
+    private static final Map<String, String> ORIGINS = new ConcurrentHashMap<>();
+
+    private static volatile boolean bundlePreloaded;
+
     private NativeLibraries() {}
+
+    /** {@code "bundle"}, {@code "system"} or a directory, for a library loaded under {@code fileNames.get(0)}. */
+    static Optional<String> origin(String firstFileName) {
+        return Optional.ofNullable(ORIGINS.get(firstFileName));
+    }
 
     /** The first of {@code fileNames} that loads, searched in the bundle, the system, then Homebrew. */
     static Optional<SymbolLookup> load(List<String> fileNames) {
+        if (fileNames.isEmpty()) return Optional.empty();
+        String key = fileNames.getFirst();
         String bundle = System.getProperty(BUNDLE_PROPERTY);
         if (bundle != null && !bundle.isBlank()) {
+            Path folder = Path.of(bundle);
+            preloadOnWindows(folder);
             for (String name : fileNames) {
-                Optional<SymbolLookup> found = open(Path.of(bundle).resolve(name));
-                if (found.isPresent()) return found;
+                Optional<SymbolLookup> found = open(folder.resolve(name));
+                if (found.isPresent()) return remember(key, "bundle", found);
             }
         }
         for (String name : fileNames) {
             try {
-                return Optional.of(SymbolLookup.libraryLookup(name, Arena.global()));
+                return remember(key, "system", Optional.of(SymbolLookup.libraryLookup(name, Arena.global())));
             } catch (IllegalArgumentException notOnTheSearchPath) {
                 // try the next name
             }
@@ -48,10 +66,42 @@ final class NativeLibraries {
         for (Path directory : EXTRA_DIRECTORIES) {
             for (String name : fileNames) {
                 Optional<SymbolLookup> found = open(directory.resolve(name));
-                if (found.isPresent()) return found;
+                if (found.isPresent()) return remember(key, directory.toString(), found);
             }
         }
         return Optional.empty();
+    }
+
+    private static Optional<SymbolLookup> remember(String key, String origin, Optional<SymbolLookup> found) {
+        ORIGINS.put(key, origin);
+        return found;
+    }
+
+    /**
+     * Windows looks for a DLL's dependencies beside the program, not beside the DLL, so {@code jxl.dll}
+     * loaded by full path cannot find {@code brotlidec.dll} next to it. Loading every DLL in the
+     * bundle first, retrying the ones whose dependencies were not in yet, means each is already in
+     * the process when something asks for it by name. Linux and macOS libraries carry an rpath
+     * instead ({@code $ORIGIN}, {@code @loader_path}).
+     */
+    private static synchronized void preloadOnWindows(Path folder) {
+        if (bundlePreloaded
+                || !System.getProperty("os.name", "").toLowerCase(Locale.ROOT).startsWith("windows")) {
+            return;
+        }
+        bundlePreloaded = true;
+        List<Path> pending = new ArrayList<>();
+        try (Stream<Path> files = Files.list(folder)) {
+            files.filter(f ->
+                            f.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".dll"))
+                    .forEach(pending::add);
+        } catch (IOException unreadable) {
+            return;
+        }
+        boolean progress = true;
+        while (!pending.isEmpty() && progress) {
+            progress = pending.removeIf(dll -> open(dll).isPresent());
+        }
     }
 
     private static Optional<SymbolLookup> open(Path file) {

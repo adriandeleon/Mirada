@@ -60,6 +60,12 @@ final class JxlDecoder {
             MemoryLayout.paddingLayout(4),
             JAVA_LONG.withName("align"));
 
+    /**
+     * The ABI versions tried, newest first: Homebrew ships 0.12, Debian 13 0.11, Ubuntu 24.04 0.7.
+     * Add a new one only after checking its headers against the offsets above.
+     */
+    static final List<String> VERSIONS = List.of("0.12", "0.11", "0.10", "0.9", "0.8", "0.7");
+
     private JxlDecoder() {}
 
     static boolean available() {
@@ -149,8 +155,7 @@ final class JxlDecoder {
             MemorySegment runner, MethodHandle create, MethodHandle destroy, MethodHandle defaultWorkers) {
 
         static @Nullable Threads bind(Linker linker) {
-            Optional<SymbolLookup> lookup =
-                    NativeLibraries.load(NativeLibraries.fileNames("jxl_threads", Library.VERSIONS));
+            Optional<SymbolLookup> lookup = NativeLibraries.load(NativeLibraries.fileNames("jxl_threads", VERSIONS));
             if (lookup.isEmpty()) return null;
             try {
                 return new Threads(
@@ -189,12 +194,6 @@ final class JxlDecoder {
             MethodHandle setImageOutBuffer,
             MethodHandle setParallelRunner,
             @Nullable Threads threads) {
-
-        /**
-         * The ABI versions tried, newest first: Homebrew ships 0.12, Debian 13 0.11, Ubuntu 24.04 0.7.
-         * Add a new one only after checking its headers against the offsets above.
-         */
-        static final List<String> VERSIONS = List.of("0.12", "0.11", "0.10", "0.9", "0.8", "0.7");
 
         static final Optional<Library> INSTANCE =
                 NativeLibraries.load(NativeLibraries.fileNames("jxl", VERSIONS)).flatMap(Library::bind);

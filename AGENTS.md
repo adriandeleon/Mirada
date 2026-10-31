@@ -19,6 +19,8 @@ In this order, when they pull against each other:
 - Test: `./mvnw test`
 - Everything CI would check (tests, NullAway, format): `./mvnw verify`
 - Format: `./mvnw spotless:apply` (Palantir, as in Termina and Torrenta)
+- Codec bundle: `scripts/build-codecs.sh` builds libheif and libjxl from source into `target/codecs`
+  (about 10 minutes; `CODECS_NO_ASM=1` without nasm). Runs and tests load from there first.
 
 Run Maven from the project root, on JDK 25 (the enforcer refuses others). CI
 (`.github/workflows/ci.yml`) runs `verify` on Linux, macOS and Windows for every push to `main`.
@@ -44,8 +46,17 @@ Four decoders (`ImageFormats.Decoder`, by extension). JavaFX's own `Image` decod
 | JPEG XL | `JxlDecoder` | libjxl, through FFM, on every core via `libjxl_threads` |
 
 The native libraries are found by `NativeLibraries`: first in the folder named by the
-`mirada.codecs` system property (where the installers will bundle them), then the system's search
-path, then Homebrew's. A missing library is not fatal: its files still list, and open with a message
+`mirada.codecs` system property, then the system's search path, then Homebrew's. Runs and tests set
+it to `target/codecs` (`codecs.dir` in the pom); the installers will set it to their own copy.
+
+**The codec bundle** is built from source, never copied from a package manager: Homebrew's libheif
+links x265, which is GPL, and both Homebrew's and the distributions' copies drag in encoders and
+image libraries Mirada never calls. `scripts/build-codecs.sh` pins the versions and builds libheif
+with libde265 and dav1d linked in statically (decoders only, no plugin loading) and libjxl with
+brotli, highway and skcms from its submodules; `scripts/check-codecs.sh` fails the build if any
+library needs something outside the bundle and the system's C/C++ runtime. The **Codecs** workflow
+runs it on all five targets (Linux in an Ubuntu 22.04 container, for the oldest glibc we support)
+and publishes a `codecs-N` release with checksums. Linux x64 is about 9.4 MB, 4.1 MB zipped. A missing library is not fatal: its files still list, and open with a message
 naming the library. EXIF is metadata-extractor.
 
 ## Things that will bite you
@@ -85,6 +96,10 @@ naming the library. EXIF is metadata-extractor.
 - **Native access is enabled for `com.mirada`** in the javafx plugin's options (and for the
   classpath in surefire's `argLine`); without it the JDK warns on every launch. A jlink launcher
   will need the same flag.
+- **Windows finds a DLL's dependencies beside the program, not beside the DLL.** `jxl.dll` loaded
+  by full path cannot find `brotlidec.dll` next to it, so `NativeLibraries.preloadOnWindows` loads
+  every DLL in the bundle first, retrying until nothing more loads. Linux and macOS libraries carry
+  `$ORIGIN` / `@loader_path` rpaths instead, which `check-codecs.sh` asserts on Linux.
 - **libjxl writes to stderr on a bad file** (`decode.cc: invalid signature`). Noise, not a failure.
 - **AWT is forced headless in `App.main`, as the first statement.** ImageIO and `BufferedImage` are
   `java.desktop`, and on macOS an initialised AWT contends with JavaFX for the AppKit run loop. Tests
@@ -123,9 +138,9 @@ Termina and Torrenta. `mvn compile` fails on any null that can reach a type not 
 ## Not done
 
 The command palette; a filmstrip; crop; slideshow; a menu bar or settings; tuned startup (AppCDS,
-jlink, `-Pdist`), installers and file associations — and with the installers, **bundling libheif,
-libde265, dav1d, libjxl and their dependencies** into the `mirada.codecs` folder (about 3 MB
-compressed; decoders only, no x265 or aom). Animated WebP, AVIF and JPEG XL show their first frame.
+jlink, `-Pdist`), installers and file associations (which copy the codec bundle in and set `mirada.codecs`), with an
+AOT cache. The build downloading the published codec bundle rather than needing it built locally,
+and CI using it in place of apt and Homebrew: waits for the first `codecs-N` release. Animated WebP, AVIF and JPEG XL show their first frame.
 JPEG XL is decoded in its own colour space, not converted to sRGB. Opening files from Finder on
 macOS (needs AWT `Desktop`). Windows has no codec libraries in CI, so its native-decoder tests skip;
 the app itself has not been run on Windows or macOS.

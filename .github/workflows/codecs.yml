@@ -1,0 +1,112 @@
+# Builds the native codec bundle (libheif with libde265 and dav1d, libjxl) for every platform Mirada
+# ships on, and publishes it as a GitHub release the build downloads from.
+#
+# Run by hand when a library version changes (scripts/build-codecs.sh holds the versions), with a new
+# tag each time: releases are never overwritten, so a build that pinned codecs-1 keeps getting
+# exactly the bytes its checksums describe.
+name: Codecs
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish, e.g. codecs-1
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    # Linux builds in Ubuntu 22.04, the oldest system Mirada supports, so the libraries' glibc and
+    # libstdc++ requirements are ones Ubuntu 22.04 and Debian 12 meet. Built on a newer system they
+    # would load only on that system and newer.
+    container: ${{ matrix.container }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x64
+            container: ubuntu:22.04
+          - os: ubuntu-24.04-arm
+            target: linux-arm64
+            container: ubuntu:22.04
+          - os: macos-latest
+            target: macos-arm64
+          - os: macos-15-intel
+            target: macos-x64
+          - os: windows-latest
+            target: windows-x64
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Build tools (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          apt-get update -qq
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+            build-essential cmake ninja-build meson nasm pkg-config git ca-certificates python3 binutils
+
+      - uses: actions/checkout@v5
+
+      - name: Build tools (macOS)
+        if: runner.os == 'macOS'
+        run: brew install meson ninja nasm
+
+      - name: Build tools (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pip install meson ninja
+          choco install -y nasm pkgconfiglite
+          echo "C:/Program Files/NASM" >> "$GITHUB_PATH"
+
+      # cl.exe, link.exe and dumpbin on the path, for the Ninja generator and the dependency check.
+      - name: MSVC environment (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build
+        env:
+          MACOSX_DEPLOYMENT_TARGET: '12.0'
+        run: scripts/build-codecs.sh "$RUNNER_TEMP/codecs"
+
+      - name: Archive
+        run: |
+          cd "$RUNNER_TEMP/codecs"
+          cmake -E tar cf "$RUNNER_TEMP/mirada-codecs-${{ matrix.target }}.zip" --format=zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mirada-codecs-${{ matrix.target }}
+          path: ${{ runner.temp }}/mirada-codecs-${{ matrix.target }}.zip
+          if-no-files-found: error
+
+  publish:
+    name: Publish ${{ inputs.tag }}
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: cd dist && sha256sum mirada-codecs-*.zip | tee SHA256SUMS
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ inputs.tag }}" dist/* \
+            --repo "${{ github.repository }}" \
+            --title "Codec bundle ${{ inputs.tag }}" \
+            --notes "Native codecs Mirada bundles: libheif (libde265, dav1d) and libjxl, decoders only. Built by the Codecs workflow from scripts/build-codecs.sh at ${{ github.sha }}." \
+            --prerelease

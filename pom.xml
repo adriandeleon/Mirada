@@ -48,6 +48,10 @@
              mac=mtl,es2,sw (Metal), windows=d3d,es2,sw, linux=es2,sw. This default covers
              profile-less builds (e.g. plain `mvn test`, which doesn't render). -->
         <prism.pipeline>es2,sw</prism.pipeline>
+
+        <!-- Where the native codec bundle is unpacked for runs and tests (NativeLibraries looks
+             here first, then the system). -->
+        <codecs.dir>${project.build.directory}/codecs</codecs.dir>
     </properties>
 
     <dependencies>
@@ -225,6 +229,7 @@
                         <!-- As App.main does: the decoder tests make BufferedImages, and on macOS
                              an initialised AWT contends with JavaFX. -->
                         <java.awt.headless>true</java.awt.headless>
+                        <mirada.codecs>${codecs.dir}</mirada.codecs>
                     </systemPropertyVariables>
                     <!-- JavaFX loads its native libraries from the classpath here; without this the
                          JDK warns that it will refuse in a future release. -->
@@ -241,6 +246,9 @@
                     <options>
                         <option>--enable-native-access=javafx.graphics,com.mirada</option>
                         <option>-Dprism.order=${prism.pipeline}</option>
+                        <!-- The codec bundle (scripts/build-codecs.sh, or the release the build
+                             downloads). Absent, the system's libheif and libjxl are used. -->
+                        <option>-Dmirada.codecs=${codecs.dir}</option>
                     </options>
                     <launcher>mirada</launcher>
                     <jlinkImageName>mirada</jlinkImageName>

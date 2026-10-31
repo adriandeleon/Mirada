@@ -43,8 +43,12 @@ bundled folder, unmodified:
   Copyright the JPEG XL Project Authors. Licensed under BSD-3-Clause.
   With its dependencies Highway (Apache-2.0 or BSD-3-Clause,
   https://github.com/google/highway), Brotli (MIT,
-  https://github.com/google/brotli) and Little CMS (MIT,
-  https://www.littlecms.com).
+  https://github.com/google/brotli) and skcms (BSD-3-Clause,
+  https://skia.googlesource.com/skcms) in the bundled build, or Little CMS
+  (MIT, https://www.littlecms.com) in some system builds.
+
+  The bundled build carries each project's licence text in its licenses/
+  folder.
 
 OpenJFX (JavaFX) — https://openjdk.org/projects/openjfx/
 Copyright Oracle and/or its affiliates.

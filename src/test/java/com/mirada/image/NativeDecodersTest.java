@@ -86,6 +86,19 @@ class NativeDecodersTest {
         assertRedThenBlue(image, 0);
     }
 
+    /** With a bundle present (scripts/build-codecs.sh, or the downloaded release), it is what loads. */
+    @Test
+    void theBundleWinsOverTheSystem() {
+        String bundle = System.getProperty(NativeLibraries.BUNDLE_PROPERTY);
+        assumeTrue(bundle != null && Files.isDirectory(Path.of(bundle)), "no codec bundle in " + bundle);
+        require(HeifDecoder.available(), "libheif");
+        require(JxlDecoder.available(), "libjxl");
+        String heif = NativeLibraries.fileNames("heif", List.of("1")).getFirst();
+        String jxl = NativeLibraries.fileNames("jxl", JxlDecoder.VERSIONS).getFirst();
+        assertEquals("bundle", NativeLibraries.origin(heif).orElse("not loaded"), heif);
+        assertEquals("bundle", NativeLibraries.origin(jxl).orElse("not loaded"), jxl);
+    }
+
     @Test
     void brokenFilesAreIoExceptions(@TempDir Path dir) throws IOException {
         Path heic = Files.writeString(dir.resolve("broken.heic"), "not a heic");
