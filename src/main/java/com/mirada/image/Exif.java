@@ -34,7 +34,9 @@ public record Exif(Orientation orientation, String summary) {
         Metadata metadata;
         try {
             metadata = ImageMetadataReader.readMetadata(file.toFile());
-        } catch (ImageProcessingException | IOException | RuntimeException e) {
+        } catch (ImageProcessingException | IOException | RuntimeException | LinkageError e) {
+            // LinkageError too: a metadata-extractor class that cannot initialise (a charset missing
+            // from a native image, say) must cost the metadata, not the image.
             return NONE;
         }
         ExifIFD0Directory camera = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);

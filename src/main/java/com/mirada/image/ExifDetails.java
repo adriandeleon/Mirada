@@ -39,7 +39,9 @@ public record ExifDetails(List<Row> camera, List<Section> all) {
         Metadata metadata;
         try {
             metadata = ImageMetadataReader.readMetadata(file.toFile());
-        } catch (ImageProcessingException | IOException | RuntimeException e) {
+        } catch (ImageProcessingException | IOException | RuntimeException | LinkageError e) {
+            // LinkageError too: a metadata-extractor class that cannot initialise (a charset missing
+            // from a native image, say) must cost the metadata, not the image.
             return NONE;
         }
         return from(metadata);

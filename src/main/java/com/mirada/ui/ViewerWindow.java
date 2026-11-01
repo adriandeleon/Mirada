@@ -293,13 +293,26 @@ public final class ViewerWindow {
         }
         ImageCache.Entry entry = cache.get(file);
         if (tour != null) tour.requested(entry.ready().isDone());
-        entry.ready().thenAcceptAsync(decoded -> display(file, decoded), Platform::runLater);
+        entry.ready()
+                .thenAcceptAsync(decoded -> display(file, decoded), Platform::runLater)
+                .exceptionally(error -> {
+                    // ready() completes normally even for a broken file; landing here means something
+                    // unforeseen went wrong on the way, and silence would leave the old image up.
+                    System.err.println("[mirada] could not show " + file + ": " + error);
+                    error.printStackTrace();
+                    Platform.runLater(() -> {
+                        if (file.equals(wanted)) showMessage("Couldn't open " + fileName(file) + ": " + error);
+                    });
+                    return null;
+                });
     }
 
     private void display(Path file, ImageCache.Decoded decoded) {
         if (!file.equals(wanted)) return;
         Image image = decoded.image();
         if (image == null) {
+            // On stderr too: the window says it to the user, this is for whoever has to find out why.
+            System.err.println("[mirada] could not open " + file + ": " + decoded.error());
             showMessage("Couldn't open " + fileName(file) + ": " + decoded.error());
             return;
         }

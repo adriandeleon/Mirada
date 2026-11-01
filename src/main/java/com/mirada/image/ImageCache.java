@@ -98,8 +98,14 @@ public final class ImageCache {
         // A decoder that turns the image upright itself must not have the EXIF turn applied again.
         CompletableFuture<Exif> orientation =
                 decoder != null && decoder.turnsUpright() ? exif.thenApply(Exif::upright) : exif;
-        CompletableFuture<Decoded> ready =
-                pixels.thenCombine(orientation, Decoded::of).exceptionally(error -> Decoded.failed(message(error)));
+        CompletableFuture<Decoded> ready = pixels.thenCombine(orientation, Decoded::of)
+                .exceptionally(error -> {
+                    Throwable cause = innermost(error);
+                    // A broken file is an IOException and says so in the window. Anything else is a
+                    // bug, or a native image missing metadata, and its trace is what finds it.
+                    if (!(cause instanceof IOException)) cause.printStackTrace();
+                    return Decoded.failed(message(error));
+                });
         return new Entry(file, ready, cancel);
     }
 
@@ -137,13 +143,21 @@ public final class ImageCache {
 
     /** The innermost cause's message, which is the one that says what was wrong with the file. */
     static String message(Throwable error) {
+        Throwable cause = innermost(error);
+        String text = cause.getMessage();
+        return text == null || text.isBlank() ? cause.getClass().getSimpleName() : text;
+    }
+
+    /** Unwraps the wrappers futures and initializers add, down to the error that says what happened. */
+    static Throwable innermost(Throwable error) {
         Throwable cause = error;
-        while ((cause instanceof CompletionException || cause instanceof UncheckedIOException)
+        while ((cause instanceof CompletionException
+                        || cause instanceof UncheckedIOException
+                        || cause instanceof ExceptionInInitializerError)
                 && cause.getCause() != null) {
             cause = cause.getCause();
         }
-        String text = cause.getMessage();
-        return text == null || text.isBlank() ? cause.getClass().getSimpleName() : text;
+        return cause;
     }
 
     /** Drops the least recently used beyond capacity, cancelling a load still in flight. */

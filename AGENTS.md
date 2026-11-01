@@ -74,6 +74,15 @@ version means: edit the tags in `build-codecs.sh`, run the workflow with the nex
 new tag and the five checksums from its `SHA256SUMS` in the pom. A missing library is not fatal: its files still list, and open with a message
 naming the library. EXIF is metadata-extractor.
 
+## The native image (an experiment)
+
+`./mvnw -Pnative -Denforcer.skip -DskipTests package` with Oracle GraalVM 25.4 as `JAVA_HOME` builds
+`target/mirada` with JavaFX linked in by StaticFX. It starts in half the time of the jlink image and
+uses a third less memory, but ships nothing yet: [docs/native-image.md](docs/native-image.md) has the
+numbers, what it took and the recommendation. Its metadata is recorded by `scripts/native-metadata.sh`
+into `src/main/resources/META-INF/native-image`; re-run it (and merge runs over richer files) after
+anything that reflects, loads resources, or adds an FFM downcall.
+
 ## Releasing
 
 1. Set `<version>` in `pom.xml` without `-SNAPSHOT`, and give its `CHANGELOG.md` heading a date

@@ -21,6 +21,9 @@ The first version: open a photo, look, arrow through its folder, close.
   On macOS, a double-click in Finder, "Open With" and a file dropped on the Dock icon open the
   image, at launch and while Mirada is running.
 - **An icon**, in the family of Editora, Termina and Torrenta: a teal iris in a periwinkle eye.
+- **A file whose metadata cannot be read still opens.** A failure inside the EXIF reader no longer
+  takes the image with it, and anything unexpected on the way to the screen is shown and logged
+  rather than leaving the previous image up.
 - **Opening a file opens its folder.** The images around it are listed in natural name order, so
   `IMG_9` comes before `IMG_10`, and hidden files are left out. Opening a folder starts at its first
   image.
