@@ -60,6 +60,11 @@ path = sys.argv[1]
 data = json.load(open(path))
 native = (".so", ".dylib", ".dll")
 resources = [r for r in data.get("resources", []) if not str(r.get("glob", "")).endswith(native)]
+# JavaFX on Windows looks for a theme file in every locale, and the agent records each look: one glob.
+themes = "com/sun/glass/ui/win/themes"
+if any(str(r.get("glob", "")).startswith(themes) for r in resources):
+    resources = [r for r in resources if not str(r.get("glob", "")).startswith(themes)]
+    resources.append({"glob": themes + "*.properties"})
 globs = {r.get("glob") for r in resources}
 for theme in ("atlantafx/base/theme/cupertino-light.bss", "atlantafx/base/theme/cupertino-dark.bss"):
     if theme not in globs:
