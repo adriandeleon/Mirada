@@ -85,6 +85,7 @@ public final class HeadStart {
     private static ArgbPixels decode(ImageFormats.Decoder decoder, Path file) throws IOException {
         return switch (decoder) {
             case TURBOJPEG -> TurboJpegDecoder.pixels(file);
+            case LIBWEBP -> WebpDecoder.pixels(file);
             case IMAGEIO -> ImageIoDecoder.pixels(file);
             case LIBHEIF -> HeifDecoder.pixels(file);
             case LIBJXL -> JxlDecoder.pixels(file);

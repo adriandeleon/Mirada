@@ -118,8 +118,8 @@ public final class ImageCache {
             // sooner). A head start that failed gives way to the usual load, started on the FX
             // thread as JavaFX's decoder needs — JavaFX itself for a JPEG libjpeg-turbo declined.
             exif = head.exif;
-            ImageFormats.Decoder fallback =
-                    decoder == ImageFormats.Decoder.TURBOJPEG ? ImageFormats.Decoder.JAVAFX : decoder;
+            ImageFormats.Decoder declined = decoder == null ? null : decoder.fallback();
+            ImageFormats.Decoder fallback = declined != null ? declined : decoder;
             pixels = head.pixels
                     .<Image>thenApply(ArgbPixels::toImage)
                     .exceptionallyCompose(
@@ -146,19 +146,48 @@ public final class ImageCache {
         return new Entry(file, ready, cancel, previews.get(file));
     }
 
+    /**
+     * Every frame of {@code file} when it is an animation Mirada's own decoders play (WebP, AVIF,
+     * HEIC, JPEG XL), else null. Decoded on the low-priority thread, after the first frame is up:
+     * the still shows at once, and starts moving when the rest is in.
+     */
+    public CompletableFuture<@Nullable Animation> animation(Path file) {
+        ImageFormats.Decoder decoder = ImageFormats.decoderFor(file);
+        if (decoder == null || !decoder.animates()) return CompletableFuture.completedFuture(null);
+        return CompletableFuture.supplyAsync(() -> frames(decoder, file), previewMaker);
+    }
+
+    private static @Nullable Animation frames(ImageFormats.Decoder decoder, Path file) {
+        try {
+            Animation.Frames frames =
+                    switch (decoder) {
+                        case LIBWEBP -> WebpDecoder.frames(file);
+                        case LIBJXL -> JxlDecoder.frames(file);
+                        case LIBHEIF -> HeifDecoder.frames(file);
+                        default -> null;
+                    };
+            return frames == null ? null : frames.toAnimation();
+        } catch (IOException | RuntimeException e) {
+            return null; // the still stays up
+        }
+    }
+
     /** A decode under way, and how to stop it. */
     private record Loading(CompletableFuture<Image> pixels, Runnable cancel) {}
 
     /** Starts decoding {@code file}'s pixels. FX thread, for JavaFX's decoder. */
     private Loading startPixels(Path file, ImageFormats.@Nullable Decoder decoder) {
-        if (decoder == ImageFormats.Decoder.TURBOJPEG) {
-            // libjpeg-turbo, and JavaFX for the JPEGs it leaves (CMYK, 12-bit, or no library).
-            CompletableFuture<Image> turbo =
-                    CompletableFuture.supplyAsync(() -> decodeOffThread(decoder, file), imageDecoder);
-            CompletableFuture<Image> pixels = turbo.exceptionallyCompose(declined -> CompletableFuture.supplyAsync(
-                            () -> startPixels(file, ImageFormats.Decoder.JAVAFX), fxThread)
-                    .thenCompose(Loading::pixels));
-            return new Loading(pixels, () -> turbo.cancel(false));
+        ImageFormats.Decoder fallback = decoder == null ? null : decoder.fallback();
+        if (decoder != null && fallback != null) {
+            ImageFormats.Decoder primary = decoder;
+            // libjpeg-turbo or libwebp, and JavaFX or ImageIO for what they leave (a CMYK JPEG, or
+            // no library), started from the FX thread as JavaFX's decoder needs.
+            CompletableFuture<Image> first =
+                    CompletableFuture.supplyAsync(() -> decodeOffThread(primary, file), imageDecoder);
+            CompletableFuture<Image> pixels = first.exceptionallyCompose(
+                    declined -> CompletableFuture.supplyAsync(() -> startPixels(file, fallback), fxThread)
+                            .thenCompose(Loading::pixels));
+            return new Loading(pixels, () -> first.cancel(false));
         }
         CompletableFuture<Image> pixels;
         Runnable cancel;
@@ -184,6 +213,7 @@ public final class ImageCache {
         try {
             return switch (decoder) {
                 case TURBOJPEG -> TurboJpegDecoder.decode(file);
+                case LIBWEBP -> WebpDecoder.decode(file);
                 case IMAGEIO -> ImageIoDecoder.decode(file);
                 case LIBHEIF -> HeifDecoder.decode(file);
                 case LIBJXL -> JxlDecoder.decode(file);

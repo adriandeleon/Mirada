@@ -16,7 +16,7 @@ class ImageFormatsTest {
     void eachExtensionHasOneDecoder() {
         assertEquals(ImageFormats.Decoder.TURBOJPEG, ImageFormats.decoderFor(Path.of("a.JPG")));
         assertEquals(ImageFormats.Decoder.JAVAFX, ImageFormats.decoderFor(Path.of("a.gif")));
-        assertEquals(ImageFormats.Decoder.IMAGEIO, ImageFormats.decoderFor(Path.of("a.webp")));
+        assertEquals(ImageFormats.Decoder.LIBWEBP, ImageFormats.decoderFor(Path.of("a.webp")));
         assertEquals(ImageFormats.Decoder.IMAGEIO, ImageFormats.decoderFor(Path.of("a.TIFF")));
         assertEquals(ImageFormats.Decoder.IMAGEIO, ImageFormats.decoderFor(Path.of("a.psd")));
         assertEquals(ImageFormats.Decoder.LIBHEIF, ImageFormats.decoderFor(Path.of("a.HEIC")));

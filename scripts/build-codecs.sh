@@ -6,6 +6,8 @@
 #   libjxl    JPEG XL, plus libjxl_threads; brotli, highway and skcms from its own submodules.
 #   turbojpeg JPEG, libjpeg-turbo's TurboJPEG library alone (it carries its own libjpeg): SIMD,
 #             and decoding at 1/2, 1/4 or 1/8 size.
+#   libwebp   WebP, still and animated: libwebp, libwebpdemux (whose animation decoder composes
+#             the frames) and libsharpyuv. Decoding only; no tools.
 #
 # Every library finds the others beside it ($ORIGIN on Linux, @loader_path on macOS), so the folder
 # works wherever it is copied. The last step checks each library's dependencies and fails on anything
@@ -23,6 +25,7 @@ DAV1D_TAG=1.5.4
 LIBHEIF_TAG=v1.23.7
 LIBJXL_TAG=v0.12.0
 LIBJPEG_TURBO_TAG=3.2.0
+LIBWEBP_TAG=v1.6.0
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 out=${1:-$root/target/codecs}
@@ -120,6 +123,19 @@ cmake --build "$work/libjpeg-turbo/build" --target install
 # The libjpeg API library is a second copy of the same decoder that nothing here calls.
 rm -f "$prefix"/lib/libjpeg.* "$prefix"/bin/jpeg62.dll "$prefix"/lib/jpeg.lib
 
+echo "== libwebp $LIBWEBP_TAG (shared, decoder and demux)"
+fetch https://github.com/webmproject/libwebp.git "$LIBWEBP_TAG" libwebp
+webp_simd=ON
+[ "$asm" = false ] && webp_simd=OFF
+cmake -S "$work/libwebp" -B "$work/libwebp/build" "${cmake_common[@]}" \
+    -DBUILD_SHARED_LIBS=ON -DWEBP_ENABLE_SIMD=$webp_simd -DWEBP_BUILD_ANIM_UTILS=OFF \
+    -DWEBP_BUILD_CWEBP=OFF -DWEBP_BUILD_DWEBP=OFF -DWEBP_BUILD_GIF2WEBP=OFF \
+    -DWEBP_BUILD_IMG2WEBP=OFF -DWEBP_BUILD_VWEBP=OFF -DWEBP_BUILD_WEBPINFO=OFF \
+    -DWEBP_BUILD_WEBPMUX=OFF -DWEBP_BUILD_EXTRAS=OFF -DWEBP_BUILD_LIBWEBPMUX=OFF
+cmake --build "$work/libwebp/build" --target install
+# libwebpdecoder is libwebp's decoder half again, for programs that link nothing else.
+rm -f "$prefix"/lib/libwebpdecoder.* "$prefix"/bin/libwebpdecoder.dll "$prefix"/lib/libwebpdecoder.lib
+
 echo "== collecting into $out"
 rm -rf "${out:?}"/*
 mkdir -p "$out/licenses"
@@ -157,12 +173,14 @@ cp "$work/libjxl/third_party/brotli/LICENSE" "$out/licenses/brotli.txt"
 cp "$work/libjxl/third_party/highway/LICENSE" "$out/licenses/highway.txt"
 cp "$work/libjxl/third_party/skcms/LICENSE" "$out/licenses/skcms.txt"
 cp "$work/libjpeg-turbo/LICENSE.md" "$out/licenses/libjpeg-turbo.md"
+cp "$work/libwebp/COPYING" "$out/licenses/libwebp.txt"
 cat > "$out/VERSIONS.txt" <<EOF
 libheif $LIBHEIF_TAG
 libde265 $LIBDE265_TAG
 dav1d $DAV1D_TAG (asm: $asm)
 libjxl $LIBJXL_TAG
 libjpeg-turbo $LIBJPEG_TURBO_TAG (simd: $simd)
+libwebp $LIBWEBP_TAG (simd: $webp_simd)
 EOF
 
 echo "== checking dependencies"

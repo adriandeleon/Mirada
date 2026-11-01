@@ -7,7 +7,8 @@
 # JVM; CI's native job opens all of them in the native image. Re-run this to add a variant; the
 # files are committed, so the tests do not need ImageMagick.
 #
-# Needs: ImageMagick 7 with HEIC/AVIF (libheif), Python with libjxl for the JPEG XL ones.
+# Needs: ImageMagick 7 with HEIC/AVIF (libheif), Python with libjxl for the JPEG XL ones, and
+# ffmpeg with libaom for the AVIF sequence.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 out="$root/src/test/resources/com/mirada/matrix"
@@ -63,11 +64,17 @@ alpha -quality 80 heic-alpha.heic
 base -quality 80 avif-rgb.avif
 alpha -quality 80 avif-alpha.avif
 base -depth 10 -quality 80 avif-10bit.avif
+# An AVIF image sequence (red, then blue coming in from the left), which ImageMagick cannot write.
+ffmpeg -hide_banner -loglevel error -y -f lavfi -i "color=c=red:s=48x32:r=4" -f lavfi -i "color=c=blue:s=48x32:r=4" \
+    -filter_complex "[0][1]overlay=x='if(gte(n,1),0,48)':y=0,format=yuv420p" -frames:v 3 \
+    -c:v libaom-av1 -still-picture 0 -f avif "$out/avif-animated.avif"
 # JPEG XL, through libjxl's encoder (ImageMagick here cannot write it)
 base -depth 8 rgb:"$out/.jxl-rgb.raw"
 python3 -I "$root/scripts/write-jxl.py" "$out/.jxl-rgb.raw" 48 32 3 jxl-rgb.jxl
 alpha -depth 8 rgba:"$out/.jxl-rgba.raw"
 python3 -I "$root/scripts/write-jxl.py" "$out/.jxl-rgba.raw" 48 32 4 jxl-rgba.jxl
+for colour in red blue lime; do magick -size 48x32 "xc:$colour" -depth 8 rgb:"$out/.jxl-$colour.raw"; done
+python3 -I "$root/scripts/write-jxl.py" "$out/.jxl-red.raw,$out/.jxl-blue.raw,$out/.jxl-lime.raw" 48 32 3 jxl-animated.jxl
 rm -f .jxl-*.raw
 # Orientation and metadata
 base -quality 85 -rotate 90 orient-6.jpg

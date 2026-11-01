@@ -65,7 +65,7 @@ public final class Thumbnails {
         } else if (decoder == ImageFormats.Decoder.JAVAFX) {
             image = javaFx(file);
         } else {
-            image = shrink(ImageCache.decodeOffThread(decoder, file), SIZE);
+            image = shrink(decodeOrFallBack(decoder, file), SIZE);
         }
         return new Thumbnail(image, orientation);
     }
@@ -76,6 +76,17 @@ public final class Thumbnails {
             return shrink(TurboJpegDecoder.pixels(file, SIZE).toImage(), SIZE);
         } catch (IOException declined) {
             return javaFx(file);
+        }
+    }
+
+    /** libwebp, and ImageIO for what it leaves; the rest, as they are. */
+    private static Image decodeOrFallBack(ImageFormats.Decoder decoder, Path file) {
+        ImageFormats.Decoder fallback = decoder.fallback();
+        try {
+            return ImageCache.decodeOffThread(decoder, file);
+        } catch (RuntimeException declined) {
+            if (fallback == null) throw declined;
+            return ImageCache.decodeOffThread(fallback, file);
         }
     }
 

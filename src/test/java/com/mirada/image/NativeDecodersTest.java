@@ -87,6 +87,13 @@ class NativeDecodersTest {
     }
 
     @Test
+    void decodesWebp() throws Exception {
+        require(WebpDecoder.available(), "libwebp");
+        WritableImage image = WebpDecoder.decode(fixture("red-blue.webp"));
+        assertRedThenBlue(image, 24);
+    }
+
+    @Test
     void decodesJpeg() throws Exception {
         require(TurboJpegDecoder.available(), "libjpeg-turbo");
         WritableImage image = TurboJpegDecoder.decode(fixture("red-blue.jpg"));

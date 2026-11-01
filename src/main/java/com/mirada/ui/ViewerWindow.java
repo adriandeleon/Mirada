@@ -48,6 +48,7 @@ import com.mirada.AppInfo;
 import com.mirada.folder.FolderImages;
 import com.mirada.folder.ImageFormats;
 import com.mirada.folder.Sorting;
+import com.mirada.image.Animation;
 import com.mirada.image.ImageCache;
 import com.mirada.image.Orientation;
 import com.mirada.os.Trash;
@@ -116,6 +117,12 @@ public final class ViewerWindow {
 
     /** Built the first time it opens. */
     private @Nullable Editor editor;
+
+    /** Shows the next frame of the animation on screen; stopped when there is none. */
+    private final PauseTransition frameTimer = new PauseTransition();
+
+    private @Nullable Animation playing;
+    private int frame;
     /** Built the first time the sidebar opens. */
     private @Nullable InfoPanel info;
 
@@ -151,6 +158,7 @@ public final class ViewerWindow {
         StackPane.setMargin(toast, new Insets(0, 0, 72, 0));
         toastTimer.setOnFinished(e -> toast.setVisible(false));
         slideshow.setOnFinished(e -> slideshowStep());
+        frameTimer.setOnFinished(e -> nextFrame());
         viewport.setKeepZoom(settings.keepZoom());
         settings.addListener(() -> {
             viewport.setKeepZoom(settings.keepZoom());
@@ -353,6 +361,7 @@ public final class ViewerWindow {
         if (tour != null) tour.requested(entry.ready().isDone());
         ImageCache.Preview preview = entry.preview();
         shownImage = null; // until this one's full resolution is in
+        stopAnimation();
         if (preview != null && !entry.ready().isDone()) {
             placeholder.setVisible(false);
             viewport.show(preview.image(), preview.exif().orientation(), preview.width(), preview.height());
@@ -391,6 +400,7 @@ public final class ViewerWindow {
         previewing = null;
         shownImage = image;
         shownOrientation = decoded.exif().orientation();
+        animate(file);
         Startup.markFirstPaint();
         Platform.runLater(() -> Platform.runLater(this::releaseAfterFirstPaint));
         if (tour != null) tour.shown(file, folder.index() == folder.size() - 1);
@@ -402,6 +412,7 @@ public final class ViewerWindow {
     }
 
     private void showMessage(String message) {
+        stopAnimation();
         previewing = null;
         shownImage = null;
         viewport.clear();
@@ -593,8 +604,37 @@ public final class ViewerWindow {
         say("Renamed to " + name);
     }
 
+    /** Starts {@code file} moving once its frames are decoded, if it is an animation still on screen. */
+    private void animate(Path file) {
+        cache.animation(file)
+                .thenAcceptAsync(
+                        animation -> {
+                            if (animation == null || !file.equals(wanted) || !file.equals(folder.current())) return;
+                            playing = animation;
+                            frame = 0;
+                            frameTimer.setDuration(Duration.millis(animation.millis()[0]));
+                            frameTimer.playFromStart();
+                        },
+                        Platform::runLater);
+    }
+
+    private void nextFrame() {
+        Animation animation = playing;
+        if (animation == null) return;
+        frame = (frame + 1) % animation.frames().size();
+        viewport.replace(animation.frames().get(frame));
+        frameTimer.setDuration(Duration.millis(animation.millis()[frame]));
+        frameTimer.playFromStart();
+    }
+
+    private void stopAnimation() {
+        playing = null;
+        frameTimer.stop();
+    }
+
     /** Opens the editor on the image showing, once its full resolution is in. */
     private void edit() {
+        stopAnimation();
         Image image = shownImage;
         Path file = folder.current();
         if (image == null || file == null) {

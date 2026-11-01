@@ -1,8 +1,9 @@
 # Encodes raw 8-bit RGB or RGBA pixels as a lossless JPEG XL with libjxl's encoder, through ctypes.
 # For scripts/make-format-matrix.sh, since ImageMagick here cannot write JPEG XL.
-# Usage: write-jxl.py <raw-file> <width> <height> <channels 3|4> <out.jxl>
+# Usage: write-jxl.py <raw-file>[,<raw-file>...] <width> <height> <channels 3|4> <out.jxl>
+# Several raw files, comma-separated, make an animation, a quarter of a second a frame.
 import ctypes, sys
-raw, width, height, channels, out = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), sys.argv[5]
+raws, width, height, channels, out = sys.argv[1].split(","), int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), sys.argv[5]
 for name in ("libjxl.so.0.12", "libjxl.so.0.11", "libjxl.so"):
     try:
         jxl = ctypes.cdll.LoadLibrary(name); break
@@ -22,6 +23,10 @@ ctypes.c_int32.from_buffer(info, 36).value = 1           # uses_original_profile
 if channels == 4:
     ctypes.c_uint32.from_buffer(info, 56).value = 1      # num_extra_channels
     ctypes.c_uint32.from_buffer(info, 60).value = 8      # alpha_bits
+if len(raws) > 1:
+    ctypes.c_int32.from_buffer(info, 44).value = 1       # have_animation
+    ctypes.c_uint32.from_buffer(info, 80).value = 1000   # tps_numerator: ticks are milliseconds
+    ctypes.c_uint32.from_buffer(info, 84).value = 1      # tps_denominator
 assert jxl.JxlEncoderSetBasicInfo(enc, info) == 0
 color = ctypes.create_string_buffer(256)
 jxl.JxlColorEncodingSetToSRGB(color, 0)
@@ -29,8 +34,14 @@ assert jxl.JxlEncoderSetColorEncoding(enc, color) == 0
 settings = c_void_p(jxl.JxlEncoderFrameSettingsCreate(enc, None))
 assert jxl.JxlEncoderSetFrameLossless(settings, 1) == 0
 fmt = (ctypes.c_uint32 * 6)(channels, 2, 0, 0, 0, 0)
-pixels = open(raw, "rb").read()
-assert jxl.JxlEncoderAddImageFrame(settings, fmt, pixels, c_size_t(len(pixels))) == 0
+for raw in raws:
+    if len(raws) > 1:
+        header = ctypes.create_string_buffer(128)
+        jxl.JxlEncoderInitFrameHeader(header)
+        ctypes.c_uint32.from_buffer(header, 0).value = 250  # duration, in ticks
+        assert jxl.JxlEncoderSetFrameHeader(settings, header) == 0
+    pixels = open(raw, "rb").read()
+    assert jxl.JxlEncoderAddImageFrame(settings, fmt, pixels, c_size_t(len(pixels))) == 0
 jxl.JxlEncoderCloseInput(enc)
 size = 1 << 20
 buffer = ctypes.create_string_buffer(size)

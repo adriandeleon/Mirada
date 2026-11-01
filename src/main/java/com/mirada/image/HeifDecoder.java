@@ -17,6 +17,8 @@ import java.util.Optional;
 
 import javafx.scene.image.WritableImage;
 
+import org.jspecify.annotations.Nullable;
+
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static java.lang.foreign.ValueLayout.JAVA_INT;
 import static java.lang.foreign.ValueLayout.JAVA_LONG;
@@ -130,7 +132,8 @@ final class HeifDecoder {
             MethodHandle imageWidth,
             MethodHandle imageHeight,
             MethodHandle planeReadonly,
-            MethodHandle imageRelease) {
+            MethodHandle imageRelease,
+            @Nullable Sequences sequences) {
 
         static final Optional<Library> INSTANCE = NativeLibraries.load(NativeLibraries.fileNames("heif", List.of("1")))
                 .flatMap(Library::bind);
@@ -187,11 +190,105 @@ final class HeifDecoder {
                                 lookup,
                                 "heif_image_get_plane_readonly",
                                 FunctionDescriptor.of(ADDRESS, ADDRESS, JAVA_INT, ADDRESS)),
-                        handle(linker, lookup, "heif_image_release", FunctionDescriptor.ofVoid(ADDRESS))));
+                        handle(linker, lookup, "heif_image_release", FunctionDescriptor.ofVoid(ADDRESS)),
+                        Sequences.bind(linker, lookup)));
             } catch (Throwable unusable) {
                 // A library too old for one of these functions, or one whose init fails: as if absent.
                 return Optional.empty();
             }
+        }
+    }
+
+    /** libheif 1.20's image sequences (an animated AVIF or HEIC): optional, older copies lack them. */
+    private record Sequences(
+            MethodHandle hasSequence,
+            MethodHandle getTrack,
+            MethodHandle timescale,
+            MethodHandle decodeNext,
+            MethodHandle duration,
+            MethodHandle trackRelease) {
+
+        static @Nullable Sequences bind(Linker linker, SymbolLookup lookup) {
+            try {
+                return new Sequences(
+                        handle(linker, lookup, "heif_context_has_sequence", FunctionDescriptor.of(JAVA_INT, ADDRESS)),
+                        handle(
+                                linker,
+                                lookup,
+                                "heif_context_get_track",
+                                FunctionDescriptor.of(ADDRESS, ADDRESS, JAVA_INT)),
+                        handle(linker, lookup, "heif_track_get_timescale", FunctionDescriptor.of(JAVA_INT, ADDRESS)),
+                        handle(
+                                linker,
+                                lookup,
+                                "heif_track_decode_next_image",
+                                FunctionDescriptor.of(ERROR, ADDRESS, ADDRESS, JAVA_INT, JAVA_INT, ADDRESS)),
+                        handle(linker, lookup, "heif_image_get_duration", FunctionDescriptor.of(JAVA_INT, ADDRESS)),
+                        handle(linker, lookup, "heif_track_release", FunctionDescriptor.ofVoid(ADDRESS)));
+            } catch (RuntimeException olderThan120) {
+                return null;
+            }
+        }
+    }
+
+    private static final int END_OF_SEQUENCE = 13;
+
+    /**
+     * Every frame of an animated HEIF (an AVIF or HEIC image sequence), or null for a still, for a
+     * libheif without sequences, or for one too large to hold.
+     */
+    static Animation.@Nullable Frames frames(Path file) throws IOException {
+        Library heif = Library.INSTANCE.orElseThrow(() -> new IOException("libheif was not found"));
+        Sequences sequences = heif.sequences;
+        if (sequences == null) return null;
+        try (Arena arena = Arena.ofConfined();
+                FileChannel channel = FileChannel.open(file, StandardOpenOption.READ)) {
+            MemorySegment data = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size(), arena);
+            MemorySegment context = (MemorySegment) heif.contextAlloc.invoke();
+            if (context.equals(MemorySegment.NULL)) throw new IOException("libheif could not allocate a context");
+            MemorySegment track = MemorySegment.NULL;
+            try {
+                heif.setMaxDecodingThreads.invoke(context, Runtime.getRuntime().availableProcessors());
+                check((MemorySegment)
+                        heif.readFromMemory.invoke(arena, context, data, data.byteSize(), MemorySegment.NULL));
+                if ((int) sequences.hasSequence.invoke(context) == 0) return null;
+                track = (MemorySegment) sequences.getTrack.invoke(context, 0); // the first visual track
+                if (track.equals(MemorySegment.NULL)) return null;
+                long timescale = Integer.toUnsignedLong((int) sequences.timescale.invoke(track));
+                Animation.Collector collector = new Animation.Collector();
+                MemorySegment imageOut = arena.allocate(ADDRESS);
+                MemorySegment strideOut = arena.allocate(JAVA_INT);
+                while (true) {
+                    MemorySegment error = (MemorySegment) sequences.decodeNext.invoke(
+                            arena, track, imageOut, COLORSPACE_RGB, CHROMA_INTERLEAVED_RGBA, MemorySegment.NULL);
+                    if (error.get(JAVA_INT, 0) == END_OF_SEQUENCE) break;
+                    check(error);
+                    MemorySegment image = imageOut.get(ADDRESS, 0);
+                    try {
+                        int width = (int) heif.imageWidth.invoke(image, CHANNEL_INTERLEAVED);
+                        int height = (int) heif.imageHeight.invoke(image, CHANNEL_INTERLEAVED);
+                        MemorySegment plane =
+                                (MemorySegment) heif.planeReadonly.invoke(image, CHANNEL_INTERLEAVED, strideOut);
+                        if (plane.equals(MemorySegment.NULL) || width <= 0 || height <= 0) break;
+                        int stride = strideOut.get(JAVA_INT, 0);
+                        ArgbPixels frame = Pixels.fromInterleaved(
+                                plane.reinterpret((long) stride * height), width, height, stride, 4);
+                        long ticks = Integer.toUnsignedLong((int) sequences.duration.invoke(image));
+                        long millis = timescale > 0 ? ticks * 1000 / timescale : 0;
+                        if (!collector.add(frame, millis)) return null; // too large to hold
+                    } finally {
+                        heif.imageRelease.invoke(image);
+                    }
+                }
+                return collector.frames();
+            } finally {
+                if (!track.equals(MemorySegment.NULL)) sequences.trackRelease.invoke(track);
+                heif.contextFree.invoke(context);
+            }
+        } catch (IOException | RuntimeException | Error e) {
+            throw e;
+        } catch (Throwable e) {
+            throw new IOException("libheif call failed", e);
         }
     }
 

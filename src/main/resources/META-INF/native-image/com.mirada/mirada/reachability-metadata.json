@@ -495,6 +495,42 @@
       ]
     },
     {
+      "type": "com.sun.imageio.plugins.jpeg.JPEGImageWriter",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "grabPixels",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "warningOccurred",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "warningWithMessage",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "writeMetadata",
+          "parameterTypes": []
+        },
+        {
+          "name": "writeOutputData",
+          "parameterTypes": [
+            "byte[]",
+            "int",
+            "int"
+          ]
+        }
+      ]
+    },
+    {
       "type": "com.sun.javafx.PreviewFeature"
     },
     {
@@ -1864,6 +1900,21 @@
         ]
       },
       {
+        "returnType": "void*",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "jint"
+        ]
+      },
+      {
+        "returnType": "void*",
+        "parameterTypes": [
+          "void*",
+          "jint"
+        ]
+      },
+      {
         "returnType": "struct(jint,jint,void*)",
         "parameterTypes": [
           "void*",
@@ -1951,6 +2002,13 @@
           "void*",
           "jlong",
           "void*"
+        ]
+      },
+      {
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*",
+          "struct(void*,void*,void*,void*,void*,void*,void*,void*)"
         ]
       },
       {

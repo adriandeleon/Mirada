@@ -68,12 +68,15 @@ class MatrixTest {
     private static String decode(ImageFormats.Decoder decoder, Path file) {
         try {
             Image image;
-            if (decoder == ImageFormats.Decoder.TURBOJPEG) {
-                // As ImageCache does: JavaFX for what libjpeg-turbo declines (CMYK, or no library).
+            ImageFormats.Decoder fallback = decoder.fallback();
+            if (fallback != null) {
+                // As ImageCache does: JavaFX or ImageIO for what libjpeg-turbo or libwebp declines.
                 try {
                     image = ImageCache.decodeOffThread(decoder, file);
                 } catch (RuntimeException declined) {
-                    image = javaFx(file);
+                    image = fallback == ImageFormats.Decoder.JAVAFX
+                            ? javaFx(file)
+                            : ImageCache.decodeOffThread(fallback, file);
                 }
             } else if (decoder == ImageFormats.Decoder.JAVAFX) {
                 image = javaFx(file);

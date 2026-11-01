@@ -23,6 +23,8 @@ public final class ImageFormats {
         /** libjpeg-turbo; JavaFX takes over a JPEG it will not decode (CMYK, 12-bit). */
         TURBOJPEG(false),
         IMAGEIO(false),
+        /** libwebp; ImageIO's pure-Java reader takes over when libwebp is missing. */
+        LIBWEBP(false),
         LIBHEIF(true),
         LIBJXL(true);
 
@@ -40,6 +42,20 @@ public final class ImageFormats {
         public boolean turnsUpright() {
             return turnsUpright;
         }
+
+        /** The decoder that takes a file this one declines or cannot load for, or null for none. */
+        public @Nullable Decoder fallback() {
+            return switch (this) {
+                case TURBOJPEG -> JAVAFX;
+                case LIBWEBP -> IMAGEIO;
+                default -> null;
+            };
+        }
+
+        /** Whether it can decode every frame of an animation (JavaFX animates GIFs itself). */
+        public boolean animates() {
+            return this == LIBWEBP || this == LIBHEIF || this == LIBJXL;
+        }
     }
 
     /** Lower case, without the dot, to its decoder. */
@@ -51,7 +67,7 @@ public final class ImageFormats {
             Map.entry("png", Decoder.JAVAFX),
             Map.entry("gif", Decoder.JAVAFX),
             Map.entry("bmp", Decoder.JAVAFX),
-            Map.entry("webp", Decoder.IMAGEIO),
+            Map.entry("webp", Decoder.LIBWEBP),
             Map.entry("tif", Decoder.IMAGEIO),
             Map.entry("tiff", Decoder.IMAGEIO),
             Map.entry("psd", Decoder.IMAGEIO),

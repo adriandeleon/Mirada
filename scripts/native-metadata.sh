@@ -6,7 +6,8 @@
 # test fixtures (one file of every format) and the format matrix (every variant: bit depths, grey,
 # CMYK, alpha, compressions; scripts/make-format-matrix.sh). Together they reach every decoder,
 # ImageIO's plugins and the JDK's native image code behind them (JNI), the libheif and libjxl
-# bindings, the EXIF reader, the stylesheets and the icon. The second run merges into the first.
+# bindings, the EXIF reader, the stylesheets and the icon. The second run merges into the first, and a
+# third writes one image in every format the editor saves (com.mirada.edit.Encoder's main).
 # It runs from the class path, as the native image is built. JavaFX's own metadata comes from StaticFX.
 #
 # Afterwards: JavaFX's own native libraries are dropped from the resources (StaticFX links them in), and
@@ -46,6 +47,11 @@ for folder in src/test/resources/com/mirada/image src/test/resources/com/mirada/
         -cp "$classpath" com.mirada.Launcher "$folder"
     agent="config-merge-dir"
 done
+# The editor's writers (JPEG's goes through JNI), which no tour reaches.
+encoded="$(mktemp -d)"
+"$graal/bin/java" -agentlib:native-image-agent=config-merge-dir="$out" -Djava.awt.headless=true \
+    -cp "$classpath" com.mirada.edit.Encoder "$encoded"
+rm -rf "$encoded"
 
 python="$(command -v python3 || command -v python)"
 "$python" - "$out/reachability-metadata.json" <<'PY'
