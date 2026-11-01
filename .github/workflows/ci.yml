@@ -150,12 +150,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # Oracle GraalVM, the distribution StaticFX is confirmed with.
-      - name: Set up Oracle GraalVM 25
+      # Oracle GraalVM, the distribution StaticFX is confirmed with. 25.4, not the 25.0 LTS: 25.0
+      # has no AWT on macOS, so ImageIO (WebP, TIFF, PSD) fails there.
+      - name: Set up Oracle GraalVM 25.4
         uses: graalvm/setup-graalvm@v1
         with:
           distribution: graalvm
-          java-version: '25'
+          version: '25.4'
           cache: maven
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -173,7 +174,9 @@ jobs:
 
       # A few minutes and several GB of memory.
       - name: Native image
-        run: ./mvnw -B --no-transfer-progress -Pnative -Denforcer.skip -DskipTests package
+        run: |
+          ./mvnw -B --no-transfer-progress -Pnative -Denforcer.skip -DskipTests package
+          ls -l target/mirada target/*.so target/*.dylib 2>/dev/null || true
 
       # The codec bundle the build downloaded is target/codecs, beside target/mirada, which is
       # where a native image looks for it.
