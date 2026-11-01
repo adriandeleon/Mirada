@@ -119,8 +119,10 @@ class NativeDecodersTest {
     @Test
     void theBundleIsFoundBesideANativeImage() {
         assertEquals(Path.of("/opt/x/codecs"), NativeLibraries.bundleFolder("/opt/x/codecs", "runtime", "/bin/mirada"));
+        // Absolute as the platform makes it: Windows adds the drive letter.
         assertEquals(
-                Path.of("/opt/mirada/codecs"), NativeLibraries.bundleFolder(null, "runtime", "/opt/mirada/mirada"));
+                Path.of("/opt/mirada").toAbsolutePath().resolve("codecs"),
+                NativeLibraries.bundleFolder(null, "runtime", "/opt/mirada/mirada"));
         // On the JVM the property is the only source: the executable is java itself.
         assertEquals(null, NativeLibraries.bundleFolder(null, null, "/usr/bin/java"));
         assertEquals(null, NativeLibraries.bundleFolder(" ", "runtime", null));
