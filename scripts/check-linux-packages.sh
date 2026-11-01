@@ -14,6 +14,9 @@ set -euo pipefail
 
 dir="${1:?installers directory required}"
 icon="${2:?icon required}"
+# Absolute: the rpm is unpacked from inside a temporary directory.
+dir="$(cd "$dir" && pwd)"
+icon="$(cd "$(dirname "$icon")" && pwd)/$(basename "$icon")"
 failures=0
 fail() { echo "::error::$1"; failures=$((failures + 1)); }
 
