@@ -44,6 +44,7 @@ A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an en
 |---|---|
 | `com.mirada.folder` | The "document": the images in one folder, in natural name order, and which one is showing (`FolderImages`, `NaturalOrder`, `ImageFormats`) |
 | `com.mirada.image` | Loading: decoded images cached by path (`ImageCache`), EXIF orientation and the camera line (`Exif`, `Orientation`) |
+| `com.mirada.os` | Platform glue: the macOS open-file handler and the one rule for `java.awt.headless` (`MacOpenFiles`) |
 | `com.mirada.ui` | The window (`ViewerWindow`), the zoom/pan canvas (`ImageViewport`) and its arithmetic (`Zoom`), every command with its keys, name and description (`Command`), the command palette (`CommandPalette`), the theme |
 
 Four decoders (`ImageFormats.Decoder`, by extension). JavaFX's own `Image` decodes BMP, GIF
@@ -163,19 +164,23 @@ a prefetched neighbour is 2–8 ms for every format.
   automatic names `module-info` requires. jdeps carries the readers' `provides` over from
   `META-INF/services`; none of them calls `ServiceLoader` itself, so no `uses` is needed. A new
   dependency that is an automatic module needs an entry there, or `-Pdist` fails at jlink.
-- **File associations register on all three platforms, but macOS does not pass the file.** On
-  Linux (`Exec=… %f`) and Windows the double-clicked image arrives as Mirada's argument. macOS sends
-  an "open documents" Apple Event instead, which only AWT's `Desktop.setOpenFileHandler` receives —
-  and AWT is headless here. Until that is wired (Torrenta's `os.AwtUse` does it), a double-click on
-  macOS starts Mirada with an empty window.
+- **macOS does not pass a double-clicked file as an argument.** Linux (`Exec=… %f`) and Windows do.
+  macOS sends an "open documents" Apple Event, which the JDK surfaces only through AWT's
+  `Desktop.setOpenFileHandler` — so `App.main` leaves AWT *headful* on macOS alone
+  (`MacOpenFiles.headless`) and `App.start` installs the handler after the first image is asked for.
+  The event that launched the app arrives before that; the JDK holds it and delivers it once the
+  handler is set. Torrenta's `os.MacHandlers` and `AwtUse`, which run this way in production. The
+  handler checks the `java.awt.headless` property before touching `GraphicsEnvironment`, so Linux
+  and Windows load no AWT class for it (measured: no start-up difference). **Not yet tried with a
+  real Finder double-click**: CI's macOS runner launches with an argument.
 - **The icon is rendered with librsvg, not ImageMagick.** ImageMagick's built-in SVG renderer, used
   when `rsvg-convert` is missing, draws only the tile of these icons (Termina's too). `branding/`
   holds the SVG and the PNG, ICO and ICNS made from it.
 - **The macOS bundle is changed after jpackage signs it** (codecs, AOT cache, version), so
   `scripts/fix-mac-bundle.sh` re-signs it ad hoc, last; CI verifies the signature.
-- **AWT is forced headless in `App.main`, as the first statement.** ImageIO and `BufferedImage` are
-  `java.desktop`, and on macOS an initialised AWT contends with JavaFX for the AppKit run loop. Tests
-  get the same through surefire's `java.awt.headless`.
+- **`java.awt.headless` is decided in `App.main`, as the first statement**: headless everywhere but
+  macOS (above). ImageIO and `BufferedImage` are `java.desktop` and need no display; tests are
+  headless on every platform through surefire's `java.awt.headless`.
 - **The TwelveMonkeys readers are found by service lookup**, so nothing names their classes.
   `module-info` requires them anyway, or a jlink image would drop them silently, and
   `ImageFormatsTest.everyImageIoExtensionHasAReader` fails if one leaves the pom.
@@ -223,8 +228,7 @@ Termina and Torrenta. `mvn compile` fails on any null that can reach a type not 
 
 ## Not done
 
-A filmstrip; crop; slideshow; a menu bar or settings. Opening a double-clicked file on macOS (see
-above). Signing: Developer ID and notarization on macOS, a code-signing certificate on Windows, GPG
+A filmstrip; crop; slideshow; a menu bar or settings. Signing: Developer ID and notarization on macOS, a code-signing certificate on Windows, GPG
 for the Linux packages. An AppImage, Homebrew and winget. No release has been made yet. Decoding the first image
 while the window is still being built (they run one after the other now, about 50 ms apart). Animated WebP, AVIF and JPEG XL show their first frame.
 JPEG XL is decoded in its own colour space, not converted to sRGB. Opening files from Finder on
