@@ -6,6 +6,8 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -14,7 +16,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TrashTest {
 
+    /** The freedesktop trash is Linux's, and these paths are Unix ones. */
     @Test
+    @DisabledOnOs(OS.WINDOWS)
     void theHomeTrashFollowsXdgDataHome() {
         assertEquals(Path.of("/data/Trash"), Trash.homeTrash("/data", "/home/me"));
         assertEquals(Path.of("/home/me/.local/share/Trash"), Trash.homeTrash(null, "/home/me"));
@@ -31,6 +35,7 @@ class TrashTest {
     }
 
     @Test
+    @DisabledOnOs(OS.WINDOWS)
     void theInfoFileSaysWhereItCameFromAndWhen() {
         String info =
                 Trash.trashInfo(Path.of("/home/me/My Photos/été.jpg"), LocalDateTime.of(2026, 11, 1, 12, 30, 5, 999));

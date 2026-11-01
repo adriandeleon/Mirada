@@ -24,7 +24,7 @@ import org.jspecify.annotations.Nullable;
  * Linux, Homebrew on macOS). A library found nowhere is not an error here: its formats then open
  * with a message saying what is missing.
  */
-final class NativeLibraries {
+public final class NativeLibraries {
 
     /** System property naming the bundled codecs folder. */
     static final String BUNDLE_PROPERTY = "mirada.codecs";
@@ -88,6 +88,27 @@ final class NativeLibraries {
         if (!"runtime".equals(imageCode) || executable == null) return null;
         Path parent = Path.of(executable).toAbsolutePath().getParent();
         return parent == null ? null : parent.resolve("codecs");
+    }
+
+    /**
+     * The bundle's {@code VERSIONS.txt}, for the About window, or null without a bundle. Beside the
+     * libraries, except in the macOS native app, where codesign allows only code in {@code
+     * Contents/MacOS} and the bundle's text files are in {@code Contents/Resources/codecs}.
+     */
+    public static @Nullable Path versionsFile() {
+        Path folder = bundleFolder(
+                System.getProperty(BUNDLE_PROPERTY),
+                System.getProperty("org.graalvm.nativeimage.imagecode"),
+                ProcessHandle.current().info().command().orElse(null));
+        if (folder == null) return null;
+        Path beside = folder.resolve("VERSIONS.txt");
+        if (Files.isRegularFile(beside)) return beside;
+        Path macOs = folder.getParent();
+        Path contents = macOs == null ? null : macOs.getParent();
+        Path resources = contents == null
+                ? null
+                : contents.resolve("Resources").resolve("codecs").resolve("VERSIONS.txt");
+        return resources != null && Files.isRegularFile(resources) ? resources : null;
     }
 
     private static Optional<SymbolLookup> remember(String key, String origin, Optional<SymbolLookup> found) {

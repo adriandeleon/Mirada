@@ -57,6 +57,14 @@ if [ -d "$appdir/codecs" ]; then
     rm -rf "$bin/codecs"
     mv "$appdir/codecs" "$bin/codecs"
 fi
+# codesign takes everything in Contents/MacOS for code and refuses a bundle with text there: the
+# bundle's licences and versions go to Contents/Resources/codecs (NativeLibraries.versionsFile).
+if [ "$(uname -s)" = Darwin ] && [ -d "$bin/codecs" ]; then
+    mkdir -p "$image/Contents/Resources/codecs"
+    for text in "$bin/codecs/licenses" "$bin/codecs/VERSIONS.txt"; do
+        [ -e "$text" ] && mv "$text" "$image/Contents/Resources/codecs/"
+    done
+fi
 rm -rf "$runtime"
 
 echo "[native] $launcher is the native image, with ${#libs[@]} JDK libraries and the codecs beside it"

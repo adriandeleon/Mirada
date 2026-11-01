@@ -23,6 +23,7 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 
 import com.mirada.AppInfo;
+import com.mirada.image.NativeLibraries;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -128,12 +129,14 @@ final class AboutWindow {
 
     /** The bundle's VERSIONS.txt, joined on one line; null without a bundle. */
     private static @Nullable String codecVersions() {
-        String folder = System.getProperty("mirada.codecs");
-        if (folder == null || folder.isBlank()) return null;
+        Path versions = NativeLibraries.versionsFile();
+        if (versions == null) return null;
         try {
-            return String.join(", ", Files.readAllLines(Path.of(folder, "VERSIONS.txt"), StandardCharsets.UTF_8))
+            return String.join(", ", Files.readAllLines(versions, StandardCharsets.UTF_8))
                     .replace(" (asm: true)", "")
-                    .replace(" (asm: false)", " (no asm)");
+                    .replace(" (asm: false)", " (no asm)")
+                    .replace(" (simd: ON)", "")
+                    .replace(" (simd: OFF)", " (no SIMD)");
         } catch (IOException | RuntimeException e) {
             return null;
         }

@@ -29,10 +29,11 @@ Darwin)
         # A self-signed code-signing certificate, trusted on this runner only.
         identity="Mirada Test Signing"
         p12_password="test"
-        openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=$identity" \
+        # The system's openssl (LibreSSL), whose .p12 the keychain imports on every macOS.
+        /usr/bin/openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=$identity" \
             -keyout "$RUNNER_TEMP/test.key" -out "$RUNNER_TEMP/test.pem" \
             -addext "keyUsage=critical,digitalSignature" -addext "extendedKeyUsage=critical,codeSigning" 2> /dev/null
-        openssl pkcs12 -export -legacy -inkey "$RUNNER_TEMP/test.key" -in "$RUNNER_TEMP/test.pem" \
+        /usr/bin/openssl pkcs12 -export -inkey "$RUNNER_TEMP/test.key" -in "$RUNNER_TEMP/test.pem" \
             -out "$p12" -passout "pass:$p12_password" -name "$identity"
         sudo security add-trusted-cert -d -r trustRoot -p codeSign \
             -k /Library/Keychains/System.keychain "$RUNNER_TEMP/test.pem"
