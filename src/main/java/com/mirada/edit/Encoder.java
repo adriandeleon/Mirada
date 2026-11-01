@@ -1,18 +1,23 @@
 package com.mirada.edit;
 
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.zip.CRC32;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageOutputStream;
+import javax.imageio.stream.MemoryCacheImageOutputStream;
 
 import org.jspecify.annotations.Nullable;
 
@@ -21,8 +26,9 @@ import org.jspecify.annotations.Nullable;
  * JPEG (at quality {@value #JPEG_QUALITY}), PNG, TIFF and BMP. WebP, HEIC, AVIF, JPEG XL and PSD
  * can be opened but not written; the editor offers JPEG or PNG for those instead.
  *
- * <p>The file's metadata is not carried over: the orientation is baked into the pixels, and what
- * else EXIF held (the camera, the date) is left behind.
+ * <p>EXIF, when given ({@link ExifBlock#carried}), goes into a JPEG as its APP1 segment and into a
+ * PNG as its eXIf chunk; TIFF and BMP are written without it. Nothing else is carried: not XMP,
+ * which repeats the orientation, and not an ICC profile.
  */
 public final class Encoder {
 
@@ -63,33 +69,91 @@ public final class Encoder {
 
     /** Writes {@code image} to {@code file}, replacing it if it exists, through a temporary file. */
     public static void write(Raster image, Path file) throws IOException {
+        write(image, file, null);
+    }
+
+    /**
+     * Writes {@code image} to {@code file} as {@link #write(Raster, Path)} does, with {@code exif} (a
+     * TIFF structure, as {@link ExifBlock} gives) in it when the format carries EXIF.
+     */
+    public static void write(Raster image, Path file, byte @Nullable [] exif) throws IOException {
         String format = formatFor(file);
         if (format == null) throw new IOException("Mirada can write JPEG, PNG, TIFF and BMP");
         boolean alpha = !image.opaque() && (format.equals("png") || format.equals("tiff"));
         BufferedImage out = toBuffered(image, alpha);
         // Beside the target, created as any new file is (createTempFile would make it owner-only).
         Path temporary = file.resolveSibling(".mirada-" + Long.toHexString(System.nanoTime()) + ".tmp");
+        boolean withExif =
+                exif != null && (format.equals("png") || format.equals("jpeg") && exif.length <= ExifBlock.MAX_IN_JPEG);
         try {
-            try (ImageOutputStream stream = ImageIO.createImageOutputStream(temporary.toFile())) {
-                Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName(format);
-                if (!writers.hasNext()) throw new IOException("no " + format + " writer");
-                ImageWriter writer = writers.next();
-                try {
-                    writer.setOutput(stream);
-                    ImageWriteParam param = writer.getDefaultWriteParam();
-                    if (format.equals("jpeg")) {
-                        param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-                        param.setCompressionQuality(JPEG_QUALITY);
-                    }
-                    writer.write(null, new IIOImage(out, null, null), param);
-                } finally {
-                    writer.dispose();
+            if (exif != null && withExif) {
+                // Encoded in memory, so the block can go in near the start of the file.
+                ByteArrayOutputStream encoded = new ByteArrayOutputStream();
+                try (ImageOutputStream stream = new MemoryCacheImageOutputStream(encoded)) {
+                    encode(out, format, stream);
+                }
+                byte[] bytes = encoded.toByteArray();
+                Files.write(
+                        temporary, format.equals("png") ? withExifChunk(bytes, exif) : withExifSegment(bytes, exif));
+            } else {
+                try (ImageOutputStream stream = ImageIO.createImageOutputStream(temporary.toFile())) {
+                    encode(out, format, stream);
                 }
             }
             Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
         } finally {
             Files.deleteIfExists(temporary);
         }
+    }
+
+    private static void encode(BufferedImage image, String format, ImageOutputStream stream) throws IOException {
+        Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName(format);
+        if (!writers.hasNext()) throw new IOException("no " + format + " writer");
+        ImageWriter writer = writers.next();
+        try {
+            writer.setOutput(stream);
+            ImageWriteParam param = writer.getDefaultWriteParam();
+            if (format.equals("jpeg")) {
+                param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                param.setCompressionQuality(JPEG_QUALITY);
+            }
+            writer.write(null, new IIOImage(image, null, null), param);
+        } finally {
+            writer.dispose();
+        }
+    }
+
+    /**
+     * {@code jpeg} with an APP1 segment holding {@code exif}, after the JFIF segment when there is one
+     * (JFIF must come first; readers find EXIF after it), else right after the start of image.
+     */
+    static byte[] withExifSegment(byte[] jpeg, byte[] exif) {
+        int at = 2;
+        if ((jpeg[2] & 0xFF) == 0xFF && (jpeg[3] & 0xFF) == 0xE0) {
+            at = 4 + ((jpeg[4] & 0xFF) << 8 | jpeg[5] & 0xFF);
+        }
+        int length = 2 + 6 + exif.length;
+        ByteBuffer out = ByteBuffer.allocate(jpeg.length + 2 + length);
+        out.put(jpeg, 0, at);
+        out.put((byte) 0xFF).put((byte) 0xE1).putShort((short) length);
+        out.put("Exif\0\0".getBytes(StandardCharsets.ISO_8859_1)).put(exif);
+        out.put(jpeg, at, jpeg.length - at);
+        return out.array();
+    }
+
+    /** {@code png} with an eXIf chunk holding {@code exif}, right after IHDR (it must precede IDAT). */
+    static byte[] withExifChunk(byte[] png, byte[] exif) {
+        int ihdrLength = ByteBuffer.wrap(png, 8, 4).getInt();
+        int at = 8 + 12 + ihdrLength;
+        byte[] type = "eXIf".getBytes(StandardCharsets.ISO_8859_1);
+        CRC32 crc = new CRC32();
+        crc.update(type);
+        crc.update(exif);
+        ByteBuffer out = ByteBuffer.allocate(png.length + 12 + exif.length);
+        out.put(png, 0, at);
+        out.putInt(exif.length).put(type).put(exif).putInt((int) crc.getValue());
+        out.put(png, at, png.length - at);
+        return out.array();
     }
 
     /**

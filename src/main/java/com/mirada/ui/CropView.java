@@ -19,7 +19,7 @@ import org.jspecify.annotations.Nullable;
  * The editor's canvas: the picture as the edit has turned and flipped it, fitted to the space, with
  * the crop box over it — the outside dimmed, the box ruled in thirds, a handle at each corner and
  * edge. Dragging inside moves the box, dragging a handle resizes it ({@link CropBox} has the rules);
- * every change is reported in the picture's own pixels.
+ * every change is reported in the picture's own pixels, and the end of each drag that changed it.
  */
 final class CropView extends Region {
 
@@ -34,6 +34,7 @@ final class CropView extends Region {
     private final Line[] thirds = new Line[4];
     private final List<Rectangle> handles = new ArrayList<>();
     private final Consumer<CropBox> changed;
+    private final Runnable dragged;
 
     private double pictureWidth = 1;
     private double pictureHeight = 1;
@@ -47,11 +48,17 @@ final class CropView extends Region {
     private double scale = 1;
 
     private CropBox.@Nullable Handle dragging;
+    private @Nullable CropBox before;
     private double lastX;
     private double lastY;
 
-    CropView(Consumer<CropBox> changed) {
+    /**
+     * @param changed every change to the box, as it is dragged
+     * @param dragged the end of a drag that changed it
+     */
+    CropView(Consumer<CropBox> changed, Runnable dragged) {
         this.changed = changed;
+        this.dragged = dragged;
         getStyleClass().add("crop-view");
         picture.setPreserveRatio(false);
         picture.setSmooth(true);
@@ -89,7 +96,7 @@ final class CropView extends Region {
         setOnMouseMoved(e -> setCursor(cursorFor(handleAt(e.getX(), e.getY()))));
         setOnMousePressed(this::onPressed);
         setOnMouseDragged(this::onDragged);
-        setOnMouseReleased(e -> dragging = null);
+        setOnMouseReleased(this::onReleased);
     }
 
     /** A new picture (after a turn or a flip), with the box to show on it. */
@@ -122,6 +129,7 @@ final class CropView extends Region {
 
     private void onPressed(MouseEvent e) {
         dragging = handleAt(e.getX(), e.getY());
+        before = box;
         lastX = e.getX();
         lastY = e.getY();
         e.consume();
@@ -138,6 +146,13 @@ final class CropView extends Region {
         requestLayout();
         changed.accept(box);
         e.consume();
+    }
+
+    private void onReleased(MouseEvent e) {
+        boolean moved = dragging != null && !box.equals(before);
+        dragging = null;
+        before = null;
+        if (moved) dragged.run();
     }
 
     /** The handle under ({@code x}, {@code y}), MOVE inside the box, or null outside it. */

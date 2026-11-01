@@ -33,6 +33,8 @@ import com.mirada.edit.AspectRatio;
 import com.mirada.edit.CropBox;
 import com.mirada.edit.Edit;
 import com.mirada.edit.Encoder;
+import com.mirada.edit.ExifBlock;
+import com.mirada.edit.History;
 import com.mirada.edit.Raster;
 import com.mirada.image.Orientation;
 import com.mirada.image.Shrink;
@@ -45,17 +47,31 @@ import org.jspecify.annotations.Nullable;
  * full image off the FX thread and writes it as a new file, the original untouched unless it is
  * chosen in the save dialog.
  *
+ * <p>Every step can be undone, Reset included: a turn, a flip, a new shape, each drag of the box,
+ * and each run of arrow presses. The saved file keeps the original's EXIF, made true of the edit
+ * ({@link ExifBlock}).
+ *
  * <p>Keys: Enter or Ctrl+S saves, Escape cancels, R and Shift+R turn, H and V flip, A steps through
- * the shapes, Backspace resets, the arrows move the box (Shift: further) and Ctrl+arrows resize it.
+ * the shapes, Backspace resets, Ctrl+Z undoes and Ctrl+Shift+Z or Ctrl+Y redoes, the arrows move the
+ * box (Shift: further) and Ctrl+arrows resize it.
  */
 final class Editor {
 
     static final int PREVIEW_SIZE = 1600;
 
+    /** What one undo takes back: the edit and the shape the crop is held to. */
+    private record Step(Edit edit, AspectRatio shape) {}
+
+    /** The runs of arrow presses that undo as one: moving the box, and resizing it. */
+    private enum Nudging {
+        MOVE,
+        RESIZE
+    }
+
     private final BorderPane window;
     private final Node viewer;
     private final BorderPane node = new BorderPane();
-    private final CropView crop = new CropView(this::cropped);
+    private final CropView crop = new CropView(this::cropped, this::record);
     private final ChoiceBox<AspectRatio> shape = new ChoiceBox<>();
     private final Label title = new Label("Edit");
     private final Consumer<String> say;
@@ -66,6 +82,12 @@ final class Editor {
     private Consumer<Path> saved = file -> {};
     private Raster uprightPreview = new Raster(1, 1, new int[] {0});
     private Edit edit = Edit.NONE;
+    private final History<Step> history = new History<>(new Step(Edit.NONE, AspectRatio.FREE));
+    private final Button undoButton = tool("Undo", "Ctrl+Z", this::undo);
+    private final Button redoButton = tool("Redo", "Ctrl+Shift+Z", this::redo);
+    /** True while the editor sets the shape itself, so the shape's listener records no step. */
+    private boolean quiet;
+
     private boolean saving;
 
     /**
@@ -109,7 +131,11 @@ final class Editor {
             }
         });
         shape.setValue(AspectRatio.FREE);
-        shape.valueProperty().addListener((o, was, now) -> shapeChanged());
+        shape.valueProperty().addListener((o, was, now) -> {
+            if (quiet) return;
+            shapeChanged();
+            record();
+        });
         shape.setTooltip(new Tooltip("The crop's shape (A)"));
         HBox bottom = new HBox(
                 8,
@@ -121,6 +147,8 @@ final class Editor {
                 tool("Flip Horizontally", "H", () -> apply(edit.flippedHorizontally())),
                 tool("Flip Vertically", "V", () -> apply(edit.flippedVertically())),
                 spacer(),
+                undoButton,
+                redoButton,
                 tool("Reset", "Backspace", this::reset));
         bottom.setAlignment(Pos.CENTER);
         bottom.setPadding(new Insets(10, 14, 10, 14));
@@ -146,7 +174,11 @@ final class Editor {
         saved = whenSaved;
         uprightPreview = Edit.upright(raster(Shrink.toFit(image, PREVIEW_SIZE)), imageOrientation);
         edit = Edit.NONE;
+        quiet = true;
         shape.setValue(AspectRatio.FREE);
+        quiet = false;
+        history.reset(new Step(Edit.NONE, AspectRatio.FREE));
+        updateUndo();
         title.setText("Edit " + name(file));
         showArranged();
         if (!isShowing()) window.setCenter(node);
@@ -171,15 +203,24 @@ final class Editor {
                 if (!e.isShortcutDown()) return false;
                 save();
             }
+            case Z -> {
+                if (!e.isShortcutDown()) return false;
+                if (e.isShiftDown()) redo();
+                else undo();
+            }
+            case Y -> {
+                if (!e.isShortcutDown()) return false;
+                redo();
+            }
             case R -> turn(e.isShiftDown() ? -1 : 1);
             case H -> apply(edit.flippedHorizontally());
             case V -> apply(edit.flippedVertically());
             case A -> shape.setValue(shape.getValue().next());
             case BACK_SPACE -> reset();
-            case LEFT -> nudge(e.isShortcutDown() ? CropBox.Handle.E : CropBox.Handle.MOVE, -dx, 0);
-            case RIGHT -> nudge(e.isShortcutDown() ? CropBox.Handle.E : CropBox.Handle.MOVE, dx, 0);
-            case UP -> nudge(e.isShortcutDown() ? CropBox.Handle.S : CropBox.Handle.MOVE, 0, -dy);
-            case DOWN -> nudge(e.isShortcutDown() ? CropBox.Handle.S : CropBox.Handle.MOVE, 0, dy);
+            case LEFT, RIGHT ->
+                nudge(e.isShortcutDown() ? CropBox.Handle.E : CropBox.Handle.MOVE, code == KeyCode.LEFT ? -dx : dx, 0);
+            case UP, DOWN ->
+                nudge(e.isShortcutDown() ? CropBox.Handle.S : CropBox.Handle.MOVE, 0, code == KeyCode.UP ? -dy : dy);
             default -> {
                 return false;
             }
@@ -191,21 +232,56 @@ final class Editor {
         CropBox moved = crop.box().dragged(handle, dx, dy, ratio(), crop.pictureWidth(), crop.pictureHeight());
         crop.setBox(moved, ratio());
         cropped(moved);
+        history.record(new Step(edit, shape.getValue()), handle == CropBox.Handle.MOVE ? Nudging.MOVE : Nudging.RESIZE);
+        updateUndo();
     }
 
     private void turn(int quarterTurns) {
-        apply(edit.turned(quarterTurns));
+        edit = edit.turned(quarterTurns);
+        showArranged();
         shapeChanged(); // the whole picture again, held to the shape if one is chosen
+        record();
     }
 
     private void reset() {
+        quiet = true;
         shape.setValue(AspectRatio.FREE);
+        quiet = false;
         apply(Edit.NONE);
     }
 
     private void apply(Edit next) {
         edit = next;
         showArranged();
+        record();
+    }
+
+    /** The edit and shape as they are now, a step to undo. */
+    private void record() {
+        history.record(new Step(edit, shape.getValue()));
+        updateUndo();
+    }
+
+    private void undo() {
+        restore(history.undo());
+    }
+
+    private void redo() {
+        restore(history.redo());
+    }
+
+    private void restore(Step step) {
+        quiet = true;
+        shape.setValue(step.shape());
+        quiet = false;
+        edit = step.edit();
+        showArranged();
+        updateUndo();
+    }
+
+    private void updateUndo() {
+        undoButton.setDisable(!history.canUndo());
+        redoButton.setDisable(!history.canRedo());
     }
 
     /** The preview turned and flipped as the edit says, with its crop box. */
@@ -275,7 +351,7 @@ final class Editor {
         Thread.ofPlatform().daemon().name("save").start(() -> {
             try {
                 Raster result = applied.apply(Edit.upright(raster(image), turnedBy));
-                Encoder.write(result, target);
+                Encoder.write(result, target, ExifBlock.carried(file, result.width(), result.height()));
                 Platform.runLater(() -> {
                     saving = false;
                     close();

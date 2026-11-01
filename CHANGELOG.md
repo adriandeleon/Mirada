@@ -24,7 +24,11 @@ The first version: open a photo, look, arrow through its folder, close.
   GIF and BMP, so a large photo is often ready before the window is.
 - **An editor** (E): crop, freely or held to a shape (square, 5:4, 4:3, 3:2, 16:9, or the
   original's), turn and flip, then save the result as a new file in JPEG, PNG, TIFF or BMP. The
-  original is untouched unless you choose it in the save dialog. Every step has a key.
+  original is untouched unless you choose it in the save dialog. Every step has a key, and every
+  step can be undone (Ctrl+Z) and redone (Ctrl+Shift+Z or Ctrl+Y), Reset included.
+- **A saved edit keeps the photo's EXIF**: camera, lens, exposure, date and location, from a JPEG,
+  HEIC, AVIF, WebP, PNG or JPEG XL, into a JPEG or PNG. It is marked upright and given the edit's
+  size, and the old thumbnail is left out.
 - **Animated WebP, AVIF and JPEG XL play**, as GIFs already did. The still shows at once and starts
   moving when the rest of the frames are in.
 - **WebP opens ten times faster**, through libwebp (bundled): a 24-megapixel WebP in about a fifth
