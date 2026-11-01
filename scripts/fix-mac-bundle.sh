@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# macOS only, last of the image steps: sets the bundle's version to the real one and re-signs it.
+# macOS only, last of the image steps: sets the bundle's version to the real one, writes its document
+# types, and re-signs it (scripts/sign-mac.sh).
 #
 # jpackage writes a bundle version with the first number bumped (macOS refuses 0.x), and signs the
 # bundle ad hoc before add-codecs.sh and aot-train.sh add files to it, which breaks the seal: an
@@ -44,9 +45,6 @@ while read -r extension mime label uti; do
 done < "$root/packaging/file-types.txt"
 echo "document types: $i"
 
-# Inside out: every loose library first (the codecs, and in a native image the JDK's AWT libraries
-# beside the executable), then the bundle, whose seal covers them.
-find "$app/Contents" -type f -name "*.dylib" -print0 | xargs -0 codesign --force --sign -
-codesign --force --deep --sign - "$app"
-codesign --verify --deep --verbose=2 "$app"
-echo "bundle re-signed and verified"
+# Signed last, as every change above breaks the seal: ad hoc, or by Developer ID when the release
+# sets MIRADA_MAC_IDENTITY (sign-mac.sh).
+"$root/scripts/sign-mac.sh" "$app"

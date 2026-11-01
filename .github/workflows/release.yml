@@ -5,9 +5,11 @@
 # worse than none. Run by hand (workflow_dispatch) it is a dry run: everything is built and checked
 # and uploaded as workflow artifacts, and no release is made.
 #
-# Termina's release.yml, without what Mirada does not have yet: Developer ID signing and
-# notarization, Linux package signing, the AppImage, and the Homebrew and winget packagers. The
-# macOS and Windows installers are therefore unsigned (README, "Installing it").
+# Signing (scripts/ci-signing-credentials.sh): with the repository's secrets, macOS builds are signed
+# with the Developer ID and notarized, and the Linux packages and the checksums with the release GPG
+# key. A run by hand without them signs with throwaway credentials made on the runner, so a dry run
+# checks every signing step; a tag without them builds unsigned. Windows is not signed yet. Not here
+# yet: the AppImage, and the Homebrew and winget packagers.
 name: Release
 
 on:
@@ -101,6 +103,15 @@ jobs:
               ;;
           esac
 
+      - name: Signing credentials
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          LINUX_GPG_PRIVATE_KEY: ${{ secrets.LINUX_GPG_PRIVATE_KEY }}
+          LINUX_GPG_PASSPHRASE: ${{ secrets.LINUX_GPG_PASSPHRASE }}
+        run: bash scripts/ci-signing-credentials.sh
+
       # With the tests: a tag is not gated on CI having passed, and two of these runners
       # (linux-arm64, macos-x64) run nowhere else, so this is the only place their build is tested.
       - name: Build, test and package
@@ -124,7 +135,24 @@ jobs:
 
       - name: Check the macOS signature
         if: runner.os == 'macOS'
-        run: codesign --verify --deep --verbose=2 target/dist/Mirada.app
+        run: |
+          set -euo pipefail
+          codesign --verify --deep --strict --verbose=2 target/dist/Mirada.app
+          codesign --display --verbose=2 target/dist/Mirada.app 2>&1 | grep -E 'Authority|Signature|flags'
+          if [ -n "${MIRADA_MAC_IDENTITY:-}" ]; then
+            # Signed by the identity, with the hardened runtime notarization requires.
+            codesign --display --verbose=2 target/dist/Mirada.app 2>&1 | grep -q "Authority=$MIRADA_MAC_IDENTITY"
+            codesign --display --verbose=2 target/dist/Mirada.app 2>&1 | grep -q 'runtime'
+          fi
+
+      # Notarized when the Apple account is in the secrets; signed only, on a dry run.
+      - name: Sign and notarize the dmg
+        if: runner.os == 'macOS'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: bash scripts/notarize-mac.sh target/installers/*.dmg
 
       - name: Check the Linux packages
         if: runner.os == 'Linux'
@@ -150,6 +178,7 @@ jobs:
           produced=0
           for file in *; do
             case "$file" in
+              *.asc) continue ;;
               *.tar.gz) ext=tar.gz ;;
               *)        ext="${file##*.}" ;;
             esac
@@ -158,6 +187,24 @@ jobs:
           done
           [ "$produced" -gt 0 ] || { echo "::error::no installer was produced for ${{ matrix.target }}"; exit 1; }
           ls -la
+
+      # After naming, so each signature is named for its file. rpm -K checks the rpm's own
+      # signature against the key, in a database of its own.
+      - name: Sign the Linux packages
+        if: runner.os == 'Linux' && env.MIRADA_GPG_KEY != ''
+        run: |
+          set -euo pipefail
+          bash scripts/sign-linux.sh target/installers "$MIRADA_GPG_KEY"
+          db="$(mktemp -d)"
+          gpg --armor --export "$MIRADA_GPG_KEY" > "$RUNNER_TEMP/public.asc"
+          rpm --dbpath "$db" --initdb
+          rpm --dbpath "$db" --import "$RUNNER_TEMP/public.asc"
+          rpm --dbpath "$db" -Kv target/installers/*.rpm
+          checked="$(rpm --dbpath "$db" -K target/installers/*.rpm)"
+          echo "$checked"
+          echo "$checked" | grep -q 'signatures OK'
+          ! echo "$checked" | grep -q 'NOT OK'
+          for asc in target/installers/*.asc; do gpg --batch --verify "$asc" "${asc%.asc}"; done
 
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -187,6 +234,21 @@ jobs:
 
       - name: Checksums
         run: cd artifacts && sha256sum Mirada-* | tee SHA256SUMS
+
+      # The checksums signed with the release key, and the public key beside them, when the key is in
+      # the secrets: verifying SHA256SUMS.asc and then the checksums covers every file.
+      - name: Sign the checksums
+        env:
+          LINUX_GPG_PRIVATE_KEY: ${{ secrets.LINUX_GPG_PRIVATE_KEY }}
+          LINUX_GPG_PASSPHRASE: ${{ secrets.LINUX_GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "$LINUX_GPG_PRIVATE_KEY" ]; then echo "no release key: checksums unsigned"; exit 0; fi
+          GITHUB_EVENT_NAME=push bash scripts/ci-signing-credentials.sh
+          key=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')
+          cd artifacts
+          gpg --batch --local-user "$key" --armor --detach-sign --output SHA256SUMS.asc SHA256SUMS
+          gpg --armor --export "$key" > mirada-signing-key.asc
 
       # A signed statement, kept by GitHub, that each file was built by this workflow from this
       # commit: `gh attestation verify <file> --repo adriandeleon/Mirada` checks a download.

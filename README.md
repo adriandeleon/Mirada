@@ -28,7 +28,7 @@ the result as a new file. See the [changelog](CHANGELOG.md).
 
 Installers for Linux (x64 and arm64), macOS (Apple silicon and Intel) and Windows will be on the
 [releases page](https://github.com/adriandeleon/Mirada/releases). Each registers Mirada for the image
-types it opens. None is signed yet, so each platform asks once:
+types it opens. Until the first signed release, each platform asks once:
 
 - **Linux** — `sudo apt install ./Mirada-<version>-linux-x64.deb` (apt fetches what it needs), or
   the `.rpm` with `dnf`. The `.tar.gz` runs from wherever it is unpacked: `bin/Mirada`.
@@ -37,6 +37,10 @@ types it opens. None is signed yet, so each platform asks once:
   choose **Open Anyway**.
 - **Windows** — run the `.msi`. SmartScreen warns about an unknown publisher: **More info → Run
   anyway**.
+
+A signed release carries `SHA256SUMS.asc` and the key that signed it, `mirada-signing-key.asc`:
+`gpg --import mirada-signing-key.asc && gpg --verify SHA256SUMS.asc && sha256sum -c SHA256SUMS`
+checks every download.
 
 ## Using it
 
