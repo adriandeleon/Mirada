@@ -2,12 +2,15 @@
 # Checks the built .deb and .rpm, not the tree: every mistake here produces a package that installs
 # and looks wrong (Termina's packages shipped a stock Java icon and a menu entry jpackage ignored).
 #
-#   - the launcher is the script (scripts/linux-launcher.sh), not jpackage's slow native one
-#   - the codec bundle and the AOT cache are inside
+#   - native image (-Pdist,native): bin/Mirada is the executable, with AWT's libraries and the codec
+#     bundle beside it, and no Java runtime
+#   - JVM image (-Pdist): the launcher is the script (scripts/linux-launcher.sh), not jpackage's slow
+#     native one, and the codec bundle and the AOT cache are inside
 #   - the menu entry is ours: passes the file (%f), lists the image types, names the window class,
 #     and passes desktop-file-validate
 #   - the icon is branding/mirada.png, byte for byte
-#   - the dependencies name GTK and nothing from the sound stack
+#   - the dependencies name GTK and nothing from the sound stack, and the deb names no t64 package
+#     without its pre-t64 alternative (or it would not install on Debian 12 or Ubuntu 22.04)
 #
 # Usage: check-linux-packages.sh <installers-dir> <icon.png>
 set -euo pipefail
@@ -22,12 +25,20 @@ fail() { echo "::error::$1"; failures=$((failures + 1)); }
 
 check_tree() { # <package-label> <extracted-root> <depends-text>
     local label="$1" tree="$2" deps="$3" app="$2/opt/mirada"
-    head -c 200 "$app/bin/Mirada" | grep -q 'linux-launcher.sh' ||
-        fail "$label: bin/Mirada is not the script launcher"
+    local codecs
+    if [ "$(head -c 4 "$app/bin/Mirada" | tr -d '\0')" = $'\x7fELF' ]; then
+        codecs="$app/bin/codecs"
+        [ -f "$app/bin/libawt.so" ] || fail "$label: native image without libawt.so beside it"
+        [ -d "$app/lib/runtime" ] && fail "$label: native image still carries a Java runtime"
+    else
+        codecs="$app/lib/app/codecs"
+        head -c 200 "$app/bin/Mirada" | grep -q 'linux-launcher.sh' ||
+            fail "$label: bin/Mirada is neither the native image nor the script launcher"
+        [ -s "$app/lib/app/mirada.aot" ] || fail "$label: no AOT cache"
+    fi
     for lib in libheif.so.1 libjxl.so.0.12 libjxl_threads.so.0.12; do
-        [ -f "$app/lib/app/codecs/$lib" ] || fail "$label: codec bundle lacks $lib"
+        [ -f "$codecs/$lib" ] || fail "$label: codec bundle lacks $lib"
     done
-    [ -s "$app/lib/app/mirada.aot" ] || fail "$label: no AOT cache"
     [ -f "$app/lib/app/NOTICE" ] || fail "$label: no NOTICE"
     case "$label" in
         *.deb)
@@ -56,6 +67,13 @@ check_tree() { # <package-label> <extracted-root> <depends-text>
     fi
     printf '%s' "$deps" | grep -q 'gtk-3' || fail "$label: dependencies do not name GTK 3"
     printf '%s' "$deps" | grep -q -i 'asound' && fail "$label: depends on ALSA (libjsound back in the image?)"
+    case "$label" in
+        *.deb)
+            local bare
+            bare=$(printf '%s' "$deps" | tr ',' '\n' | grep 't64' | grep -v '|' || true)
+            [ -z "$bare" ] || fail "$label: t64 dependencies without an alternative:$(echo $bare)"
+            ;;
+    esac
     echo "$label: checked"
 }
 

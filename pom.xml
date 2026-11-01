@@ -58,6 +58,10 @@
         <jpackage.icon>${project.basedir}/branding/mirada.png</jpackage.icon>
         <!-- Installers take minutes the dev loop never wants; CI and the release turn them on. -->
         <skip.installers>true</skip.installers>
+        <!-- -Pdist,native: the native profile flips both (the image gets the native executable, and
+             there is no JVM left to train an AOT cache for). -->
+        <skip.native.app>true</skip.native.app>
+        <skip.aot>false</skip.aot>
 
         <!-- The native codec bundle (libheif, libjxl): built by the Codecs workflow from
              scripts/build-codecs.sh and published as a release; downloaded, checked against the
@@ -450,6 +454,8 @@
                                 <configuration>
                                     <outputDirectory>${project.build.directory}/mods</outputDirectory>
                                     <includeScope>runtime</includeScope>
+                                    <!-- StaticFX (-Pdist,native) is for native-image, not jlink. -->
+                                    <excludeGroupIds>us.hebi.graalvm</excludeGroupIds>
                                 </configuration>
                             </execution>
                         </executions>
@@ -618,6 +624,22 @@
                                 </configuration>
                             </execution>
                             <execution>
+                                <!-- -Pdist,native only: the native executable and its libraries in
+                                     place of the launcher and the runtime. -->
+                                <id>native-app-image</id>
+                                <phase>package</phase>
+                                <goals><goal>exec</goal></goals>
+                                <configuration>
+                                    <executable>bash</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/scripts/native-app-image.sh</argument>
+                                        <argument>${project.build.directory}/dist/${jpackage.imageName}</argument>
+                                        <argument>${project.build.directory}</argument>
+                                    </arguments>
+                                    <skip>${skip.native.app}</skip>
+                                </configuration>
+                            </execution>
+                            <execution>
                                 <id>aot-train</id>
                                 <phase>package</phase>
                                 <goals><goal>exec</goal></goals>
@@ -629,6 +651,7 @@
                                         <argument>mirada.aot</argument>
                                         <argument>${project.basedir}/src/test/resources/com/mirada/image</argument>
                                     </arguments>
+                                    <skip>${skip.aot}</skip>
                                 </configuration>
                             </execution>
                             <execution>
@@ -683,6 +706,8 @@
             <id>native</id>
             <properties>
                 <native.extra>H:+ReportExceptionStackTraces</native.extra>
+                <skip.native.app>false</skip.native.app>
+                <skip.aot>true</skip.aot>
             </properties>
             <dependencies>
                 <dependency>
@@ -707,7 +732,9 @@
                         <executions>
                             <execution>
                                 <id>build-native</id>
-                                <phase>package</phase>
+                                <!-- Before package, so -Pdist,native's jpackage steps (package)
+                                     find the executable ready. It reads target/classes, not the jar. -->
+                                <phase>prepare-package</phase>
                                 <goals><goal>compile-no-fork</goal></goals>
                             </execution>
                         </executions>

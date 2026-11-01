@@ -63,46 +63,71 @@ jobs:
           path: target/surefire-reports/
           retention-days: 7
 
+  # What ships: the native image (GraalVM + StaticFX, docs/native-image.md) in jpackage's app image
+  # wherever GraalVM builds one, and the jlink image with its AOT cache on Intel macOS, which
+  # GraalVM 25.4 no longer targets. A native image is only as complete as its reachability
+  # metadata, and a gap shows only when a file that needs it is opened, so every variant of every
+  # format is opened in each. A failure there usually means scripts/native-metadata.sh needs
+  # running again.
   package:
-    name: Package (${{ matrix.os }})
+    name: Package (${{ matrix.target }}, ${{ matrix.build }})
     runs-on: ${{ matrix.os }}
     needs: test
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - { os: ubuntu-latest,  target: linux-x64,   build: native }
+          - { os: macos-latest,   target: macos-arm64, build: native }
+          - { os: windows-latest, target: windows-x64, build: native }
+          - { os: macos-15-intel, target: macos-x64,   build: jlink }
 
     steps:
       - uses: actions/checkout@v5
 
+      # Oracle GraalVM, the distribution StaticFX is confirmed with. 25.4, not the 25.0 LTS: 25.0
+      # has no AWT on macOS, so ImageIO (WebP, TIFF, PSD) fails there.
+      - name: Set up Oracle GraalVM 25.4
+        if: matrix.build == 'native'
+        uses: graalvm/setup-graalvm@v1
+        with:
+          distribution: graalvm
+          version: '25.4'
+          cache: maven
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up JDK 25
+        if: matrix.build == 'jlink'
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
 
-      # A display for the AOT training run and the smoke tests, which must render; rpmbuild and the
-      # rest for the Linux installers and their checks.
+      # StaticFX links JavaFX statically, so on Linux the GTK, X and GL development libraries are
+      # needed to link (macOS and Windows link against their own); a display for the smoke tests;
+      # rpmbuild and the rest for the Linux installers and their checks.
       - name: Tools (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq xvfb fakeroot rpm cpio desktop-file-utils
+          sudo apt-get install -y -qq build-essential zlib1g-dev libgtk-3-dev libxtst-dev \
+            libxxf86vm-dev libgl1-mesa-dev xvfb fakeroot rpm cpio desktop-file-utils
 
-      # jlink and jpackage cannot cross-build, so each platform proves its own image. A missing AOT
-      # cache fails here rather than quietly costing half of start-up in whatever ships next. Linux
-      # builds the installers too, because that is where their contents get checked; the dmg and
-      # msi are left to the release.
+      # jpackage cannot cross-build, so each platform proves its own image. Linux builds the
+      # installers too, because that is where their contents get checked; the dmg and msi are left
+      # to the release. The native build takes a few minutes and several GB of memory.
       - name: App image
         env:
-          MIRADA_REQUIRE_AOT: '1'
+          MIRADA_REQUIRE_AOT: ${{ matrix.build == 'jlink' && '1' || '' }}
         run: |
+          profiles=dist
+          [ "${{ matrix.build }}" = native ] && profiles=dist,native
           installers=true
           [ "${{ runner.os }}" = Linux ] && installers=false
-          ./mvnw -B --no-transfer-progress clean -Pdist -DskipTests -Dskip.installers=$installers package
+          ./mvnw -B --no-transfer-progress clean -P$profiles -DskipTests -Dskip.installers=$installers package
 
-      - name: Smoke test (every format, in the packaged app)
+      - name: Smoke test (every format and variant, in the packaged app)
         run: |
           case "${{ runner.os }}" in
             macOS)   launcher=target/dist/Mirada.app/Contents/MacOS/Mirada ;;
@@ -110,15 +135,14 @@ jobs:
             *)       launcher=target/dist/Mirada/bin/Mirada ;;
           esac
           bash scripts/smoke-test.sh "$launcher" src/test/resources/com/mirada/image
-          # Every variant of every format (scripts/make-format-matrix.sh), on each platform's own
-          # packaged runtime and codecs.
           bash scripts/smoke-test.sh "$launcher" src/test/resources/com/mirada/matrix
 
       - name: Check the macOS signature
         if: runner.os == 'macOS'
-        run: codesign --verify --deep --verbose=2 target/dist/Mirada.app
+        run: codesign --verify --deep --strict --verbose=2 target/dist/Mirada.app
 
-      # The same figure as the native job's, on the same runners, so the two can be compared.
+      # Cold runs on a shared virtual machine: a sanity figure, not a benchmark (docs/native-image.md
+      # has the real numbers).
       - name: Start-up (for information)
         if: runner.os != 'Windows'
         continue-on-error: true
@@ -141,79 +165,12 @@ jobs:
           sudo apt-get install -y -qq "./$(ls target/installers/*.deb)"
           bash scripts/smoke-test.sh /opt/mirada/bin/Mirada src/test/resources/com/mirada/image
 
-  # Mirada as a GraalVM native image with JavaFX linked in by StaticFX (docs/native-image.md): an
-  # experiment, not a release. It starts in half the time of the jlink image, but it is only as
-  # complete as its reachability metadata, and a gap shows only when a file that needs it is opened.
-  # So this builds it and opens every variant of every format in it. A failure here usually means
-  # scripts/native-metadata.sh needs running again.
-  native:
-    name: Native image (${{ matrix.target }}, StaticFX)
-    runs-on: ${{ matrix.os }}
-    needs: test
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: linux-x64
-          - os: macos-latest
-            target: macos-arm64
-
-    steps:
-      - uses: actions/checkout@v5
-
-      # Oracle GraalVM, the distribution StaticFX is confirmed with. 25.4, not the 25.0 LTS: 25.0
-      # has no AWT on macOS, so ImageIO (WebP, TIFF, PSD) fails there.
-      - name: Set up Oracle GraalVM 25.4
-        uses: graalvm/setup-graalvm@v1
-        with:
-          distribution: graalvm
-          version: '25.4'
-          cache: maven
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      # StaticFX links JavaFX statically, so on Linux the GTK, X and GL development libraries are
-      # needed to link; xvfb for the smoke test. macOS links against its own frameworks.
-      - name: Build tools (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential zlib1g-dev libgtk-3-dev libxtst-dev \
-            libxxf86vm-dev libgl1-mesa-dev xvfb
-
-      - name: GraalVM
-        run: native-image --version
-
-      # A few minutes and several GB of memory.
-      - name: Native image
-        run: |
-          ./mvnw -B --no-transfer-progress -Pnative -Denforcer.skip -DskipTests package
-          ls -l target/mirada target/*.so target/*.dylib 2>/dev/null || true
-
-      # The codec bundle the build downloaded is target/codecs, beside target/mirada, which is
-      # where a native image looks for it.
-      - name: Smoke test (every format and variant, in the native image)
-        run: |
-          bash scripts/smoke-test.sh target/mirada src/test/resources/com/mirada/image
-          bash scripts/smoke-test.sh target/mirada src/test/resources/com/mirada/matrix
-
-      # Cold runs on a shared virtual machine: a sanity figure, not a benchmark (docs/native-image.md
-      # has the real numbers).
-      - name: Start-up (for information)
-        continue-on-error: true
-        run: |
-          if [ "${{ runner.os }}" = Linux ]; then run=(xvfb-run -a); else run=(); fi
-          "${run[@]}" scripts/measure-startup.sh -n 5 target/mirada src/test/resources/com/mirada/image/red-blue.jpg
-
-      - name: Upload the native app
+      # A week's worth of the app as built, to try on a machine CI does not have.
+      - name: Upload the app image
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mirada-native-${{ matrix.target }}
-          path: |
-            target/mirada
-            target/*.so
-            target/*.dylib
-            target/codecs/
+          name: mirada-${{ matrix.target }}
+          path: target/dist/
           retention-days: 7
           if-no-files-found: warn

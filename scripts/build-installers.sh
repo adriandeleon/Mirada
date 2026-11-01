@@ -76,10 +76,16 @@ build() {
 # desktops and dpkg's triggers find it, instead of the `xdg-desktop-menu install` jpackage's postinst
 # runs and packaging/linux/postinst leaves out (it fails the install on a system with no menu
 # directory). The entry is jpackage's, tokens already filled in.
-own_menu_entry() {
-    local deb="$1" root size
+#
+# Its dependencies become exactly the given list. jpackage adds every package that owns a library
+# any file in the image reaches, by asking the build host's dpkg: for a native image that is the
+# whole GTK closure under this host's names (libgtk-3-0t64 alone), which Debian 12 and Ubuntu 22.04
+# cannot satisfy.
+fix_deb() {
+    local deb="$1" deps="$2" root size
     root="$(mktemp -d)"
     dpkg-deb -R "$deb" "$root"
+    sed -i "s/^Depends: .*/Depends: $deps/" "$root/DEBIAN/control"
     install -D -m 644 "$root/opt/mirada/lib/mirada-Mirada.desktop" "$root/usr/share/applications/mirada.desktop"
     # The control file's sums and size describe the contents and are rewritten to match them.
     (cd "$root" && find . -path ./DEBIAN -prune -o -type f -printf '%P\0' | LC_ALL=C sort -z |
@@ -112,13 +118,15 @@ case "$(uname -s)" in
             "$root/packaging/linux/prerm" "$resources/"
         cp "$icon" "$resources/Mirada.png"
 
-        # What JavaFX links (Termina's list, from readelf of its natives). They are extracted from
-        # the module jars at run time, so the bundlers' library scan never sees them. Debian names
-        # with the t64 rename as an alternative, so one deb installs on Debian 12 and 13 and Ubuntu
-        # 22.04 and 24.04; the rpm by shared-library capability. The codec bundle needs only libc
-        # and libstdc++ (scripts/check-codecs.sh).
-        deb_deps="libgtk-3-0t64 | libgtk-3-0, libgl1, libx11-6, libxxf86vm1, libxtst6"
-        deb_deps+=", libpango-1.0-0, libpangoft2-1.0-0, libfontconfig1, libfreetype6, libstdc++6"
+        # What the executable and AWT's libraries link (readelf -d; the native image has JavaFX in
+        # it, the JVM image extracts JavaFX's natives at run time, and these cover both). Debian
+        # names with the t64 rename as an alternative, so one deb installs on Debian 12 and 13 and
+        # Ubuntu 22.04 and 24.04; the rpm by shared-library capability. The codec bundle needs only
+        # libc and libstdc++ (scripts/check-codecs.sh).
+        deb_deps="libc6, libgtk-3-0t64 | libgtk-3-0, libglib2.0-0t64 | libglib2.0-0, libgdk-pixbuf-2.0-0"
+        deb_deps+=", libcairo2, libpango-1.0-0, libpangoft2-1.0-0, libfontconfig1, libfreetype6"
+        deb_deps+=", libgl1, libx11-6, libxext6, libxi6, libxrender1, libxtst6, libxxf86vm1"
+        deb_deps+=", libstdc++6, zlib1g"
         rpm_deps="libgtk-3.so.0()(64bit), libGL.so.1()(64bit), libX11.so.6()(64bit)"
         rpm_deps+=", libXxf86vm.so.1()(64bit), libXtst.so.6()(64bit), libpangoft2-1.0.so.0()(64bit)"
         rpm_deps+=", libfontconfig.so.1()(64bit), libfreetype.so.6()(64bit), libstdc++.so.6()(64bit)"
@@ -131,7 +139,7 @@ case "$(uname -s)" in
             --linux-package-deps "$deb_deps" \
             --license-file "$root/LICENSE" \
             --resource-dir "$resources"
-        own_menu_entry "$(ls "$dest"/mirada_*.deb)"
+        fix_deb "$(ls "$dest"/mirada_*.deb)" "$deb_deps"
         if command -v rpmbuild >/dev/null 2>&1; then
             build rpm \
                 --linux-package-name mirada \

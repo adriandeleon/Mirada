@@ -20,6 +20,9 @@ if [ "$current" != "$version" ]; then
     /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $version" "$plist"
     echo "bundle version: $current -> $version"
 fi
+# Inside out: every loose library first (the codecs, and in a native image the JDK's AWT libraries
+# beside the executable), then the bundle, whose seal covers them.
+find "$app/Contents" -type f -name "*.dylib" -print0 | xargs -0 codesign --force --sign -
 codesign --force --deep --sign - "$app"
 codesign --verify --deep --verbose=2 "$app"
 echo "bundle re-signed and verified"
