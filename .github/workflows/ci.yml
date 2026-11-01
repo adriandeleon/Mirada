@@ -135,14 +135,22 @@ jobs:
   # So this builds it and opens every variant of every format in it. A failure here usually means
   # scripts/native-metadata.sh needs running again.
   native:
-    name: Native image (Linux, StaticFX)
-    runs-on: ubuntu-latest
+    name: Native image (${{ matrix.target }}, StaticFX)
+    runs-on: ${{ matrix.os }}
     needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x64
+          - os: macos-latest
+            target: macos-arm64
 
     steps:
       - uses: actions/checkout@v5
 
-      # Oracle GraalVM, the distribution StaticFX is confirmed with (25.4 at the time of writing).
+      # Oracle GraalVM, the distribution StaticFX is confirmed with.
       - name: Set up Oracle GraalVM 25
         uses: graalvm/setup-graalvm@v1
         with:
@@ -151,16 +159,19 @@ jobs:
           cache: maven
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # StaticFX links JavaFX statically, so the GTK, X and GL development libraries are needed to
-      # link; xvfb for the smoke test.
-      - name: Build tools
+      # StaticFX links JavaFX statically, so on Linux the GTK, X and GL development libraries are
+      # needed to link; xvfb for the smoke test. macOS links against its own frameworks.
+      - name: Build tools (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq build-essential zlib1g-dev libgtk-3-dev libxtst-dev \
             libxxf86vm-dev libgl1-mesa-dev xvfb
-          native-image --version
 
-      # About a minute and 8-9 GB of memory; the runner has 16 GB.
+      - name: GraalVM
+        run: native-image --version
+
+      # A few minutes and several GB of memory.
       - name: Native image
         run: ./mvnw -B --no-transfer-progress -Pnative -Denforcer.skip -DskipTests package
 
@@ -171,19 +182,23 @@ jobs:
           bash scripts/smoke-test.sh target/mirada src/test/resources/com/mirada/image
           bash scripts/smoke-test.sh target/mirada src/test/resources/com/mirada/matrix
 
-      # A single cold run on a shared virtual machine with software rendering: a sanity figure, not
-      # a benchmark (docs/native-image.md has the real numbers).
+      # Cold runs on a shared virtual machine: a sanity figure, not a benchmark (docs/native-image.md
+      # has the real numbers).
       - name: Start-up (for information)
         continue-on-error: true
-        run: xvfb-run -a scripts/measure-startup.sh -n 5 target/mirada src/test/resources/com/mirada/image/red-blue.jpg
+        run: |
+          if [ "${{ runner.os }}" = Linux ]; then run=(xvfb-run -a); else run=(); fi
+          "${run[@]}" scripts/measure-startup.sh -n 5 target/mirada src/test/resources/com/mirada/image/red-blue.jpg
 
       - name: Upload the native app
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mirada-native-linux-x64
+          name: mirada-native-${{ matrix.target }}
           path: |
             target/mirada
             target/*.so
+            target/*.dylib
             target/codecs/
           retention-days: 7
-          if-no-files-found: error
+          if-no-files-found: warn

@@ -44,19 +44,21 @@ public final class MacOpenFiles {
     public static String install(Consumer<Path> open) {
         // The property first: asking GraphicsEnvironment would load AWT classes on the start-up path
         // of every platform where the answer is already known to be no.
-        if (Boolean.getBoolean("java.awt.headless") || GraphicsEnvironment.isHeadless()) {
-            return "none (AWT is headless)";
-        }
-        if (!Desktop.isDesktopSupported()) return "none (no desktop integration)";
-        Desktop desktop;
+        if (Boolean.getBoolean("java.awt.headless")) return "none (AWT is headless)";
+        // Everything after this touches AWT's native side, which is where an environment without it
+        // (a native image missing a library, a broken display) fails, with a LinkageError rather
+        // than an exception. That must cost Finder integration, not the launch.
         try {
-            desktop = Desktop.getDesktop();
+            if (GraphicsEnvironment.isHeadless()) return "none (AWT is headless)";
+            if (!Desktop.isDesktopSupported()) return "none (no desktop integration)";
+            Desktop desktop = Desktop.getDesktop();
+            if (!desktop.isSupported(Desktop.Action.APP_OPEN_FILE)) return "none (not supported here)";
+            desktop.setOpenFileHandler(event -> first(event.getFiles()).ifPresent(file -> open.accept(file.toPath())));
+            return "files";
         } catch (RuntimeException | LinkageError e) {
-            return "none (" + e.getMessage() + ")";
+            System.err.println("[mirada] no open-file handler: " + e);
+            return "none (" + e + ")";
         }
-        if (!desktop.isSupported(Desktop.Action.APP_OPEN_FILE)) return "none (not supported here)";
-        desktop.setOpenFileHandler(event -> first(event.getFiles()).ifPresent(file -> open.accept(file.toPath())));
-        return "files";
     }
 
     /** One window shows one folder, so of several files opened at once the first is the one shown. */
