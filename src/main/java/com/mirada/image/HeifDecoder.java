@@ -51,6 +51,11 @@ final class HeifDecoder {
     }
 
     static WritableImage decode(Path file) throws IOException {
+        return pixels(file).toImage();
+    }
+
+    /** The image, decoded without the JavaFX toolkit. */
+    static ArgbPixels pixels(Path file) throws IOException {
         Library heif =
                 Library.INSTANCE.orElseThrow(() -> new IOException("HEIC and AVIF need libheif, which was not found"));
         try (Arena arena = Arena.ofConfined();
@@ -58,6 +63,8 @@ final class HeifDecoder {
             MemorySegment data = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size(), arena);
             MemorySegment context = (MemorySegment) heif.contextAlloc.invoke();
             if (context.equals(MemorySegment.NULL)) throw new IOException("libheif could not allocate a context");
+            // Phones store a HEIC as a grid of tiles, decoded in parallel; libheif's default is four.
+            heif.setMaxDecodingThreads.invoke(context, Runtime.getRuntime().availableProcessors());
             MemorySegment handle = MemorySegment.NULL;
             MemorySegment image = MemorySegment.NULL;
             try {
@@ -114,6 +121,7 @@ final class HeifDecoder {
     private record Library(
             MethodHandle contextAlloc,
             MethodHandle contextFree,
+            MethodHandle setMaxDecodingThreads,
             MethodHandle readFromMemory,
             MethodHandle primaryImageHandle,
             MethodHandle handleRelease,
@@ -138,6 +146,11 @@ final class HeifDecoder {
                 return Optional.of(new Library(
                         handle(linker, lookup, "heif_context_alloc", FunctionDescriptor.of(ADDRESS)),
                         handle(linker, lookup, "heif_context_free", FunctionDescriptor.ofVoid(ADDRESS)),
+                        handle(
+                                linker,
+                                lookup,
+                                "heif_context_set_max_decoding_threads",
+                                FunctionDescriptor.ofVoid(ADDRESS, JAVA_INT)),
                         handle(
                                 linker,
                                 lookup,

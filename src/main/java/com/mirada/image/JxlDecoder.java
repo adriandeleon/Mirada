@@ -73,6 +73,11 @@ final class JxlDecoder {
     }
 
     static WritableImage decode(Path file) throws IOException {
+        return pixels(file).toImage();
+    }
+
+    /** The image, decoded without the JavaFX toolkit. */
+    static ArgbPixels pixels(Path file) throws IOException {
         Library jxl = Library.INSTANCE.orElseThrow(() -> new IOException("JPEG XL needs libjxl, which was not found"));
         try (Arena arena = Arena.ofConfined();
                 FileChannel channel = FileChannel.open(file, StandardOpenOption.READ)) {
@@ -104,7 +109,7 @@ final class JxlDecoder {
     }
 
     /** Drives the decoder's event loop to the first full frame. */
-    private static WritableImage run(Library jxl, MemorySegment decoder, Arena arena) throws Throwable {
+    private static ArgbPixels run(Library jxl, MemorySegment decoder, Arena arena) throws Throwable {
         MemorySegment info = arena.allocate(INFO_SIZE);
         MemorySegment format = arena.allocate(PIXEL_FORMAT);
         MemorySegment pixels = MemorySegment.NULL;

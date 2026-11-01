@@ -1,0 +1,54 @@
+# Records the native image's reachability metadata on macOS and Windows (scripts/native-metadata.sh),
+# each merged into the committed file, and uploads the results. Run by hand after anything that
+# changes what the app reflects on, loads or calls natively; then join the two downloads and commit:
+#
+#   gh run download <run> -D target/metadata
+#   native-image-configure generate --input-dir=target/metadata/metadata-macos \
+#       --input-dir=target/metadata/metadata-windows \
+#       --output-dir=src/main/resources/META-INF/native-image/com.mirada/mirada
+#
+# Linux is recorded locally (it needs a display; the tour renders).
+name: Native metadata
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  record:
+    name: Record (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest,   name: macos }
+          - { os: windows-latest, name: windows }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Oracle GraalVM 25.4
+        uses: graalvm/setup-graalvm@v1
+        with:
+          distribution: graalvm
+          version: '25.4'
+          cache: maven
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # The script's compile also downloads the codec bundle, so HEIC, AVIF and JPEG XL go through
+      # their bindings too.
+      - name: Record
+        env:
+          MIRADA_METADATA_MERGE: '1'
+        run: GRAALVM_HOME="$JAVA_HOME" bash scripts/native-metadata.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: metadata-${{ matrix.name }}
+          path: src/main/resources/META-INF/native-image/com.mirada/mirada/
+          retention-days: 7

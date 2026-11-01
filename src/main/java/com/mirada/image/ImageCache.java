@@ -11,6 +11,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import javafx.application.Platform;
 import javafx.scene.image.Image;
 
 import com.mirada.folder.ImageFormats;
@@ -53,6 +54,7 @@ public final class ImageCache {
     private final int capacity;
     private final Executor metadataReader;
     private final Executor imageDecoder;
+    private final Executor fxThread;
     private final Map<Path, Entry> entries = new LinkedHashMap<>(16, 0.75f, true);
 
     public ImageCache(int capacity) {
@@ -60,13 +62,15 @@ public final class ImageCache {
                 capacity,
                 Executors.newVirtualThreadPerTaskExecutor(),
                 Executors.newFixedThreadPool(
-                        2, Thread.ofPlatform().daemon().name("decoder-", 0).factory()));
+                        2, Thread.ofPlatform().daemon().name("decoder-", 0).factory()),
+                Platform::runLater);
     }
 
-    ImageCache(int capacity, Executor metadataReader, Executor imageDecoder) {
+    ImageCache(int capacity, Executor metadataReader, Executor imageDecoder, Executor fxThread) {
         this.capacity = capacity;
         this.metadataReader = metadataReader;
         this.imageDecoder = imageDecoder;
+        this.fxThread = fxThread;
     }
 
     /** The entry for {@code file}, starting its load if it is not cached; marks it most recently used. */
@@ -80,10 +84,49 @@ public final class ImageCache {
     }
 
     private Entry load(Path file) {
-        CompletableFuture<Exif> exif = CompletableFuture.supplyAsync(() -> Exif.read(file), metadataReader);
+        ImageFormats.Decoder decoder = ImageFormats.decoderFor(file);
+        HeadStart head = HeadStart.claim(file);
+        CompletableFuture<Exif> exif;
         CompletableFuture<Image> pixels;
         Runnable cancel;
-        ImageFormats.Decoder decoder = ImageFormats.decoderFor(file);
+        if (head != null) {
+            // Decoded before the toolkit was up; wrapped now that it is (nothing asks the cache
+            // sooner). A head start that failed — a JPEG JavaFX and ImageIO would show differently —
+            // gives way to the usual load, started on the FX thread as JavaFX's decoder needs.
+            exif = head.exif;
+            pixels = head.pixels
+                    .<Image>thenApply(ArgbPixels::toImage)
+                    .exceptionallyCompose(
+                            failed -> CompletableFuture.supplyAsync(() -> startPixels(file, decoder), fxThread)
+                                    .thenCompose(Loading::pixels));
+            cancel = () -> {};
+        } else {
+            exif = CompletableFuture.supplyAsync(() -> Exif.read(file), metadataReader);
+            Loading loading = startPixels(file, decoder);
+            pixels = loading.pixels();
+            cancel = loading.cancel();
+        }
+        // A decoder that turns the image upright itself must not have the EXIF turn applied again.
+        CompletableFuture<Exif> orientation =
+                decoder != null && decoder.turnsUpright() ? exif.thenApply(Exif::upright) : exif;
+        CompletableFuture<Decoded> ready = pixels.thenCombine(orientation, Decoded::of)
+                .exceptionally(error -> {
+                    Throwable cause = innermost(error);
+                    // A broken file is an IOException and says so in the window. Anything else is a
+                    // bug, or a native image missing metadata, and its trace is what finds it.
+                    if (!(cause instanceof IOException)) cause.printStackTrace();
+                    return Decoded.failed(message(error));
+                });
+        return new Entry(file, ready, cancel);
+    }
+
+    /** A decode under way, and how to stop it. */
+    private record Loading(CompletableFuture<Image> pixels, Runnable cancel) {}
+
+    /** Starts decoding {@code file}'s pixels. FX thread, for JavaFX's decoder. */
+    private Loading startPixels(Path file, ImageFormats.@Nullable Decoder decoder) {
+        CompletableFuture<Image> pixels;
+        Runnable cancel;
         if (decoder == null || decoder == ImageFormats.Decoder.JAVAFX) {
             Image image = new Image(file.toUri().toString(), true);
             // JavaFX's decoders miss variants ImageIO's readers handle (a 32-bit BMP with alpha
@@ -99,18 +142,7 @@ public final class ImageCache {
             CompletableFuture<Image> started = pixels;
             cancel = () -> started.cancel(false);
         }
-        // A decoder that turns the image upright itself must not have the EXIF turn applied again.
-        CompletableFuture<Exif> orientation =
-                decoder != null && decoder.turnsUpright() ? exif.thenApply(Exif::upright) : exif;
-        CompletableFuture<Decoded> ready = pixels.thenCombine(orientation, Decoded::of)
-                .exceptionally(error -> {
-                    Throwable cause = innermost(error);
-                    // A broken file is an IOException and says so in the window. Anything else is a
-                    // bug, or a native image missing metadata, and its trace is what finds it.
-                    if (!(cause instanceof IOException)) cause.printStackTrace();
-                    return Decoded.failed(message(error));
-                });
-        return new Entry(file, ready, cancel);
+        return new Loading(pixels, cancel);
     }
 
     static Image decodeOffThread(ImageFormats.Decoder decoder, Path file) {

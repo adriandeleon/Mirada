@@ -7,6 +7,7 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
 
+import com.mirada.image.HeadStart;
 import com.mirada.os.MacOpenFiles;
 import com.mirada.perf.Startup;
 import com.mirada.settings.Settings;
@@ -25,6 +26,9 @@ public final class App extends Application {
         // an Apple Event only AWT's Desktop handler receives (MacOpenFiles).
         System.setProperty("java.awt.headless", String.valueOf(MacOpenFiles.headless(System.getProperty("os.name"))));
         Startup.mark("main");
+        // The first image decodes while the toolkit starts, which is most of what comes before the
+        // window (HeadStart). After the headless property: ImageIO is AWT.
+        HeadStart.begin(List.of(args));
         launch(args);
     }
 
