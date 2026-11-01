@@ -1,3 +1,5 @@
+<img src="branding/mirada.png" alt="" width="96" align="left" hspace="14" vspace="4">
+
 # Mirada
 
 **A fast, folder-oriented image viewer.** Double-click a photo, look, arrow through the folder, close.
@@ -15,9 +17,25 @@ folder as the document: open one photo and the rest of the folder is already the
 you'd number it, one arrow key away. The image fills the window; a single status line under it says
 which file, where it sits in the folder, how large it is, and what took it.
 
+<br clear="left">
+
 **Status:** early, and unreleased. JPEG, PNG, GIF, BMP, WebP, TIFF, PSD, HEIC, AVIF and JPEG XL,
 turned upright. The HEIC, AVIF and JPEG XL decoders (libheif, libjxl) are built from source and
-bundled; the build downloads them. No installers yet — build it from source. See the [changelog](CHANGELOG.md).
+bundled; the build downloads them. See the [changelog](CHANGELOG.md).
+
+## Installing it
+
+Installers for Linux (x64 and arm64), macOS (Apple silicon and Intel) and Windows will be on the
+[releases page](https://github.com/adriandeleon/Mirada/releases). Each registers Mirada for the image
+types it opens. None is signed yet, so each platform asks once:
+
+- **Linux** — `sudo apt install ./Mirada-<version>-linux-x64.deb` (apt fetches what it needs), or
+  the `.rpm` with `dnf`. The `.tar.gz` runs from wherever it is unpacked: `bin/Mirada`.
+- **macOS** — open the `.dmg` and drag Mirada to Applications. macOS refuses the first launch of an
+  unnotarized app: open **System Settings → Privacy & Security**, find Mirada near the bottom, and
+  choose **Open Anyway**.
+- **Windows** — run the `.msi`. SmartScreen warns about an unknown publisher: **More info → Run
+  anyway**.
 
 ## Using it
 
@@ -52,6 +70,8 @@ the native codec bundle for your platform from the
 ./mvnw verify                                       # tests, null checks, formatting
 ./mvnw clean -Pdist -DskipTests package             # the app, in target/dist
 ```
+
+Add `-Dskip.installers=false` to wrap it into this platform's installers, in `target/installers`.
 
 The app in `target/dist` starts in about a quarter of a second: a jlink runtime with Mirada in it,
 an AOT cache trained by stepping through every format, and the codec bundle.

@@ -21,6 +21,9 @@ In this order, when they pull against each other:
 - Format: `./mvnw spotless:apply` (Palantir, as in Termina and Torrenta)
 - App image: **`./mvnw clean -Pdist -DskipTests package`** ⇒ `target/dist/Mirada{.app}`, with the
   codec bundle inside and a trained AOT cache. `clean` is required (jlink reads `target/classes`).
+- Installers too: add `-Dskip.installers=false` ⇒ `target/installers` (deb, rpm and tar.gz on Linux,
+  dmg on macOS, msi on Windows); `scripts/check-linux-packages.sh target/installers branding/mirada.png`
+  checks the Linux ones.
 - Run without Maven (any JVM option, no build time counted): `scripts/dev-run.sh [-D…] photo.jpg`
 - Start-up, median of warm runs: `scripts/measure-startup.sh -n 7 target/dist/Mirada/bin/Mirada photo.jpg`
   (or `MIRADA_NO_BUILD=1 … scripts/dev-run.sh photo.jpg`). Stepping: `MIRADA_PERF=1 MIRADA_PERF_TOUR=1`
@@ -68,6 +71,19 @@ and publishes a `codecs-N` release with checksums; the zips are 3.0–4.2 MB. Ch
 version means: edit the tags in `build-codecs.sh`, run the workflow with the next tag, then put the
 new tag and the five checksums from its `SHA256SUMS` in the pom. A missing library is not fatal: its files still list, and open with a message
 naming the library. EXIF is metadata-extractor.
+
+## Releasing
+
+1. Set `<version>` in `pom.xml` without `-SNAPSHOT`, and give its `CHANGELOG.md` heading a date
+   (`## 0.1.0 — 2026-11-02`); the release notes are that section.
+2. Commit, then tag and push the tag: `git tag v0.1.0 && git push origin v0.1.0`.
+3. The **Release** workflow refuses a tag that disagrees with the pom or a snapshot, builds, tests and
+   packages on all five targets, smoke-tests every app image and the installed deb, checks the Linux
+   packages, and publishes the installers with `SHA256SUMS` and build provenance.
+4. Move the pom to the next `-SNAPSHOT`.
+
+Run the workflow by hand first for a dry run: it builds and checks everything and publishes nothing.
+Nothing is signed: macOS and Windows warn on first launch (README, "Installing it").
 
 ## Start-up, measured
 
@@ -147,6 +163,14 @@ a prefetched neighbour is 2–8 ms for every format.
   automatic names `module-info` requires. jdeps carries the readers' `provides` over from
   `META-INF/services`; none of them calls `ServiceLoader` itself, so no `uses` is needed. A new
   dependency that is an automatic module needs an entry there, or `-Pdist` fails at jlink.
+- **File associations register on all three platforms, but macOS does not pass the file.** On
+  Linux (`Exec=… %f`) and Windows the double-clicked image arrives as Mirada's argument. macOS sends
+  an "open documents" Apple Event instead, which only AWT's `Desktop.setOpenFileHandler` receives —
+  and AWT is headless here. Until that is wired (Torrenta's `os.AwtUse` does it), a double-click on
+  macOS starts Mirada with an empty window.
+- **The icon is rendered with librsvg, not ImageMagick.** ImageMagick's built-in SVG renderer, used
+  when `rsvg-convert` is missing, draws only the tile of these icons (Termina's too). `branding/`
+  holds the SVG and the PNG, ICO and ICNS made from it.
 - **The macOS bundle is changed after jpackage signs it** (codecs, AOT cache, version), so
   `scripts/fix-mac-bundle.sh` re-signs it ad hoc, last; CI verifies the signature.
 - **AWT is forced headless in `App.main`, as the first statement.** ImageIO and `BufferedImage` are
@@ -199,8 +223,9 @@ Termina and Torrenta. `mvn compile` fails on any null that can reach a type not 
 
 ## Not done
 
-A filmstrip; crop; slideshow; a menu bar or settings; installers (deb, rpm, dmg, msi) and file
-associations, made from the `-Pdist` image; an icon; a release workflow. Decoding the first image
+A filmstrip; crop; slideshow; a menu bar or settings. Opening a double-clicked file on macOS (see
+above). Signing: Developer ID and notarization on macOS, a code-signing certificate on Windows, GPG
+for the Linux packages. An AppImage, Homebrew and winget. No release has been made yet. Decoding the first image
 while the window is still being built (they run one after the other now, about 50 ms apart). Animated WebP, AVIF and JPEG XL show their first frame.
 JPEG XL is decoded in its own colour space, not converted to sRGB. Opening files from Finder on
 macOS (needs AWT `Desktop`). The app itself has not been run on Windows or macOS; CI only tests

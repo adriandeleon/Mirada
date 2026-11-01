@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=APPLICATION_NAME
+GenericName=Image Viewer
+Comment=APPLICATION_DESCRIPTION
+TryExec=APPLICATION_LAUNCHER
+Exec=APPLICATION_LAUNCHER %f
+Icon=APPLICATION_ICON
+Terminal=false
+Type=Application
+Categories=Graphics;2DGraphics;RasterGraphics;Viewer;
+Keywords=photo;picture;image;viewer;heic;avif;webp;jxl;
+MimeType=image/jpeg;image/png;image/gif;image/bmp;image/webp;image/tiff;image/vnd.adobe.photoshop;image/heic;image/heif;image/avif;image/jxl;
+StartupWMClass=com.mirada.App

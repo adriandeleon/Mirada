@@ -82,19 +82,25 @@ jobs:
           java-version: '25'
           cache: maven
 
-      # A display for the AOT training run and the smoke test, which must render.
-      - name: Display (Linux)
+      # A display for the AOT training run and the smoke tests, which must render; rpmbuild and the
+      # rest for the Linux installers and their checks.
+      - name: Tools (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq xvfb
+          sudo apt-get install -y -qq xvfb fakeroot rpm cpio desktop-file-utils
 
       # jlink and jpackage cannot cross-build, so each platform proves its own image. A missing AOT
-      # cache fails here rather than quietly costing half of start-up in whatever ships next.
+      # cache fails here rather than quietly costing half of start-up in whatever ships next. Linux
+      # builds the installers too, because that is where their contents get checked; the dmg and
+      # msi are left to the release.
       - name: App image
         env:
           MIRADA_REQUIRE_AOT: '1'
-        run: ./mvnw -B --no-transfer-progress clean -Pdist -DskipTests package
+        run: |
+          installers=true
+          [ "${{ runner.os }}" = Linux ] && installers=false
+          ./mvnw -B --no-transfer-progress clean -Pdist -DskipTests -Dskip.installers=$installers package
 
       - name: Smoke test (every format, in the packaged app)
         run: |
@@ -108,3 +114,14 @@ jobs:
       - name: Check the macOS signature
         if: runner.os == 'macOS'
         run: codesign --verify --deep --verbose=2 target/dist/Mirada.app
+
+      - name: Check the Linux packages
+        if: runner.os == 'Linux'
+        run: bash scripts/check-linux-packages.sh target/installers branding/mirada.png
+
+      - name: Install the deb and smoke-test it
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y -qq "./$(ls target/installers/*.deb)"
+          bash scripts/smoke-test.sh /opt/mirada/bin/Mirada src/test/resources/com/mirada/image

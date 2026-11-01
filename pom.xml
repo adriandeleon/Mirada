@@ -54,6 +54,10 @@
         <jpackage.plugin.version>1.8.0</jpackage.plugin.version>
         <!-- What jpackage writes: Mirada/ on Linux and Windows, Mirada.app on macOS (os-mac). -->
         <jpackage.imageName>Mirada</jpackage.imageName>
+        <!-- jpackage wants .png on Linux, .icns on macOS, .ico on Windows; the os-* profiles pick. -->
+        <jpackage.icon>${project.basedir}/branding/mirada.png</jpackage.icon>
+        <!-- Installers take minutes the dev loop never wants; CI and the release turn them on. -->
+        <skip.installers>true</skip.installers>
 
         <!-- The native codec bundle (libheif, libjxl): built by the Codecs workflow from
              scripts/build-codecs.sh and published as a release; downloaded, checked against the
@@ -299,6 +303,7 @@
             <properties>
                 <prism.pipeline>mtl,es2,sw</prism.pipeline>
                 <jpackage.imageName>Mirada.app</jpackage.imageName>
+                <jpackage.icon>${project.basedir}/branding/mirada.icns</jpackage.icon>
             </properties>
         </profile>
         <profile>
@@ -306,6 +311,7 @@
             <activation><os><family>windows</family></os></activation>
             <properties>
                 <prism.pipeline>d3d,es2,sw</prism.pipeline>
+                <jpackage.icon>${project.basedir}/branding/mirada.ico</jpackage.icon>
             </properties>
         </profile>
         <profile>
@@ -527,6 +533,7 @@
                                     <name>Mirada</name>
                                     <appVersion>${jpackage.appVersion}</appVersion>
                                     <vendor>Mirada</vendor>
+                                    <icon>${jpackage.icon}</icon>
                                     <destination>${project.build.directory}/dist</destination>
                                     <module>com.mirada/com.mirada.App</module>
                                     <modulePaths>
@@ -584,6 +591,20 @@
                                 </configuration>
                             </execution>
                             <execution>
+                                <id>add-notices</id>
+                                <phase>package</phase>
+                                <goals><goal>exec</goal></goals>
+                                <configuration>
+                                    <executable>bash</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/scripts/add-notices.sh</argument>
+                                        <argument>${project.build.directory}/dist/${jpackage.imageName}</argument>
+                                        <argument>${project.basedir}/LICENSE</argument>
+                                        <argument>${project.basedir}/NOTICE</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
                                 <id>add-codecs</id>
                                 <phase>package</phase>
                                 <goals><goal>exec</goal></goals>
@@ -622,6 +643,24 @@
                                         <argument>${project.build.directory}/dist/Mirada.app</argument>
                                         <argument>${jpackage.numericVersion}</argument>
                                     </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <!-- Last, so it wraps a finished image. Opt-in with
+                                     -Dskip.installers=false (CI, the release). -->
+                                <id>build-installers</id>
+                                <phase>package</phase>
+                                <goals><goal>exec</goal></goals>
+                                <configuration>
+                                    <executable>bash</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/scripts/build-installers.sh</argument>
+                                        <argument>${project.build.directory}/dist/${jpackage.imageName}</argument>
+                                        <argument>${jpackage.appVersion}</argument>
+                                        <argument>${project.build.directory}/installers</argument>
+                                        <argument>${jpackage.icon}</argument>
+                                    </arguments>
+                                    <skip>${skip.installers}</skip>
                                 </configuration>
                             </execution>
                         </executions>
