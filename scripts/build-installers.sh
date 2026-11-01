@@ -72,6 +72,24 @@ build() {
     fi
 }
 
+# The finished deb, rebuilt with the menu entry as a file it owns: /usr/share/applications, where
+# desktops and dpkg's triggers find it, instead of the `xdg-desktop-menu install` jpackage's postinst
+# runs and packaging/linux/postinst leaves out (it fails the install on a system with no menu
+# directory). The entry is jpackage's, tokens already filled in.
+own_menu_entry() {
+    local deb="$1" root size
+    root="$(mktemp -d)"
+    dpkg-deb -R "$deb" "$root"
+    install -D -m 644 "$root/opt/mirada/lib/mirada-Mirada.desktop" "$root/usr/share/applications/mirada.desktop"
+    # The control file's sums and size describe the contents and are rewritten to match them.
+    (cd "$root" && find . -path ./DEBIAN -prune -o -type f -printf '%P\0' | LC_ALL=C sort -z |
+        xargs -0 md5sum) > "$root/DEBIAN/md5sums"
+    size=$(du -sk --exclude=DEBIAN "$root" | cut -f1)
+    sed -i "s/^Installed-Size: .*/Installed-Size: $size/" "$root/DEBIAN/control"
+    dpkg-deb --root-owner-group --build "$root" "$deb" > /dev/null
+    rm -rf "$root"
+}
+
 # The image as it is, for a system without dpkg or rpm, or a user without root.
 build_tarball() {
     local out="$dest/mirada-$version-linux.tar.gz"
@@ -90,7 +108,8 @@ case "$(uname -s)" in
         # The resource directory overrides the menu entry and the icon (packaging/linux/NOTES.md).
         [ -n "$icon" ] && [ -f "$icon" ] || { echo "::error::[installers] no icon at '$icon'" >&2; exit 1; }
         resources="$(mktemp -d)"
-        cp "$root/packaging/linux/Mirada.desktop" "$resources/"
+        cp "$root/packaging/linux/Mirada.desktop" "$root/packaging/linux/postinst" \
+            "$root/packaging/linux/prerm" "$resources/"
         cp "$icon" "$resources/Mirada.png"
 
         # What JavaFX links (Termina's list, from readelf of its natives). They are extracted from
@@ -112,6 +131,7 @@ case "$(uname -s)" in
             --linux-package-deps "$deb_deps" \
             --license-file "$root/LICENSE" \
             --resource-dir "$resources"
+        own_menu_entry "$(ls "$dest"/mirada_*.deb)"
         if command -v rpmbuild >/dev/null 2>&1; then
             build rpm \
                 --linux-package-name mirada \

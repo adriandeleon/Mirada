@@ -1,0 +1,38 @@
+#!/bin/sh
+# postinst script for APPLICATION_PACKAGE
+#
+# jpackage's own template (JDK 25, template.postinst) without its DESKTOP_COMMANDS_INSTALL, which
+# runs `xdg-desktop-menu install` and fails the whole install ("No writable system menu directory
+# found") on a system with no desktop menu directory: a server, a container, a fresh CI runner. The
+# menu entry is a file the package owns instead, /usr/share/applications/mirada.desktop, and dpkg's
+# triggers refresh the menu. Plus `mirada` on PATH. See packaging/linux/NOTES.md.
+#
+# see: dh_installdeb(1)
+
+set -e
+
+package_type=deb
+LAUNCHER_AS_SERVICE_SCRIPTS
+
+mirada_launcher=/opt/mirada/bin/Mirada
+
+case "$1" in
+    configure)
+LAUNCHER_AS_SERVICE_COMMANDS_INSTALL
+        # A link rather than a copy: the launcher finds the image from its own resolved path. Left
+        # alone if something that is not a link already has the name.
+        if [ ! -e /usr/bin/mirada ] || [ -L /usr/bin/mirada ]; then
+            ln -sfn "$mirada_launcher" /usr/bin/mirada
+        fi
+    ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+exit 0

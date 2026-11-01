@@ -29,6 +29,12 @@ check_tree() { # <package-label> <extracted-root> <depends-text>
     done
     [ -s "$app/lib/app/mirada.aot" ] || fail "$label: no AOT cache"
     [ -f "$app/lib/app/NOTICE" ] || fail "$label: no NOTICE"
+    case "$label" in
+        *.deb)
+            [ -f "$tree/usr/share/applications/mirada.desktop" ] ||
+                fail "$label: no /usr/share/applications/mirada.desktop (the menu entry must be a file it owns)"
+            ;;
+    esac
 
     local entry="$app/lib/mirada-Mirada.desktop"
     if [ -f "$entry" ]; then
@@ -60,6 +66,11 @@ rpms=("$dir"/*.rpm)
 
 for deb in "${debs[@]}"; do
     tree="$(mktemp -d)"
+    # Its install script must not call xdg-desktop-menu, which fails the install wherever there is no
+    # system menu directory (packaging/linux/postinst).
+    if dpkg-deb -I "$deb" postinst | grep -v '^[[:space:]]*#' | grep -q 'xdg-desktop-menu'; then
+        fail "$(basename "$deb"): postinst calls xdg-desktop-menu"
+    fi
     dpkg-deb -x "$deb" "$tree"
     check_tree "$(basename "$deb")" "$tree" "$(dpkg-deb -f "$deb" Depends)"
     rm -rf "$tree"

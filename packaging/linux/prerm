@@ -1,0 +1,35 @@
+#!/bin/sh
+# prerm script for APPLICATION_PACKAGE
+#
+# jpackage's own template (JDK 25, template.prerm) without its DESKTOP_COMMANDS_UNINSTALL (the menu
+# entry is a file dpkg removes itself; see postinst), and removing the `mirada` link postinst made.
+#
+# see: dh_installdeb(1)
+
+set -e
+
+package_type=deb
+COMMON_SCRIPTS
+LAUNCHER_AS_SERVICE_SCRIPTS
+
+mirada_launcher=/opt/mirada/bin/Mirada
+
+case "$1" in
+    remove|upgrade|deconfigure)
+LAUNCHER_AS_SERVICE_COMMANDS_UNINSTALL
+        # Only on the way out: an upgrade's new postinst puts the link straight back.
+        if [ "$1" != upgrade ] && [ -L /usr/bin/mirada ] && [ "$(readlink /usr/bin/mirada)" = "$mirada_launcher" ]; then
+            rm -f /usr/bin/mirada
+        fi
+    ;;
+
+    failed-upgrade)
+    ;;
+
+    *)
+        echo "prerm called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+exit 0
