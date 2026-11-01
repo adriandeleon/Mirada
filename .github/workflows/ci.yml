@@ -118,6 +118,18 @@ jobs:
         if: runner.os == 'macOS'
         run: codesign --verify --deep --verbose=2 target/dist/Mirada.app
 
+      # The same figure as the native job's, on the same runners, so the two can be compared.
+      - name: Start-up (for information)
+        if: runner.os != 'Windows'
+        continue-on-error: true
+        run: |
+          if [ "${{ runner.os }}" = Linux ]; then
+            run=(xvfb-run -a); launcher=target/dist/Mirada/bin/Mirada
+          else
+            run=(); launcher=target/dist/Mirada.app/Contents/MacOS/Mirada
+          fi
+          "${run[@]}" scripts/measure-startup.sh -n 5 "$launcher" src/test/resources/com/mirada/image/red-blue.jpg
+
       - name: Check the Linux packages
         if: runner.os == 'Linux'
         run: bash scripts/check-linux-packages.sh target/installers branding/mirada.png
