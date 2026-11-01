@@ -124,13 +124,21 @@ a half minutes.
 - **Windows is untried.** StaticFX claims it; the AWT libraries, the codecs and the launcher
   arrangement would need the same work there that macOS needed (below).
 
-## Recommendation
+## Decision
 
-Keep the jlink image as what ships, and keep the native profile as a maintained experiment:
+**The native image ships** (2026-11-01), on Linux (x64, arm64), Windows and Apple silicon; Intel
+Macs keep the jlink image, which GraalVM 25.4 no longer builds for. StaticFX's licence was checked
+with its author. `-Pdist,native` builds it inside jpackage's app image (`scripts/native-app-image.sh`),
+so the installers are made exactly as before; AGENTS.md, "The native image (what ships)", has the
+how.
 
-1. ~~Grow the fixtures into a format matrix and run the native smoke test over it in CI on Linux.~~
-   Done (above).
-2. Ask StaticFX's author about the licence of what ends up in the executable.
-3. ~~Try macOS (the platform where launch time is most visible, through Finder) once Linux is
-   clean.~~ Done in CI (below); not yet run on a Mac by hand, nor packaged as a `.app`.
-4. Then decide on the numbers above whether the native build replaces the jlink one.
+Since this page's measurements, libjpeg-turbo, libwebp and the first image's head start have moved
+the native image's numbers again: 123 ms to a small JPEG, 160–177 ms to a 24-megapixel one, about
+220 ms to a 24-megapixel WebP (AGENTS.md, "Start-up, measured").
+
+What is still open:
+
+- **Windows needs its own metadata.** Its AWT calls back into Java through JNI that Linux's never
+  reaches (`java.awt.Toolkit.getDefaultToolkit` while loading), so ImageIO failed there until the
+  **Native metadata** workflow recorded it. Every platform's run is merged into the one file.
+- **A real Mac and a real Windows machine** have not run it by hand; CI opens every format in both.
