@@ -127,8 +127,8 @@ a half minutes.
 ## Decision
 
 **The native image ships** (2026-11-01), on Linux (x64, arm64), Windows and Apple silicon; Intel
-Macs keep the jlink image, which GraalVM 25.4 no longer builds for. StaticFX's licence was checked
-with its author. `-Pdist,native` builds it inside jpackage's app image (`scripts/native-app-image.sh`),
+Macs keep the jlink image, which GraalVM 25.4 no longer builds for. StaticFX's licence was cleared
+for shipping. `-Pdist,native` builds it inside jpackage's app image (`scripts/native-app-image.sh`),
 so the installers are made exactly as before; AGENTS.md, "The native image (what ships)", has the
 how.
 
