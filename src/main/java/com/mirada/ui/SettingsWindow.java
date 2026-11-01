@@ -1,0 +1,141 @@
+package com.mirada.ui;
+
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.Spinner;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+import javafx.stage.Window;
+import javafx.util.StringConverter;
+
+import com.mirada.settings.Settings;
+
+/**
+ * Settings, Termina's way: every control writes through at once, so there is no OK button, and each
+ * row says what it does — including the two that take effect at the next start. Built the first time
+ * it is opened.
+ */
+final class SettingsWindow {
+
+    private final Stage stage = new Stage();
+
+    SettingsWindow(Settings settings, String stylesheet) {
+        stage.setTitle("Settings");
+        stage.setResizable(false);
+        WindowIcon.applyTo(stage);
+
+        ChoiceBox<Settings.ThemeChoice> theme = new ChoiceBox<>();
+        theme.getItems().addAll(Settings.ThemeChoice.values());
+        theme.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(Settings.ThemeChoice choice) {
+                return choice == null
+                        ? ""
+                        : switch (choice) {
+                            case SYSTEM -> "Follow the system";
+                            case LIGHT -> "Light";
+                            case DARK -> "Dark";
+                        };
+            }
+
+            @Override
+            public Settings.ThemeChoice fromString(String text) {
+                return Settings.ThemeChoice.SYSTEM;
+            }
+        });
+        theme.setValue(settings.theme());
+        theme.valueProperty().addListener((o, was, now) -> {
+            if (now != null) settings.setTheme(now);
+        });
+
+        CheckBox thumbnails = new CheckBox();
+        thumbnails.setSelected(settings.startWithThumbnails());
+        thumbnails.selectedProperty().addListener((o, was, now) -> settings.setStartWithThumbnails(now));
+
+        CheckBox info = new CheckBox();
+        info.setSelected(settings.startWithInfo());
+        info.selectedProperty().addListener((o, was, now) -> settings.setStartWithInfo(now));
+
+        Spinner<Integer> hide =
+                new Spinner<>(Settings.MIN_HIDE_SECONDS, Settings.MAX_HIDE_SECONDS, settings.controlsHideSeconds());
+        hide.setPrefWidth(110);
+        hide.valueProperty().addListener((o, was, now) -> {
+            if (now != null) settings.setControlsHideSeconds(now);
+        });
+
+        VBox root = new VBox(
+                18,
+                group("Appearance", row("Theme", "Light or dark controls and backgrounds.", theme)),
+                group(
+                        "Viewer",
+                        row(
+                                "Thumbnails at start",
+                                "Opens the thumbnail strip when Mirada starts. T toggles it.",
+                                thumbnails),
+                        row(
+                                "Properties at start",
+                                "Opens the properties sidebar when Mirada starts. I toggles it.",
+                                info),
+                        row(
+                                "Hide controls after",
+                                "Seconds without moving the pointer before the floating controls fade.",
+                                hide)));
+        root.setPadding(new Insets(20));
+        root.getStyleClass().add("settings");
+        root.setPrefWidth(540);
+        Scene scene = new Scene(root);
+        scene.getStylesheets().add(stylesheet);
+        scene.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ESCAPE) stage.hide();
+        });
+        stage.setScene(scene);
+    }
+
+    void show(Window from) {
+        if (stage.isShowing()) {
+            stage.toFront();
+            return;
+        }
+        stage.setX(from.getX() + Math.max(0, (from.getWidth() - 520) / 2));
+        stage.setY(from.getY() + 80);
+        stage.show();
+    }
+
+    private static VBox group(String title, Node... rows) {
+        Label heading = new Label(title);
+        heading.getStyleClass().add("settings-group");
+        VBox card = new VBox(rows);
+        card.getStyleClass().add("info-card");
+        for (int i = 1; i < rows.length; i++) rows[i].getStyleClass().add("info-row-after");
+        return new VBox(8, heading, card);
+    }
+
+    private static HBox row(String name, String description, Node control) {
+        Label label = new Label(name);
+        label.getStyleClass().add("info-value");
+        Label detail = new Label(description);
+        detail.getStyleClass().add("info-label");
+        detail.setWrapText(true);
+        // A wrapping label is laid out at its one-line height unless told otherwise, and its column
+        // has to be allowed to shrink for the wrap to happen: without both, the text ends in "...".
+        detail.setMinHeight(Region.USE_PREF_SIZE);
+        VBox words = new VBox(2, label, detail);
+        words.setMinWidth(0);
+        HBox.setHgrow(words, Priority.ALWAYS);
+        // The control keeps its own width; the words give way.
+        if (control instanceof Region region) region.setMinWidth(Region.USE_PREF_SIZE);
+        HBox row = new HBox(12, words, control);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.getStyleClass().add("info-row");
+        return row;
+    }
+}

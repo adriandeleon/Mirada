@@ -3,12 +3,19 @@ package com.mirada.ui;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
-import javafx.beans.binding.Bindings;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.css.PseudoClass;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
@@ -19,14 +26,13 @@ import javafx.scene.image.Image;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import com.mirada.AppInfo;
 import com.mirada.folder.FolderImages;
@@ -34,11 +40,14 @@ import com.mirada.folder.ImageFormats;
 import com.mirada.image.ImageCache;
 import com.mirada.perf.Startup;
 import com.mirada.perf.Tour;
+import com.mirada.settings.Settings;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The one window: the image, and a status line under it. Opening a file loads its folder; the arrow
- * keys walk it.
+ * The one window, laid out as GNOME Image Viewer's: a header bar with the file name ({@link
+ * TitleBar}), the image with floating controls over it ({@link OnScreenControls}), and an info
+ * sidebar that opens beside it ({@link InfoPanel}). Opening a file loads its folder; the arrow keys
+ * walk it.
  *
  * <p>Stepping keeps the previous image on screen until the next one is decoded and its EXIF read,
  * so the window never flashes empty or shows a photo on its side before turning it. The neighbours
@@ -47,17 +56,37 @@ import org.jspecify.annotations.Nullable;
 public final class ViewerWindow {
 
     private static final PseudoClass FULL_SCREEN = PseudoClass.getPseudoClass("full-screen");
+    /** Reads the sidebar's details; a virtual thread per read, as the metadata reads in ImageCache. */
+    private static final Executor DETAILS_READER = Executors.newVirtualThreadPerTaskExecutor();
+
     private static final String EMPTY_HINT = "Open an image with Ctrl+O, or drop one here";
 
     private final Stage stage;
     private final ImageViewport viewport = new ImageViewport();
     private final Label placeholder = new Label(EMPTY_HINT);
-    private final Label name = new Label();
-    private final Label position = new Label();
-    private final Label dimensions = new Label();
-    private final Label zoom = new Label();
-    private final Label shot = new Label();
-    private final HBox statusBar;
+    private final BorderPane root;
+    private final TitleBar titleBar;
+    /** Built on the first pointer movement over the image: hidden until then anyway. */
+    private @Nullable OnScreenControls controls;
+
+    private final StackPane canvas;
+    /** What waits until the first image is on screen (or half a second has passed without one). */
+    private @Nullable List<Runnable> afterFirstPaint = new ArrayList<>();
+
+    private final BooleanProperty infoShowing = new SimpleBooleanProperty(this, "infoShowing", false);
+    private final Settings settings;
+    private final Consumer<String> openLink;
+    /** Built the first time each is opened. */
+    private @Nullable AboutWindow about;
+
+    private @Nullable SettingsWindow settingsWindow;
+    /** Built the first time the sidebar opens. */
+    private @Nullable InfoPanel info;
+
+    private final BooleanProperty thumbnailsShowing = new SimpleBooleanProperty(this, "thumbnailsShowing", false);
+    /** Built the first time the strip opens. */
+    private @Nullable ThumbnailStrip strip;
+
     private final ImageCache cache = new ImageCache(3);
     private final CommandPalette palette;
     /** Steps through the folder on its own when measuring or training the AOT cache; else null. */
@@ -67,35 +96,40 @@ public final class ViewerWindow {
     /** The image asked for most recently; a load that finishes for any other is dropped. */
     private @Nullable Path wanted;
 
-    public ViewerWindow(Stage stage) {
+    /** @param openLink opens a link or a folder ({@code file:} URI) with the platform's handler */
+    public ViewerWindow(Stage stage, Settings settings, Consumer<String> openLink) {
         this.stage = stage;
+        this.settings = settings;
+        this.openLink = openLink;
         this.tour = Tour.start(() -> go(folder.step(1)));
 
         placeholder.getStyleClass().add("placeholder");
         placeholder.setWrapText(true);
-        StackPane canvas = new StackPane(viewport, placeholder);
+        canvas = new StackPane(viewport, placeholder);
         canvas.getStyleClass().add("canvas");
+        canvas.addEventFilter(MouseEvent.MOUSE_MOVED, e -> {
+            if (controls == null) onScreenControls().wake();
+        });
+        settings.addListener(() -> {
+            OnScreenControls built = controls;
+            if (built != null) built.setIdle(settings.controlsHideSeconds());
+        });
+        viewport.fittedProperty().addListener((o, was, now) -> updateControls());
 
-        name.getStyleClass().add("name");
-        Region spring = new Region();
-        HBox.setHgrow(spring, Priority.ALWAYS);
-        statusBar = new HBox(name, position, dimensions, zoom, spring, shot);
-        statusBar.getStyleClass().add("status-bar");
-        zoom.textProperty()
-                .bind(Bindings.createStringBinding(
-                        () -> folder.isEmpty()
-                                ? ""
-                                : Zoom.label(
-                                        viewport.scaleProperty().get(),
-                                        viewport.fittedProperty().get()),
-                        viewport.scaleProperty(),
-                        viewport.fittedProperty()));
-
-        BorderPane root = new BorderPane(canvas);
-        root.setBottom(statusBar);
+        root = new BorderPane(canvas);
         root.getStyleClass().add("mirada");
+        titleBar = new TitleBar(stage, this::run, infoShowing);
+        root.setTop(titleBar.node());
+        infoShowing.addListener((o, was, now) -> {
+            root.setRight(now ? infoPanel().node() : null);
+            refreshInfo();
+        });
+        thumbnailsShowing.addListener((o, was, now) -> {
+            root.setBottom(now ? thumbnailStrip().node() : null);
+            refreshStrip();
+        });
 
-        // The palette lays its card and backdrop over everything, the status bar included.
+        // The palette lays its card and backdrop over everything, the header included.
         StackPane overlay = new StackPane(root);
         palette = new CommandPalette(overlay, this::run);
 
@@ -115,10 +149,110 @@ public final class ViewerWindow {
         stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
         stage.setFullScreenExitHint("");
         stage.fullScreenProperty().addListener((obs, was, now) -> {
-            statusBar.setVisible(!now);
-            statusBar.setManaged(!now);
+            titleBar.fullScreen(root, now);
             root.pseudoClassStateChanged(FULL_SCREEN, now);
         });
+        updateControls();
+        afterFirstPaint(titleBar::finish);
+        afterFirstPaint(() -> WindowIcon.applyTo(stage));
+        // A window opened without an image has no first paint to wait for.
+        PauseTransition fallback = new PauseTransition(Duration.millis(500));
+        fallback.setOnFinished(e -> releaseAfterFirstPaint());
+        fallback.play();
+        // What the settings open at start; after the listeners above, so they build what they show.
+        thumbnailsShowing.set(settings.startWithThumbnails());
+        infoShowing.set(settings.startWithInfo());
+    }
+
+    private void afterFirstPaint(Runnable task) {
+        List<Runnable> waiting = afterFirstPaint;
+        if (waiting == null) {
+            task.run();
+        } else {
+            waiting.add(task);
+        }
+    }
+
+    /**
+     * Runs what was waiting, once. Called on the pulse after the first image is shown, so the frame
+     * with the image is drawn before any of it.
+     */
+    private void releaseAfterFirstPaint() {
+        List<Runnable> waiting = afterFirstPaint;
+        if (waiting == null) return;
+        afterFirstPaint = null;
+        waiting.forEach(Runnable::run);
+    }
+
+    private OnScreenControls onScreenControls() {
+        OnScreenControls built = controls;
+        if (built == null) {
+            built = new OnScreenControls(canvas, this::run);
+            built.setIdle(settings.controlsHideSeconds());
+            controls = built;
+            updateControls();
+        }
+        return built;
+    }
+
+    private InfoPanel infoPanel() {
+        InfoPanel panel = info;
+        if (panel == null) {
+            panel = new InfoPanel(folder -> openLink.accept(folder.toUri().toString()));
+            info = panel;
+        }
+        return panel;
+    }
+
+    private ThumbnailStrip thumbnailStrip() {
+        ThumbnailStrip made = strip;
+        if (made == null) {
+            made = new ThumbnailStrip(index -> go(folder.jump(index)));
+            strip = made;
+        }
+        return made;
+    }
+
+    /** The strip, when it is open, on the folder's current image. */
+    private void refreshStrip() {
+        ThumbnailStrip shown = strip;
+        if (shown != null && thumbnailsShowing.get()) shown.show(folder.images(), folder.index());
+    }
+
+    /**
+     * The sidebar's contents, when it is open: details of the image on screen, read off the FX thread
+     * (a stat and a metadata walk) and shown if that image is still the one on screen.
+     */
+    private void refreshInfo() {
+        InfoPanel panel = info;
+        if (panel == null || !infoShowing.get()) return;
+        Path file = folder.current();
+        if (file == null || placeholder.isVisible()) {
+            panel.show(null);
+            return;
+        }
+        int index = folder.index();
+        int count = folder.size();
+        double width = viewport.contentWidth();
+        double height = viewport.contentHeight();
+        CompletableFuture.supplyAsync(() -> ImageDetails.read(file, index, count, width, height), DETAILS_READER)
+                .thenAcceptAsync(
+                        details -> {
+                            if (file.equals(wanted) && infoShowing.get()) panel.show(details);
+                        },
+                        Platform::runLater);
+    }
+
+    private void updateControls() {
+        boolean showing = !placeholder.isVisible() && !folder.isEmpty();
+        OnScreenControls built = controls;
+        if (built != null)
+            built.update(
+                    folder.index(),
+                    folder.size(),
+                    showing,
+                    viewport.fittedProperty().get());
+        titleBar.setImageShowing(showing);
     }
 
     public void show() {
@@ -146,8 +280,8 @@ public final class ViewerWindow {
         if (file == null) return;
         wanted = file;
         stage.setTitle(fileName(file) + " — " + AppInfo.NAME);
-        name.setText(fileName(file));
-        position.setText((folder.index() + 1) + " / " + folder.size());
+        titleBar.setTitle(fileName(file));
+        refreshStrip();
 
         if (!ImageFormats.isImage(file)) {
             String extension = ImageFormats.extension(file).toUpperCase(Locale.ROOT);
@@ -173,9 +307,10 @@ public final class ViewerWindow {
         placeholder.setVisible(false);
         viewport.show(image, decoded.exif().orientation());
         Startup.markFirstPaint();
+        Platform.runLater(() -> Platform.runLater(this::releaseAfterFirstPaint));
         if (tour != null) tour.shown(file, folder.index() == folder.size() - 1);
-        dimensions.setText(dimensionsText());
-        shot.setText(decoded.exif().summary());
+        updateControls();
+        refreshInfo();
         for (Path neighbour : folder.neighbours()) {
             if (ImageFormats.isImage(neighbour)) cache.get(neighbour);
         }
@@ -185,17 +320,12 @@ public final class ViewerWindow {
         viewport.clear();
         placeholder.setText(message);
         placeholder.setVisible(true);
-        dimensions.setText("");
-        shot.setText("");
         if (folder.isEmpty()) {
-            name.setText("");
-            position.setText("");
+            titleBar.setTitle(AppInfo.NAME);
             stage.setTitle(AppInfo.NAME);
         }
-    }
-
-    private String dimensionsText() {
-        return Math.round(viewport.contentWidth()) + " × " + Math.round(viewport.contentHeight());
+        updateControls();
+        refreshInfo();
     }
 
     private void onKey(KeyEvent e) {
@@ -237,7 +367,29 @@ public final class ViewerWindow {
             case OPEN -> chooseFile();
             case CLOSE -> stage.close();
             case PALETTE -> palette.show(Command.inPalette(), this::unavailable);
+            case INFO -> infoShowing.set(!infoShowing.get());
+            case THUMBNAILS -> thumbnailsShowing.set(!thumbnailsShowing.get());
+            case SETTINGS -> settingsWindow().show(stage);
+            case ABOUT -> aboutWindow().show(stage);
         }
+    }
+
+    private SettingsWindow settingsWindow() {
+        SettingsWindow made = settingsWindow;
+        if (made == null) {
+            made = new SettingsWindow(settings, stylesheet());
+            settingsWindow = made;
+        }
+        return made;
+    }
+
+    private AboutWindow aboutWindow() {
+        AboutWindow made = about;
+        if (made == null) {
+            made = new AboutWindow(settings.file(), openLink, stylesheet());
+            about = made;
+        }
+        return made;
     }
 
     /** Why {@code command} cannot run right now, or null when it can. */
@@ -253,7 +405,7 @@ public final class ViewerWindow {
 
     private void rotate(int quarterTurns) {
         viewport.rotate(quarterTurns);
-        if (!placeholder.isVisible()) dimensions.setText(dimensionsText());
+        refreshInfo();
     }
 
     private void chooseFile() {
@@ -295,6 +447,8 @@ public final class ViewerWindow {
                 item(Command.ROTATE_CLOCKWISE),
                 item(Command.ROTATE_COUNTERCLOCKWISE),
                 new SeparatorMenuItem(),
+                item(Command.INFO),
+                item(Command.THUMBNAILS),
                 item(Command.FULL_SCREEN));
         menu.setAutoHide(true);
         return menu;
@@ -314,7 +468,7 @@ public final class ViewerWindow {
         return name == null ? file.toString() : name.toString();
     }
 
-    private static String stylesheet() {
+    static String stylesheet() {
         return Objects.requireNonNull(ViewerWindow.class.getResource("/com/mirada/styles/mirada.css"), "mirada.css")
                 .toExternalForm();
     }

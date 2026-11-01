@@ -43,9 +43,10 @@ A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an en
 | Package | What |
 |---|---|
 | `com.mirada.folder` | The "document": the images in one folder, in natural name order, and which one is showing (`FolderImages`, `NaturalOrder`, `ImageFormats`) |
-| `com.mirada.image` | Loading: decoded images cached by path (`ImageCache`), EXIF orientation and the camera line (`Exif`, `Orientation`) |
+| `com.mirada.image` | Loading: decoded images cached by path (`ImageCache`), EXIF orientation and the camera line (`Exif`, `Orientation`), the sidebar's camera card and every metadata tag (`ExifDetails`), the strip's thumbnails (`Thumbnails`) |
 | `com.mirada.os` | Platform glue: the macOS open-file handler and the one rule for `java.awt.headless` (`MacOpenFiles`) |
-| `com.mirada.ui` | The window (`ViewerWindow`), the zoom/pan canvas (`ImageViewport`) and its arithmetic (`Zoom`), every command with its keys, name and description (`Command`), the command palette (`CommandPalette`), the theme |
+| `com.mirada.settings` | `~/.mirada/settings.properties` (`MIRADA_CONFIG_DIR` moves it): theme, what opens at start, how long the floating controls stay; clamped on read, written through on every change |
+| `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`); every command with its keys, name and description (`Command`), the command palette (`CommandPalette`), `AboutWindow`, `SettingsWindow`, the theme, the symbolic icons (`Icons`) |
 
 Four decoders (`ImageFormats.Decoder`, by extension). JavaFX's own `Image` decodes BMP, GIF
 (animated), JPEG and PNG in its background thread. The rest run on two decoder threads in
@@ -97,7 +98,8 @@ Measure again after anything that touches start-up; these are the numbers to bea
 | App image, jpackage's launcher, no AOT cache | 812 |
 | App image, jpackage's launcher, AOT cache | 577 |
 | App image, script launcher, no AOT cache | 476 |
-| **App image, script launcher, AOT cache (what `-Pdist` builds)** | **246** |
+| App image, script launcher, AOT cache, before the header-bar UI | 246 |
+| **The same, with the header bar, controls, sidebar and palette styles (what `-Pdist` builds now)** | **285–291** |
 
 With everything on, `main` is reached at about 160 ms, the window is up 60 ms later, and the image is
 decoded and painted in the next 30. A HEIC as the first image costs about 60 ms more. Stepping onto
@@ -124,7 +126,7 @@ a prefetched neighbour is 2–8 ms for every format.
   Downsampled previews for the fitted view would let it hold more; not done.
 - **The viewport turns an `ImageView`, it never copies pixels.** The view is laid out unturned at the
   zoomed size and rotated about its centre, so `layoutChildren` places that centre on the centre of
-  where the turned image should stand. Sizes the user sees (status bar, fit) are the turned ones:
+  where the turned image should stand. Sizes the user sees (properties, fit) are the turned ones:
   `contentWidth`/`contentHeight`.
 - **libheif and libjxl turn the image upright themselves; the EXIF orientation must then be
   skipped.** HEIF readers are required to apply the container's `irot`/`imir`, and iPhones write an
@@ -145,6 +147,17 @@ a prefetched neighbour is 2–8 ms for every format.
   every DLL in the bundle first, retrying until nothing more loads. Linux and macOS libraries carry
   `$ORIGIN` / `@loader_path` rpaths instead, which `check-codecs.sh` asserts on Linux.
 - **libjxl writes to stderr on a bad file** (`decode.cc: invalid signature`). Noise, not a failure.
+- **Only what the first frame shows is built before it.** The header bar is; the floating controls
+  are built on the first pointer movement over the image, the properties sidebar and the thumbnail
+  strip the first time they open, About and Settings the first time they are asked for, and the
+  header's tooltips, its menu's items and the window icon run from `ViewerWindow.afterFirstPaint`,
+  on the pulse after the first image is shown (or half a second after start without one). Building
+  them first measured +40 ms; deferred, +20 ms over the old window. Put new chrome behind the same
+  door. `HeaderBar` itself is not the cost: switched off, the start-up was the same.
+- **A window covered by others runs at about one frame a second here.** GNOME throttles a covered
+  XWayland window's frame callbacks, so every JavaFX animation and even mouse delivery slows to that
+  rate: the floating controls seemed to fade seconds late in a test until timestamps showed wake and
+  idle on time and only the pulses slow. Judge timing on an uncovered window, or by timestamps.
 - **jpackage's Linux launcher asks dpkg and rpm about itself on every start.** It runs `rpm -qf`
   and `dpkg -S` on its own path (`JPACKAGE_DEBUG=true` shows it) to learn whether a package
   installed it; `dpkg -S` searches the whole package database, about 300 ms — more than the rest of
@@ -228,7 +241,8 @@ Termina and Torrenta. `mvn compile` fails on any null that can reach a type not 
 
 ## Not done
 
-A filmstrip; crop; slideshow; a menu bar or settings. Signing: Developer ID and notarization on macOS, a code-signing certificate on Windows, GPG
+The editor (GNOME Image Viewer's: crop with aspect ratios, rotate, flip, Cancel and Save); the
+header's rotate button is where it will open. Slideshow; a keyboard shortcuts window. Signing: Developer ID and notarization on macOS, a code-signing certificate on Windows, GPG
 for the Linux packages. An AppImage, Homebrew and winget. No release has been made yet. Decoding the first image
 while the window is still being built (they run one after the other now, about 50 ms apart). Animated WebP, AVIF and JPEG XL show their first frame.
 JPEG XL is decoded in its own colour space, not converted to sRGB. Opening files from Finder on

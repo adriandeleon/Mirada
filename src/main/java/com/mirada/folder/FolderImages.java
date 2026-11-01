@@ -80,6 +80,11 @@ public record FolderImages(List<Path> images, int index) {
         return new FolderImages(images, index + delta);
     }
 
+    /** The image at {@code index}, clamped to the folder. */
+    public FolderImages jump(int index) {
+        return new FolderImages(images, index);
+    }
+
     public FolderImages first() {
         return new FolderImages(images, 0);
     }

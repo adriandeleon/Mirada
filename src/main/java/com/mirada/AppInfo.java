@@ -18,6 +18,7 @@ public final class AppInfo {
 
     public static final String COPYRIGHT = "Copyright © 2026 Adrian De Leon";
     public static final String LICENSE = "MIT License";
+    public static final String HOMEPAGE = "https://github.com/adriandeleon/Mirada";
 
     private AppInfo() {}
 

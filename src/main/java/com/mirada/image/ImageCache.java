@@ -103,7 +103,7 @@ public final class ImageCache {
         return new Entry(file, ready, cancel);
     }
 
-    private static Image decodeOffThread(ImageFormats.Decoder decoder, Path file) {
+    static Image decodeOffThread(ImageFormats.Decoder decoder, Path file) {
         try {
             return switch (decoder) {
                 case IMAGEIO -> ImageIoDecoder.decode(file);

@@ -36,8 +36,28 @@ enum Command {
             "turn",
             new KeyCodeCombination(KeyCode.R, KeyCombination.SHIFT_DOWN)),
     FULL_SCREEN("Full Screen", "Fills the screen with the image. Escape leaves.", "view", key(KeyCode.F)),
+    INFO(
+            "Image Properties",
+            "Shows the folder, size, format, file dates and camera beside the image.",
+            "info details exif metadata sidebar",
+            key(KeyCode.I)),
+    THUMBNAILS(
+            "Thumbnails",
+            "Shows the folder's images in a strip along the bottom.",
+            "filmstrip strip gallery browse folder",
+            key(KeyCode.T)),
     /** Leaves full screen, or closes the window: look, then go. */
     ESCAPE("Escape", "Leaves full screen, or closes the window.", "", key(KeyCode.ESCAPE)),
+    SETTINGS(
+            "Settings",
+            "Theme, what opens at start, and how long the floating controls stay.",
+            "preferences options configure",
+            shortcut(KeyCode.COMMA)),
+    ABOUT(
+            "About Mirada",
+            "Version, licence, and the runtime and codec versions.",
+            "version help credits",
+            key(KeyCode.F12)),
     OPEN("Open…", "Opens an image, with its folder, or a folder.", "file", shortcut(KeyCode.O)),
     CLOSE("Close Window", "Closes Mirada.", "quit exit", shortcut(KeyCode.W)),
     PALETTE(
@@ -110,6 +130,7 @@ enum Command {
                 case O -> OPEN;
                 case W, Q -> CLOSE;
                 case P -> shift ? PALETTE : null;
+                case COMMA -> SETTINGS;
                 case EQUALS, PLUS, ADD -> ZOOM_IN;
                 case MINUS, SUBTRACT -> ZOOM_OUT;
                 case DIGIT0, NUMPAD0 -> FIT;
@@ -129,7 +150,10 @@ enum Command {
             case DIGIT1, NUMPAD1 -> ACTUAL_SIZE;
             case R -> shift ? ROTATE_COUNTERCLOCKWISE : ROTATE_CLOCKWISE;
             case F, F11 -> FULL_SCREEN;
+            case I -> INFO;
+            case T -> THUMBNAILS;
             case F1 -> PALETTE;
+            case F12 -> ABOUT;
             case ESCAPE -> ESCAPE;
             default -> null;
         };

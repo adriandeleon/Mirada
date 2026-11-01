@@ -17,21 +17,220 @@
     -fx-text-alignment: center;
 }
 
-.mirada .status-bar {
-    -fx-padding: 5 12 5 12;
-    -fx-spacing: 16;
-    -fx-alignment: center-left;
+/*
+ * The header bar, GNOME Image Viewer's: flat icon buttons around the file name. HeaderBar ships with
+ * no style class; TitleBar adds header-bar. The window buttons are drawn by the platform (or by
+ * JavaFX, outside the scene graph) over the right of this row.
+ */
+.header-bar {
+    -fx-background-color: -color-border-muted, -color-bg-subtle;
+    -fx-background-insets: 0, 0 0 1 0;
+    -fx-padding: 6 8 6 8;
+    -fx-min-height: 46;
+}
+
+.header-title {
+    -fx-text-fill: -color-fg-default;
+    -fx-font-weight: bold;
+    -fx-padding: 0 12 0 12;
+}
+
+.header-button,
+.osd-button,
+.info-action {
+    -fx-background-radius: 8;
+    -fx-padding: 0;
+    -fx-alignment: center;
+    -fx-min-width: 34;
+    -fx-min-height: 34;
+    -fx-pref-width: 34;
+    -fx-pref-height: 34;
+    -fx-max-width: 34;
+    -fx-max-height: 34;
+}
+
+/* A MenuButton's label adds its own padding around the graphic; centred like a Button's. */
+.header-button > .label,
+.osd-button > .label {
+    -fx-padding: 0;
+    -fx-alignment: center;
+}
+
+.header-button:selected {
+    -fx-background-color: -color-bg-default;
+}
+
+/* A MenuButton used as an icon button: no arrow beside the icon. */
+.no-arrow > .arrow-button {
+    -fx-padding: 0;
+}
+
+.no-arrow > .arrow-button > .arrow {
+    -fx-shape: null;
+    -fx-padding: 0;
+}
+
+/* The symbolic icons (Icons): stroked, never filled, in the text colour. */
+.icon {
+    -fx-fill: transparent;
+    -fx-stroke: -color-fg-default;
+    -fx-stroke-width: 2;
+    -fx-stroke-line-cap: round;
+    -fx-stroke-line-join: round;
+}
+
+.button:disabled .icon,
+.menu-button:disabled .icon {
+    -fx-stroke: -color-fg-subtle;
+}
+
+/*
+ * The floating controls over the image: dark translucent pills, the same on light and dark themes,
+ * because they sit on the photo, not on the window.
+ */
+.osd {
+    -fx-background-color: rgba(30, 32, 40, 0.78);
+    -fx-background-radius: 14;
+    -fx-padding: 6;
+}
+
+.osd .icon {
+    -fx-stroke: #f2f2f2;
+}
+
+.osd .button:disabled .icon,
+.osd .menu-button:disabled .icon {
+    -fx-stroke: rgba(242, 242, 242, 0.35);
+}
+
+.osd-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* The info sidebar: cards of label-over-value rows on the window's background. */
+.info-panel,
+.info-panel > .viewport {
+    -fx-background-color: -color-bg-default;
+}
+
+.info-panel {
+    -fx-border-color: -color-border-muted;
+    -fx-border-width: 0 0 0 1;
+}
+
+.info-cards {
+    -fx-padding: 14;
+}
+
+.info-card {
     -fx-background-color: -color-bg-subtle;
+    -fx-background-radius: 12;
+}
+
+.info-row {
+    -fx-padding: 10 14 10 16;
+}
+
+.info-row-after {
     -fx-border-color: -color-border-muted;
     -fx-border-width: 1 0 0 0;
 }
 
-.mirada .status-bar .label {
+.info-label {
+    -fx-text-fill: -color-fg-muted;
+}
+
+.info-value {
+    -fx-text-fill: -color-fg-default;
+    -fx-font-size: 1.15em;
+}
+
+/* The thumbnail strip along the bottom: the current image's cell carries the accent. */
+.thumbnail-strip {
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: -color-border-muted;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 6 8 6 8;
+}
+
+.thumbnail-strip .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 2;
+}
+
+.thumbnail-strip .thumbnail {
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-border-width: 2;
+    -fx-border-color: transparent;
+}
+
+.thumbnail-strip .list-cell:hover .thumbnail {
+    -fx-background-color: -color-bg-default;
+}
+
+.thumbnail-strip .list-cell:selected .thumbnail {
+    -fx-border-color: -color-accent-emphasis;
+    -fx-background-color: -color-accent-subtle;
+}
+
+/* "All Metadata": a folded card listing every tag, smaller than the rows above it. */
+.metadata-pane > .title {
+    -fx-background-color: -color-bg-subtle;
+    -fx-background-radius: 12;
+    -fx-padding: 12 14 12 16;
+}
+
+.metadata-pane > .content {
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-width: 0;
+    -fx-padding: 4 16 14 16;
+}
+
+.metadata-section {
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-default;
+}
+
+.metadata-label {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 0.9em;
+}
+
+.metadata-value {
+    -fx-text-fill: -color-fg-default;
+}
+
+.info-empty {
+    -fx-text-fill: -color-fg-muted;
+    -fx-padding: 8;
+}
+
+/* About and Settings: Termina's About layout, and the sidebar's cards for the settings rows. */
+.about,
+.settings {
+    -fx-background-color: -color-bg-default;
+}
+
+.about-name {
+    -fx-font-size: 1.6em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-default;
+}
+
+.about-version,
+.about-details .label {
+    -fx-text-fill: -color-fg-muted;
+}
+
+.about-path,
+.about-credits {
     -fx-text-fill: -color-fg-muted;
     -fx-font-size: 0.92em;
 }
 
-.mirada .status-bar .name {
+.settings-group {
+    -fx-font-weight: bold;
     -fx-text-fill: -color-fg-default;
 }
 

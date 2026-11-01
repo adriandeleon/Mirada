@@ -25,8 +25,17 @@ The first version: open a photo, look, arrow through its folder, close.
   `IMG_9` comes before `IMG_10`, and hidden files are left out. Opening a folder starts at its first
   image.
 - **Photos are turned upright from their EXIF orientation**, including the mirrored ones.
-- **The status bar** shows the file name, its place in the folder, its size as displayed, the zoom,
-  and the camera and exposure when the file records them.
+- **A window laid out as GNOME Image Viewer's.** A header bar with the file name, full screen,
+  rotate, properties and the main menu, drawn in the title bar where the platform allows; floating
+  previous/next and zoom controls over the image that fade when the pointer rests.
+- **A properties sidebar** (I): folder, position, image size, format, file size, dates, and for
+  photos a camera card (camera, lens, date taken, exposure, aperture, ISO, focal length, flash,
+  location) and every metadata tag under All Metadata.
+- **A thumbnail strip** (T), closed by default: the folder's images along the bottom, made in the
+  background for the ones in view.
+- **Settings** (Ctrl+,): theme (follow the system, light or dark), what opens at start, how long the
+  floating controls stay. Applied as you change them, saved in `~/.mirada/settings.properties`.
+- **About** (F12): version, licence, and the Java, JavaFX and codec versions.
 - **Zoom and pan.** The wheel zooms about the pointer, `+` and `-` step through zoom stops, `0` fits
   the window and `1` shows actual size; double-click toggles the two. Drag to pan. Above 200 % the
   pixels are drawn as crisp squares.

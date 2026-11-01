@@ -14,7 +14,7 @@ Java 25 + JavaFX 27.
 
 An image viewer is the app you open a hundred times a day for three seconds each. Mirada treats the
 folder as the document: open one photo and the rest of the folder is already there, in the order
-you'd number it, one arrow key away. The image fills the window; a single status line under it says
+you'd number it, one arrow key away. The image fills the window; the properties sidebar says
 which file, where it sits in the folder, how large it is, and what took it.
 
 <br clear="left">
@@ -40,7 +40,9 @@ types it opens. None is signed yet, so each platform asks once:
 ## Using it
 
 Open a photo or a folder from the command line, with Ctrl+O, or by dropping it on the window.
-Drag to pan a zoomed image; the wheel zooms about the pointer.
+Drag to pan a zoomed image; the wheel zooms about the pointer. Move the pointer over the image for
+the previous/next and zoom controls; the header's buttons go full screen, rotate, open the
+properties sidebar and the main menu.
 
 | Key | Does |
 |---|---|
@@ -52,7 +54,11 @@ Drag to pan a zoomed image; the wheel zooms about the pointer.
 | `R` / Shift+`R` | Rotate right / left |
 | `F`, F11 | Full screen |
 | Escape | Leave full screen, or close |
+| `I` | Properties sidebar: file, image and camera details |
+| `T` | Thumbnail strip |
 | Ctrl+Shift+P, F1 | Command palette: every command, by name |
+| Ctrl+, | Settings |
+| F12 | About |
 | Ctrl+O | Open |
 | Ctrl+W, Ctrl+Q | Close |
 

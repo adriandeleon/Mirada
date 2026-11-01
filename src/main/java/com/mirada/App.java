@@ -9,6 +9,7 @@ import javafx.stage.Stage;
 
 import com.mirada.os.MacOpenFiles;
 import com.mirada.perf.Startup;
+import com.mirada.settings.Settings;
 import com.mirada.ui.Theme;
 import com.mirada.ui.ViewerWindow;
 
@@ -30,8 +31,11 @@ public final class App extends Application {
     @Override
     public void start(Stage stage) {
         Startup.mark("fx-start");
-        Theme.followSystem();
-        ViewerWindow window = new ViewerWindow(stage);
+        Settings settings = new Settings(Settings.defaultFile());
+        settings.load();
+        Theme.apply(settings.theme());
+        settings.addListener(() -> Theme.apply(settings.theme()));
+        ViewerWindow window = new ViewerWindow(stage, settings, getHostServices()::showDocument);
         window.show();
         Startup.mark("window-shown");
         List<String> args = getParameters().getUnnamed();
