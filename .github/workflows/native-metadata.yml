@@ -12,6 +12,8 @@ name: Native metadata
 
 on:
   workflow_dispatch:
+  push:
+    branches: [native-installers] # TEMPORARY: until this file is on main and can be dispatched
 
 permissions:
   contents: read
