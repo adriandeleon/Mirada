@@ -11,8 +11,9 @@ import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The "document" of an image viewer: the images in one folder, in name order, and which one is
- * showing. Immutable; stepping returns a new value.
+ * The "document" of an image viewer: the images in one folder, in the chosen order ({@link
+ * Sorting}, natural name order by default), and which one is showing. Immutable; stepping returns a
+ * new value.
  *
  * <p>A file opened by name is always in the list, even when it is hidden or its extension is not
  * one Mirada decodes, so the window can say what is wrong with it instead of opening a different
@@ -29,25 +30,63 @@ public record FolderImages(List<Path> images, int index) {
         index = images.isEmpty() ? 0 : Math.clamp(index, 0, images.size() - 1);
     }
 
-    /** A file opens with its folder around it; a folder opens at its first image. */
+    /** A file opens with its folder around it; a folder opens at its first image. In name order. */
     public static FolderImages open(Path path) throws IOException {
+        return open(path, Sorting.DEFAULT);
+    }
+
+    /** A file opens with its folder around it; a folder opens at its first image. */
+    public static FolderImages open(Path path, Sorting sorting) throws IOException {
         Path target = path.toAbsolutePath().normalize();
-        if (Files.isDirectory(target)) return select(list(target), null);
+        if (Files.isDirectory(target)) return select(list(target), null, sorting);
         Path folder = target.getParent();
         if (folder == null) return new FolderImages(List.of(target), 0);
-        return select(list(folder), target);
+        return select(list(folder), target, sorting);
+    }
+
+    static FolderImages select(List<Path> candidates, @Nullable Path selected) {
+        return select(candidates, selected, Sorting.DEFAULT);
     }
 
     /** Hidden files left out, the selected one put back in, sorted, and the selection found. */
-    static FolderImages select(List<Path> candidates, @Nullable Path selected) {
+    static FolderImages select(List<Path> candidates, @Nullable Path selected, Sorting sorting) {
         List<Path> images = new ArrayList<>();
         for (Path candidate : candidates) {
             if (!name(candidate).startsWith(".")) images.add(candidate);
         }
         if (selected != null && !images.contains(selected)) images.add(selected);
-        images.sort(BY_NAME);
-        int index = selected == null ? 0 : images.indexOf(selected);
-        return new FolderImages(images, index);
+        List<Path> sorted = sorting.sort(images);
+        int index = selected == null ? 0 : sorted.indexOf(selected);
+        return new FolderImages(sorted, index);
+    }
+
+    /** The same images in another order, still on the one showing. */
+    public FolderImages sorted(Sorting sorting) {
+        Path showing = current();
+        List<Path> sorted = sorting.sort(images);
+        return new FolderImages(sorted, showing == null ? 0 : sorted.indexOf(showing));
+    }
+
+    /**
+     * Without {@code gone} (trashed, or moved away), on the image that took its place: the next one,
+     * or the previous when it was the last.
+     */
+    public FolderImages without(Path gone) {
+        int at = images.indexOf(gone);
+        if (at < 0) return this;
+        List<Path> rest = new ArrayList<>(images);
+        rest.remove(at);
+        int next = at < index ? index - 1 : at == index ? Math.min(at, rest.size() - 1) : index;
+        return new FolderImages(rest, Math.max(0, next));
+    }
+
+    /** With {@code from} renamed to {@code to}, re-sorted, and on {@code to} if {@code from} was showing. */
+    public FolderImages renamed(Path from, Path to, Sorting sorting) {
+        Path showing = current();
+        List<Path> changed = images.stream().map(p -> p.equals(from) ? to : p).toList();
+        List<Path> sorted = sorting.sort(changed);
+        Path stay = from.equals(showing) ? to : showing;
+        return new FolderImages(sorted, stay == null ? 0 : Math.max(0, sorted.indexOf(stay)));
     }
 
     private static List<Path> list(Path folder) throws IOException {

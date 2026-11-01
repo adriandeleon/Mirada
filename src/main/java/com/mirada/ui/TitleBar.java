@@ -112,10 +112,13 @@ final class TitleBar {
                         item(Command.THUMBNAILS, run),
                         item(Command.INFO, run),
                         new SeparatorMenuItem(),
+                        item(Command.EDIT, run),
                         item(Command.ROTATE_COUNTERCLOCKWISE, run),
                         item(Command.ROTATE_CLOCKWISE, run),
+                        item(Command.SLIDESHOW, run),
                         new SeparatorMenuItem(),
                         item(Command.SETTINGS, run),
+                        item(Command.SHORTCUTS, run),
                         item(Command.ABOUT, run),
                         new SeparatorMenuItem(),
                         item(Command.CLOSE, run));

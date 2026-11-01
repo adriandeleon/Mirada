@@ -72,14 +72,20 @@ public final class ImageViewport extends Region {
         setOnMouseClicked(this::onClicked);
     }
 
-    /** Shows {@code image} fitted, upright by {@code orientation}, with the user's turns reset. */
+    /** Whether a newly shown image keeps the zoom and position, rather than being fitted. */
+    private boolean keepZoom;
+
+    /** Shows {@code image} upright by {@code orientation}, with the user's turns reset. */
     public void show(Image image, Orientation orientation) {
         show(image, orientation, image.getWidth(), image.getHeight());
     }
 
     /**
-     * Shows a preview of an image {@code width} × {@code height} pixels, fitted and laid out as that
-     * image would be, until {@link #replace} hands over the image itself.
+     * Shows a preview of an image {@code width} × {@code height} pixels, laid out as that image would
+     * be, until {@link #replace} hands over the image itself.
+     *
+     * <p>Fitted, unless {@link #setKeepZoom keeping the zoom} and the last image was zoomed: then at
+     * the same scale and position, to compare the same detail across a burst of photos.
      */
     public void show(Image preview, Orientation orientation, double width, double height) {
         this.image = preview;
@@ -88,7 +94,22 @@ public final class ImageViewport extends Region {
         this.orientation = orientation;
         this.turns = 0;
         view.setImage(preview);
-        fitted.set(true);
+        if (!keepZoom) fitted.set(true);
+        requestLayout();
+    }
+
+    public void setKeepZoom(boolean keep) {
+        keepZoom = keep;
+    }
+
+    /**
+     * Moves a zoomed-in image by a fraction of the window: {@code (-0.1, 0)} shows what is to the
+     * left. Nothing happens to an image that fits.
+     */
+    public void pan(double fractionX, double fractionY) {
+        if (image == null || fitted.get()) return;
+        offsetX -= fractionX * getWidth();
+        offsetY -= fractionY * getHeight();
         requestLayout();
     }
 

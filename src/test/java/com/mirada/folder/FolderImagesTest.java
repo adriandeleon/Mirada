@@ -109,4 +109,41 @@ class FolderImagesTest {
         assertEquals("", ImageFormats.extension(Path.of("README")));
         assertEquals("webp", ImageFormats.extension(Path.of("x.WebP")));
     }
+
+    @Test
+    void aTrashedImageGivesWayToTheNextOrThePrevious() {
+        Path a = Path.of("a.jpg");
+        Path b = Path.of("b.jpg");
+        Path c = Path.of("c.jpg");
+        FolderImages onB = new FolderImages(List.of(a, b, c), 1);
+        assertEquals(new FolderImages(List.of(a, c), 1), onB.without(b));
+        assertEquals(new FolderImages(List.of(b, c), 0), onB.without(a));
+        assertEquals(new FolderImages(List.of(a, b), 1), onB.without(c));
+        FolderImages onC = new FolderImages(List.of(a, b, c), 2);
+        assertEquals(new FolderImages(List.of(a, b), 1), onC.without(c));
+        assertTrue(new FolderImages(List.of(a), 0).without(a).isEmpty());
+        assertEquals(onB, onB.without(Path.of("elsewhere.jpg")));
+    }
+
+    @Test
+    void aRenamedImageIsSortedAgainAndStaysShowing() {
+        Path a = Path.of("a.jpg");
+        Path b = Path.of("b.jpg");
+        Path c = Path.of("c.jpg");
+        FolderImages onA = new FolderImages(List.of(a, b, c), 0);
+        FolderImages renamed = onA.renamed(a, Path.of("z.jpg"), Sorting.DEFAULT);
+        assertEquals(List.of(b, c, Path.of("z.jpg")), renamed.images());
+        assertEquals(Path.of("z.jpg"), renamed.current());
+        assertEquals(a, onA.renamed(b, Path.of("0.jpg"), Sorting.DEFAULT).current());
+    }
+
+    @Test
+    void reSortingKeepsTheImageShowing() {
+        Path a = Path.of("a.jpg");
+        Path b = Path.of("b.jpg");
+        FolderImages onA = new FolderImages(List.of(a, b), 0);
+        FolderImages reversed = onA.sorted(Sorting.DEFAULT.reverse());
+        assertEquals(List.of(b, a), reversed.images());
+        assertEquals(a, reversed.current());
+    }
 }

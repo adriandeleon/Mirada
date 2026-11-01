@@ -73,14 +73,55 @@ class CommandTest {
     }
 
     @Test
-    void thePaletteListsEveryCommandButItselfAndEscape() {
+    void thePaletteListsEveryCommandButItselfEscapeAndPanning() {
         assertFalse(Command.inPalette().contains(Command.PALETTE));
         assertFalse(Command.inPalette().contains(Command.ESCAPE));
-        assertEquals(Command.values().length - 2, Command.inPalette().size());
+        assertFalse(Command.inPalette().contains(Command.PAN_LEFT));
+        assertEquals(Command.values().length - 6, Command.inPalette().size());
         for (Command command : Command.inPalette()) {
             assertFalse(command.label().isBlank(), command.name());
             assertFalse(command.description().isBlank(), command.name());
         }
+    }
+
+    @Test
+    void shiftArrowsPanAndBareArrowsStep() {
+        assertEquals(Command.PAN_LEFT, Command.forKey(KeyCode.LEFT, true, false));
+        assertEquals(Command.PAN_RIGHT, Command.forKey(KeyCode.RIGHT, true, false));
+        assertEquals(Command.PAN_UP, Command.forKey(KeyCode.UP, false, false));
+        assertEquals(Command.PAN_DOWN, Command.forKey(KeyCode.DOWN, true, false));
+        assertEquals(Command.NEXT, Command.forKey(KeyCode.RIGHT, false, false));
+    }
+
+    @Test
+    void fileKeysAreTheDesktopsOwn() {
+        assertEquals(Command.MOVE_TO_TRASH, Command.forKey(KeyCode.DELETE, false, false));
+        assertEquals(Command.RENAME, Command.forKey(KeyCode.F2, false, false));
+        assertEquals(Command.SLIDESHOW, Command.forKey(KeyCode.F5, false, false));
+        assertEquals(Command.SHORTCUTS, Command.forKey(KeyCode.SLASH, true, true));
+        assertEquals(Command.KEEP_ZOOM, Command.forKey(KeyCode.Z, false, false));
+    }
+
+    @Test
+    void everyCommandHasAGroupAndTheShortcutsWindowListsEveryKey() {
+        int keyed = 0;
+        for (Command command : Command.values()) {
+            assertFalse(command.group().isBlank(), command.name());
+            if (command.chord() != javafx.scene.input.KeyCombination.NO_MATCH) keyed++;
+        }
+        assertEquals(
+                keyed,
+                ShortcutsWindow.grouped().values().stream()
+                        .mapToInt(java.util.List::size)
+                        .sum());
+    }
+
+    @Test
+    void fileCommandsNeedAnImageAndASlideshowTwo() {
+        assertEquals("No image is showing.", Command.MOVE_TO_TRASH.unavailable(0, 1, false));
+        assertNull(Command.RENAME.unavailable(0, 1, true));
+        assertEquals("A slideshow needs a folder with more than one image.", Command.SLIDESHOW.unavailable(0, 1, true));
+        assertNull(Command.SLIDESHOW.unavailable(0, 2, true));
     }
 
     @Test

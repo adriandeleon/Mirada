@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import com.mirada.folder.Sorting;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -21,6 +22,26 @@ class SettingsTest {
         assertFalse(settings.startWithThumbnails());
         assertFalse(settings.startWithInfo());
         assertEquals(2, settings.controlsHideSeconds());
+        assertEquals(Sorting.DEFAULT, settings.sorting());
+        assertFalse(settings.keepZoom());
+        assertEquals(5, settings.slideshowSeconds());
+    }
+
+    @Test
+    void theFolderOrderZoomAndSlideshowAreKept(@TempDir Path dir) {
+        Path file = dir.resolve("settings.properties");
+        Settings settings = new Settings(file);
+        settings.setSorting(new Sorting(Sorting.By.DATE, true));
+        settings.setKeepZoom(true);
+        settings.setSlideshowSeconds(12);
+
+        Settings again = new Settings(file);
+        again.load();
+        assertEquals(new Sorting(Sorting.By.DATE, true), again.sorting());
+        assertTrue(again.keepZoom());
+        assertEquals(12, again.slideshowSeconds());
+        assertEquals(Settings.MAX_SLIDESHOW_SECONDS, Settings.slideshowSecondsOf("600"));
+        assertEquals(5, Settings.slideshowSecondsOf("fast"));
     }
 
     @Test

@@ -14,12 +14,12 @@ import javafx.scene.image.WritablePixelFormat;
  * <p>Premultiplied pixels are averaged as they are, which is what keeps a transparent edge from
  * turning dark. Any thread, for an image that has finished loading.
  */
-final class Shrink {
+public final class Shrink {
 
     private Shrink() {}
 
     /** {@code source} with its longer side at most {@code longSide}; {@code source} itself if it already is. */
-    static Image toFit(Image source, int longSide) {
+    public static Image toFit(Image source, int longSide) {
         int width = (int) source.getWidth();
         int height = (int) source.getHeight();
         int[] size = fittedSize(width, height, longSide);

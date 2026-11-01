@@ -229,9 +229,23 @@
     -fx-font-size: 0.92em;
 }
 
-.settings-group {
+.settings-group,
+.shortcuts-group {
     -fx-font-weight: bold;
     -fx-text-fill: -color-fg-default;
+}
+
+/* Keyboard Shortcuts: each key in a small rounded chip, as the palette shows chords. */
+.shortcuts {
+    -fx-background-color: -color-bg-default;
+}
+
+.shortcut-key {
+    -fx-text-fill: -color-fg-muted;
+    -fx-background-color: -color-bg-subtle;
+    -fx-background-radius: 5;
+    -fx-padding: 1 7 1 7;
+    -fx-font-size: 0.92em;
 }
 
 /*
@@ -347,4 +361,55 @@
     -fx-text-fill: -color-fg-muted;
     -fx-font-size: 11px;
     -fx-padding: 7 10 2 10;
+}
+
+/* What a toggle or a file operation just did, over the bottom of the image; gone after two seconds. */
+.toast {
+    -fx-background-color: rgba(0, 0, 0, 0.72);
+    -fx-background-radius: 999;
+    -fx-text-fill: white;
+    -fx-padding: 8 16 8 16;
+    -fx-font-size: 1.0em;
+}
+
+/* The editor: the window's own surfaces for its bars, a dark canvas for the picture, and the crop
+   box drawn in white over a dimmed outside, as GNOME Image Viewer draws it. */
+.editor {
+    -fx-background-color: -color-bg-default;
+}
+
+.editor-bar {
+    -fx-background-color: -color-bg-subtle;
+}
+
+.editor-title {
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-default;
+}
+
+.crop-view {
+    -fx-background-color: #1e1e1e;
+}
+
+.crop-shade {
+    -fx-fill: rgba(0, 0, 0, 0.55);
+}
+
+.crop-border {
+    -fx-fill: transparent;
+    -fx-stroke: white;
+    -fx-stroke-width: 1.5;
+    -fx-stroke-type: inside;
+}
+
+.crop-third {
+    -fx-stroke: rgba(255, 255, 255, 0.45);
+    -fx-stroke-width: 1;
+}
+
+.crop-handle {
+    -fx-fill: white;
+    -fx-stroke: rgba(0, 0, 0, 0.5);
+    -fx-arc-width: 3;
+    -fx-arc-height: 3;
 }

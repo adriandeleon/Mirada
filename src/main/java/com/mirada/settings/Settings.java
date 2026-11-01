@@ -13,10 +13,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 
+import com.mirada.folder.Sorting;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Mirada's settings, in {@code ~/.mirada/settings.properties} ({@code MIRADA_CONFIG_DIR} moves the
+ * Mirada's settings: theme, what opens at start, how long the floating controls stay, the folder's
+ * order, whether stepping keeps the zoom, and the slideshow's pace. In {@code ~/.mirada/settings.properties} ({@code MIRADA_CONFIG_DIR} moves the
  * folder, for tests and timing runs), Termina's way: a plain file meant to be hand-edited, every
  * value clamped on read as well as on write, so a bad edit cannot break the next start, and every
  * change written through at once (the settings window has no OK button).
@@ -36,9 +38,16 @@ public final class Settings {
     static final String START_WITH_THUMBNAILS = "start.thumbnails";
     static final String START_WITH_INFO = "start.info";
     static final String CONTROLS_HIDE_SECONDS = "controls.hideSeconds";
+    static final String SORT_BY = "sort.by";
+    static final String SORT_REVERSED = "sort.reversed";
+    static final String KEEP_ZOOM = "view.keepZoom";
+    static final String SLIDESHOW_SECONDS = "slideshow.seconds";
 
     public static final int MIN_HIDE_SECONDS = 1;
     public static final int MAX_HIDE_SECONDS = 10;
+    public static final int MIN_SLIDESHOW_SECONDS = 1;
+    public static final int MAX_SLIDESHOW_SECONDS = 60;
+    static final int DEFAULT_SLIDESHOW_SECONDS = 5;
 
     private final Path file;
     private final List<Runnable> listeners = new ArrayList<>();
@@ -47,6 +56,9 @@ public final class Settings {
     private boolean startWithThumbnails;
     private boolean startWithInfo;
     private int controlsHideSeconds = 2;
+    private Sorting sorting = Sorting.DEFAULT;
+    private boolean keepZoom;
+    private int slideshowSeconds = DEFAULT_SLIDESHOW_SECONDS;
 
     public Settings(Path file) {
         this.file = file;
@@ -82,6 +94,22 @@ public final class Settings {
         startWithInfo = Boolean.parseBoolean(
                 properties.getProperty(START_WITH_INFO, "false").trim());
         controlsHideSeconds = hideSecondsOf(properties.getProperty(CONTROLS_HIDE_SECONDS));
+        sorting = new Sorting(
+                Sorting.byOf(properties.getProperty(SORT_BY)),
+                Boolean.parseBoolean(
+                        properties.getProperty(SORT_REVERSED, "false").trim()));
+        keepZoom =
+                Boolean.parseBoolean(properties.getProperty(KEEP_ZOOM, "false").trim());
+        slideshowSeconds = slideshowSecondsOf(properties.getProperty(SLIDESHOW_SECONDS));
+    }
+
+    static int slideshowSecondsOf(@Nullable String value) {
+        if (value == null) return DEFAULT_SLIDESHOW_SECONDS;
+        try {
+            return Math.clamp(Integer.parseInt(value.trim()), MIN_SLIDESHOW_SECONDS, MAX_SLIDESHOW_SECONDS);
+        } catch (NumberFormatException e) {
+            return DEFAULT_SLIDESHOW_SECONDS;
+        }
     }
 
     static ThemeChoice themeOf(@Nullable String value) {
@@ -116,6 +144,35 @@ public final class Settings {
 
     public int controlsHideSeconds() {
         return controlsHideSeconds;
+    }
+
+    /** The folder's order. */
+    public Sorting sorting() {
+        return sorting;
+    }
+
+    /** Whether stepping to another image keeps the zoom and position instead of fitting it. */
+    public boolean keepZoom() {
+        return keepZoom;
+    }
+
+    public int slideshowSeconds() {
+        return slideshowSeconds;
+    }
+
+    public void setSorting(Sorting value) {
+        sorting = value;
+        changed();
+    }
+
+    public void setKeepZoom(boolean value) {
+        keepZoom = value;
+        changed();
+    }
+
+    public void setSlideshowSeconds(int value) {
+        slideshowSeconds = Math.clamp(value, MIN_SLIDESHOW_SECONDS, MAX_SLIDESHOW_SECONDS);
+        changed();
     }
 
     public void setTheme(ThemeChoice value) {
@@ -158,6 +215,10 @@ public final class Settings {
         properties.setProperty(START_WITH_THUMBNAILS, Boolean.toString(startWithThumbnails));
         properties.setProperty(START_WITH_INFO, Boolean.toString(startWithInfo));
         properties.setProperty(CONTROLS_HIDE_SECONDS, Integer.toString(controlsHideSeconds));
+        properties.setProperty(SORT_BY, sorting.by().name().toLowerCase(Locale.ROOT));
+        properties.setProperty(SORT_REVERSED, Boolean.toString(sorting.reversed()));
+        properties.setProperty(KEEP_ZOOM, Boolean.toString(keepZoom));
+        properties.setProperty(SLIDESHOW_SECONDS, Integer.toString(slideshowSeconds));
         try {
             Path folder = file.toAbsolutePath().getParent();
             if (folder != null) Files.createDirectories(folder);

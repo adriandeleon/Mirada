@@ -2,11 +2,14 @@ package com.mirada.ui;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -17,11 +20,18 @@ import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.css.PseudoClass;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.TextInputDialog;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.KeyCombination;
@@ -37,7 +47,10 @@ import javafx.util.Duration;
 import com.mirada.AppInfo;
 import com.mirada.folder.FolderImages;
 import com.mirada.folder.ImageFormats;
+import com.mirada.folder.Sorting;
 import com.mirada.image.ImageCache;
+import com.mirada.image.Orientation;
+import com.mirada.os.Trash;
 import com.mirada.perf.Startup;
 import com.mirada.perf.Tour;
 import com.mirada.settings.Settings;
@@ -80,6 +93,29 @@ public final class ViewerWindow {
     private @Nullable AboutWindow about;
 
     private @Nullable SettingsWindow settingsWindow;
+
+    private @Nullable ShortcutsWindow shortcutsWindow;
+
+    /** A line over the image saying what a toggle or a file operation did; fades on its own. */
+    private final Label toast = new Label();
+
+    private final PauseTransition toastTimer = new PauseTransition(Duration.seconds(2));
+
+    /** Steps to the next image while the slideshow runs; stopped otherwise. */
+    private final PauseTransition slideshow = new PauseTransition();
+
+    private boolean slideshowRunning;
+
+    /** The order the open folder is in. */
+    private Sorting sortedBy;
+
+    /** The full-resolution image on screen and its orientation, for the editor; null while there is none. */
+    private @Nullable Image shownImage;
+
+    private Orientation shownOrientation = Orientation.NORMAL;
+
+    /** Built the first time it opens. */
+    private @Nullable Editor editor;
     /** Built the first time the sidebar opens. */
     private @Nullable InfoPanel info;
 
@@ -104,10 +140,29 @@ public final class ViewerWindow {
         this.settings = settings;
         this.openLink = openLink;
         this.tour = Tour.start(() -> go(folder.step(1)));
+        this.sortedBy = settings.sorting();
 
         placeholder.getStyleClass().add("placeholder");
         placeholder.setWrapText(true);
-        canvas = new StackPane(viewport, placeholder);
+        toast.getStyleClass().add("toast");
+        toast.setVisible(false);
+        toast.setMouseTransparent(true);
+        StackPane.setAlignment(toast, Pos.BOTTOM_CENTER);
+        StackPane.setMargin(toast, new Insets(0, 0, 72, 0));
+        toastTimer.setOnFinished(e -> toast.setVisible(false));
+        slideshow.setOnFinished(e -> slideshowStep());
+        viewport.setKeepZoom(settings.keepZoom());
+        settings.addListener(() -> {
+            viewport.setKeepZoom(settings.keepZoom());
+            // From the menu, the palette or the settings window: the open folder follows.
+            if (!settings.sorting().equals(sortedBy)) {
+                sortedBy = settings.sorting();
+                folder = folder.sorted(sortedBy);
+                refreshStrip();
+            }
+        });
+        stage.setOnHidden(e -> slideshow.stop());
+        canvas = new StackPane(viewport, placeholder, toast);
         canvas.getStyleClass().add("canvas");
         canvas.addEventFilter(MouseEvent.MOUSE_MOVED, e -> {
             if (controls == null) onScreenControls().wake();
@@ -264,7 +319,8 @@ public final class ViewerWindow {
     /** Opens a file with its folder behind it, or a folder at its first image. */
     public void open(Path path) {
         try {
-            folder = FolderImages.open(path);
+            sortedBy = settings.sorting();
+            folder = FolderImages.open(path, sortedBy);
         } catch (IOException e) {
             folder = FolderImages.EMPTY;
             showMessage("Couldn't read " + path + ": " + e.getMessage());
@@ -296,6 +352,7 @@ public final class ViewerWindow {
         ImageCache.Entry entry = cache.get(file);
         if (tour != null) tour.requested(entry.ready().isDone());
         ImageCache.Preview preview = entry.preview();
+        shownImage = null; // until this one's full resolution is in
         if (preview != null && !entry.ready().isDone()) {
             placeholder.setVisible(false);
             viewport.show(preview.image(), preview.exif().orientation(), preview.width(), preview.height());
@@ -332,6 +389,8 @@ public final class ViewerWindow {
         if (file.equals(previewing)) viewport.replace(image);
         else viewport.show(image, decoded.exif().orientation());
         previewing = null;
+        shownImage = image;
+        shownOrientation = decoded.exif().orientation();
         Startup.markFirstPaint();
         Platform.runLater(() -> Platform.runLater(this::releaseAfterFirstPaint));
         if (tour != null) tour.shown(file, folder.index() == folder.size() - 1);
@@ -344,6 +403,7 @@ public final class ViewerWindow {
 
     private void showMessage(String message) {
         previewing = null;
+        shownImage = null;
         viewport.clear();
         placeholder.setText(message);
         placeholder.setVisible(true);
@@ -356,6 +416,12 @@ public final class ViewerWindow {
     }
 
     private void onKey(KeyEvent e) {
+        // The editor's keys are its own while it is open; the viewer's wait.
+        Editor open = editor;
+        if (open != null && open.isShowing()) {
+            if (open.onKey(e)) e.consume();
+            return;
+        }
         Command command = Command.forKey(e.getCode(), e.isShiftDown(), e.isShortcutDown());
         // While the palette is up, keys are its own (typing "r" must not rotate the image); only its
         // chord reaches here, to close it again.
@@ -372,6 +438,12 @@ public final class ViewerWindow {
     }
 
     private void run(Command command) {
+        // From the header's menu while the editor is open: what would change the image under it waits.
+        Editor open = editor;
+        if (open != null && open.isShowing() && !duringEdit(command)) {
+            say("Finish editing first: Save or Cancel");
+            return;
+        }
         switch (command) {
             case NEXT -> go(folder.step(1));
             case PREVIOUS -> go(folder.step(-1));
@@ -385,7 +457,9 @@ public final class ViewerWindow {
             case ROTATE_COUNTERCLOCKWISE -> rotate(-1);
             case FULL_SCREEN -> stage.setFullScreen(!stage.isFullScreen());
             case ESCAPE -> {
-                if (stage.isFullScreen()) {
+                if (slideshowRunning) {
+                    stopSlideshow();
+                } else if (stage.isFullScreen()) {
                     stage.setFullScreen(false);
                 } else {
                     stage.close();
@@ -398,7 +472,173 @@ public final class ViewerWindow {
             case THUMBNAILS -> thumbnailsShowing.set(!thumbnailsShowing.get());
             case SETTINGS -> settingsWindow().show(stage);
             case ABOUT -> aboutWindow().show(stage);
+            case SHORTCUTS -> shortcutsWindow().show(stage);
+            case PAN_LEFT -> viewport.pan(-PAN_STEP, 0);
+            case PAN_RIGHT -> viewport.pan(PAN_STEP, 0);
+            case PAN_UP -> viewport.pan(0, -PAN_STEP);
+            case PAN_DOWN -> viewport.pan(0, PAN_STEP);
+            case KEEP_ZOOM -> {
+                settings.setKeepZoom(!settings.keepZoom());
+                say(settings.keepZoom() ? "Keeping the zoom when stepping" : "Fitting each image");
+            }
+            case SLIDESHOW -> {
+                if (slideshowRunning) stopSlideshow();
+                else startSlideshow();
+            }
+            case EDIT -> edit();
+            case RENAME -> rename();
+            case MOVE_TO_TRASH -> moveToTrash();
+            case SORT_BY_NAME -> sort(settings.sorting().by(Sorting.By.NAME));
+            case SORT_BY_DATE -> sort(settings.sorting().by(Sorting.By.DATE));
+            case SORT_BY_SIZE -> sort(settings.sorting().by(Sorting.By.SIZE));
+            case REVERSE_ORDER -> sort(settings.sorting().reverse());
         }
+    }
+
+    /** The commands that leave the image alone, so they can run while the editor is open. */
+    private static boolean duringEdit(Command command) {
+        return switch (command) {
+            case FULL_SCREEN, INFO, THUMBNAILS, SETTINGS, SHORTCUTS, ABOUT, CLOSE -> true;
+            default -> false;
+        };
+    }
+
+    /** How far one press of a panning key moves the view: a tenth of the window. */
+    private static final double PAN_STEP = 0.1;
+
+    /** Shows {@code message} over the image for two seconds. */
+    private void say(String message) {
+        toast.setText(message);
+        toast.setVisible(true);
+        toastTimer.playFromStart();
+    }
+
+    private void startSlideshow() {
+        if (folder.size() < 2) return;
+        slideshowRunning = true;
+        stage.setFullScreen(true);
+        say("Slideshow: every " + settings.slideshowSeconds() + " s. Escape stops it.");
+        restartSlideshowTimer();
+    }
+
+    private void stopSlideshow() {
+        slideshowRunning = false;
+        slideshow.stop();
+        stage.setFullScreen(false);
+        say("Slideshow stopped");
+    }
+
+    private void restartSlideshowTimer() {
+        if (!slideshowRunning) return;
+        slideshow.setDuration(Duration.seconds(settings.slideshowSeconds()));
+        slideshow.playFromStart();
+    }
+
+    /** The next image, or the first again after the last: a slideshow goes round. */
+    private void slideshowStep() {
+        if (!slideshowRunning) return;
+        go(folder.index() >= folder.size() - 1 ? folder.first() : folder.step(1));
+        restartSlideshowTimer();
+    }
+
+    private void sort(Sorting sorting) {
+        settings.setSorting(sorting); // the settings listener re-sorts the folder
+        String by =
+                switch (sorting.by()) {
+                    case NAME -> "name";
+                    case DATE -> "date";
+                    case SIZE -> "size";
+                };
+        say("Sorted by " + by + (sorting.reversed() ? ", reversed" : ""));
+    }
+
+    /**
+     * Asks for a new name, in the same folder, and renames the file. The extension is kept unless the
+     * new name gives one; an existing file is never replaced.
+     */
+    private void rename() {
+        Path file = folder.current();
+        if (file == null) return;
+        String old = fileName(file);
+        TextInputDialog dialog = new TextInputDialog(old);
+        dialog.initOwner(stage);
+        dialog.setTitle("Rename");
+        dialog.setHeaderText("Rename " + old);
+        dialog.setContentText("New name:");
+        dialog.getDialogPane().getStylesheets().add(stylesheet());
+        // The name without its extension selected, ready to be typed over.
+        Platform.runLater(() -> dialog.getEditor().selectRange(0, Renaming.stemLength(old)));
+        Optional<String> answer = dialog.showAndWait();
+        if (answer.isEmpty()) return;
+        String name;
+        try {
+            name = Renaming.validName(old, answer.get());
+        } catch (IllegalArgumentException e) {
+            say("Not renamed: " + e.getMessage());
+            return;
+        }
+        if (name.equals(old)) return;
+        Path target = file.resolveSibling(name);
+        try {
+            Files.move(file, target);
+        } catch (FileAlreadyExistsException e) {
+            say("Not renamed: " + name + " already exists");
+            return;
+        } catch (IOException e) {
+            say("Not renamed: " + e.getMessage());
+            return;
+        }
+        folder = folder.renamed(file, target, settings.sorting());
+        showCurrent();
+        say("Renamed to " + name);
+    }
+
+    /** Opens the editor on the image showing, once its full resolution is in. */
+    private void edit() {
+        Image image = shownImage;
+        Path file = folder.current();
+        if (image == null || file == null) {
+            say("The image is still loading");
+            return;
+        }
+        Editor made = editor;
+        if (made == null) {
+            made = new Editor(root, canvas, this::say);
+            editor = made;
+        }
+        made.open(image, shownOrientation, file, saved -> {
+            open(saved);
+            say("Saved " + fileName(saved));
+        });
+    }
+
+    /** Off the FX thread: a file on another drive goes through {@code gio}, which can take a moment. */
+    private void moveToTrash() {
+        Path file = folder.current();
+        if (file == null) return;
+        Thread.ofVirtual().name("trash").start(() -> {
+            try {
+                Trash.move(file);
+                Platform.runLater(() -> {
+                    FolderImages rest = folder.without(file);
+                    folder = rest;
+                    say("Moved " + fileName(file) + " to the Trash");
+                    if (rest.isEmpty()) showMessage("No images left in this folder");
+                    else showCurrent();
+                });
+            } catch (IOException | RuntimeException e) {
+                Platform.runLater(() -> say("Couldn't move " + fileName(file) + " to the Trash: " + e.getMessage()));
+            }
+        });
+    }
+
+    private ShortcutsWindow shortcutsWindow() {
+        ShortcutsWindow made = shortcutsWindow;
+        if (made == null) {
+            made = new ShortcutsWindow(stylesheet());
+            shortcutsWindow = made;
+        }
+        return made;
     }
 
     private SettingsWindow settingsWindow() {
@@ -428,6 +668,8 @@ public final class ViewerWindow {
         if (next.index() == folder.index() || next.isEmpty()) return;
         folder = next;
         showCurrent();
+        // A step by hand during a slideshow gives the new image its full time.
+        restartSlideshowTimer();
     }
 
     private void rotate(int quarterTurns) {
@@ -474,10 +716,40 @@ public final class ViewerWindow {
                 item(Command.ROTATE_CLOCKWISE),
                 item(Command.ROTATE_COUNTERCLOCKWISE),
                 new SeparatorMenuItem(),
+                item(Command.RENAME),
+                item(Command.MOVE_TO_TRASH),
+                new SeparatorMenuItem(),
+                sortMenu(),
                 item(Command.INFO),
                 item(Command.THUMBNAILS),
-                item(Command.FULL_SCREEN));
+                item(Command.FULL_SCREEN),
+                item(Command.SLIDESHOW));
         menu.setAutoHide(true);
+        return menu;
+    }
+
+    /** Sort by name, date or size, the current one ticked, and the order's direction. */
+    private Menu sortMenu() {
+        Sorting sorting = settings.sorting();
+        ToggleGroup group = new ToggleGroup();
+        Menu menu = new Menu("Sort");
+        for (Command command : List.of(Command.SORT_BY_NAME, Command.SORT_BY_DATE, Command.SORT_BY_SIZE)) {
+            RadioMenuItem item = new RadioMenuItem(command.label());
+            item.setToggleGroup(group);
+            item.setSelected(
+                    switch (command) {
+                        case SORT_BY_DATE -> sorting.by() == Sorting.By.DATE;
+                        case SORT_BY_SIZE -> sorting.by() == Sorting.By.SIZE;
+                        default -> sorting.by() == Sorting.By.NAME;
+                    });
+            item.setOnAction(e -> run(command));
+            menu.getItems().add(item);
+        }
+        CheckMenuItem reversed = new CheckMenuItem(Command.REVERSE_ORDER.label());
+        reversed.setSelected(sorting.reversed());
+        reversed.setOnAction(e -> run(Command.REVERSE_ORDER));
+        menu.getItems().addAll(new SeparatorMenuItem(), reversed);
+        menu.setDisable(folder.isEmpty());
         return menu;
     }
 

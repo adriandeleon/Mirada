@@ -17,6 +17,7 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.StringConverter;
 
+import com.mirada.folder.Sorting;
 import com.mirada.settings.Settings;
 
 /**
@@ -72,6 +73,56 @@ final class SettingsWindow {
             if (now != null) settings.setControlsHideSeconds(now);
         });
 
+        ChoiceBox<Sorting.By> sortBy = new ChoiceBox<>();
+        sortBy.getItems().addAll(Sorting.By.values());
+        sortBy.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(Sorting.By by) {
+                return by == null
+                        ? ""
+                        : switch (by) {
+                            case NAME -> "Name";
+                            case DATE -> "Date modified";
+                            case SIZE -> "Size";
+                        };
+            }
+
+            @Override
+            public Sorting.By fromString(String text) {
+                return Sorting.By.NAME;
+            }
+        });
+        sortBy.setValue(settings.sorting().by());
+        sortBy.valueProperty().addListener((o, was, now) -> {
+            if (now != null && now != settings.sorting().by())
+                settings.setSorting(settings.sorting().by(now));
+        });
+
+        CheckBox reversed = new CheckBox();
+        reversed.setSelected(settings.sorting().reversed());
+        reversed.selectedProperty().addListener((o, was, now) -> {
+            if (now != settings.sorting().reversed())
+                settings.setSorting(settings.sorting().reverse());
+        });
+
+        CheckBox keepZoom = new CheckBox();
+        keepZoom.setSelected(settings.keepZoom());
+        keepZoom.selectedProperty().addListener((o, was, now) -> settings.setKeepZoom(now));
+
+        Spinner<Integer> slideshow = new Spinner<>(
+                Settings.MIN_SLIDESHOW_SECONDS, Settings.MAX_SLIDESHOW_SECONDS, settings.slideshowSeconds());
+        slideshow.setPrefWidth(110);
+        slideshow.valueProperty().addListener((o, was, now) -> {
+            if (now != null) settings.setSlideshowSeconds(now);
+        });
+
+        // The same settings change from the keyboard and the context menu; follow them.
+        settings.addListener(() -> {
+            sortBy.setValue(settings.sorting().by());
+            reversed.setSelected(settings.sorting().reversed());
+            keepZoom.setSelected(settings.keepZoom());
+        });
+
         VBox root = new VBox(
                 18,
                 group("Appearance", row("Theme", "Light or dark controls and backgrounds.", theme)),
@@ -88,7 +139,17 @@ final class SettingsWindow {
                         row(
                                 "Hide controls after",
                                 "Seconds without moving the pointer before the floating controls fade.",
-                                hide)));
+                                hide),
+                        row(
+                                "Keep zoom when stepping",
+                                "Moving to another image keeps the zoom and position, to compare the same"
+                                        + " detail across shots. Z toggles it.",
+                                keepZoom)),
+                group(
+                        "Folder",
+                        row("Sort by", "The order images are stepped through.", sortBy),
+                        row("Reverse order", "Last first: newest, largest, or Z to A.", reversed),
+                        row("Slideshow speed", "Seconds each image shows in a slideshow. F5 starts it.", slideshow)));
         root.setPadding(new Insets(20));
         root.getStyleClass().add("settings");
         root.setPrefWidth(540);
