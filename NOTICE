@@ -54,6 +54,11 @@ bundled folder, unmodified:
   used through its C API to decode JPEG. This software is based in part on
   the work of the Independent JPEG Group.
 
+  libwebp — https://chromium.googlesource.com/webm/libwebp
+  Copyright Google Inc. Licensed under BSD-3-Clause, with Google's additional
+  patent grant. libwebp, libwebpdemux and libsharpyuv, used through their C
+  APIs to decode WebP, still and animated.
+
   The bundled build carries each project's licence text in its licenses/
   folder.
 

@@ -45,21 +45,24 @@ A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an en
 
 | Package | What |
 |---|---|
-| `com.mirada.folder` | The "document": the images in one folder, in natural name order, and which one is showing (`FolderImages`, `NaturalOrder`, `ImageFormats`) |
+| `com.mirada.folder` | The "document": the images in one folder, in the chosen order (`Sorting`: natural name order, date or size), and which one is showing (`FolderImages`, `NaturalOrder`, `ImageFormats`) |
 | `com.mirada.image` | Loading: decoded images cached by path (`ImageCache`), EXIF orientation and the camera line (`Exif`, `Orientation`), the sidebar's camera card and every metadata tag (`ExifDetails`), the strip's thumbnails (`Thumbnails`) |
-| `com.mirada.os` | Platform glue: the macOS open-file handler and the one rule for `java.awt.headless` (`MacOpenFiles`) |
+| `com.mirada.edit` | The editor's rules and pixel work, none of it UI: the edit and its order (`Edit`: turn, flip, crop), the crop as fractions (`Crop`) and as a box being dragged (`CropBox`), the shapes (`AspectRatio`), turns and mirrors on ARGB ints (`Raster`), and writing JPEG, PNG, TIFF or BMP (`Encoder`) |
+| `com.mirada.os` | Platform glue: the macOS open-file handler and the one rule for `java.awt.headless` (`MacOpenFiles`); moving a file to the desktop's trash (`Trash`) |
 | `com.mirada.settings` | `~/.mirada/settings.properties` (`MIRADA_CONFIG_DIR` moves it): theme, what opens at start, how long the floating controls stay; clamped on read, written through on every change |
-| `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`); every command with its keys, name and description (`Command`), the command palette (`CommandPalette`), `AboutWindow`, `SettingsWindow`, the theme, the symbolic icons (`Icons`) |
+| `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`); the editor (`Editor`, `CropView`); every command with its keys, name, description and group (`Command`), the command palette (`CommandPalette`), `AboutWindow`, `SettingsWindow`, `ShortcutsWindow`, the rename rules (`Renaming`), the theme, the symbolic icons (`Icons`) |
 
-Five decoders (`ImageFormats.Decoder`, by extension). JavaFX's own `Image` decodes BMP, GIF
-(animated) and PNG in its background thread, and the JPEGs libjpeg-turbo declines. The rest run on
+Six decoders (`ImageFormats.Decoder`, by extension). JavaFX's own `Image` decodes BMP, GIF
+(animated) and PNG in its background thread, and the JPEGs libjpeg-turbo declines; a decoder with
+a `fallback()` hands what it declines, or cannot load for, to that one. The rest run on
 two decoder threads in `ImageCache`, into premultiplied ARGB ints (`ArgbPixels`) that become a
 `WritableImage` without a copy (`PixelBuffer`):
 
 | Formats | Decoder | How |
 |---|---|---|
 | JPEG | `TurboJpegDecoder` | libjpeg-turbo's TurboJPEG, through FFM; JavaFX for CMYK, YCCK and 12-bit |
-| WebP, TIFF, PSD | `ImageIoDecoder` | ImageIO with the TwelveMonkeys plugins, pure Java |
+| WebP (still and animated) | `WebpDecoder` | libwebp's animation decoder, through FFM; ImageIO for WebP without libwebp |
+| TIFF, PSD | `ImageIoDecoder` | ImageIO with the TwelveMonkeys plugins, pure Java |
 | HEIC, AVIF | `HeifDecoder` | libheif (with libde265 and dav1d), through FFM |
 | JPEG XL | `JxlDecoder` | libjxl, through FFM, on every core via `libjxl_threads` |
 
@@ -155,6 +158,26 @@ a prefetched neighbour is 2–8 ms for every format.
   as JavaFX does; the JDK's ImageIO reader converts it, which is why ImageIO is not the JPEG path.
   What TurboJPEG will not decode to 8-bit RGB (CMYK, YCCK, 12-bit) is an `IOException`, and
   `ImageCache` hands the file to JavaFX: the matrix's CMYK JPEG is the test.
+- **Animations decode after the still is up.** `ImageCache.animation` decodes every frame of a WebP,
+  AVIF/HEIC sequence or JPEG XL on the low-priority thread once the first frame shows, so stepping
+  costs no more for an animated file; `ViewerWindow` then swaps frames with `replace`. The frames
+  are whole pictures (libwebp and libjxl compose partial ones) and limited to `Animation.MAX_PIXELS`
+  in all; a larger animation stays a still. HEIF sequences need libheif 1.20, colour output for JPEG
+  XL libjxl 0.9: both are optional bindings, so an older system library still decodes stills.
+- **The editor works on a preview and saves from the full image.** `Editor` shrinks the image to
+  1600 pixels, makes it upright by the file's orientation (`Edit.upright`, the same "mirror, then
+  turn" as `Orientation`), and every turn and flip re-arranges that preview at once. The crop is kept
+  as fractions (`Crop`), so the same edit applies to the full image when saving, off the FX thread.
+  It takes the window's centre, below the header, so the window's own controls stay usable; while
+  it is open, `ViewerWindow.run` refuses what would change the image under it.
+- **Saving never overwrites by default.** The save dialog suggests "name (edited).ext" in a format
+  Mirada can write (HEIC, AVIF, JPEG XL and WebP become JPEG or PNG); the file is written beside its
+  target and moved over it. Metadata is not carried: the orientation is baked in.
+- **Move to Trash is three implementations.** Linux follows the freedesktop.org spec itself (info
+  file first, created exclusively to reserve the name, then an atomic move) and leaves a file on
+  another drive to `gio trash`; Windows calls `SHFileOperationW` through FFM with undo; macOS uses
+  AWT's `Desktop`, AWT being headful there. Only Linux's is tested here (`TrashTest`, against a
+  temporary trash).
 - **A preview stands in at the full image's size.** `ImageViewport` lays out by `imageWidth` and
   `imageHeight`, not the `Image`'s own, so a 1280-pixel preview fills exactly what the full image
   will, and `replace` swaps the pixels without touching zoom or turns.
@@ -300,11 +323,9 @@ Termina and Torrenta. `mvn compile` fails on any null that can reach a type not 
 
 ## Not done
 
-The editor (GNOME Image Viewer's: crop with aspect ratios, rotate, flip, Cancel and Save); the
-header's rotate button is where it will open. Slideshow; a keyboard shortcuts window. Signing:
+Signing:
 Developer ID and notarization on macOS, a code-signing certificate on Windows, GPG for the Linux
-packages. An AppImage, Homebrew and winget. No release has been made yet. Animated WebP, AVIF and
-JPEG XL show their first frame. JPEG XL is decoded in its own colour space, not converted to sRGB.
-HEIC grids are untested against a real iPhone photo. The app itself has not been run on Windows
+packages. An AppImage, Homebrew and winget. No release has been made yet. Undo in the editor
+beyond Reset; keeping EXIF in a saved edit. Trash on Windows and macOS is untested. HEIC grids are untested against a real iPhone photo. The app itself has not been run on Windows
 or macOS by hand; CI only tests there, and the macOS Finder double-click is untried in the native
 image.

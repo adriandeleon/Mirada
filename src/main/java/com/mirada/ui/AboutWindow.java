@@ -77,8 +77,10 @@ final class AboutWindow {
         settings.getStyleClass().add("about-path");
         settings.setWrapText(true);
 
-        Label credits = new Label("Decoding by JavaFX, TwelveMonkeys ImageIO, libheif, libde265, dav1d and libjxl;"
-                + " EXIF by metadata-extractor; themes by AtlantaFX. Their licences are in NOTICE.");
+        Label credits =
+                new Label("Decoding by JavaFX, libjpeg-turbo, libwebp, TwelveMonkeys ImageIO, libheif, libde265,"
+                        + " dav1d and libjxl; compiled by GraalVM Native Image, with JavaFX linked in by StaticFX;"
+                        + " EXIF by metadata-extractor; themes by AtlantaFX. Their licences are in NOTICE.");
         credits.getStyleClass().add("about-credits");
         credits.setWrapText(true);
 

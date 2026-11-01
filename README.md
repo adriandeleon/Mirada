@@ -20,8 +20,9 @@ which file, where it sits in the folder, how large it is, and what took it.
 <br clear="left">
 
 **Status:** early, and unreleased. JPEG, PNG, GIF, BMP, WebP, TIFF, PSD, HEIC, AVIF and JPEG XL,
-turned upright. The HEIC, AVIF and JPEG XL decoders (libheif, libjxl) are built from source and
-bundled; the build downloads them. See the [changelog](CHANGELOG.md).
+turned upright, animated where the file is. The native decoders (libjpeg-turbo, libwebp, libheif,
+libjxl) are built from source and bundled; the build downloads them. Crop, turn and flip, and save
+the result as a new file. See the [changelog](CHANGELOG.md).
 
 ## Installing it
 
@@ -51,36 +52,46 @@ properties sidebar and the main menu.
 | Home / End | First / last image |
 | `+` / `-` | Zoom in / out |
 | `0` / `1` | Fit to window / actual size (double-click toggles them) |
+| Shift+arrows, Up / Down | Pan a zoomed image |
+| `Z` | Keep the zoom when stepping (compare one detail across shots) |
 | `R` / Shift+`R` | Rotate right / left |
+| `E` | Edit: crop, turn, flip; Enter saves a copy, Escape cancels |
+| F2 | Rename |
+| Delete | Move to the Trash |
+| F5 | Slideshow |
 | `F`, F11 | Full screen |
 | Escape | Leave full screen, or close |
 | `I` | Properties sidebar: file, image and camera details |
 | `T` | Thumbnail strip |
 | Ctrl+Shift+P, F1 | Command palette: every command, by name |
-| Ctrl+, | Settings |
+| Ctrl+, | Settings: theme, panels at start, sort order, slideshow speed |
+| Ctrl+? | Keyboard shortcuts |
 | F12 | About |
 | Ctrl+O | Open |
 | Ctrl+W, Ctrl+Q | Close |
 
-On macOS, Cmd takes Ctrl's place.
+On macOS, Cmd takes Ctrl's place. The folder can be sorted by name, date or size from the context
+menu or the palette.
 
 ## Building it
 
-JDK 25 is required (the build refuses others). The Maven wrapper fetches everything else, including
-the native codec bundle for your platform from the
-[codecs-1 release](https://github.com/adriandeleon/Mirada/releases/tag/codecs-1).
+JDK 25 is required (the build refuses others); Oracle GraalVM 25.4 for the native image that ships.
+The Maven wrapper fetches everything else, including the native codec bundle for your platform from
+the project's `codecs-N` release.
 
 ```
 ./mvnw javafx:run                                   # an empty window
 ./mvnw javafx:run -Djavafx.args=/path/to/photo.jpg  # a photo and its folder
 ./mvnw verify                                       # tests, null checks, formatting
-./mvnw clean -Pdist -DskipTests package             # the app, in target/dist
+./mvnw clean -Pdist,native -DskipTests package      # the app as it ships, in target/dist (GraalVM)
+./mvnw clean -Pdist -DskipTests package             # the JVM app, on any JDK 25
 ```
 
 Add `-Dskip.installers=false` to wrap it into this platform's installers, in `target/installers`.
 
-The app in `target/dist` starts in about a quarter of a second: a jlink runtime with Mirada in it,
-an AOT cache trained by stepping through every format, and the codec bundle.
+The native app starts in about an eighth of a second, with the first image decoding while the
+window is still being built. The JVM app takes about a quarter: a jlink runtime with an AOT cache
+trained by stepping through every format.
 
 The project notes for contributors, human or not, are in [AGENTS.md](AGENTS.md).
 

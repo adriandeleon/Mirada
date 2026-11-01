@@ -22,6 +22,20 @@ The first version: open a photo, look, arrow through its folder, close.
   in about 170 ms from launch.
 - **The first image decodes while the window is still being built**, for every format but PNG,
   GIF and BMP, so a large photo is often ready before the window is.
+- **An editor** (E): crop, freely or held to a shape (square, 5:4, 4:3, 3:2, 16:9, or the
+  original's), turn and flip, then save the result as a new file in JPEG, PNG, TIFF or BMP. The
+  original is untouched unless you choose it in the save dialog. Every step has a key.
+- **Animated WebP, AVIF and JPEG XL play**, as GIFs already did. The still shows at once and starts
+  moving when the rest of the frames are in.
+- **WebP opens ten times faster**, through libwebp (bundled): a 24-megapixel WebP in about a fifth
+  of a second instead of two.
+- **JPEG XL shows in the right colours**: it is converted to sRGB like every other format, rather
+  than shown in whatever colour space it was stored in.
+- **Move to Trash** (Delete), **Rename** (F2), **a slideshow** (F5, full screen, at the speed set in
+  Settings), and **sorting by name, date or size**, reversible and remembered.
+- **Keep the zoom when stepping** (Z), to compare the same detail across a burst of shots; and the
+  arrow keys pan a zoomed image (Shift+Left and Right, Up and Down).
+- **A Keyboard Shortcuts window** (Ctrl+?), listing every key from the same table the keys run on.
 - **Stepping back is instant further back**: the last two dozen images leave a preview behind,
   shown at once while the full resolution decodes again. Thumbnails of JPEGs decode at an eighth
   of the size.
