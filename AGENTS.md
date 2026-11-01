@@ -76,6 +76,11 @@ naming the library. EXIF is metadata-extractor.
 
 ## The native image (an experiment)
 
+CI's `native` job builds it on Linux and opens every fixture and every variant of the format matrix
+in it (`src/test/resources/com/mirada/matrix`, from `scripts/make-format-matrix.sh`); `MatrixTest`
+decodes the matrix on the JVM, and the jlink packaging job opens it on all three platforms. Add a
+variant there when a new kind of file turns up a problem.
+
 `./mvnw -Pnative -Denforcer.skip -DskipTests package` with Oracle GraalVM 25.4 as `JAVA_HOME` builds
 `target/mirada` with JavaFX linked in by StaticFX. It starts in half the time of the jlink image and
 uses a third less memory, but ships nothing yet: [docs/native-image.md](docs/native-image.md) has the

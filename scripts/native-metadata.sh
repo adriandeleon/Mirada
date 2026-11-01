@@ -2,10 +2,15 @@
 # Records Mirada's reachability metadata for the native image (the pom's `native` profile) with
 # GraalVM's tracing agent: reflection, resources, JNI and the FFM downcalls a run actually uses.
 #
-# The run is a tour (com.mirada.perf.Tour) of the test fixtures, one file of every format, with the
-# properties sidebar and the thumbnail strip open, so it reaches every decoder, ImageIO's plugins,
-# the libheif and libjxl bindings, the EXIF reader, the stylesheets and the icon. It runs from the
-# class path, as the native image is built. JavaFX's own metadata comes from StaticFX.
+# Two tours (com.mirada.perf.Tour), with the properties sidebar and the thumbnail strip open: the
+# test fixtures (one file of every format) and the format matrix (every variant: bit depths, grey,
+# CMYK, alpha, compressions; scripts/make-format-matrix.sh). Together they reach every decoder,
+# ImageIO's plugins and the JDK's native image code behind them (JNI), the libheif and libjxl
+# bindings, the EXIF reader, the stylesheets and the icon. The second run merges into the first.
+# It runs from the class path, as the native image is built. JavaFX's own metadata comes from StaticFX.
+#
+# Afterwards: JavaFX's own .so files are dropped from the resources (StaticFX links them in), and
+# both Cupertino themes are kept, whichever one the run happened to use.
 #
 # Usage: GRAALVM_HOME=~/.sdkman/candidates/java/25.4.4.1+1-graal scripts/native-metadata.sh
 set -euo pipefail
@@ -23,11 +28,28 @@ trap 'rm -rf "$config"' EXIT
 printf 'start.info=true\nstart.thumbnails=true\n' > "$config/settings.properties"
 
 mkdir -p "$out"
-MIRADA_CONFIG_DIR="$config" MIRADA_PERF_TOUR=1 MIRADA_PERF_TOUR_PAUSE=600 \
-    "$graal/bin/java" \
-    -agentlib:native-image-agent=config-output-dir="$out" \
-    --enable-native-access=ALL-UNNAMED \
-    -Dmirada.codecs=target/codecs \
-    -cp "$classpath" com.mirada.Launcher src/test/resources/com/mirada/image
+agent="config-output-dir"
+for folder in src/test/resources/com/mirada/image src/test/resources/com/mirada/matrix; do
+    MIRADA_CONFIG_DIR="$config" MIRADA_PERF_TOUR=1 MIRADA_PERF_TOUR_PAUSE=600 \
+        "$graal/bin/java" \
+        -agentlib:native-image-agent=$agent="$out" \
+        --enable-native-access=ALL-UNNAMED \
+        -Dmirada.codecs=target/codecs \
+        -cp "$classpath" com.mirada.Launcher "$folder"
+    agent="config-merge-dir"
+done
+
+python3 - "$out/reachability-metadata.json" <<'PY'
+import json, sys
+path = sys.argv[1]
+data = json.load(open(path))
+resources = [r for r in data.get("resources", []) if not str(r.get("glob", "")).endswith(".so")]
+globs = {r.get("glob") for r in resources}
+for theme in ("atlantafx/base/theme/cupertino-light.bss", "atlantafx/base/theme/cupertino-dark.bss"):
+    if theme not in globs:
+        resources.append({"glob": theme})
+data["resources"] = resources
+json.dump(data, open(path, "w"), indent=2)
+PY
 echo "metadata in $out:"
 ls -la "$out"

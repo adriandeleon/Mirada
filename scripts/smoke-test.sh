@@ -26,12 +26,19 @@ if [ "$(uname -s)" = "Linux" ] && [ -z "${DISPLAY:-}" ]; then
 else
     out=$(${limit[@]+"${limit[@]}"} "$launcher" "$folder" 2>&1 || true)
 fi
-printf '%s\n' "$out" | grep -E '^\[perf\]|^  [a-z-]+ +[0-9]+ ms' || true
+printf '%s\n' "$out" | grep -E '^\[perf\] (startup|step)|^  [a-z-]+ +[0-9]+ ms' || true
 
-# The first image is the start-up figure; every other one is a step line.
+# The first image is the start-up figure; every other one is a step line, or a fail line naming
+# the file and why (the tour reports a failure and goes on, so one run names them all).
 steps=$(printf '%s\n' "$out" | grep -c '^\[perf\] step' || true)
+fails=$(printf '%s\n' "$out" | grep -c '^\[perf\] fail' || true)
+if [ "$fails" -gt 0 ]; then
+    printf '%s\n' "$out" | grep '^\[perf\] fail' | sed 's/^/::error::/'
+    echo "::error::$fails of $images images failed to open"
+    exit 1
+fi
 if [ "$steps" -ne $((images - 1)) ]; then
-    echo "::error::showed $((steps + 1)) of $images images"
+    echo "::error::showed $((steps + 1)) of $images images (the first failed, or the run stopped)"
     printf '%s\n' "$out" | tail -20
     exit 1
 fi

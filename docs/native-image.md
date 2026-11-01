@@ -58,6 +58,29 @@ correct as its metadata, and nothing at build time says what is missing.
    over larger and deeper images (`config-merge-dir`) recorded it. Every new kind of file is a
    chance of another gap like this.
 
+## The format matrix and the CI job
+
+`scripts/make-format-matrix.sh` writes 41 small variants into `src/test/resources/com/mirada/matrix`:
+JPEG (RGB, grey, CMYK, progressive, 4:4:4), PNG (8- and 16-bit, grey, grey + alpha, palette, RGBA),
+GIF (static, animated), BMP (24-bit, 32-bit with alpha, palette), WebP (lossy, lossless, alpha,
+animated), TIFF (8- and 16-bit, LZW, deflate, JPEG-compressed, grey, CMYK, RGBA, multi-page), PSD
+(8- and 16-bit, CMYK, RGBA), HEIC and AVIF (with alpha, 10-bit), JPEG XL (RGB, RGBA), an EXIF
+orientation and a heavy EXIF block.
+
+- `MatrixTest` decodes all of them on the JVM. It found **a gap on every runtime**: JavaFX's own BMP
+  decoder throws on a 32-bit BMP with alpha. Mirada now falls back to ImageIO whenever JavaFX gives
+  up on a file.
+- The tour reports a file it cannot show (`[perf] fail name: reason`) and goes on, so the smoke test
+  names every failure in one run instead of timing out at the first.
+- CI's **native** job (Linux) installs Oracle GraalVM, builds the native image, opens the fixtures and
+  the whole matrix in it, prints a start-up figure and uploads the app for a week. Its first local
+  run found **two more native-only gaps**, both JNI into the JDK's image code: AWT's
+  `IntegerComponentRaster` (the BMP fallback) and the JPEG reader's callback (a JPEG-compressed
+  TIFF). `scripts/native-metadata.sh` now tours the matrix as well, and all 41 variants open.
+- CI's jlink packaging job opens the matrix too, on all three platforms.
+- A native image finds the codec bundle in a `codecs` folder beside its executable, so `target/mirada`
+  runs with no options.
+
 ## What it would cost to ship
 
 - **A native build per platform**, each on a runner with enough memory: 8.6 GB peak here. GitHub's
@@ -76,8 +99,8 @@ correct as its metadata, and nothing at build time says what is missing.
 
 Keep the jlink image as what ships, and keep the native profile as a maintained experiment:
 
-1. Grow the fixtures into a format matrix (16-bit, CMYK, grey, alpha, animated, EXIF-heavy) and run
-   the native smoke test over it in CI on Linux, so gaps are found by CI rather than by users.
+1. ~~Grow the fixtures into a format matrix and run the native smoke test over it in CI on Linux.~~
+   Done (above).
 2. Ask StaticFX's author about the licence of what ends up in the executable.
 3. Try macOS (the platform where launch time is most visible, through Finder) once Linux is clean.
 4. Then decide on the numbers above whether the native build replaces the jlink one.

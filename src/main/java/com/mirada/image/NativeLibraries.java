@@ -13,6 +13,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Finds a native codec library: first in the folder an installer bundles them in, then wherever the
  * system keeps them.
@@ -47,9 +49,11 @@ final class NativeLibraries {
     static Optional<SymbolLookup> load(List<String> fileNames) {
         if (fileNames.isEmpty()) return Optional.empty();
         String key = fileNames.getFirst();
-        String bundle = System.getProperty(BUNDLE_PROPERTY);
-        if (bundle != null && !bundle.isBlank()) {
-            Path folder = Path.of(bundle);
+        Path folder = bundleFolder(
+                System.getProperty(BUNDLE_PROPERTY),
+                System.getProperty("org.graalvm.nativeimage.imagecode"),
+                ProcessHandle.current().info().command().orElse(null));
+        if (folder != null) {
             preloadOnWindows(folder);
             for (String name : fileNames) {
                 Optional<SymbolLookup> found = open(folder.resolve(name));
@@ -70,6 +74,20 @@ final class NativeLibraries {
             }
         }
         return Optional.empty();
+    }
+
+    /**
+     * Where the bundle is: the {@value #BUNDLE_PROPERTY} property when it is set (the jlink launcher
+     * sets it to {@code $APPDIR/codecs}, runs and tests to {@code target/codecs}); otherwise, in a
+     * native image, the {@code codecs} folder beside the executable, so {@code target/mirada} and an
+     * installed copy need no option. Null when there is neither.
+     */
+    static @Nullable Path bundleFolder(
+            @Nullable String property, @Nullable String imageCode, @Nullable String executable) {
+        if (property != null && !property.isBlank()) return Path.of(property);
+        if (!"runtime".equals(imageCode) || executable == null) return null;
+        Path parent = Path.of(executable).toAbsolutePath().getParent();
+        return parent == null ? null : parent.resolve("codecs");
     }
 
     private static Optional<SymbolLookup> remember(String key, String origin, Optional<SymbolLookup> found) {

@@ -21,6 +21,8 @@ The first version: open a photo, look, arrow through its folder, close.
   On macOS, a double-click in Finder, "Open With" and a file dropped on the Dock icon open the
   image, at launch and while Mirada is running.
 - **An icon**, in the family of Editora, Termina and Torrenta: a teal iris in a periwinkle eye.
+- **32-bit BMPs with transparency open.** JavaFX's own decoder fails on them; Mirada now hands
+  any file JavaFX cannot decode to ImageIO before calling it an error.
 - **A file whose metadata cannot be read still opens.** A failure inside the EXIF reader no longer
   takes the image with it, and anything unexpected on the way to the screen is shown and logged
   rather than leaving the previous image up.

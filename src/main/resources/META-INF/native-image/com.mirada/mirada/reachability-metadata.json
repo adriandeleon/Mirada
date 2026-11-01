@@ -10,6 +10,15 @@
       ]
     },
     {
+      "type": "com.drew.metadata.exif.ExifImageDirectory",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "com.drew.metadata.exif.ExifSubIFDDirectory",
       "methods": [
         {
@@ -409,6 +418,78 @@
           "name": "notifyStateChanged",
           "parameterTypes": [
             "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.imageio.plugins.jpeg.JPEGImageReader",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "acceptPixels",
+          "parameterTypes": [
+            "int",
+            "boolean"
+          ]
+        },
+        {
+          "name": "passComplete",
+          "parameterTypes": []
+        },
+        {
+          "name": "passStarted",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "pushBack",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "readInputData",
+          "parameterTypes": [
+            "byte[]",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "setImageData",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int",
+            "int",
+            "byte[]"
+          ]
+        },
+        {
+          "name": "skipInputBytes",
+          "parameterTypes": [
+            "long"
+          ]
+        },
+        {
+          "name": "skipPastImage",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "warningOccurred",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "warningWithMessage",
+          "parameterTypes": [
+            "java.lang.String"
           ]
         }
       ]
@@ -1321,7 +1402,13 @@
       ]
     },
     {
+      "type": "java.util.stream.Stream"
+    },
+    {
       "type": "javafx.animation.Interpolator"
+    },
+    {
+      "type": "javafx.animation.KeyValue"
     },
     {
       "type": "javafx.css.CssParser"
@@ -1429,7 +1516,37 @@
       "type": "javafx.stage.Window"
     },
     {
+      "type": "javax.imageio.plugins.jpeg.JPEGHuffmanTable",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "lengths"
+        },
+        {
+          "name": "values"
+        }
+      ]
+    },
+    {
+      "type": "javax.imageio.plugins.jpeg.JPEGQTable",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "qTable"
+        }
+      ]
+    },
+    {
       "type": "javax.imageio.spi.ImageReaderSpi"
+    },
+    {
+      "type": "javax.imageio.spi.ImageReaderWriterSpi",
+      "methods": [
+        {
+          "name": "getFormatNames",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "javax.imageio.spi.ImageWriterSpi"
@@ -1477,6 +1594,27 @@
       ]
     },
     {
+      "type": "sun.awt.image.IntegerComponentRaster",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "data"
+        },
+        {
+          "name": "dataOffsets"
+        },
+        {
+          "name": "pixelStride"
+        },
+        {
+          "name": "scanlineStride"
+        },
+        {
+          "name": "type"
+        }
+      ]
+    },
+    {
       "type": "sun.awt.image.ShortComponentRaster",
       "jniAccessible": true,
       "fields": [
@@ -1494,6 +1632,20 @@
         },
         {
           "name": "type"
+        }
+      ]
+    },
+    {
+      "type": "sun.java2d.Disposer",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "addRecord",
+          "parameterTypes": [
+            "java.lang.Object",
+            "long",
+            "long"
+          ]
         }
       ]
     },
@@ -1563,9 +1715,6 @@
       "glob": "META-INF/services/javax.imageio.spi.ImageWriterSpi"
     },
     {
-      "glob": "atlantafx/base/theme/cupertino-dark.bss"
-    },
-    {
       "glob": "atlantafx/base/theme/cupertino-light.bss"
     },
     {
@@ -1623,6 +1772,15 @@
       "glob": "com/sun/prism/es2/glsl/Texture_Color.frag"
     },
     {
+      "glob": "com/twelvemonkeys/imageio/color/icc_profiles.properties"
+    },
+    {
+      "glob": "com/twelvemonkeys/imageio/color/icc_profiles.xml"
+    },
+    {
+      "glob": "com/twelvemonkeys/imageio/color/icc_profiles_lnx.properties"
+    },
+    {
       "module": "java.base",
       "glob": "jdk/internal/icu/impl/data/icudt76b/ubidi.icu"
     },
@@ -1657,6 +1815,9 @@
     },
     {
       "bundle": "sun.util.logging.resources.logging"
+    },
+    {
+      "glob": "atlantafx/base/theme/cupertino-dark.bss"
     }
   ],
   "foreign": {

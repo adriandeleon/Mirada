@@ -86,7 +86,11 @@ public final class ImageCache {
         ImageFormats.Decoder decoder = ImageFormats.decoderFor(file);
         if (decoder == null || decoder == ImageFormats.Decoder.JAVAFX) {
             Image image = new Image(file.toUri().toString(), true);
-            pixels = whenLoaded(image);
+            // JavaFX's decoders miss variants ImageIO's readers handle (a 32-bit BMP with alpha
+            // throws inside JavaFX): when JavaFX gives up, ImageIO gets a turn before it is an error.
+            pixels = whenLoaded(image)
+                    .exceptionallyCompose(javafxFailed -> CompletableFuture.supplyAsync(
+                            () -> decodeOffThread(ImageFormats.Decoder.IMAGEIO, file), imageDecoder));
             cancel = () -> {
                 if (image.getProgress() < 1) image.cancel();
             };

@@ -102,6 +102,22 @@ public final class Tour {
         }
     }
 
+    /**
+     * The requested image could not be shown. Says so, as {@code [perf] fail name: reason}, and goes
+     * on to the next, so one run of the smoke test names every file that fails rather than stopping
+     * at the first.
+     */
+    public void failed(Path file, String reason, boolean last) {
+        Path name = file.getFileName();
+        System.out.printf("[perf] fail  %s: %s%n", name == null ? file : name, reason);
+        steps++;
+        if (last) {
+            System.out.flush();
+            System.exit(0);
+        }
+        next.run();
+    }
+
     /** Whether this run is recording the AOT cache. */
     public static boolean training() {
         return TRAINING;

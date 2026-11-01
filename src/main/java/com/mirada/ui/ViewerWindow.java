@@ -314,6 +314,7 @@ public final class ViewerWindow {
             // On stderr too: the window says it to the user, this is for whoever has to find out why.
             System.err.println("[mirada] could not open " + file + ": " + decoded.error());
             showMessage("Couldn't open " + fileName(file) + ": " + decoded.error());
+            if (tour != null) tour.failed(file, decoded.error(), folder.index() == folder.size() - 1);
             return;
         }
         Startup.mark("image-decoded");

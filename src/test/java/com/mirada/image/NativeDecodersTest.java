@@ -115,4 +115,14 @@ class NativeDecodersTest {
                 NativeLibraries.fileNames("Mac OS X", "jxl", List.of("0.11", "0.7")));
         assertEquals(List.of("heif.dll", "libheif.dll"), NativeLibraries.fileNames("Windows 11", "heif", List.of("1")));
     }
+
+    @Test
+    void theBundleIsFoundBesideANativeImage() {
+        assertEquals(Path.of("/opt/x/codecs"), NativeLibraries.bundleFolder("/opt/x/codecs", "runtime", "/bin/mirada"));
+        assertEquals(
+                Path.of("/opt/mirada/codecs"), NativeLibraries.bundleFolder(null, "runtime", "/opt/mirada/mirada"));
+        // On the JVM the property is the only source: the executable is java itself.
+        assertEquals(null, NativeLibraries.bundleFolder(null, null, "/usr/bin/java"));
+        assertEquals(null, NativeLibraries.bundleFolder(" ", "runtime", null));
+    }
 }
