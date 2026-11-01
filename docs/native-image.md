@@ -72,7 +72,7 @@ orientation and a heavy EXIF block.
   up on a file.
 - The tour reports a file it cannot show (`[perf] fail name: reason`) and goes on, so the smoke test
   names every failure in one run instead of timing out at the first.
-- CI's **native** job (Linux) installs Oracle GraalVM, builds the native image, opens the fixtures and
+- CI's **native** job (Linux and macOS) installs Oracle GraalVM 25.4, builds the native image, opens the fixtures and
   the whole matrix in it, prints a start-up figure and uploads the app for a week. Its first local
   run found **two more native-only gaps**, both JNI into the JDK's image code: AWT's
   `IntegerComponentRaster` (the BMP fallback) and the JPEG reader's callback (a JPEG-compressed
@@ -80,6 +80,35 @@ orientation and a heavy EXIF block.
 - CI's jlink packaging job opens the matrix too, on all three platforms.
 - A native image finds the codec bundle in a `codecs` folder beside its executable, so `target/mirada`
   runs with no options.
+
+## macOS
+
+CI builds and smoke-tests it on `macos-latest` (Apple silicon): every fixture and all 41 matrix
+variants open. It took one change, the GraalVM release:
+
+- **GraalVM 25.0 has no AWT on macOS.** The first run (25.0.4) built cleanly and opened JPEG, PNG,
+  HEIC, AVIF and JPEG XL, then failed WebP, TIFF and PSD with `Could not initialize class
+  java.awt.Toolkit`: the build emitted no `.dylib` at all, and ImageIO needs `libawt` even headless
+  (`BufferedImage` loads it). **25.4** emits nine libraries beside the executable — `libawt`,
+  `libawt_lwawt`, `libfontmanager`, `libfreetype`, `libjavajpeg`, `liblcms`, `libmlib_image` and the
+  `libjava`/`libjvm` shims — and the same metadata recorded on Linux was enough. Both CI jobs now
+  use 25.4, as this machine does.
+- **Not done:** a `.app` bundle around it (the libraries go in `Contents/MacOS` and each must be
+  signed), Finder's open-file event (`MacOpenFiles` is headful AWT; untested in the native image),
+  and a run on a real Mac.
+
+Start-up on the CI runners, launch to the first image (`measure-startup.sh -n 5`, median of the 4
+warm runs; shared virtual machines, so a sanity figure, not a benchmark). Both builds come from the
+same commit and run on the same kind of runner (run 41281297354):
+
+| Runner | jlink + AOT cache | Native image |
+|---|---|---|
+| `ubuntu-latest` (x64, Xvfb) | 624 ms | **153 ms** |
+| `macos-latest` (Apple silicon) | 558 ms | **364 ms** (563 in the run before; single runs 312–815) |
+
+On macOS the gap is smaller and the native figure noisier than on Linux; until it is measured on a
+real Mac, take it as "faster", not as a ratio. The macOS build fits the runner's 7 GB: about five and
+a half minutes.
 
 ## What it would cost to ship
 
@@ -92,8 +121,8 @@ orientation and a heavy EXIF block.
 - **StaticFX's licence**: its repository is GPL-2.0 without the Classpath Exception. It is a build
   tool and its feature code may not end up in the executable, but that needs checking with its
   author before shipping anything built with it.
-- **macOS and Windows are untried.** StaticFX claims both; the AWT libraries, the codecs and the
-  launcher arrangement would need the same work there.
+- **Windows is untried.** StaticFX claims it; the AWT libraries, the codecs and the launcher
+  arrangement would need the same work there that macOS needed (below).
 
 ## Recommendation
 
@@ -102,5 +131,6 @@ Keep the jlink image as what ships, and keep the native profile as a maintained 
 1. ~~Grow the fixtures into a format matrix and run the native smoke test over it in CI on Linux.~~
    Done (above).
 2. Ask StaticFX's author about the licence of what ends up in the executable.
-3. Try macOS (the platform where launch time is most visible, through Finder) once Linux is clean.
+3. ~~Try macOS (the platform where launch time is most visible, through Finder) once Linux is
+   clean.~~ Done in CI (below); not yet run on a Mac by hand, nor packaged as a `.app`.
 4. Then decide on the numbers above whether the native build replaces the jlink one.

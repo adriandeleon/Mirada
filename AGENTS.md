@@ -76,7 +76,7 @@ naming the library. EXIF is metadata-extractor.
 
 ## The native image (an experiment)
 
-CI's `native` job builds it on Linux and opens every fixture and every variant of the format matrix
+CI's `native` job builds it on Linux and macOS and opens every fixture and every variant of the format matrix
 in it (`src/test/resources/com/mirada/matrix`, from `scripts/make-format-matrix.sh`); `MatrixTest`
 decodes the matrix on the JVM, and the jlink packaging job opens it on all three platforms. Add a
 variant there when a new kind of file turns up a problem.
@@ -87,6 +87,11 @@ uses a third less memory, but ships nothing yet: [docs/native-image.md](docs/nat
 numbers, what it took and the recommendation. Its metadata is recorded by `scripts/native-metadata.sh`
 into `src/main/resources/META-INF/native-image`; re-run it (and merge runs over richer files) after
 anything that reflects, loads resources, or adds an FFM downcall.
+
+**GraalVM 25.4, not the 25.0 LTS.** 25.0 has no AWT on macOS: the image builds and opens JPEG, PNG,
+HEIC and JPEG XL, then fails on WebP, TIFF and PSD with `Could not initialize class java.awt.Toolkit`,
+because ImageIO needs `libawt` and no `.dylib` was emitted. 25.4 leaves `libawt.dylib` and eight
+others beside the executable, as Linux leaves its `.so` files; they must travel with it.
 
 ## Releasing
 
