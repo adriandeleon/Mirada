@@ -14,10 +14,20 @@ case "$(uname -s)" in
     Linux)
         allowed='^(libc|libm|libdl|libpthread|librt|libgcc_s|libstdc\+\+|ld-linux.*)\.so'
         for f in "$dir"/*.so*; do
+            sibling=false
             for need in $(readelf -d "$f" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p'); do
-                bundled "$need" || [[ "$need" =~ $allowed ]] || { echo "$(basename "$f") needs $need"; status=1; }
+                if bundled "$need"; then sibling=true
+                elif ! [[ "$need" =~ $allowed ]]; then echo "$(basename "$f") needs $need"; status=1
+                fi
             done
-            readelf -d "$f" | grep -q 'R\(UN\)\?PATH.*\$ORIGIN' || { echo "$(basename "$f") has no \$ORIGIN rpath"; status=1; }
+            # One that loads another from the bundle must look beside itself, and none may carry the
+            # build machine's directories.
+            if $sibling && ! readelf -d "$f" | grep -q 'R\(UN\)\?PATH.*\$ORIGIN'; then
+                echo "$(basename "$f") has no \$ORIGIN rpath"; status=1
+            fi
+            if readelf -d "$f" | grep 'R\(UN\)\?PATH' | grep -q '\[/'; then
+                echo "$(basename "$f") has an absolute rpath"; status=1
+            fi
         done
         ;;
     Darwin)

@@ -25,19 +25,37 @@ import org.jspecify.annotations.Nullable;
  * 190 MB, and the cache holds full resolution because zooming to 100 % needs it. Three entries is
  * the current image and one either side.
  *
- * <p>Four decoders feed it (see {@link ImageFormats.Decoder}). JavaFX's loads in its own background
- * thread and reports progress on the FX thread; ImageIO, libheif and libjxl run on two decoder
- * threads here — two, because each decode briefly holds a full image twice over.
+ * <p>Behind it, previews: an image leaving the cache is shrunk to {@value #PREVIEW_SIZE} pixels on
+ * its longer side (about 4 MB) on a low-priority thread, and {@value #PREVIEWS} of those are kept.
+ * Stepping back onto one shows its preview at once, at the full image's size on screen, while the
+ * full resolution decodes again ({@link Entry#preview}).
+ *
+ * <p>Five decoders feed it (see {@link ImageFormats.Decoder}). JavaFX's loads in its own background
+ * thread and reports progress on the FX thread; libjpeg-turbo, ImageIO, libheif and libjxl run on
+ * two decoder threads here — two, because each decode briefly holds a full image twice over.
  *
  * <p>FX thread only.
  */
 public final class ImageCache {
 
+    /** Longer side of a preview, in pixels. */
+    static final int PREVIEW_SIZE = 1280;
+    /** How many previews are kept: about 100 MB at most. */
+    static final int PREVIEWS = 24;
+
     /**
      * One image on its way. {@code ready} completes, never exceptionally, once the pixels are
-     * decoded and the metadata read, or once either has failed.
+     * decoded and the metadata read, or once either has failed. {@code preview} is what can be shown
+     * until then: the image shrunk, from the last time it was decoded, or null.
      */
-    public record Entry(Path file, CompletableFuture<Decoded> ready, Runnable cancel) {}
+    public record Entry(
+            Path file,
+            CompletableFuture<Decoded> ready,
+            Runnable cancel,
+            @Nullable Preview preview) {}
+
+    /** An image shrunk to at most {@link #PREVIEW_SIZE}, with the full image's size and its EXIF. */
+    public record Preview(Image image, Exif exif, double width, double height) {}
 
     /** The outcome of a load: an image and its EXIF, or the reason there is none. */
     public record Decoded(@Nullable Image image, Exif exif, String error) {
@@ -56,6 +74,12 @@ public final class ImageCache {
     private final Executor imageDecoder;
     private final Executor fxThread;
     private final Map<Path, Entry> entries = new LinkedHashMap<>(16, 0.75f, true);
+    private final Map<Path, Preview> previews = new LinkedHashMap<>(32, 0.75f, true);
+    private final Executor previewMaker = Executors.newSingleThreadExecutor(Thread.ofPlatform()
+            .daemon()
+            .priority(Thread.MIN_PRIORITY)
+            .name("previews")
+            .factory());
 
     public ImageCache(int capacity) {
         this(
@@ -91,13 +115,15 @@ public final class ImageCache {
         Runnable cancel;
         if (head != null) {
             // Decoded before the toolkit was up; wrapped now that it is (nothing asks the cache
-            // sooner). A head start that failed — a JPEG JavaFX and ImageIO would show differently —
-            // gives way to the usual load, started on the FX thread as JavaFX's decoder needs.
+            // sooner). A head start that failed gives way to the usual load, started on the FX
+            // thread as JavaFX's decoder needs — JavaFX itself for a JPEG libjpeg-turbo declined.
             exif = head.exif;
+            ImageFormats.Decoder fallback =
+                    decoder == ImageFormats.Decoder.TURBOJPEG ? ImageFormats.Decoder.JAVAFX : decoder;
             pixels = head.pixels
                     .<Image>thenApply(ArgbPixels::toImage)
                     .exceptionallyCompose(
-                            failed -> CompletableFuture.supplyAsync(() -> startPixels(file, decoder), fxThread)
+                            failed -> CompletableFuture.supplyAsync(() -> startPixels(file, fallback), fxThread)
                                     .thenCompose(Loading::pixels));
             cancel = () -> {};
         } else {
@@ -117,7 +143,7 @@ public final class ImageCache {
                     if (!(cause instanceof IOException)) cause.printStackTrace();
                     return Decoded.failed(message(error));
                 });
-        return new Entry(file, ready, cancel);
+        return new Entry(file, ready, cancel, previews.get(file));
     }
 
     /** A decode under way, and how to stop it. */
@@ -125,6 +151,15 @@ public final class ImageCache {
 
     /** Starts decoding {@code file}'s pixels. FX thread, for JavaFX's decoder. */
     private Loading startPixels(Path file, ImageFormats.@Nullable Decoder decoder) {
+        if (decoder == ImageFormats.Decoder.TURBOJPEG) {
+            // libjpeg-turbo, and JavaFX for the JPEGs it leaves (CMYK, 12-bit, or no library).
+            CompletableFuture<Image> turbo =
+                    CompletableFuture.supplyAsync(() -> decodeOffThread(decoder, file), imageDecoder);
+            CompletableFuture<Image> pixels = turbo.exceptionallyCompose(declined -> CompletableFuture.supplyAsync(
+                            () -> startPixels(file, ImageFormats.Decoder.JAVAFX), fxThread)
+                    .thenCompose(Loading::pixels));
+            return new Loading(pixels, () -> turbo.cancel(false));
+        }
         CompletableFuture<Image> pixels;
         Runnable cancel;
         if (decoder == null || decoder == ImageFormats.Decoder.JAVAFX) {
@@ -148,6 +183,7 @@ public final class ImageCache {
     static Image decodeOffThread(ImageFormats.Decoder decoder, Path file) {
         try {
             return switch (decoder) {
+                case TURBOJPEG -> TurboJpegDecoder.decode(file);
                 case IMAGEIO -> ImageIoDecoder.decode(file);
                 case LIBHEIF -> HeifDecoder.decode(file);
                 case LIBJXL -> JxlDecoder.decode(file);
@@ -196,13 +232,36 @@ public final class ImageCache {
         return cause;
     }
 
-    /** Drops the least recently used beyond capacity, cancelling a load still in flight. */
+    /**
+     * Drops the least recently used beyond capacity, cancelling a load still in flight, and keeps a
+     * preview of each decoded image it drops.
+     */
     private void trim() {
         Iterator<Entry> oldestFirst = entries.values().iterator();
         while (entries.size() > capacity && oldestFirst.hasNext()) {
             Entry evicted = oldestFirst.next();
             oldestFirst.remove();
             evicted.cancel().run();
+            Decoded decoded = evicted.ready().getNow(null);
+            if (decoded != null && decoded.image() != null && !previews.containsKey(evicted.file())) {
+                keepPreview(evicted.file(), decoded.image(), decoded.exif());
+            }
         }
+    }
+
+    private void keepPreview(Path file, Image image, Exif exif) {
+        double width = image.getWidth();
+        double height = image.getHeight();
+        CompletableFuture.supplyAsync(() -> Shrink.toFit(image, PREVIEW_SIZE), previewMaker)
+                .thenAcceptAsync(
+                        small -> {
+                            previews.put(file, new Preview(small, exif, width, height));
+                            Iterator<Preview> oldest = previews.values().iterator();
+                            while (previews.size() > PREVIEWS && oldest.hasNext()) {
+                                oldest.next();
+                                oldest.remove();
+                            }
+                        },
+                        fxThread);
     }
 }

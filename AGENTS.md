@@ -19,8 +19,11 @@ In this order, when they pull against each other:
 - Test: `./mvnw test`
 - Everything CI would check (tests, NullAway, format): `./mvnw verify`
 - Format: `./mvnw spotless:apply` (Palantir, as in Termina and Torrenta)
-- App image: **`./mvnw clean -Pdist -DskipTests package`** ⇒ `target/dist/Mirada{.app}`, with the
-  codec bundle inside and a trained AOT cache. `clean` is required (jlink reads `target/classes`).
+- App image, as it ships: **`./mvnw clean -Pdist,native -DskipTests package`** with Oracle GraalVM
+  25.4 as `JAVA_HOME` ⇒ `target/dist/Mirada{.app}`, the native executable with AWT's libraries and
+  the codec bundle beside it. `clean` is required (jlink reads `target/classes`).
+- The JVM app image (Intel Macs, and any JDK 25): `./mvnw clean -Pdist -DskipTests package`, with
+  a trained AOT cache in place of the native executable.
 - Installers too: add `-Dskip.installers=false` ⇒ `target/installers` (deb, rpm and tar.gz on Linux,
   dmg on macOS, msi on Windows); `scripts/check-linux-packages.sh target/installers branding/mirada.png`
   checks the Linux ones.
@@ -48,12 +51,14 @@ A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an en
 | `com.mirada.settings` | `~/.mirada/settings.properties` (`MIRADA_CONFIG_DIR` moves it): theme, what opens at start, how long the floating controls stay; clamped on read, written through on every change |
 | `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`); every command with its keys, name and description (`Command`), the command palette (`CommandPalette`), `AboutWindow`, `SettingsWindow`, the theme, the symbolic icons (`Icons`) |
 
-Four decoders (`ImageFormats.Decoder`, by extension). JavaFX's own `Image` decodes BMP, GIF
-(animated), JPEG and PNG in its background thread. The rest run on two decoder threads in
-`ImageCache` and are copied into a `WritableImage` (`Pixels`):
+Five decoders (`ImageFormats.Decoder`, by extension). JavaFX's own `Image` decodes BMP, GIF
+(animated) and PNG in its background thread, and the JPEGs libjpeg-turbo declines. The rest run on
+two decoder threads in `ImageCache`, into premultiplied ARGB ints (`ArgbPixels`) that become a
+`WritableImage` without a copy (`PixelBuffer`):
 
 | Formats | Decoder | How |
 |---|---|---|
+| JPEG | `TurboJpegDecoder` | libjpeg-turbo's TurboJPEG, through FFM; JavaFX for CMYK, YCCK and 12-bit |
 | WebP, TIFF, PSD | `ImageIoDecoder` | ImageIO with the TwelveMonkeys plugins, pure Java |
 | HEIC, AVIF | `HeifDecoder` | libheif (with libde265 and dav1d), through FFM |
 | JPEG XL | `JxlDecoder` | libjxl, through FFM, on every core via `libjxl_threads` |
@@ -74,19 +79,28 @@ version means: edit the tags in `build-codecs.sh`, run the workflow with the nex
 new tag and the five checksums from its `SHA256SUMS` in the pom. A missing library is not fatal: its files still list, and open with a message
 naming the library. EXIF is metadata-extractor.
 
-## The native image (an experiment)
+## The native image (what ships)
 
-CI's `native` job builds it on Linux and macOS and opens every fixture and every variant of the format matrix
-in it (`src/test/resources/com/mirada/matrix`, from `scripts/make-format-matrix.sh`); `MatrixTest`
-decodes the matrix on the JVM, and the jlink packaging job opens it on all three platforms. Add a
-variant there when a new kind of file turns up a problem.
+Mirada ships as a GraalVM native image with JavaFX linked in by StaticFX, on Linux (x64, arm64),
+Windows and Apple silicon; GraalVM 25.4 has no Intel macOS, which keeps the jlink image. It starts
+in half the time of the jlink image and uses a third less memory ([docs/native-image.md](docs/native-image.md)).
 
-`./mvnw -Pnative -Denforcer.skip -DskipTests package` with Oracle GraalVM 25.4 as `JAVA_HOME` builds
-`target/mirada` with JavaFX linked in by StaticFX. It starts in half the time of the jlink image and
-uses a third less memory, but ships nothing yet: [docs/native-image.md](docs/native-image.md) has the
-numbers, what it took and the recommendation. Its metadata is recorded by `scripts/native-metadata.sh`
-into `src/main/resources/META-INF/native-image`; re-run it (and merge runs over richer files) after
-anything that reflects, loads resources, or adds an FFM downcall.
+`-Pdist,native` builds it inside jpackage's app image: the native profile compiles `target/mirada`
+in `prepare-package`, jpackage makes the app image as before, and `scripts/native-app-image.sh`
+puts the executable, AWT's libraries and the codec bundle in place of the launcher and the Java
+runtime. The installers are made from that image, so the file associations, menu entries and
+package metadata are the same for both builds. `./mvnw -Pnative -DskipTests package` alone builds
+just `target/mirada`.
+
+CI's packaging job opens every fixture and every variant of the format matrix in each app image
+(`src/test/resources/com/mirada/matrix`, from `scripts/make-format-matrix.sh`); `MatrixTest`
+decodes the matrix on the JVM. Add a variant there when a new kind of file turns up a problem.
+
+A native image is only as complete as its reachability metadata, and a gap shows only when a file
+that needs it is opened. It is recorded by `scripts/native-metadata.sh` into
+`src/main/resources/META-INF/native-image`, on Linux locally and on macOS and Windows by the
+**Native metadata** workflow, then joined (the workflow's header says how). Re-record after anything
+that reflects, loads resources, or adds an FFM downcall: each platform's AWT reaches its own JNI.
 
 **GraalVM 25.4, not the 25.0 LTS.** 25.0 has no AWT on macOS: the image builds and opens JPEG, PNG,
 HEIC and JPEG XL, then fails on WebP, TIFF and PSD with `Could not initialize class java.awt.Toolkit`,
@@ -108,6 +122,12 @@ Nothing is signed: macOS and Windows warn on first launch (README, "Installing i
 
 ## Start-up, measured
 
+The native app image (what ships), this machine, median of 6 warm runs: **123 ms** to a small JPEG,
+**160–177 ms** to a 24-megapixel JPEG, **655 ms** to a 24-megapixel HEIC. `main` is reached at
+about 9 ms; bringing up GTK takes the next 90, during which the first image decodes (`HeadStart`).
+
+The jlink image, before the native image and libjpeg-turbo:
+
 Launch to the first image on screen, Linux x64 (this machine), a small JPEG, median of 6 warm runs.
 Measure again after anything that touches start-up; these are the numbers to beat.
 
@@ -125,6 +145,26 @@ decoded and painted in the next 30. A HEIC as the first image costs about 60 ms 
 a prefetched neighbour is 2–8 ms for every format.
 
 ## Things that will bite you
+
+- **The first image decodes before JavaFX is up** (`HeadStart`, started from `App.main`). JavaFX's
+  own decoder cannot (it asks for the screens' scale), so that head start needs a decoder of ours:
+  every format but PNG, GIF and BMP. `ImageCache.load` claims it for that one file; the first claim
+  closes the door, so a head start that loses the race gives up instead of holding its pixels.
+  `WritableImage` still needs the toolkit: `ArgbPixels` is the toolkit-free form, wrapped later.
+- **libjpeg-turbo must not change how a photo looks.** It ignores an embedded ICC profile exactly
+  as JavaFX does; the JDK's ImageIO reader converts it, which is why ImageIO is not the JPEG path.
+  What TurboJPEG will not decode to 8-bit RGB (CMYK, YCCK, 12-bit) is an `IOException`, and
+  `ImageCache` hands the file to JavaFX: the matrix's CMYK JPEG is the test.
+- **A preview stands in at the full image's size.** `ImageViewport` lays out by `imageWidth` and
+  `imageHeight`, not the `Image`'s own, so a 1280-pixel preview fills exactly what the full image
+  will, and `replace` swaps the pixels without touching zoom or turns.
+- **The deb's dependencies are a hand-kept list.** jpackage adds a package for every library the
+  image reaches, as the build host's dpkg names it: for a native image that is the whole GTK
+  closure under Debian 13's names (`libgtk-3-0t64`), which Debian 12 and Ubuntu 22.04 cannot
+  install. `build-installers.sh` replaces the field; `check-linux-packages.sh` fails a bare t64 name.
+- **The macOS dmg is `hdiutil`, not jpackage**, whose dmg step wants the Java runtime inside the
+  bundle. The document types are written into `Info.plist` by `fix-mac-bundle.sh` from
+  `packaging/file-types.txt`, which the other installers' file associations read too.
 
 - **JavaFX ignores EXIF orientation.** Phones store pixels as the sensor read them and tag how the
   phone was held; untreated, portrait photos lie on their side. `Orientation` is "mirror first, then
@@ -210,8 +250,8 @@ a prefetched neighbour is 2–8 ms for every format.
   holds the SVG and the PNG, ICO and ICNS made from it.
 - **The macOS bundle is changed after jpackage signs it** (codecs, AOT cache, version), so
   `scripts/fix-mac-bundle.sh` re-signs it ad hoc, last; CI verifies the signature.
-- **`java.awt.headless` is decided in `App.main`, as the first statement**: headless everywhere but
-  macOS (above). ImageIO and `BufferedImage` are `java.desktop` and need no display; tests are
+- **`java.awt.headless` is decided in `App.main`, as the first statement**, before `HeadStart` can
+  touch ImageIO: headless everywhere but macOS (above). ImageIO and `BufferedImage` are `java.desktop` and need no display; tests are
   headless on every platform through surefire's `java.awt.headless`.
 - **The TwelveMonkeys readers are found by service lookup**, so nothing names their classes.
   `module-info` requires them anyway, or a jlink image would drop them silently, and
@@ -261,9 +301,10 @@ Termina and Torrenta. `mvn compile` fails on any null that can reach a type not 
 ## Not done
 
 The editor (GNOME Image Viewer's: crop with aspect ratios, rotate, flip, Cancel and Save); the
-header's rotate button is where it will open. Slideshow; a keyboard shortcuts window. Signing: Developer ID and notarization on macOS, a code-signing certificate on Windows, GPG
-for the Linux packages. An AppImage, Homebrew and winget. No release has been made yet. Decoding the first image
-while the window is still being built (they run one after the other now, about 50 ms apart). Animated WebP, AVIF and JPEG XL show their first frame.
-JPEG XL is decoded in its own colour space, not converted to sRGB. Opening files from Finder on
-macOS (needs AWT `Desktop`). The app itself has not been run on Windows or macOS; CI only tests
-there.
+header's rotate button is where it will open. Slideshow; a keyboard shortcuts window. Signing:
+Developer ID and notarization on macOS, a code-signing certificate on Windows, GPG for the Linux
+packages. An AppImage, Homebrew and winget. No release has been made yet. Animated WebP, AVIF and
+JPEG XL show their first frame. JPEG XL is decoded in its own colour space, not converted to sRGB.
+HEIC grids are untested against a real iPhone photo. The app itself has not been run on Windows
+or macOS by hand; CI only tests there, and the macOS Finder double-click is untried in the native
+image.

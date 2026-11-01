@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -21,11 +20,10 @@ import org.jspecify.annotations.Nullable;
  * of that size in 800. Started from {@code main}, before {@code launch}, the decode runs alongside.
  * {@link ImageCache} claims the result when the window asks for that file.
  *
- * <p>Only decoders that need no toolkit can do this: ImageIO, libheif and libjxl, which produce
- * {@link ArgbPixels}. JavaFX's own decoder cannot run before the toolkit, so of its formats only JPEG
- * gets a head start, through ImageIO and only when JavaFX would show the same pixels ({@link
- * ImageIoDecoder#plainJpeg}). PNG, GIF and BMP wait for the toolkit as before. A head start that
- * fails is not an error: the cache loads the file the usual way.
+ * <p>Every decoder but JavaFX's own can do this (libjpeg-turbo, ImageIO, libheif and libjxl all
+ * produce {@link ArgbPixels}); JavaFX's needs the toolkit's screens, so PNG, GIF and BMP wait for it
+ * as before. A head start that fails is not an error: the cache loads the file the usual way, which
+ * for a JPEG libjpeg-turbo declines (CMYK, 12-bit) means JavaFX.
  */
 public final class HeadStart {
 
@@ -62,7 +60,7 @@ public final class HeadStart {
         }
         if (file == null) return;
         ImageFormats.Decoder decoder = ImageFormats.decoderFor(file);
-        if (decoder == null || !worthStarting(decoder, ImageFormats.extension(file))) return;
+        if (decoder == null || !canStartEarly(decoder)) return;
 
         HeadStart started = new HeadStart(file, decoder);
         if (!STATE.compareAndSet(null, started)) return; // the window got there first
@@ -79,23 +77,18 @@ public final class HeadStart {
         }
     }
 
-    /** Whether a format can be decoded before the toolkit is up. */
-    static boolean worthStarting(ImageFormats.Decoder decoder, String extension) {
-        return switch (decoder) {
-            case IMAGEIO, LIBHEIF, LIBJXL -> true;
-            case JAVAFX -> {
-                String lower = extension.toLowerCase(Locale.ROOT);
-                yield lower.equals("jpg") || lower.equals("jpeg");
-            }
-        };
+    /** Whether a decoder runs without the toolkit: every one but JavaFX's own. */
+    static boolean canStartEarly(ImageFormats.Decoder decoder) {
+        return decoder != ImageFormats.Decoder.JAVAFX;
     }
 
     private static ArgbPixels decode(ImageFormats.Decoder decoder, Path file) throws IOException {
         return switch (decoder) {
+            case TURBOJPEG -> TurboJpegDecoder.pixels(file);
             case IMAGEIO -> ImageIoDecoder.pixels(file);
             case LIBHEIF -> HeifDecoder.pixels(file);
             case LIBJXL -> JxlDecoder.pixels(file);
-            case JAVAFX -> ImageIoDecoder.plainJpeg(file);
+            case JAVAFX -> throw new IllegalArgumentException("JavaFX's decoder needs the toolkit");
         };
     }
 

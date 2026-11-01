@@ -1,5 +1,6 @@
 package com.mirada.image;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -9,9 +10,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import javafx.scene.image.Image;
-import javafx.scene.image.PixelReader;
-import javafx.scene.image.PixelWriter;
-import javafx.scene.image.WritableImage;
 
 import com.mirada.folder.ImageFormats;
 
@@ -62,50 +60,34 @@ public final class Thumbnails {
         Orientation orientation =
                 decoder.turnsUpright() ? Orientation.NORMAL : Exif.read(file).orientation();
         Image image;
-        if (decoder == ImageFormats.Decoder.JAVAFX) {
-            // Decoded at the small size by JavaFX itself, synchronously on this thread.
-            image = new Image(file.toUri().toString(), SIZE, SIZE, true, true, false);
-            if (image.isError()) throw new IllegalStateException("could not decode " + file);
+        if (decoder == ImageFormats.Decoder.TURBOJPEG) {
+            image = turboOrJavaFx(file);
+        } else if (decoder == ImageFormats.Decoder.JAVAFX) {
+            image = javaFx(file);
         } else {
             image = shrink(ImageCache.decodeOffThread(decoder, file), SIZE);
         }
         return new Thumbnail(image, orientation);
     }
 
-    /**
-     * {@code source} scaled so its longer side is at most {@code size}, each output pixel the average
-     * of the source pixels it covers (a box filter: no aliasing, and quick enough at thumbnail size).
-     */
-    static Image shrink(Image source, int size) {
-        int width = (int) source.getWidth();
-        int height = (int) source.getHeight();
-        double scale = Math.min(1, (double) size / Math.max(width, height));
-        if (scale >= 1) return source;
-        int outWidth = Math.max(1, (int) Math.round(width * scale));
-        int outHeight = Math.max(1, (int) Math.round(height * scale));
-        PixelReader reader = source.getPixelReader();
-        WritableImage out = new WritableImage(outWidth, outHeight);
-        PixelWriter writer = out.getPixelWriter();
-        for (int y = 0; y < outHeight; y++) {
-            int y0 = y * height / outHeight;
-            int y1 = Math.max(y0 + 1, (y + 1) * height / outHeight);
-            for (int x = 0; x < outWidth; x++) {
-                int x0 = x * width / outWidth;
-                int x1 = Math.max(x0 + 1, (x + 1) * width / outWidth);
-                long a = 0, r = 0, g = 0, b = 0;
-                for (int sy = y0; sy < y1; sy++) {
-                    for (int sx = x0; sx < x1; sx++) {
-                        int argb = reader.getArgb(sx, sy);
-                        a += argb >>> 24;
-                        r += (argb >> 16) & 0xFF;
-                        g += (argb >> 8) & 0xFF;
-                        b += argb & 0xFF;
-                    }
-                }
-                long n = (long) (x1 - x0) * (y1 - y0);
-                writer.setArgb(x, y, (int) (a / n) << 24 | (int) (r / n) << 16 | (int) (g / n) << 8 | (int) (b / n));
-            }
+    /** At an eighth, a quarter or half size straight out of libjpeg-turbo, then shrunk the rest of the way. */
+    private static Image turboOrJavaFx(Path file) {
+        try {
+            return shrink(TurboJpegDecoder.pixels(file, SIZE).toImage(), SIZE);
+        } catch (IOException declined) {
+            return javaFx(file);
         }
-        return out;
+    }
+
+    /** Decoded at the small size by JavaFX itself, synchronously on this thread. */
+    private static Image javaFx(Path file) {
+        Image image = new Image(file.toUri().toString(), SIZE, SIZE, true, true, false);
+        if (image.isError()) throw new IllegalStateException("could not decode " + file);
+        return image;
+    }
+
+    /** {@code source} scaled so its longer side is at most {@code size} (a box filter, {@link Shrink}). */
+    static Image shrink(Image source, int size) {
+        return Shrink.toFit(source, size);
     }
 }

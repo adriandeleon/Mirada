@@ -37,6 +37,14 @@ public final class ImageViewport extends Region {
     private final ReadOnlyBooleanWrapper fitted = new ReadOnlyBooleanWrapper(this, "fitted", true);
 
     private @Nullable Image image;
+    /**
+     * The real image's size, unturned. The same as {@link #image}'s, except while a preview stands
+     * in for it: then the smaller preview is stretched to this size, so zoom, fit and what the user
+     * sees do not jump when the full image replaces it.
+     */
+    private double imageWidth;
+
+    private double imageHeight;
     private Orientation orientation = Orientation.NORMAL;
     /** The user's turns on top of the file's own orientation, clockwise, 0 to 3. */
     private int turns;
@@ -66,11 +74,30 @@ public final class ImageViewport extends Region {
 
     /** Shows {@code image} fitted, upright by {@code orientation}, with the user's turns reset. */
     public void show(Image image, Orientation orientation) {
-        this.image = image;
+        show(image, orientation, image.getWidth(), image.getHeight());
+    }
+
+    /**
+     * Shows a preview of an image {@code width} × {@code height} pixels, fitted and laid out as that
+     * image would be, until {@link #replace} hands over the image itself.
+     */
+    public void show(Image preview, Orientation orientation, double width, double height) {
+        this.image = preview;
+        this.imageWidth = width;
+        this.imageHeight = height;
         this.orientation = orientation;
         this.turns = 0;
-        view.setImage(image);
+        view.setImage(preview);
         fitted.set(true);
+        requestLayout();
+    }
+
+    /** Puts the full image in place of its preview, keeping the zoom, position and turns. */
+    public void replace(Image full) {
+        this.image = full;
+        this.imageWidth = full.getWidth();
+        this.imageHeight = full.getHeight();
+        view.setImage(full);
         requestLayout();
     }
 
@@ -90,15 +117,13 @@ public final class ImageViewport extends Region {
 
     /** The image's width as it stands on screen, turned: what the status bar reports. */
     public double contentWidth() {
-        Image shown = image;
-        if (shown == null) return 0;
-        return sideways() ? shown.getHeight() : shown.getWidth();
+        if (image == null) return 0;
+        return sideways() ? imageHeight : imageWidth;
     }
 
     public double contentHeight() {
-        Image shown = image;
-        if (shown == null) return 0;
-        return sideways() ? shown.getWidth() : shown.getHeight();
+        if (image == null) return 0;
+        return sideways() ? imageWidth : imageHeight;
     }
 
     public void fit() {
@@ -138,8 +163,7 @@ public final class ImageViewport extends Region {
 
     @Override
     protected void layoutChildren() {
-        Image shown = image;
-        if (shown == null || shown.getWidth() <= 0 || shown.getHeight() <= 0) {
+        if (image == null || imageWidth <= 0 || imageHeight <= 0) {
             view.setVisible(false);
             return;
         }
@@ -152,8 +176,8 @@ public final class ImageViewport extends Region {
 
         // The view is laid out unturned and turns about its own centre, so place that centre on
         // the centre of where the turned image should stand.
-        double viewWidth = shown.getWidth() * s;
-        double viewHeight = shown.getHeight() * s;
+        double viewWidth = imageWidth * s;
+        double viewHeight = imageHeight * s;
         double centreX = offsetX + width * s / 2;
         double centreY = offsetY + height * s / 2;
         view.setFitWidth(viewWidth);

@@ -4,14 +4,17 @@
 #   libheif   HEIC and AVIF, with libde265 (HEVC) and dav1d (AV1) linked in statically.
 #             Decoders only: no x265 (GPL), no aom, no plugin loading.
 #   libjxl    JPEG XL, plus libjxl_threads; brotli, highway and skcms from its own submodules.
+#   turbojpeg JPEG, libjpeg-turbo's TurboJPEG library alone (it carries its own libjpeg): SIMD,
+#             and decoding at 1/2, 1/4 or 1/8 size.
 #
 # Every library finds the others beside it ($ORIGIN on Linux, @loader_path on macOS), so the folder
 # works wherever it is copied. The last step checks each library's dependencies and fails on anything
 # outside the system's C and C++ runtimes.
 #
 # Usage: scripts/build-codecs.sh [out-dir]          (default: target/codecs)
-# Needs: git, cmake, ninja, meson, pkg-config, a C/C++ compiler, and nasm (x86) for dav1d's assembly.
-# Env:   CODECS_NO_ASM=1   build dav1d without assembly (when nasm is missing; much slower AV1)
+# Needs: git, cmake, ninja, meson, pkg-config, a C/C++ compiler, and nasm (x86) for dav1d's and
+#        libjpeg-turbo's assembly.
+# Env:   CODECS_NO_ASM=1   build without assembly (when nasm is missing; much slower AV1 and JPEG)
 #        CODECS_WORK=dir   where sources and builds go (default: target/codecs-build)
 set -euo pipefail
 
@@ -19,6 +22,7 @@ LIBDE265_TAG=v1.1.3
 DAV1D_TAG=1.5.4
 LIBHEIF_TAG=v1.23.7
 LIBJXL_TAG=v0.12.0
+LIBJPEG_TURBO_TAG=3.2.0
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 out=${1:-$root/target/codecs}
@@ -102,6 +106,20 @@ cmake -S "$work/libjxl" -B "$work/libjxl/build" "${cmake_common[@]}" \
     -DJPEGXL_FORCE_SYSTEM_BROTLI=OFF -DJPEGXL_FORCE_SYSTEM_HWY=OFF -DJPEGXL_FORCE_SYSTEM_LCMS2=OFF
 cmake --build "$work/libjxl/build" --target install
 
+echo "== libjpeg-turbo $LIBJPEG_TURBO_TAG (TurboJPEG only, simd=$asm)"
+fetch https://github.com/libjpeg-turbo/libjpeg-turbo.git "$LIBJPEG_TURBO_TAG" libjpeg-turbo
+simd=ON
+[ "$asm" = false ] && simd=OFF
+# No rpath: it needs nothing from the bundle, and its CMake would otherwise write the absolute
+# install directory in place of ours.
+cmake -S "$work/libjpeg-turbo" -B "$work/libjpeg-turbo/build" "${cmake_common[@]}" \
+    -DENABLE_SHARED=ON -DENABLE_STATIC=OFF -DWITH_TURBOJPEG=ON -DWITH_JNA=OFF \
+    -DWITH_SIMD=$simd -DWITH_TOOLS=OFF -DWITH_TESTS=OFF \
+    -DCMAKE_SKIP_INSTALL_RPATH=ON
+cmake --build "$work/libjpeg-turbo/build" --target install
+# The libjpeg API library is a second copy of the same decoder that nothing here calls.
+rm -f "$prefix"/lib/libjpeg.* "$prefix"/bin/jpeg62.dll "$prefix"/lib/jpeg.lib
+
 echo "== collecting into $out"
 rm -rf "${out:?}"/*
 mkdir -p "$out/licenses"
@@ -138,11 +156,13 @@ cp "$work/libjxl/LICENSE" "$out/licenses/libjxl.txt"
 cp "$work/libjxl/third_party/brotli/LICENSE" "$out/licenses/brotli.txt"
 cp "$work/libjxl/third_party/highway/LICENSE" "$out/licenses/highway.txt"
 cp "$work/libjxl/third_party/skcms/LICENSE" "$out/licenses/skcms.txt"
+cp "$work/libjpeg-turbo/LICENSE.md" "$out/licenses/libjpeg-turbo.md"
 cat > "$out/VERSIONS.txt" <<EOF
 libheif $LIBHEIF_TAG
 libde265 $LIBDE265_TAG
 dav1d $DAV1D_TAG (asm: $asm)
 libjxl $LIBJXL_TAG
+libjpeg-turbo $LIBJPEG_TURBO_TAG (simd: $simd)
 EOF
 
 echo "== checking dependencies"

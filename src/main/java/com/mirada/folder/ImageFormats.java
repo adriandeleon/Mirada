@@ -20,6 +20,8 @@ public final class ImageFormats {
     /** What turns a file's bytes into pixels. */
     public enum Decoder {
         JAVAFX(false),
+        /** libjpeg-turbo; JavaFX takes over a JPEG it will not decode (CMYK, 12-bit). */
+        TURBOJPEG(false),
         IMAGEIO(false),
         LIBHEIF(true),
         LIBJXL(true);
@@ -42,10 +44,10 @@ public final class ImageFormats {
 
     /** Lower case, without the dot, to its decoder. */
     private static final Map<String, Decoder> BY_EXTENSION = Map.ofEntries(
-            Map.entry("jpg", Decoder.JAVAFX),
-            Map.entry("jpeg", Decoder.JAVAFX),
-            Map.entry("jpe", Decoder.JAVAFX),
-            Map.entry("jfif", Decoder.JAVAFX),
+            Map.entry("jpg", Decoder.TURBOJPEG),
+            Map.entry("jpeg", Decoder.TURBOJPEG),
+            Map.entry("jpe", Decoder.TURBOJPEG),
+            Map.entry("jfif", Decoder.TURBOJPEG),
             Map.entry("png", Decoder.JAVAFX),
             Map.entry("gif", Decoder.JAVAFX),
             Map.entry("bmp", Decoder.JAVAFX),

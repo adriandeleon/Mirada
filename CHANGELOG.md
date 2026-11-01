@@ -13,9 +13,18 @@ The first version: open a photo, look, arrow through its folder, close.
 - **HEIC, AVIF and JPEG XL**, through libheif and libjxl, built from source for each platform and
   bundled (3–4 MB): nothing to install, and the same versions everywhere. JPEG XL decodes on every
   core.
-- **The packaged app shows the first image about a quarter of a second after launch** (Linux,
-  measured): a jlink runtime with an AOT cache trained across every format, and on Linux a launcher
-  that skips the 300 ms jpackage's spends asking dpkg about itself.
+- **The packaged app shows the first image about an eighth of a second after launch** (Linux,
+  measured): it is compiled ahead of time into a native executable (GraalVM, with JavaFX linked in
+  by StaticFX) on Linux, Windows and Apple silicon, and uses a third less memory. Intel Macs get a
+  jlink runtime with an AOT cache trained across every format.
+- **JPEG decodes two to three times faster**, through libjpeg-turbo (bundled, like the other
+  codecs); JavaFX still takes the CMYK and 12-bit files it declines. A 24-megapixel photo opens
+  in about 170 ms from launch.
+- **The first image decodes while the window is still being built**, for every format but PNG,
+  GIF and BMP, so a large photo is often ready before the window is.
+- **Stepping back is instant further back**: the last two dozen images leave a preview behind,
+  shown at once while the full resolution decodes again. Thumbnails of JPEGs decode at an eighth
+  of the size.
 - **Installers**: deb, rpm and tar.gz for Linux (x64 and arm64), dmg for macOS (Apple silicon and
   Intel), msi for Windows, each registering Mirada for the image types it opens. Not signed yet.
   On macOS, a double-click in Finder, "Open With" and a file dropped on the Dock icon open the

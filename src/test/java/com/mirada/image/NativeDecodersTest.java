@@ -86,6 +86,45 @@ class NativeDecodersTest {
         assertRedThenBlue(image, 0);
     }
 
+    @Test
+    void decodesJpeg() throws Exception {
+        require(TurboJpegDecoder.available(), "libjpeg-turbo");
+        WritableImage image = TurboJpegDecoder.decode(fixture("red-blue.jpg"));
+        assertRedThenBlue(image, 24);
+    }
+
+    /** At an eighth of the size when that still covers what was asked for, in the DCT. */
+    @Test
+    void decodesJpegSmaller() throws Exception {
+        require(TurboJpegDecoder.available(), "libjpeg-turbo");
+        Path jpeg = fixture("red-blue.jpg");
+        int fullWidth = (int) TurboJpegDecoder.decode(jpeg).getWidth();
+        ArgbPixels half = TurboJpegDecoder.pixels(jpeg, (fullWidth + 1) / 2);
+        assertEquals((fullWidth + 1) / 2, half.width());
+    }
+
+    @Test
+    void denominatorIsTheLargestThatStillCovers() {
+        assertEquals(8, TurboJpegDecoder.denominator(6000, 256));
+        assertEquals(4, TurboJpegDecoder.denominator(6000, 1000));
+        assertEquals(2, TurboJpegDecoder.denominator(6000, 2000));
+        assertEquals(1, TurboJpegDecoder.denominator(6000, 4000));
+        assertEquals(1, TurboJpegDecoder.denominator(6000, 0));
+        assertEquals(8, TurboJpegDecoder.denominator(7, 1)); // rounded up, as TJSCALED is
+    }
+
+    /** CMYK is left to JavaFX: an IOException, which ImageCache answers with JavaFX's decoder. */
+    @Test
+    void leavesCmykToJavaFx() throws Exception {
+        require(TurboJpegDecoder.available(), "libjpeg-turbo");
+        Path cmyk = Path.of(NativeDecodersTest.class
+                        .getResource("/com/mirada/matrix")
+                        .toURI())
+                .resolve("jpeg-cmyk.jpg");
+        assumeTrue(Files.exists(cmyk), "no CMYK fixture");
+        assertThrows(IOException.class, () -> TurboJpegDecoder.pixels(cmyk));
+    }
+
     /** With a bundle present (scripts/build-codecs.sh, or the downloaded release), it is what loads. */
     @Test
     void theBundleWinsOverTheSystem() {

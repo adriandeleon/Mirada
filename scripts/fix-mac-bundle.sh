@@ -20,6 +20,30 @@ if [ "$current" != "$version" ]; then
     /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $version" "$plist"
     echo "bundle version: $current -> $version"
 fi
+# The image types it opens (packaging/file-types.txt), as Finder reads them: one document type each,
+# Mirada a viewer of them and not their default owner (LSHandlerRank Alternate).
+root="$(cd "$(dirname "$0")/.." && pwd)"
+buddy() { /usr/libexec/PlistBuddy -c "$1" "$plist"; }
+buddy "Delete :CFBundleDocumentTypes" 2>/dev/null || true
+buddy "Add :CFBundleDocumentTypes array"
+i=0
+while read -r extension mime label uti; do
+    case "$extension" in '' | '#'*) continue ;; esac
+    entry=":CFBundleDocumentTypes:$i"
+    buddy "Add $entry dict"
+    buddy "Add $entry:CFBundleTypeName string ${label//_/ } image"
+    buddy "Add $entry:CFBundleTypeRole string Viewer"
+    buddy "Add $entry:LSHandlerRank string Alternate"
+    buddy "Add $entry:LSItemContentTypes array"
+    buddy "Add $entry:LSItemContentTypes:0 string $uti"
+    buddy "Add $entry:CFBundleTypeExtensions array"
+    buddy "Add $entry:CFBundleTypeExtensions:0 string $extension"
+    buddy "Add $entry:CFBundleTypeMIMETypes array"
+    buddy "Add $entry:CFBundleTypeMIMETypes:0 string $mime"
+    i=$((i + 1))
+done < "$root/packaging/file-types.txt"
+echo "document types: $i"
+
 # Inside out: every loose library first (the codecs, and in a native image the JDK's AWT libraries
 # beside the executable), then the bundle, whose seal covers them.
 find "$app/Contents" -type f -name "*.dylib" -print0 | xargs -0 codesign --force --sign -

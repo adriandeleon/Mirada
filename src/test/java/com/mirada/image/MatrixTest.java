@@ -58,14 +58,25 @@ class MatrixTest {
         assertTrue(checked >= 30, "only " + checked + " variants checked");
     }
 
+    /** JavaFX's decoder, and ImageIO when it gives up, as ImageCache does. */
+    private static Image javaFx(Path file) {
+        Image image = new Image(file.toUri().toString(), false);
+        return image.isError() ? ImageCache.decodeOffThread(ImageFormats.Decoder.IMAGEIO, file) : image;
+    }
+
     /** Null when the file decoded to an image of the matrix's size; else what went wrong. */
     private static String decode(ImageFormats.Decoder decoder, Path file) {
         try {
             Image image;
-            if (decoder == ImageFormats.Decoder.JAVAFX) {
-                image = new Image(file.toUri().toString(), false);
-                // As ImageCache does: ImageIO when JavaFX's own decoder gives up.
-                if (image.isError()) image = ImageCache.decodeOffThread(ImageFormats.Decoder.IMAGEIO, file);
+            if (decoder == ImageFormats.Decoder.TURBOJPEG) {
+                // As ImageCache does: JavaFX for what libjpeg-turbo declines (CMYK, or no library).
+                try {
+                    image = ImageCache.decodeOffThread(decoder, file);
+                } catch (RuntimeException declined) {
+                    image = javaFx(file);
+                }
+            } else if (decoder == ImageFormats.Decoder.JAVAFX) {
+                image = javaFx(file);
             } else {
                 image = ImageCache.decodeOffThread(decoder, file);
             }

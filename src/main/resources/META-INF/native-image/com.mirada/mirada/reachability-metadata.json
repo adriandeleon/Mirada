@@ -1823,6 +1823,17 @@
   "foreign": {
     "downcalls": [
       {
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "jlong",
+          "void*",
+          "jint",
+          "jint"
+        ]
+      },
+      {
         "returnType": "void*",
         "parameterTypes": [
           "void*",
@@ -1880,13 +1891,26 @@
       {
         "returnType": "jint",
         "parameterTypes": [
-          "void*"
+          "void*",
+          "jint"
         ]
       },
       {
         "returnType": "jint",
         "parameterTypes": [
           "void*",
+          "struct(jint,jint)"
+        ]
+      },
+      {
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*"
+        ]
+      },
+      {
+        "returnType": "void*",
+        "parameterTypes": [
           "jint"
         ]
       },
@@ -1897,18 +1921,18 @@
         ]
       },
       {
-        "returnType": "struct(jint,jint,void*)",
-        "parameterTypes": [
-          "void*",
-          "void*"
-        ]
-      },
-      {
         "returnType": "jint",
         "parameterTypes": [
           "void*",
           "void*",
           "jlong"
+        ]
+      },
+      {
+        "returnType": "struct(jint,jint,void*)",
+        "parameterTypes": [
+          "void*",
+          "void*"
         ]
       },
       {
@@ -1930,13 +1954,13 @@
         ]
       },
       {
-        "returnType": "struct(jint,jint,void*)",
+        "returnType": "void*",
         "parameterTypes": [
           "void*"
         ]
       },
       {
-        "returnType": "void*",
+        "returnType": "struct(jint,jint,void*)",
         "parameterTypes": [
           "void*"
         ]

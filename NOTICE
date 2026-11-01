@@ -47,8 +47,30 @@ bundled folder, unmodified:
   https://skia.googlesource.com/skcms) in the bundled build, or Little CMS
   (MIT, https://www.littlecms.com) in some system builds.
 
+  libjpeg-turbo — https://libjpeg-turbo.org
+  Copyright the libjpeg-turbo Project, D. R. Commander and others, and the
+  Independent JPEG Group. Licensed under the IJG License, the Modified
+  (3-clause) BSD License and the zlib License. Its TurboJPEG library alone,
+  used through its C API to decode JPEG. This software is based in part on
+  the work of the Independent JPEG Group.
+
   The bundled build carries each project's licence text in its licenses/
   folder.
+
+The installers for Linux, Windows and Apple silicon contain Mirada compiled
+ahead of time into a native executable:
+
+  Oracle GraalVM Native Image — https://www.graalvm.org
+  Copyright Oracle and/or its affiliates. The executable includes the Native
+  Image runtime and the parts of the Java class library it uses, under the
+  GraalVM Free Terms and Conditions (https://www.oracle.com/downloads/licenses/graal-free-license.html)
+  and, for the class library, GPL-2.0 with the Classpath Exception. The JDK
+  libraries beside the executable (AWT, for ImageIO) are the JDK's own.
+
+  StaticFX — https://github.com/HebiRobotics/jfx-static-feature
+  Copyright HEBI Robotics. Licensed under GPL-2.0, as its repository states.
+  The build-time feature and the static JavaFX libraries (jfx-static-libs)
+  that link JavaFX into the executable.
 
 OpenJFX (JavaFX) — https://openjdk.org/projects/openjfx/
 Copyright Oracle and/or its affiliates.

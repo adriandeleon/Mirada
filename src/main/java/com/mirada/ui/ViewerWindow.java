@@ -95,6 +95,8 @@ public final class ViewerWindow {
     private FolderImages folder = FolderImages.EMPTY;
     /** The image asked for most recently; a load that finishes for any other is dropped. */
     private @Nullable Path wanted;
+    /** The image whose preview the viewport shows until its full resolution arrives; else null. */
+    private @Nullable Path previewing;
 
     /** @param openLink opens a link or a folder ({@code file:} URI) with the platform's handler */
     public ViewerWindow(Stage stage, Settings settings, Consumer<String> openLink) {
@@ -293,6 +295,13 @@ public final class ViewerWindow {
         }
         ImageCache.Entry entry = cache.get(file);
         if (tour != null) tour.requested(entry.ready().isDone());
+        ImageCache.Preview preview = entry.preview();
+        if (preview != null && !entry.ready().isDone()) {
+            placeholder.setVisible(false);
+            viewport.show(preview.image(), preview.exif().orientation(), preview.width(), preview.height());
+            previewing = file;
+            updateControls();
+        }
         entry.ready()
                 .thenAcceptAsync(decoded -> display(file, decoded), Platform::runLater)
                 .exceptionally(error -> {
@@ -319,7 +328,10 @@ public final class ViewerWindow {
         }
         Startup.mark("image-decoded");
         placeholder.setVisible(false);
-        viewport.show(image, decoded.exif().orientation());
+        // In place of its preview, keeping whatever the user did to it meanwhile.
+        if (file.equals(previewing)) viewport.replace(image);
+        else viewport.show(image, decoded.exif().orientation());
+        previewing = null;
         Startup.markFirstPaint();
         Platform.runLater(() -> Platform.runLater(this::releaseAfterFirstPaint));
         if (tour != null) tour.shown(file, folder.index() == folder.size() - 1);
@@ -331,6 +343,7 @@ public final class ViewerWindow {
     }
 
     private void showMessage(String message) {
+        previewing = null;
         viewport.clear();
         placeholder.setText(message);
         placeholder.setVisible(true);

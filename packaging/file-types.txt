@@ -1,0 +1,17 @@
+# The image types Mirada registers for, one per line: extension, MIME type, the kind's name (_ for a
+# space), macOS's type identifier. Read by scripts/build-installers.sh (Linux and Windows file associations) and
+# scripts/fix-mac-bundle.sh (the macOS bundle's document types). The MIME types must match MimeType
+# in packaging/linux/Mirada.desktop.
+jpg  image/jpeg                JPEG      public.jpeg
+jpeg image/jpeg                JPEG      public.jpeg
+png  image/png                 PNG       public.png
+gif  image/gif                 GIF       com.compuserve.gif
+bmp  image/bmp                 BMP       com.microsoft.bmp
+webp image/webp                WebP      org.webmproject.webp
+tif  image/tiff                TIFF      public.tiff
+tiff image/tiff                TIFF      public.tiff
+psd  image/vnd.adobe.photoshop Photoshop com.adobe.photoshop-image
+heic image/heic                HEIC      public.heic
+heif image/heif                HEIF      public.heif
+avif image/avif                AVIF      public.avif
+jxl  image/jxl                 JPEG_XL   public.jpeg-xl

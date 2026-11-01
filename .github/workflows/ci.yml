@@ -114,9 +114,9 @@ jobs:
           sudo apt-get install -y -qq build-essential zlib1g-dev libgtk-3-dev libxtst-dev \
             libxxf86vm-dev libgl1-mesa-dev xvfb fakeroot rpm cpio desktop-file-utils
 
-      # jpackage cannot cross-build, so each platform proves its own image. Linux builds the
-      # installers too, because that is where their contents get checked; the dmg and msi are left
-      # to the release. The native build takes a few minutes and several GB of memory.
+      # jpackage cannot cross-build, so each platform proves its own image. Linux and macOS build
+      # their installers too (the deb's contents get checked below); the msi, which needs WiX, is
+      # left to the release. The native build takes a few minutes and several GB of memory.
       - name: App image
         env:
           MIRADA_REQUIRE_AOT: ${{ matrix.build == 'jlink' && '1' || '' }}
@@ -124,7 +124,7 @@ jobs:
           profiles=dist
           [ "${{ matrix.build }}" = native ] && profiles=dist,native
           installers=true
-          [ "${{ runner.os }}" = Linux ] && installers=false
+          [ "${{ runner.os }}" != Windows ] && installers=false
           ./mvnw -B --no-transfer-progress clean -P$profiles -DskipTests -Dskip.installers=$installers package
 
       - name: Smoke test (every format and variant, in the packaged app)
@@ -137,9 +137,12 @@ jobs:
           bash scripts/smoke-test.sh "$launcher" src/test/resources/com/mirada/image
           bash scripts/smoke-test.sh "$launcher" src/test/resources/com/mirada/matrix
 
-      - name: Check the macOS signature
+      - name: Check the macOS signature and disk image
         if: runner.os == 'macOS'
-        run: codesign --verify --deep --strict --verbose=2 target/dist/Mirada.app
+        run: |
+          codesign --verify --deep --strict --verbose=2 target/dist/Mirada.app
+          /usr/libexec/PlistBuddy -c "Print :CFBundleDocumentTypes:0" target/dist/Mirada.app/Contents/Info.plist
+          hdiutil verify target/installers/*.dmg
 
       # Cold runs on a shared virtual machine: a sanity figure, not a benchmark (docs/native-image.md
       # has the real numbers).

@@ -7,9 +7,9 @@
 #   Windows  .msi
 #   Linux    .deb, .rpm and .tar.gz
 #
-# Each registers Mirada for its image types (file associations), so a double-click opens it. On
-# Linux and Windows the file arrives as Mirada's argument; macOS sends an "open" event instead,
-# which Mirada does not handle yet (AGENTS.md, "Not done").
+# Each registers Mirada for its image types (packaging/file-types.txt), so a double-click opens it.
+# On Linux and Windows the file arrives as Mirada's argument; macOS sends an "open" event, which
+# MacOpenFiles receives.
 #
 # Usage: build-installers.sh <app-image> <app-version> <dest-dir> <icon>
 set -euo pipefail
@@ -31,33 +31,17 @@ common=(--app-image "$image" --name Mirada --app-version "$version" --dest "$des
         --about-url "https://github.com/adriandeleon/Mirada")
 [ -n "$icon" ] && [ -f "$icon" ] && common+=(--icon "$icon")
 
-# One properties file per extension, the form jpackage takes. The MIME types must match MimeType in
-# packaging/linux/Mirada.desktop.
+# One properties file per extension, the form jpackage takes (packaging/file-types.txt).
 associations="$(mktemp -d)"
-while read -r extension mime label; do
+while read -r extension mime label _; do
+    case "$extension" in '' | '#'*) continue ;; esac
     cat > "$associations/$extension.properties" <<PROPS
 extension=$extension
 mime-type=$mime
 description=${label//_/ } image
-mac.CFBundleTypeRole=Viewer
-mac.LSHandlerRank=Alternate
 PROPS
     common+=(--file-associations "$associations/$extension.properties")
-done <<'TYPES'
-jpg  image/jpeg JPEG
-jpeg image/jpeg JPEG
-png  image/png PNG
-gif  image/gif GIF
-bmp  image/bmp BMP
-webp image/webp WebP
-tif  image/tiff TIFF
-tiff image/tiff TIFF
-psd  image/vnd.adobe.photoshop Photoshop
-heic image/heic HEIC
-heif image/heif HEIF
-avif image/avif AVIF
-jxl  image/jxl JPEG_XL
-TYPES
+done < "$root/packaging/file-types.txt"
 
 build() {
     local type="$1"; shift
@@ -108,7 +92,17 @@ build_tarball() {
 
 case "$(uname -s)" in
     Darwin)
-        build dmg --mac-package-name Mirada
+        # hdiutil, not jpackage: jpackage's dmg wants the Java runtime inside the bundle, which the
+        # native image no longer has. The bundle is finished (document types, signature) by
+        # fix-mac-bundle.sh; this only puts it on a disk image beside a link to /Applications.
+        echo "[installers] building dmg"
+        staging="$(mktemp -d)"
+        cp -R "$image" "$staging/"
+        ln -s /Applications "$staging/Applications"
+        hdiutil create -quiet -volname Mirada -srcfolder "$staging" -fs HFS+ -format UDZO -ov \
+            "$dest/Mirada-$version.dmg"
+        rm -rf "$staging"
+        echo "[installers] dmg OK"
         ;;
     Linux)
         # The resource directory overrides the menu entry and the icon (packaging/linux/NOTES.md).

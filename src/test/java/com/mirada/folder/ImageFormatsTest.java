@@ -14,7 +14,7 @@ class ImageFormatsTest {
 
     @Test
     void eachExtensionHasOneDecoder() {
-        assertEquals(ImageFormats.Decoder.JAVAFX, ImageFormats.decoderFor(Path.of("a.JPG")));
+        assertEquals(ImageFormats.Decoder.TURBOJPEG, ImageFormats.decoderFor(Path.of("a.JPG")));
         assertEquals(ImageFormats.Decoder.JAVAFX, ImageFormats.decoderFor(Path.of("a.gif")));
         assertEquals(ImageFormats.Decoder.IMAGEIO, ImageFormats.decoderFor(Path.of("a.webp")));
         assertEquals(ImageFormats.Decoder.IMAGEIO, ImageFormats.decoderFor(Path.of("a.TIFF")));
@@ -31,6 +31,7 @@ class ImageFormatsTest {
         assertTrue(ImageFormats.Decoder.LIBHEIF.turnsUpright());
         assertTrue(ImageFormats.Decoder.LIBJXL.turnsUpright());
         assertFalse(ImageFormats.Decoder.JAVAFX.turnsUpright());
+        assertFalse(ImageFormats.Decoder.TURBOJPEG.turnsUpright());
         assertFalse(ImageFormats.Decoder.IMAGEIO.turnsUpright());
     }
 
