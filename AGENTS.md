@@ -361,7 +361,7 @@ Termina and Torrenta. `mvn compile` fails on any null that can reach a type not 
 
 Signing:
 Developer ID and notarization on macOS, a code-signing certificate on Windows, GPG for the Linux
-packages. An AppImage, Homebrew and winget. No release has been made yet. ICC profiles and XMP in a saved edit, and EXIF in a saved TIFF;
+packages. An AppImage, Homebrew and winget. ICC profiles and XMP in a saved edit, and EXIF in a saved TIFF;
 a Brotli-compressed JPEG XL Exif box. Trash on Windows and macOS is untested. HEIC grids are untested against a real iPhone photo. The app itself has not been run on Windows
 or macOS by hand; CI only tests there, and the macOS Finder double-click is untried in the native
 image.

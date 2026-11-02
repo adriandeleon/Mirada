@@ -3,6 +3,8 @@
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org); until
 1.0.0 the minor number moves for anything user-visible.
 
+## 0.2.0 — unreleased
+
 ## 0.1.0 — 2026-11-01
 
 The first version: open a photo, look, arrow through its folder, close.
