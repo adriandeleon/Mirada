@@ -132,7 +132,7 @@ signing step and its check runs either way:
 | `MACOS_CERTIFICATE_PASSWORD` | The `.p12`'s password |
 | `MACOS_SIGNING_IDENTITY` | Its name, `Developer ID Application: Name (TEAMID)` |
 | `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD` | For notarizing: the account, its team, an app-specific password |
-| `LINUX_GPG_PRIVATE_KEY`, `LINUX_GPG_PASSPHRASE` | The release key, armored, and its passphrase if it has one |
+| `LINUX_GPG_PRIVATE_KEY` (or `LINUX_GPG_KEY`), `LINUX_GPG_PASSPHRASE` | The release key, armored, and its passphrase if it has one |
 
 macOS: `scripts/sign-mac.sh` signs every Mach-O file in the bundle, then the bundle, with the
 hardened runtime and `packaging/macos/entitlements.plist`; `scripts/notarize-mac.sh` signs the dmg,

@@ -6,8 +6,8 @@
 #   Linux   MIRADA_GPG_KEY, the fingerprint of the key in the runner's keyring
 #
 # From the repository's secrets when they are set (MACOS_CERTIFICATE, a base64 .p12, with
-# MACOS_CERTIFICATE_PASSWORD and MACOS_SIGNING_IDENTITY; LINUX_GPG_PRIVATE_KEY, armored, with
-# LINUX_GPG_PASSPHRASE if it has one). Without them, on a run started by hand: throwaway
+# MACOS_CERTIFICATE_PASSWORD and MACOS_SIGNING_IDENTITY; LINUX_GPG_PRIVATE_KEY (or LINUX_GPG_KEY),
+# armored, with LINUX_GPG_PASSPHRASE if it has one). Without them, on a run started by hand: throwaway
 # credentials made here, so a dry run exercises every signing step and its checks; nothing signed
 # with them is published. A tag without the secrets builds unsigned, as before.
 set -euo pipefail
@@ -72,6 +72,7 @@ Linux)
         echo "passphrase-file $HOME/.gnupg/passphrase" >> ~/.gnupg/gpg.conf
     fi
     key=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')
+    [ -n "$key" ] || { echo "::error::[signing] the GPG secret holds no private key" >&2; exit 1; }
     echo "MIRADA_GPG_KEY=$key" >> "$env_file"
     echo "[signing] Linux: $kind $key"
     ;;
