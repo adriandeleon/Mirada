@@ -133,6 +133,55 @@ jobs:
           bash scripts/smoke-test.sh "$launcher" src/test/resources/com/mirada/image
           bash scripts/smoke-test.sh "$launcher" src/test/resources/com/mirada/matrix
 
+      # An msi larger than the files it installs stores something twice: jpackage put the whole
+      # native launcher in as the Add/Remove Programs icon until build-installers.sh pointed it at
+      # the .ico. Installed for this user, silently, it must then open every format as the app
+      # image did.
+      - name: Check and install the msi
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $msi = (Get-Item target/installers/*.msi).FullName
+          $size = (Get-Item $msi).Length
+          $image = (Get-ChildItem -Recurse -File target/dist/Mirada | Measure-Object Length -Sum).Sum
+          '{0}: {1:N1} MB, installing {2:N1} MB' -f (Split-Path -Leaf $msi), ($size / 1MB), ($image / 1MB)
+          if ($size -ge $image) { throw 'the msi is larger than the app it installs' }
+
+          $log = Join-Path $env:RUNNER_TEMP 'msi.log'
+          $run = Start-Process msiexec.exe -ArgumentList '/i', "`"$msi`"", '/qn', '/l*v', "`"$log`"" -Wait -PassThru
+          if ($run.ExitCode -ne 0) { Get-Content $log -Tail 80; throw "msiexec exited with $($run.ExitCode)" }
+          $installed = @("$env:LOCALAPPDATA\Mirada", "$env:LOCALAPPDATA\Programs\Mirada", "$env:ProgramFiles\Mirada") |
+              ForEach-Object { Join-Path $_ 'Mirada.exe' } | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $installed) { Get-Content $log -Tail 80; throw 'installed, but no Mirada.exe where jpackage installs' }
+          "installed: $installed"
+          "MIRADA_INSTALLED=$installed" >> $env:GITHUB_ENV
+
+          # The icon Add/Remove Programs shows is the .ico, not a 78 MB copy of the program. A
+          # per-user MSI keeps its entry under Windows Installer's UserData, not in Uninstall.
+          $keys = @(Get-ChildItem -ErrorAction SilentlyContinue HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall,
+                  HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall) +
+              @(Get-Item -ErrorAction SilentlyContinue HKLM:\Software\Microsoft\Windows\CurrentVersion\Installer\UserData\*\Products\*\InstallProperties)
+          $entry = $keys | Get-ItemProperty | Where-Object { $_.DisplayName -eq 'Mirada' } | Select-Object -First 1
+          if (-not $entry) { throw 'no Add/Remove Programs entry for Mirada' }
+          # An MSI's ARPPRODUCTICON lands as ProductIcon under Installer\Products, cached as a file.
+          $product = Get-ChildItem -ErrorAction SilentlyContinue HKCU:\Software\Microsoft\Installer\Products,
+                  HKLM:\Software\Classes\Installer\Products |
+              Get-ItemProperty | Where-Object { $_.ProductName -eq 'Mirada' } | Select-Object -First 1
+          $iconFile = @($product.ProductIcon, $entry.DisplayIcon) | Where-Object { $_ } | Select-Object -First 1
+          "Add/Remove Programs: $($entry.DisplayName) $($entry.DisplayVersion), icon $iconFile"
+          $iconFile = "$iconFile" -replace ',-?\d+$', ''
+          if (-not $iconFile -or -not (Test-Path $iconFile)) {
+              $entry | Format-List | Out-String; $product | Format-List | Out-String
+              throw "no icon file for the entry"
+          }
+          $icon = (Get-Item $iconFile).Length
+          if ($icon -ne (Get-Item branding/mirada.ico).Length) { throw "the icon is $icon bytes, not mirada.ico" }
+
+      - name: Smoke-test the installed msi
+        if: runner.os == 'Windows'
+        run: bash scripts/smoke-test.sh "$(cygpath -u "$MIRADA_INSTALLED")" src/test/resources/com/mirada/image
+
       - name: Check the macOS signature
         if: runner.os == 'macOS'
         run: |

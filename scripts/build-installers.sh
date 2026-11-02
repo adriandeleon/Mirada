@@ -149,6 +149,19 @@ case "$(uname -s)" in
         build_tarball
         ;;
     *)
+        # jpackage takes the Add/Remove Programs icon from the main launcher and stores the whole
+        # file in the MSI's Icon table, uncompressed: harmless for its 100 KB launcher, 78 MB twice
+        # over for our native image. Its main.wxs reads the file from the JpIcon variable, which
+        # overrides.wxi (included first, a stub for exactly this) points at the .ico instead.
+        case "$icon" in *.ico) ;; *) echo "::error::[installers] the msi needs an .ico, not '$icon'" >&2; exit 1 ;; esac
+        msi_resources="$(mktemp -d)"
+        cat > "$msi_resources/overrides.wxi" <<WXI
+<?xml version="1.0" encoding="utf-8"?>
+<Include xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <?ifdef JpIcon ?><?undef JpIcon ?><?endif?>
+  <?define JpIcon = "$(cygpath -w "$icon")" ?>
+</Include>
+WXI
         # A fixed upgrade UUID makes the next MSI replace this one rather than install beside it.
         # Generated once; changing it strands every existing install.
         build msi \
@@ -157,7 +170,8 @@ case "$(uname -s)" in
             --win-shortcut \
             --win-dir-chooser \
             --win-per-user-install \
-            --win-upgrade-uuid "390e8e75-fb71-413f-9f7d-a70507695e4c"
+            --win-upgrade-uuid "390e8e75-fb71-413f-9f7d-a70507695e4c" \
+            --resource-dir "$msi_resources"
         ;;
 esac
 

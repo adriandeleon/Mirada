@@ -213,6 +213,14 @@ a prefetched neighbour is 2–8 ms for every format.
   image reaches, as the build host's dpkg names it: for a native image that is the whole GTK
   closure under Debian 13's names (`libgtk-3-0t64`), which Debian 12 and Ubuntu 22.04 cannot
   install. `build-installers.sh` replaces the field; `check-linux-packages.sh` fails a bare t64 name.
+- **jpackage puts the whole launcher in the MSI as its Add/Remove Programs icon**, uncompressed in
+  the Icon table. Its own launcher is a 100 KB stub; ours is the 78 MB native image, which made the
+  MSI 110 MB around 36 MB of compressed files. Its `main.wxs` takes that file from the `JpIcon`
+  variable, and `build-installers.sh` writes an `overrides.wxi` (jpackage's stub for changing those
+  variables, included first) that points it at `branding/mirada.ico`. Editing the finished MSI
+  instead does not work: rewriting it to a new path drops the cabinet, and editing it in place
+  keeps the old stream's space. The release fails an MSI larger than the app it installs, then
+  installs it and smoke-tests the installed copy.
 - **The macOS dmg is `hdiutil`, not jpackage**, whose dmg step wants the Java runtime inside the
   bundle. The document types are written into `Info.plist` by `fix-mac-bundle.sh` from
   `packaging/file-types.txt`, which the other installers' file associations read too.
