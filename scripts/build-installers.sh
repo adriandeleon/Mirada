@@ -99,8 +99,17 @@ case "$(uname -s)" in
         staging="$(mktemp -d)"
         cp -R "$image" "$staging/"
         ln -s /Applications "$staging/Applications"
-        hdiutil create -quiet -volname Mirada -srcfolder "$staging" -fs HFS+ -format UDZO -ov \
-            "$dest/Mirada-$version.dmg"
+        # hdiutil fails now and then on GitHub's Mac runners ("Resource busy"), and passes when
+        # simply run again.
+        for attempt in 1 2 3 4 5; do
+            if hdiutil create -volname Mirada -srcfolder "$staging" -fs HFS+ -format UDZO -ov \
+                "$dest/Mirada-$version.dmg"; then
+                break
+            fi
+            [ "$attempt" -lt 5 ] || { echo "::error::[installers] hdiutil failed five times" >&2; exit 1; }
+            echo "[installers] hdiutil failed, trying again ($attempt of 5)" >&2
+            sleep 10
+        done
         rm -rf "$staging"
         echo "[installers] dmg OK"
         ;;

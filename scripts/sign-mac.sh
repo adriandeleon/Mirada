@@ -22,17 +22,29 @@ if [ "$identity" != "-" ]; then
     options+=(--options runtime --timestamp --entitlements "$root/packaging/macos/entitlements.plist")
 fi
 
+# A secure timestamp is Apple's server's answer, and it does not always come ("A timestamp was
+# expected but was not found"); a signing that fails is tried again.
+sign() {
+    local attempt
+    for attempt in 1 2 3 4 5; do
+        codesign "${options[@]}" "$1" && return 0
+        [ "$attempt" -lt 5 ] || return 1
+        echo "[sign] codesign failed on $1, trying again ($attempt of 5)" >&2
+        sleep 5
+    done
+}
+
 # Every Mach-O file but the bundle's own executable: the codecs, the native image's JDK libraries,
 # and for the JVM build the runtime's libraries and executables. Then the JVM build's runtime,
 # itself a bundle, which seals what is in it.
 main="$app/Contents/MacOS/$(basename "$app" .app)"
 while IFS= read -r -d '' file; do
     if file -b "$file" | grep -q 'Mach-O'; then
-        codesign "${options[@]}" "$file"
+        sign "$file"
     fi
 done < <(find "$app/Contents" -type f ! -path "$main" -print0)
-if [ -d "$app/Contents/runtime" ]; then codesign "${options[@]}" "$app/Contents/runtime"; fi
+if [ -d "$app/Contents/runtime" ]; then sign "$app/Contents/runtime"; fi
 
-codesign "${options[@]}" "$app"
+sign "$app"
 codesign --verify --deep --strict --verbose=2 "$app"
 echo "[sign] $app signed by ${identity/#-/ad hoc}"
