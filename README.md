@@ -59,7 +59,7 @@ properties sidebar and the main menu.
 | Shift+arrows, Up / Down | Pan a zoomed image |
 | `Z` | Keep the zoom when stepping (compare one detail across shots) |
 | `R` / Shift+`R` | Rotate right / left |
-| `E` | Edit: crop, turn, flip, undo (Ctrl+Z); Enter saves a copy, with its EXIF; Escape cancels |
+| `E` | Edit: crop, turn, flip, undo (Ctrl+Z); Enter saves a copy, with its EXIF and colour profile; Escape cancels |
 | F2 | Rename |
 | Delete | Move to the Trash |
 | F5 | Slideshow |

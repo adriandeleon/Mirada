@@ -135,7 +135,7 @@ class ExifBlockTest {
     static Metadata metadata(byte[] tiff) throws Exception {
         Path file = Files.createTempFile("exif", ".jpg");
         try {
-            Encoder.write(new Raster(2, 2, new int[] {-1, -1, -1, -1}), file, tiff);
+            Encoder.write(new Raster(2, 2, new int[] {-1, -1, -1, -1}), file, tiff, null);
             return ImageMetadataReader.readMetadata(file.toFile());
         } finally {
             Files.delete(file);

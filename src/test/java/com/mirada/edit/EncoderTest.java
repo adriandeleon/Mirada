@@ -73,7 +73,7 @@ class EncoderTest {
         Raster image = new Raster(32, 16, pixels);
         for (String extension : new String[] {"jpg", "png"}) {
             Path file = dir.resolve("with-exif." + extension);
-            Encoder.write(image, file, edited);
+            Encoder.write(image, file, edited, null);
             Metadata metadata = ImageMetadataReader.readMetadata(file.toFile());
             ExifIFD0Directory ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
             assertNotNull(ifd0, extension);
@@ -86,7 +86,7 @@ class EncoderTest {
         }
         // TIFF and BMP are written without it, and still written.
         Path bmp = dir.resolve("plain.bmp");
-        Encoder.write(image, bmp, edited);
+        Encoder.write(image, bmp, edited, null);
         assertEquals(32, ImageIO.read(bmp.toFile()).getWidth());
     }
 }

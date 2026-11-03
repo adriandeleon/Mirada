@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -172,5 +173,33 @@ class NativeDecodersTest {
         // On the JVM the property is the only source: the executable is java itself.
         assertEquals(null, NativeLibraries.bundleFolder(null, null, "/usr/bin/java"));
         assertEquals(null, NativeLibraries.bundleFolder(" ", "runtime", null));
+    }
+
+    /**
+     * The edit fixtures are rgb(200, 100, 50) tagged Display P3. A decoder that keeps the file's
+     * colours hands those values back, so a saved edit can carry the profile; ImageIO's WebP reader
+     * converts them to sRGB (about 215, 93, 31), which is why {@code keepsColours} is false for it.
+     */
+    @Test
+    void theDecodersThatKeepColoursLeaveTheProfileUnapplied() throws Exception {
+        require(TurboJpegDecoder.available(), "libjpeg-turbo");
+        require(WebpDecoder.available(), "libwebp");
+        require(HeifDecoder.available(), "libheif");
+        int tone = 0xFFC86432;
+        assertNear(tone, centre(TurboJpegDecoder.pixels(fixture("/com/mirada/edit/profile.jpg"))), 4);
+        assertNear(tone, centre(WebpDecoder.pixels(fixture("/com/mirada/edit/profile.webp"))), 4);
+        assertNear(tone, centre(HeifDecoder.pixels(fixture("/com/mirada/edit/profile.heic"))), 4);
+        assertNear(tone, centre(HeifDecoder.pixels(fixture("/com/mirada/edit/profile.avif"))), 4);
+        assertNear(tone, centre(ImageIoDecoder.pixels(fixture("/com/mirada/edit/profile.png"))), 4);
+        int converted = centre(ImageIoDecoder.pixels(fixture("/com/mirada/edit/profile.webp")));
+        assertTrue((converted >> 16 & 0xFF) > 0xC8 + 8, String.format("ImageIO converts: %08X", converted));
+        assertTrue(ImageCache.keepsColours(Path.of("a.webp")));
+        assertTrue(ImageCache.keepsColours(Path.of("a.HEIC")));
+        assertFalse(ImageCache.keepsColours(Path.of("a.jxl")));
+        assertFalse(ImageCache.keepsColours(Path.of("a.tif")));
+    }
+
+    private static int centre(ArgbPixels image) {
+        return image.pixels()[image.height() / 2 * image.width() + image.width() / 2];
     }
 }

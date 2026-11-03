@@ -19,19 +19,22 @@ public final class ImageFormats {
 
     /** What turns a file's bytes into pixels. */
     public enum Decoder {
-        JAVAFX(false),
+        JAVAFX(false, true),
         /** libjpeg-turbo; JavaFX takes over a JPEG it will not decode (CMYK, 12-bit). */
-        TURBOJPEG(false),
-        IMAGEIO(false),
+        TURBOJPEG(false, true),
+        IMAGEIO(false, false),
         /** libwebp; ImageIO's pure-Java reader takes over when libwebp is missing. */
-        LIBWEBP(false),
-        LIBHEIF(true),
-        LIBJXL(true);
+        LIBWEBP(false, true),
+        LIBHEIF(true, true),
+        /** libjxl, asked for sRGB. */
+        LIBJXL(true, false);
 
         private final boolean turnsUpright;
+        private final boolean keepsColours;
 
-        Decoder(boolean turnsUpright) {
+        Decoder(boolean turnsUpright, boolean keepsColours) {
             this.turnsUpright = turnsUpright;
+            this.keepsColours = keepsColours;
         }
 
         /**
@@ -41,6 +44,16 @@ public final class ImageFormats {
          */
         public boolean turnsUpright() {
             return turnsUpright;
+        }
+
+        /**
+         * True when the pixels come out in the file's own colours, its embedded ICC profile not
+         * applied, so the profile still describes them and a saved edit can carry it. ImageIO's
+         * readers each decide (the TwelveMonkeys WebP reader converts to sRGB), and libjxl is asked
+         * for sRGB.
+         */
+        public boolean keepsColours() {
+            return keepsColours;
         }
 
         /** The decoder that takes a file this one declines or cannot load for, or null for none. */

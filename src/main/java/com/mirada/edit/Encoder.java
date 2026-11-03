@@ -3,15 +3,19 @@ package com.mirada.edit;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.zip.CRC32;
+import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
@@ -26,13 +30,16 @@ import org.jspecify.annotations.Nullable;
  * JPEG (at quality {@value #JPEG_QUALITY}), PNG, TIFF and BMP. WebP, HEIC, AVIF, JPEG XL and PSD
  * can be opened but not written; the editor offers JPEG or PNG for those instead.
  *
- * <p>EXIF, when given ({@link ExifBlock#carried}), goes into a JPEG as its APP1 segment and into a
- * PNG as its eXIf chunk; TIFF and BMP are written without it. Nothing else is carried: not XMP,
- * which repeats the orientation, and not an ICC profile.
+ * <p>EXIF and an ICC profile, when given ({@link ExifBlock#carried}, {@link IccProfile#carried}),
+ * go into a JPEG as its APP1 and APP2 segments and into a PNG as its eXIf and iCCP chunks; TIFF and
+ * BMP are written without them. XMP is not carried: it repeats the orientation.
  */
 public final class Encoder {
 
     static final float JPEG_QUALITY = 0.92f;
+
+    /** The most of a profile one APP2 segment holds, after its length, "ICC_PROFILE\0" and two bytes. */
+    static final int ICC_CHUNK = 0xFFFF - 2 - 14;
 
     /** The extensions it writes, lower case, the one it prefers for each format first. */
     public static final List<String> EXTENSIONS = List.of("jpg", "jpeg", "png", "tif", "tiff", "bmp");
@@ -69,32 +76,40 @@ public final class Encoder {
 
     /** Writes {@code image} to {@code file}, replacing it if it exists, through a temporary file. */
     public static void write(Raster image, Path file) throws IOException {
-        write(image, file, null);
+        write(image, file, null, null);
     }
 
     /**
      * Writes {@code image} to {@code file} as {@link #write(Raster, Path)} does, with {@code exif} (a
-     * TIFF structure, as {@link ExifBlock} gives) in it when the format carries EXIF.
+     * TIFF structure, as {@link ExifBlock} gives) and {@code profile} (an ICC profile) in it when the
+     * format carries them.
      */
-    public static void write(Raster image, Path file, byte @Nullable [] exif) throws IOException {
+    public static void write(Raster image, Path file, byte @Nullable [] exif, byte @Nullable [] profile)
+            throws IOException {
         String format = formatFor(file);
         if (format == null) throw new IOException("Mirada can write JPEG, PNG, TIFF and BMP");
         boolean alpha = !image.opaque() && (format.equals("png") || format.equals("tiff"));
         BufferedImage out = toBuffered(image, alpha);
         // Beside the target, created as any new file is (createTempFile would make it owner-only).
         Path temporary = file.resolveSibling(".mirada-" + Long.toHexString(System.nanoTime()) + ".tmp");
-        boolean withExif =
-                exif != null && (format.equals("png") || format.equals("jpeg") && exif.length <= ExifBlock.MAX_IN_JPEG);
+        boolean carries = format.equals("png") || format.equals("jpeg");
+        byte[] keptExif = carries && !(format.equals("jpeg") && exif != null && exif.length > ExifBlock.MAX_IN_JPEG)
+                ? exif
+                : null;
+        byte[] keptProfile = carries ? profile : null;
         try {
-            if (exif != null && withExif) {
-                // Encoded in memory, so the block can go in near the start of the file.
+            if (keptExif != null || keptProfile != null) {
+                // Encoded in memory, so the metadata can go in near the start of the file.
                 ByteArrayOutputStream encoded = new ByteArrayOutputStream();
                 try (ImageOutputStream stream = new MemoryCacheImageOutputStream(encoded)) {
                     encode(out, format, stream);
                 }
                 byte[] bytes = encoded.toByteArray();
                 Files.write(
-                        temporary, format.equals("png") ? withExifChunk(bytes, exif) : withExifSegment(bytes, exif));
+                        temporary,
+                        format.equals("png")
+                                ? withChunks(bytes, keptExif, keptProfile)
+                                : withSegments(bytes, keptExif, keptProfile));
             } else {
                 try (ImageOutputStream stream = ImageIO.createImageOutputStream(temporary.toFile())) {
                     encode(out, format, stream);
@@ -124,36 +139,79 @@ public final class Encoder {
     }
 
     /**
-     * {@code jpeg} with an APP1 segment holding {@code exif}, after the JFIF segment when there is one
-     * (JFIF must come first; readers find EXIF after it), else right after the start of image.
+     * {@code jpeg} with an APP1 segment holding {@code exif} and the APP2 segments holding {@code
+     * profile}, after the JFIF segment when there is one (JFIF must come first; readers find the rest
+     * after it), else right after the start of image. A profile is cut into chunks of at most
+     * {@value #ICC_CHUNK} bytes, each with its number and the count, as the ICC specification says.
      */
-    static byte[] withExifSegment(byte[] jpeg, byte[] exif) {
+    static byte[] withSegments(byte[] jpeg, byte @Nullable [] exif, byte @Nullable [] profile) {
         int at = 2;
         if ((jpeg[2] & 0xFF) == 0xFF && (jpeg[3] & 0xFF) == 0xE0) {
             at = 4 + ((jpeg[4] & 0xFF) << 8 | jpeg[5] & 0xFF);
         }
-        int length = 2 + 6 + exif.length;
-        ByteBuffer out = ByteBuffer.allocate(jpeg.length + 2 + length);
-        out.put(jpeg, 0, at);
-        out.put((byte) 0xFF).put((byte) 0xE1).putShort((short) length);
-        out.put("Exif\0\0".getBytes(StandardCharsets.ISO_8859_1)).put(exif);
-        out.put(jpeg, at, jpeg.length - at);
-        return out.array();
+        ByteArrayOutputStream out = new ByteArrayOutputStream(jpeg.length + (1 << 10));
+        out.write(jpeg, 0, at);
+        if (exif != null) segment(out, 0xE1, "Exif\0\0".getBytes(StandardCharsets.ISO_8859_1), exif, 0, exif.length);
+        if (profile != null) {
+            int count = (profile.length + ICC_CHUNK - 1) / ICC_CHUNK;
+            for (int i = 0; i < count; i++) {
+                byte[] head = Arrays.copyOf("ICC_PROFILE\0".getBytes(StandardCharsets.ISO_8859_1), 14);
+                head[12] = (byte) (i + 1);
+                head[13] = (byte) count;
+                int from = i * ICC_CHUNK;
+                segment(out, 0xE2, head, profile, from, Math.min(profile.length, from + ICC_CHUNK) - from);
+            }
+        }
+        out.write(jpeg, at, jpeg.length - at);
+        return out.toByteArray();
     }
 
-    /** {@code png} with an eXIf chunk holding {@code exif}, right after IHDR (it must precede IDAT). */
-    static byte[] withExifChunk(byte[] png, byte[] exif) {
+    private static void segment(ByteArrayOutputStream out, int type, byte[] head, byte[] data, int from, int length) {
+        int size = 2 + head.length + length;
+        out.write(0xFF);
+        out.write(type);
+        out.write(size >> 8);
+        out.write(size);
+        out.writeBytes(head);
+        out.write(data, from, length);
+    }
+
+    /**
+     * {@code png} with an iCCP chunk holding {@code profile} and an eXIf chunk holding {@code exif},
+     * right after IHDR (both must precede IDAT).
+     */
+    static byte[] withChunks(byte[] png, byte @Nullable [] exif, byte @Nullable [] profile) {
         int ihdrLength = ByteBuffer.wrap(png, 8, 4).getInt();
         int at = 8 + 12 + ihdrLength;
-        byte[] type = "eXIf".getBytes(StandardCharsets.ISO_8859_1);
+        ByteArrayOutputStream out = new ByteArrayOutputStream(png.length + (1 << 10));
+        out.write(png, 0, at);
+        if (profile != null) {
+            // The profile's name, a zero, compression method 0 (deflate), then the deflated profile.
+            ByteArrayOutputStream iccp = new ByteArrayOutputStream();
+            iccp.writeBytes("ICC profile\0\0".getBytes(StandardCharsets.ISO_8859_1));
+            Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+            try (DeflaterOutputStream deflated = new DeflaterOutputStream(iccp, deflater)) {
+                deflated.write(profile);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e); // in memory: cannot happen
+            } finally {
+                deflater.end();
+            }
+            chunk(out, "iCCP", iccp.toByteArray());
+        }
+        if (exif != null) chunk(out, "eXIf", exif);
+        out.write(png, at, png.length - at);
+        return out.toByteArray();
+    }
+
+    private static void chunk(ByteArrayOutputStream out, String type, byte[] data) {
+        byte[] name = type.getBytes(StandardCharsets.ISO_8859_1);
         CRC32 crc = new CRC32();
-        crc.update(type);
-        crc.update(exif);
-        ByteBuffer out = ByteBuffer.allocate(png.length + 12 + exif.length);
-        out.put(png, 0, at);
-        out.putInt(exif.length).put(type).put(exif).putInt((int) crc.getValue());
-        out.put(png, at, png.length - at);
-        return out.array();
+        crc.update(name);
+        crc.update(data);
+        out.writeBytes(ByteBuffer.allocate(8).putInt(data.length).put(name).array());
+        out.writeBytes(data);
+        out.writeBytes(ByteBuffer.allocate(4).putInt((int) crc.getValue()).array());
     }
 
     /**

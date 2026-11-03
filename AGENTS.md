@@ -47,7 +47,7 @@ A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an en
 |---|---|
 | `com.mirada.folder` | The "document": the images in one folder, in the chosen order (`Sorting`: natural name order, date or size), and which one is showing (`FolderImages`, `NaturalOrder`, `ImageFormats`) |
 | `com.mirada.image` | Loading: decoded images cached by path (`ImageCache`), EXIF orientation and the camera line (`Exif`, `Orientation`), the sidebar's camera card and every metadata tag (`ExifDetails`), the strip's thumbnails (`Thumbnails`) |
-| `com.mirada.edit` | The editor's rules and pixel work, none of it UI: the edit and its order (`Edit`: turn, flip, crop), the crop as fractions (`Crop`) and as a box being dragged (`CropBox`), the shapes (`AspectRatio`), turns and mirrors on ARGB ints (`Raster`), undo and redo (`History`), the EXIF a saved edit keeps (`ExifBlock`), and writing JPEG, PNG, TIFF or BMP (`Encoder`) |
+| `com.mirada.edit` | The editor's rules and pixel work, none of it UI: the edit and its order (`Edit`: turn, flip, crop), the crop as fractions (`Crop`) and as a box being dragged (`CropBox`), the shapes (`AspectRatio`), turns and mirrors on ARGB ints (`Raster`), undo and redo (`History`), the EXIF and colour profile a saved edit keeps (`ExifBlock`, `IccProfile`, both reading through `Containers`), and writing JPEG, PNG, TIFF or BMP (`Encoder`) |
 | `com.mirada.os` | Platform glue: the macOS open-file handler and the one rule for `java.awt.headless` (`MacOpenFiles`); moving a file to the desktop's trash (`Trash`) |
 | `com.mirada.settings` | `~/.mirada/settings.properties` (`MIRADA_CONFIG_DIR` moves it): theme, what opens at start, how long the floating controls stay; clamped on read, written through on every change |
 | `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`); the editor (`Editor`, `CropView`); every command with its keys, name, description and group (`Command`), the command palette (`CommandPalette`), `AboutWindow`, `SettingsWindow`, `ShortcutsWindow`, the rename rules (`Renaming`), the theme, the symbolic icons (`Icons`) |
@@ -196,7 +196,16 @@ a prefetched neighbour is 2–8 ms for every format.
   edit's (a SHORT entry widened to LONG in place), and IFD0's link to the thumbnail cut. Nothing
   moves, so maker notes, whose offsets other tools break, survive. `Encoder` puts it into JPEG
   (after JFIF) and PNG (after IHDR); TIFF and BMP get none, nor does a block over JPEG's 64 KB.
-  XMP is left behind because it repeats the orientation, and ICC profiles are not carried yet.
+  XMP is left behind because it repeats the orientation.
+- **A saved edit keeps the ICC profile only while it still describes the pixels.** `IccProfile`
+  reads it (JPEG's APP2 segments, PNG's iCCP, WebP's ICCP, the HEIF primary item's colr through
+  ipma) and `Encoder` writes it into JPEG and PNG beside the EXIF. Mirada shows pixels as they are
+  stored, profile unapplied, so carrying it is right for every decoder that leaves them so;
+  `Decoder.keepsColours` names the two that do not: libjxl (asked for sRGB) and ImageIO, whose
+  TwelveMonkeys WebP reader converts to sRGB. `ImageCache.keepsColours` counts a WebP as ImageIO's
+  when libwebp is missing. Only an RGB profile is carried, as the edit is RGB: a CMYK JPEG's profile
+  is dropped. A HEIF that gives its colours as nclx codes has no profile to carry; one is not made
+  up for it. `NativeDecodersTest` checks each decoder against P3-tagged fixtures.
 - **Undo is a history of whole steps** (`History`): each records the edit and the shape. A drag
   records once, when the mouse is released; a run of arrow presses records once, as a "run" that
   joins steps until something else happens. Setting the shape from code (open, reset, undo) goes
@@ -360,8 +369,8 @@ Termina and Torrenta. `mvn compile` fails on any null that can reach a type not 
 ## Not done
 
 Signing:
-Developer ID and notarization on macOS, a code-signing certificate on Windows, GPG for the Linux
-packages. An AppImage, Homebrew and winget. ICC profiles and XMP in a saved edit, and EXIF in a saved TIFF;
-a Brotli-compressed JPEG XL Exif box. Trash on Windows and macOS is untested. HEIC grids are untested against a real iPhone photo. The app itself has not been run on Windows
+Developer ID and notarization on macOS (wired, waiting for the secrets), a code-signing certificate
+on Windows. An AppImage, Homebrew and winget. XMP in a saved edit, EXIF and the colour profile in a
+saved TIFF, a profile for a HEIF with nclx colours or a JPEG XL; a Brotli-compressed JPEG XL Exif box. Trash on Windows and macOS is untested. HEIC grids are untested against a real iPhone photo. The app itself has not been run on Windows
 or macOS by hand; CI only tests there, and the macOS Finder double-click is untried in the native
 image.

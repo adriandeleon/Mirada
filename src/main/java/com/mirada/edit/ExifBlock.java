@@ -1,14 +1,22 @@
 package com.mirada.edit;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 
 import org.jspecify.annotations.Nullable;
+
+import static com.mirada.edit.Containers.MAX_BLOCK;
+import static com.mirada.edit.Containers.box;
+import static com.mirada.edit.Containers.bytes;
+import static com.mirada.edit.Containers.child;
+import static com.mirada.edit.Containers.is;
+import static com.mirada.edit.Containers.sized;
+import static com.mirada.edit.Containers.u16;
+import static com.mirada.edit.Containers.u32;
+import static com.mirada.edit.Containers.u8;
 
 /**
  * A file's EXIF as raw bytes — the TIFF structure EXIF is, from its "II*\0" or "MM\0*" header on —
@@ -27,9 +35,6 @@ public final class ExifBlock {
 
     /** The most a JPEG's APP1 segment holds after its length and its "Exif\0\0". */
     public static final int MAX_IN_JPEG = 0xFFFF - 2 - 6;
-
-    /** Boxes, chunks and segments larger than this are not EXIF; reading stops rather than trust it. */
-    private static final int MAX_BLOCK = 16 << 20;
 
     private static final int ORIENTATION = 0x0112;
     private static final int IMAGE_WIDTH = 0x0100;
@@ -124,9 +129,7 @@ public final class ExifBlock {
      * whose data is a four-byte offset to the TIFF header and then the block.
      */
     private static byte @Nullable [] fromHeif(FileChannel channel) throws IOException {
-        long[] meta = box(channel, 0, channel.size(), "meta");
-        if (meta == null || meta[1] > MAX_BLOCK) return null;
-        byte[] data = bytes(channel, meta[0], (int) meta[1]);
+        byte[] data = Containers.heifMeta(channel);
         if (data == null) return null;
         // The meta box is a full box: version and flags, then its children.
         int[] iinf = child(data, 4, data.length, "iinf");
@@ -236,44 +239,6 @@ public final class ExifBlock {
     }
 
     /**
-     * The first box of {@code type} among those from {@code start} to {@code end} of the file, as
-     * {position of its content, length of its content}; null when there is none.
-     */
-    private static long @Nullable [] box(FileChannel channel, long start, long end, String type) throws IOException {
-        long at = start;
-        while (at + 8 <= end) {
-            byte[] header = bytes(channel, at, 16);
-            if (header == null) header = bytes(channel, at, 8);
-            if (header == null) return null;
-            long size = u32(header, 0, false);
-            int headerSize = 8;
-            if (size == 1) {
-                if (header.length < 16) return null;
-                size = u32(header, 8, false) << 32 | u32(header, 12, false);
-                headerSize = 16;
-            } else if (size == 0) {
-                size = end - at;
-            }
-            if (size < headerSize) return null;
-            if (is(header, 4, type)) return new long[] {at + headerSize, size - headerSize};
-            at += size;
-        }
-        return null;
-    }
-
-    /** {@link #box} within bytes already read: {offset of its content, length of its content}. */
-    private static int @Nullable [] child(byte[] data, int start, int end, String type) {
-        int at = start;
-        while (at + 8 <= end) {
-            long size = u32(data, at, false);
-            if (size < 8 || at + size > end) return null;
-            if (is(data, at + 4, type)) return new int[] {at + 8, (int) size - 8};
-            at += (int) size;
-        }
-        return null;
-    }
-
-    /**
      * A copy of {@code tiff} as EXIF of an edit {@code width} × {@code height} pixels, saved upright
      * and without the thumbnail; null when the block is not one this can follow.
      */
@@ -320,42 +285,6 @@ public final class ExifBlock {
         boolean intel = is(data, at, "II") && u8(data, at + 2) == 42 && u8(data, at + 3) == 0;
         boolean motorola = is(data, at, "MM") && u8(data, at + 2) == 0 && u8(data, at + 3) == 42;
         return intel || motorola ? Arrays.copyOfRange(data, at, data.length) : null;
-    }
-
-    private static byte @Nullable [] bytes(FileChannel channel, long at, int length) throws IOException {
-        if (at < 0 || length < 0 || at + length > channel.size()) return null;
-        ByteBuffer buffer = ByteBuffer.allocate(length);
-        while (buffer.hasRemaining()) {
-            if (channel.read(buffer, at + buffer.position()) < 0) return null;
-        }
-        return buffer.array();
-    }
-
-    private static boolean is(byte[] data, int at, String text) {
-        byte[] wanted = text.getBytes(StandardCharsets.ISO_8859_1);
-        return at + wanted.length <= data.length
-                && Arrays.equals(data, at, at + wanted.length, wanted, 0, wanted.length);
-    }
-
-    private static int u8(byte[] data, int at) {
-        return data[at] & 0xFF;
-    }
-
-    private static int u16(byte[] data, int at, boolean little) {
-        return little ? u8(data, at) | u8(data, at + 1) << 8 : u8(data, at) << 8 | u8(data, at + 1);
-    }
-
-    private static long u32(byte[] data, int at, boolean little) {
-        long low = u16(data, at + (little ? 0 : 2), little);
-        long high = u16(data, at + (little ? 2 : 0), little);
-        return high << 16 | low;
-    }
-
-    /** A big-endian number of {@code size} bytes (0, 4 or 8, as iloc's fields are). */
-    private static long sized(byte[] data, int at, int size) {
-        long value = 0;
-        for (int i = 0; i < size; i++) value = value << 8 | u8(data, at + i);
-        return value;
     }
 
     private static void putU16(byte[] data, int at, int value, boolean little) {

@@ -35,6 +35,16 @@ class ImageFormatsTest {
         assertFalse(ImageFormats.Decoder.IMAGEIO.turnsUpright());
     }
 
+    @Test
+    void imageIoAndLibjxlHandBackColoursOtherThanTheFile() {
+        assertTrue(ImageFormats.Decoder.JAVAFX.keepsColours());
+        assertTrue(ImageFormats.Decoder.TURBOJPEG.keepsColours());
+        assertTrue(ImageFormats.Decoder.LIBWEBP.keepsColours());
+        assertTrue(ImageFormats.Decoder.LIBHEIF.keepsColours());
+        assertFalse(ImageFormats.Decoder.IMAGEIO.keepsColours());
+        assertFalse(ImageFormats.Decoder.LIBJXL.keepsColours());
+    }
+
     /** A plugin dropped from the pom would otherwise show only as "no decoder accepts this file". */
     @Test
     void everyImageIoExtensionHasAReader() {

@@ -209,6 +209,19 @@ public final class ImageCache {
         return new Loading(pixels, cancel);
     }
 
+    /**
+     * Whether {@code file}'s pixels, as loaded here, are in the file's own colours, so its ICC
+     * profile still describes them ({@link ImageFormats.Decoder#keepsColours}). A WebP is read by
+     * ImageIO, which converts, when libwebp is missing. Any thread.
+     */
+    public static boolean keepsColours(Path file) {
+        ImageFormats.Decoder decoder = ImageFormats.decoderFor(file);
+        if (decoder == ImageFormats.Decoder.LIBWEBP && !WebpDecoder.available()) {
+            decoder = ImageFormats.Decoder.IMAGEIO;
+        }
+        return decoder != null && decoder.keepsColours();
+    }
+
     static Image decodeOffThread(ImageFormats.Decoder decoder, Path file) {
         try {
             return switch (decoder) {

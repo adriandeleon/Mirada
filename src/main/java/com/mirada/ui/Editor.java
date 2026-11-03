@@ -35,7 +35,9 @@ import com.mirada.edit.Edit;
 import com.mirada.edit.Encoder;
 import com.mirada.edit.ExifBlock;
 import com.mirada.edit.History;
+import com.mirada.edit.IccProfile;
 import com.mirada.edit.Raster;
+import com.mirada.image.ImageCache;
 import com.mirada.image.Orientation;
 import com.mirada.image.Shrink;
 import org.jspecify.annotations.Nullable;
@@ -49,7 +51,8 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>Every step can be undone, Reset included: a turn, a flip, a new shape, each drag of the box,
  * and each run of arrow presses. The saved file keeps the original's EXIF, made true of the edit
- * ({@link ExifBlock}).
+ * ({@link ExifBlock}), and its colour profile ({@link IccProfile}) when the pixels are still in its
+ * colours.
  *
  * <p>Keys: Enter or Ctrl+S saves, Escape cancels, R and Shift+R turn, H and V flip, A steps through
  * the shapes, Backspace resets, Ctrl+Z undoes and Ctrl+Shift+Z or Ctrl+Y redoes, the arrows move the
@@ -351,7 +354,11 @@ final class Editor {
         Thread.ofPlatform().daemon().name("save").start(() -> {
             try {
                 Raster result = applied.apply(Edit.upright(raster(image), turnedBy));
-                Encoder.write(result, target, ExifBlock.carried(file, result.width(), result.height()));
+                Encoder.write(
+                        result,
+                        target,
+                        ExifBlock.carried(file, result.width(), result.height()),
+                        ImageCache.keepsColours(file) ? IccProfile.carried(file) : null);
                 Platform.runLater(() -> {
                     saving = false;
                     close();

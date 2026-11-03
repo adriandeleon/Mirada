@@ -5,6 +5,12 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## 0.2.0 — unreleased
 
+### Added
+
+- **A saved edit keeps the photo's colour profile**, in JPEG and PNG: a wide-gamut photo (an
+  iPhone's Display P3, a camera's Adobe RGB) no longer saves duller than it was in apps that manage
+  colour. Read from JPEG, PNG, WebP, HEIC and AVIF.
+
 ## 0.1.0 — 2026-11-01
 
 The first version: open a photo, look, arrow through its folder, close.
