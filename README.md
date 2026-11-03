@@ -19,14 +19,14 @@ which file, where it sits in the folder, how large it is, and what took it.
 
 <br clear="left">
 
-**Status:** early, and unreleased. JPEG, PNG, GIF, BMP, WebP, TIFF, PSD, HEIC, AVIF and JPEG XL,
+**Status:** early; [0.1.0](https://github.com/adriandeleon/Mirada/releases/tag/v0.1.0) is the first release. JPEG, PNG, GIF, BMP, WebP, TIFF, PSD, HEIC, AVIF and JPEG XL,
 turned upright, animated where the file is. The native decoders (libjpeg-turbo, libwebp, libheif,
 libjxl) are built from source and bundled; the build downloads them. Crop, turn and flip, and save
 the result as a new file. See the [changelog](CHANGELOG.md).
 
 ## Installing it
 
-Installers for Linux (x64 and arm64), macOS (Apple silicon and Intel) and Windows will be on the
+Installers for Linux (x64 and arm64), macOS (Apple silicon and Intel) and Windows are on the
 [releases page](https://github.com/adriandeleon/Mirada/releases). Each registers Mirada for the image
 types it opens. Until the first signed release, each platform asks once:
 

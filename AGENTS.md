@@ -117,8 +117,13 @@ others beside the executable, as Linux leaves its `.so` files; they must travel 
 2. Commit, then tag and push the tag: `git tag v0.1.0 && git push origin v0.1.0`.
 3. The **Release** workflow refuses a tag that disagrees with the pom or a snapshot, builds, tests and
    packages on all five targets, smoke-tests every app image and the installed deb, checks the Linux
-   packages, and publishes the installers with `SHA256SUMS` and build provenance.
-4. Move the pom to the next `-SNAPSHOT`.
+   packages, and publishes the installers with `SHA256SUMS` and build provenance. Its last job, the
+   **winget** workflow, writes the winget manifests from the published MSI
+   (`scripts/winget-manifests.sh`), validates them, installs and uninstalls through them, and uploads
+   them as `winget-manifests-<version>`.
+4. Open a pull request to microsoft/winget-pkgs with those manifests (one version per PR, titled
+   "New package: AdrianDeLeon.Mirada version 0.1.0", later "Update: AdrianDeLeon.Mirada to 0.2.0").
+5. Move the pom to the next `-SNAPSHOT`.
 
 Run the workflow by hand first for a dry run: it builds and checks everything and publishes nothing.
 
@@ -370,7 +375,7 @@ Termina and Torrenta. `mvn compile` fails on any null that can reach a type not 
 
 Signing:
 Developer ID and notarization on macOS (wired, waiting for the secrets), a code-signing certificate
-on Windows. An AppImage, Homebrew and winget. XMP in a saved edit, EXIF and the colour profile in a
+on Windows. An AppImage; a Homebrew cask (Homebrew takes only notarized apps); winget-pkgs has not been sent Mirada yet. XMP in a saved edit, EXIF and the colour profile in a
 saved TIFF, a profile for a HEIF with nclx colours or a JPEG XL; a Brotli-compressed JPEG XL Exif box. Trash on Windows and macOS is untested. HEIC grids are untested against a real iPhone photo. The app itself has not been run on Windows
 or macOS by hand; CI only tests there, and the macOS Finder double-click is untried in the native
 image.

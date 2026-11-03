@@ -1,0 +1,106 @@
+# The winget manifests for a release: written from the published MSI (scripts/winget-manifests.sh),
+# validated by winget itself, installed from with `winget install --manifest`, the installed copy
+# smoke-tested and uninstalled again. The manifests are uploaded as an artifact, ready for a pull
+# request to microsoft/winget-pkgs; nothing is submitted from here.
+#
+# Called by the Release workflow once a release is published, run by hand for any release, and run
+# on a push that changes the script or this file, against the latest release.
+name: winget
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: The released version, without the v
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The released version, without the v (empty for the latest release)
+        type: string
+        required: false
+  push:
+    branches: ['**'] # not tags: a tag's release is not published yet when its push arrives
+    paths:
+      - scripts/winget-manifests.sh
+      - .github/workflows/winget.yml
+
+permissions:
+  contents: read
+
+jobs:
+  manifests:
+    name: Manifests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download the release's msi
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -z "$VERSION" ]; then
+            VERSION=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+            VERSION=${VERSION#v}
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          gh release download "v$VERSION" --repo "$GITHUB_REPOSITORY" --pattern '*.msi' --dir release
+
+      - name: Write the manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/winget-manifests.sh "$VERSION" release/Mirada-*-windows-x64.msi winget
+          echo "MANIFEST=$(cygpath -w "winget/manifests/a/AdrianDeLeon/Mirada/$VERSION")" >> "$GITHUB_ENV"
+
+      # GitHub's Windows images do not carry winget; its PowerShell module installs it.
+      - name: Install winget
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Install-Module Microsoft.WinGet.Client -Force -Scope CurrentUser -Repository PSGallery
+          Repair-WinGetPackageManager -Force -Latest
+          winget --version
+
+      - name: Validate
+        shell: pwsh
+        run: |
+          winget validate --manifest $env:MANIFEST
+          if ($LASTEXITCODE -ne 0) { throw "winget validate exited with $LASTEXITCODE" }
+
+      - name: Install from the manifests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          winget settings --enable LocalManifestFiles
+          winget install --manifest $env:MANIFEST --silent --disable-interactivity `
+              --accept-package-agreements --accept-source-agreements
+          if ($LASTEXITCODE -ne 0) { throw "winget install exited with $LASTEXITCODE" }
+          $installed = Join-Path $env:LOCALAPPDATA 'Mirada\Mirada.exe'
+          if (-not (Test-Path $installed)) { throw "installed, but no $installed" }
+          "MIRADA_INSTALLED=$installed" >> $env:GITHUB_ENV
+
+      - name: Smoke-test the installed copy
+        shell: bash
+        run: bash scripts/smoke-test.sh "$(cygpath -u "$MIRADA_INSTALLED")" src/test/resources/com/mirada/image
+
+      # winget finds the installed copy by the manifest's ProductCode: uninstalling through the
+      # manifest shows that it does.
+      - name: Uninstall
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          winget list --name Mirada --disable-interactivity --accept-source-agreements
+          winget uninstall --manifest $env:MANIFEST --silent --disable-interactivity
+          if ($LASTEXITCODE -ne 0) { throw "winget uninstall exited with $LASTEXITCODE" }
+          if (Test-Path (Join-Path $env:LOCALAPPDATA 'Mirada\Mirada.exe')) { throw 'still installed' }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: winget-manifests-${{ env.VERSION }}
+          path: winget/manifests
+          if-no-files-found: error

@@ -8,8 +8,11 @@
 # Signing (scripts/ci-signing-credentials.sh): with the repository's secrets, macOS builds are signed
 # with the Developer ID and notarized, and the Linux packages and the checksums with the release GPG
 # key. A run by hand without them signs with throwaway credentials made on the runner, so a dry run
-# checks every signing step; a tag without them builds unsigned. Windows is not signed yet. Not here
-# yet: the AppImage, and the Homebrew and winget packagers.
+# checks every signing step; a tag without them builds unsigned. Windows is not signed yet.
+#
+# Once published, the winget workflow writes the manifests from the released MSI, installs from them
+# and uploads them, ready for a pull request to microsoft/winget-pkgs. Not here yet: the AppImage
+# and the Homebrew cask (which Homebrew takes only once the app is notarized).
 name: Release
 
 on:
@@ -327,3 +330,10 @@ jobs:
             --title "Mirada $VERSION" \
             --notes-file notes.md \
             --verify-tag
+
+  winget:
+    name: winget
+    needs: [build, release]
+    uses: ./.github/workflows/winget.yml
+    with:
+      version: ${{ needs.build.outputs.version }}
