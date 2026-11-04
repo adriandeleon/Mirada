@@ -205,6 +205,12 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
+                <configuration>
+                    <!-- For the tests, which are compiled into the module: MacOpenFilesTest. -->
+                    <compilerArgs>
+                        <arg>--add-exports=javafx.graphics/com.sun.glass.ui=com.mirada</arg>
+                    </compilerArgs>
+                </configuration>
                 <executions>
                     <execution>
                         <!-- NullAway only: every other Error Prone check is off. OnlyNullMarked
@@ -216,6 +222,9 @@
                                 <arg>-XDcompilePolicy=simple</arg>
                                 <arg>--should-stop=ifError=FLOW</arg>
                                 <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR -XepOpt:NullAway:OnlyNullMarked=true -XepOpt:NullAway:JSpecifyMode=true</arg>
+                                <!-- JavaFX's glass, for the macOS open-files handler (os.MacOpenFiles);
+                                     every JVM launcher passes the same. -->
+                                <arg>--add-exports=javafx.graphics/com.sun.glass.ui=com.mirada</arg>
                             </compilerArgs>
                             <annotationProcessorPaths>
                                 <path>
@@ -287,6 +296,7 @@
                     <mainClass>com.mirada/com.mirada.App</mainClass>
                     <options>
                         <option>--enable-native-access=javafx.graphics,com.mirada</option>
+                        <option>--add-exports=javafx.graphics/com.sun.glass.ui=com.mirada</option>
                         <option>-Dprism.order=${prism.pipeline}</option>
                         <!-- The codec bundle (scripts/build-codecs.sh, or the release the build
                              downloads). Absent, the system's libheif and libjxl are used. -->
@@ -547,6 +557,7 @@
                                     </modulePaths>
                                     <javaOptions>
                                         <javaOption>--enable-native-access=javafx.graphics,com.mirada</javaOption>
+                                        <javaOption>--add-exports=javafx.graphics/com.sun.glass.ui=com.mirada</javaOption>
                                         <javaOption>-Dprism.order=${prism.pipeline}</javaOption>
                                         <!-- $APPDIR is the installed image's app directory, so both
                                              survive the bundle being moved. scripts/add-codecs.sh

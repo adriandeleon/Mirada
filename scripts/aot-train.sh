@@ -52,6 +52,7 @@ opts=(-XX:AOTCacheOutput="$(native "$cache")"
       -Dmirada.aotTrain=1
       -Dmirada.codecs="$(native "$appdir/codecs")"
       --enable-native-access=javafx.graphics,com.mirada
+      --add-exports=javafx.graphics/com.sun.glass.ui=com.mirada
       -m com.mirada/com.mirada.App
       "$(native "$training")")
 

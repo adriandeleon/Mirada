@@ -5,6 +5,11 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## 0.2.0 — unreleased
 
+### Fixed
+
+- **macOS: an image opened from Finder shows**: a double-click, "Open With" or a file dropped on the
+  Dock icon opened an empty window in 0.1.0, because the file never reached Mirada.
+
 ### Added
 
 - **A saved edit keeps the photo's colour profile**, in JPEG and PNG: a wide-gamut photo (an

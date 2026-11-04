@@ -1,8 +1,10 @@
 package com.mirada.os;
 
-import java.io.File;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
+import com.sun.glass.ui.Application;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,25 +15,54 @@ class MacOpenFilesTest {
 
     @Test
     void onlyMacOsNeedsAwt() {
-        assertFalse(MacOpenFiles.headless("Mac OS X"));
-        assertFalse(MacOpenFiles.headless("Darwin"));
-        assertTrue(MacOpenFiles.headless("Linux"));
-        assertTrue(MacOpenFiles.headless("Windows 11"));
-        assertTrue(MacOpenFiles.headless(null));
-    }
-
-    @Test
-    void headlessInstallsNothingAndSaysWhy() {
-        // Surefire runs the tests headless on every platform.
-        assertEquals("none (AWT is headless)", MacOpenFiles.install(path -> {}));
+        assertFalse(Trash.headless("Mac OS X"));
+        assertFalse(Trash.headless("Darwin"));
+        assertTrue(Trash.headless("Linux"));
+        assertTrue(Trash.headless("Windows 11"));
+        assertTrue(Trash.headless(null));
     }
 
     @Test
     void ofSeveralFilesTheFirstIsShown() {
         assertEquals(
-                new File("a.jpg"),
-                MacOpenFiles.first(List.of(new File("a.jpg"), new File("b.jpg")))
-                        .orElseThrow());
-        assertTrue(MacOpenFiles.first(List.of()).isEmpty());
+                Path.of("a.jpg"),
+                MacOpenFiles.first(new String[] {"a.jpg", "b.jpg"}).orElseThrow());
+        assertEquals(
+                Path.of("b.jpg"),
+                MacOpenFiles.first(new String[] {null, "b.jpg"}).orElseThrow());
+        assertTrue(MacOpenFiles.first(new String[0]).isEmpty());
+        assertTrue(MacOpenFiles.first(null).isEmpty());
+    }
+
+    @Test
+    void theHandlerOpensTheFileAndLeavesTheRestToJavaFx() {
+        List<String> javafx = new ArrayList<>();
+        List<Path> opened = new ArrayList<>();
+        Application.EventHandler quantum = new Application.EventHandler() {
+            @Override
+            public void handleQuitAction(Application app, long time) {
+                javafx.add("quit");
+            }
+
+            @Override
+            public void handleOpenFilesAction(Application app, long time, String[] files) {
+                javafx.add("open");
+            }
+        };
+        MacOpenFiles.Handler handler = new MacOpenFiles.Handler(quantum, opened::add);
+
+        handler.handleOpenFilesAction(null, 0, new String[] {"/photos/a.jpg", "/photos/b.jpg"});
+        handler.handleQuitAction(null, 0);
+
+        assertEquals(List.of(Path.of("/photos/a.jpg")), opened);
+        // Quit is how JavaFX closes its windows on Cmd+Q from the Dock: it must still get there.
+        assertEquals(List.of("open", "quit"), javafx);
+    }
+
+    @Test
+    void withoutJavaFxsHandlerTheFilesStillOpen() {
+        List<Path> opened = new ArrayList<>();
+        new MacOpenFiles.Handler(null, opened::add).handleOpenFilesAction(null, 0, new String[] {"a.jpg"});
+        assertEquals(List.of(Path.of("a.jpg")), opened);
     }
 }

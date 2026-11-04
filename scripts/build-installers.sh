@@ -9,7 +9,7 @@
 #
 # Each registers Mirada for its image types (packaging/file-types.txt), so a double-click opens it.
 # On Linux and Windows the file arrives as Mirada's argument; macOS sends an "open" event, which
-# MacOpenFiles receives.
+# MacOpenFiles receives through JavaFX's glass.
 #
 # Usage: build-installers.sh <app-image> <app-version> <dest-dir> <icon>
 set -euo pipefail

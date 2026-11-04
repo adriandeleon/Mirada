@@ -135,6 +135,10 @@ jobs:
           esac
           bash scripts/smoke-test.sh "$launcher" src/test/resources/com/mirada/image
           bash scripts/smoke-test.sh "$launcher" src/test/resources/com/mirada/matrix
+          # As Finder opens a file: an Apple Event, not an argument.
+          if [ "${{ runner.os }}" = macOS ]; then
+            bash scripts/smoke-test.sh target/dist/Mirada.app src/test/resources/com/mirada/image
+          fi
 
       # An msi larger than the files it installs stores something twice: jpackage put the whole
       # native launcher in as the Add/Remove Programs icon until build-installers.sh pointed it at

@@ -65,6 +65,7 @@ exec java \
     --module-path "$MODULE_PATH:target/classes" \
     --add-modules com.mirada \
     --enable-native-access=javafx.graphics,com.mirada \
+    --add-exports=javafx.graphics/com.sun.glass.ui=com.mirada \
     "-Dprism.order=$PRISM" \
     -Dmirada.codecs=target/codecs \
     ${jvm[@]+"${jvm[@]}"} \

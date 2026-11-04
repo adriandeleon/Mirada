@@ -38,12 +38,21 @@ import static java.lang.foreign.ValueLayout.JAVA_SHORT;
  *       moved, never copied. A file on another file system than home goes through {@code gio
  *       trash}, which knows each volume's own trash folder.
  *   <li><b>Windows</b>: the Recycle Bin, through the shell's {@code SHFileOperationW} with undo.
- *   <li><b>macOS</b>: AWT's {@code Desktop.moveToTrash}, AWT being headful there (MacOpenFiles).
+ *   <li><b>macOS</b>: AWT's {@code Desktop.moveToTrash}, AWT being headful there ({@link #headless}).
  * </ul>
  */
 public final class Trash {
 
     private Trash() {}
+
+    /**
+     * Whether AWT must be headless on {@code osName}: everywhere but macOS, where {@code
+     * Desktop.moveToTrash} needs it headful. Decided in {@code App.main} before any AWT class loads;
+     * headful, AWT still loads only when a file is first trashed.
+     */
+    public static boolean headless(@Nullable String osName) {
+        return !MacOpenFiles.isMac(osName);
+    }
 
     /** Moves {@code file} to the trash, or says why it could not. */
     public static void move(Path file) throws IOException {

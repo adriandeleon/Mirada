@@ -48,7 +48,7 @@ A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an en
 | `com.mirada.folder` | The "document": the images in one folder, in the chosen order (`Sorting`: natural name order, date or size), and which one is showing (`FolderImages`, `NaturalOrder`, `ImageFormats`) |
 | `com.mirada.image` | Loading: decoded images cached by path (`ImageCache`), EXIF orientation and the camera line (`Exif`, `Orientation`), the sidebar's camera card and every metadata tag (`ExifDetails`), the strip's thumbnails (`Thumbnails`) |
 | `com.mirada.edit` | The editor's rules and pixel work, none of it UI: the edit and its order (`Edit`: turn, flip, crop), the crop as fractions (`Crop`) and as a box being dragged (`CropBox`), the shapes (`AspectRatio`), turns and mirrors on ARGB ints (`Raster`), undo and redo (`History`), the EXIF and colour profile a saved edit keeps (`ExifBlock`, `IccProfile`, both reading through `Containers`), and writing JPEG, PNG, TIFF or BMP (`Encoder`) |
-| `com.mirada.os` | Platform glue: the macOS open-file handler and the one rule for `java.awt.headless` (`MacOpenFiles`); moving a file to the desktop's trash (`Trash`) |
+| `com.mirada.os` | Platform glue: the macOS open-file handler (`MacOpenFiles`); moving a file to the desktop's trash, and the one rule for `java.awt.headless` (`Trash`) |
 | `com.mirada.settings` | `~/.mirada/settings.properties` (`MIRADA_CONFIG_DIR` moves it): theme, what opens at start, how long the floating controls stay; clamped on read, written through on every change |
 | `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`); the editor (`Editor`, `CropView`); every command with its keys, name, description and group (`Command`), the command palette (`CommandPalette`), `AboutWindow`, `SettingsWindow`, `ShortcutsWindow`, the rename rules (`Renaming`), the theme, the symbolic icons (`Icons`) |
 
@@ -310,21 +310,25 @@ a prefetched neighbour is 2–8 ms for every format.
   `META-INF/services`; none of them calls `ServiceLoader` itself, so no `uses` is needed. A new
   dependency that is an automatic module needs an entry there, or `-Pdist` fails at jlink.
 - **macOS does not pass a double-clicked file as an argument.** Linux (`Exec=… %f`) and Windows do.
-  macOS sends an "open documents" Apple Event, which the JDK surfaces only through AWT's
-  `Desktop.setOpenFileHandler` — so `App.main` leaves AWT *headful* on macOS alone
-  (`MacOpenFiles.headless`) and `App.start` installs the handler after the first image is asked for.
-  The event that launched the app arrives before that; the JDK holds it and delivers it once the
-  handler is set. Torrenta's `os.MacHandlers` and `AwtUse`, which run this way in production. The
-  handler checks the `java.awt.headless` property before touching `GraphicsEnvironment`, so Linux
-  and Windows load no AWT class for it (measured: no start-up difference). **Not yet tried with a
-  real Finder double-click**: CI's macOS runner launches with an argument.
+  macOS sends an "open documents" Apple Event to the application's delegate, which is JavaFX's
+  glass, not AWT: AWT's `Desktop.setOpenFileHandler` never hears of it once JavaFX owns the
+  application, and JavaFX's own glass handler drops it. 0.1.0 relied on AWT and opened nothing from
+  Finder; jpackage's launcher, which turns the launching event into an argument, had hidden that
+  until the native image replaced it. `MacOpenFiles` puts a handler of ours in front of JavaFX's
+  (`com.sun.glass.ui.Application.setEventHandler`, every other event passed on), installed from
+  `App.start` after the first image is asked for; glass keeps the launching files and hands them to
+  the new handler. The package is not exported, so the compiler and every JVM launcher pass
+  `--add-exports=javafx.graphics/com.sun.glass.ui=com.mirada` (the native image is built from the
+  class path and needs nothing). CI opens the fixtures through `open -a` (`smoke-test.sh` given
+  `Mirada.app`), the Apple Event route.
 - **The icon is rendered with librsvg, not ImageMagick.** ImageMagick's built-in SVG renderer, used
   when `rsvg-convert` is missing, draws only the tile of these icons (Termina's too). `branding/`
   holds the SVG and the PNG, ICO and ICNS made from it.
 - **The macOS bundle is changed after jpackage signs it** (codecs, AOT cache, version), so
   `scripts/fix-mac-bundle.sh` re-signs it ad hoc, last; CI verifies the signature.
 - **`java.awt.headless` is decided in `App.main`, as the first statement**, before `HeadStart` can
-  touch ImageIO: headless everywhere but macOS (above). ImageIO and `BufferedImage` are `java.desktop` and need no display; tests are
+  touch ImageIO: headless everywhere but macOS, where Move to Trash is AWT's `Desktop`
+  (`Trash.headless`); AWT itself loads only when a file is first trashed. ImageIO and `BufferedImage` are `java.desktop` and need no display; tests are
   headless on every platform through surefire's `java.awt.headless`.
 - **The TwelveMonkeys readers are found by service lookup**, so nothing names their classes.
   `module-info` requires them anyway, or a jlink image would drop them silently, and
@@ -377,5 +381,4 @@ Signing:
 Developer ID and notarization on macOS (wired, waiting for the secrets), a code-signing certificate
 on Windows. An AppImage; a Homebrew cask (Homebrew takes only notarized apps); winget-pkgs has not been sent Mirada yet. XMP in a saved edit, EXIF and the colour profile in a
 saved TIFF, a profile for a HEIF with nclx colours or a JPEG XL; a Brotli-compressed JPEG XL Exif box. Trash on Windows and macOS is untested. HEIC grids are untested against a real iPhone photo. The app itself has not been run on Windows
-or macOS by hand; CI only tests there, and the macOS Finder double-click is untried in the native
-image.
+or macOS by hand; CI only tests there, and the macOS Finder double-click is tested only through `open -a` on CI.
