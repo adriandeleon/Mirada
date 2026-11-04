@@ -94,8 +94,8 @@ variants open. It took one change, the GraalVM release:
   `libjava`/`libjvm` shims — and the same metadata recorded on Linux was enough. Both CI jobs now
   use 25.4, as this machine does.
 - **Not done:** a `.app` bundle around it (the libraries go in `Contents/MacOS` and each must be
-  signed), Finder's open-file event (since received through JavaFX's glass, `MacOpenFiles`, and
-  smoke-tested through `open -a`), and a run on a real Mac.
+  signed), Finder's open-file event (since observed through the Objective-C runtime, `MacOpenFiles`,
+  and smoke-tested through `open -a`), and a run on a real Mac.
 
 Start-up on the CI runners, launch to the first image (`measure-startup.sh -n 5`, median of the 4
 warm runs; shared virtual machines, so a sanity figure, not a benchmark). Both builds come from the

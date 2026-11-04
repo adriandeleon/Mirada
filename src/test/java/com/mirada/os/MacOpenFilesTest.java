@@ -4,9 +4,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
-import com.sun.glass.ui.Application;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -26,47 +26,50 @@ class MacOpenFilesTest {
     }
 
     @Test
+    void listensOnlyOnMacOs() {
+        if (MacOpenFiles.isMac(System.getProperty("os.name"))) return;
+        assertEquals("none (not macOS)", MacOpenFiles.listen());
+    }
+
+    @Test
     void ofSeveralFilesTheFirstIsShown() {
         assertEquals(
                 Path.of("a.jpg"),
-                MacOpenFiles.first(new String[] {"a.jpg", "b.jpg"}).orElseThrow());
-        assertEquals(
-                Path.of("b.jpg"),
-                MacOpenFiles.first(new String[] {null, "b.jpg"}).orElseThrow());
-        assertTrue(MacOpenFiles.first(new String[0]).isEmpty());
-        assertTrue(MacOpenFiles.first(null).isEmpty());
+                MacOpenFiles.first(List.of(Path.of("a.jpg"), Path.of("b.jpg"))).orElseThrow());
+        assertTrue(MacOpenFiles.first(List.of()).isEmpty());
     }
 
     @Test
-    void theHandlerOpensTheFileAndLeavesTheRestToJavaFx() {
-        List<String> javafx = new ArrayList<>();
+    void aFileUrlIsItsPath(@TempDir Path folder) {
+        Path photo = folder.resolve("a photo.jpg");
+        assertEquals(Optional.of(photo), MacOpenFiles.fileOf(photo.toUri().toString()));
+        // AppKit's absoluteString escapes what a URI must. A Unix path, which Windows reads otherwise.
+        if (!System.getProperty("os.name", "").startsWith("Windows")) {
+            assertEquals(
+                    Optional.of(Path.of("/Users/me/Pictures/a b.jpg")),
+                    MacOpenFiles.fileOf("file:///Users/me/Pictures/a%20b.jpg"));
+        }
+    }
+
+    @Test
+    void anythingButAFileUrlIsNothing() {
+        assertTrue(MacOpenFiles.fileOf(null).isEmpty());
+        assertTrue(MacOpenFiles.fileOf("https://example.com/a.jpg").isEmpty());
+        assertTrue(MacOpenFiles.fileOf("not a url").isEmpty());
+        assertTrue(MacOpenFiles.fileOf("file:relative.jpg").isEmpty());
+    }
+
+    @Test
+    void whatArrivesBeforeTheWindowWaitsForIt() {
         List<Path> opened = new ArrayList<>();
-        Application.EventHandler quantum = new Application.EventHandler() {
-            @Override
-            public void handleQuitAction(Application app, long time) {
-                javafx.add("quit");
-            }
+        MacOpenFiles.arrived(Path.of("/photos/a.jpg"));
+        MacOpenFiles.arrived(Path.of("/photos/b.jpg"));
+        assertTrue(opened.isEmpty());
 
-            @Override
-            public void handleOpenFilesAction(Application app, long time, String[] files) {
-                javafx.add("open");
-            }
-        };
-        MacOpenFiles.Handler handler = new MacOpenFiles.Handler(quantum, opened::add, false);
+        MacOpenFiles.receive(null, opened::add);
 
-        handler.handleOpenFilesAction(null, 0, new String[] {"/photos/a.jpg", "/photos/b.jpg"});
-        handler.handleQuitAction(null, 0);
-
+        // One event, two files: one window, the first.
         assertEquals(List.of(Path.of("/photos/a.jpg")), opened);
-        // Quit is how JavaFX closes its windows on Cmd+Q from the Dock: it must still get there.
-        assertEquals(List.of("open", "quit"), javafx);
-    }
-
-    @Test
-    void withoutJavaFxsHandlerTheFilesStillOpen() {
-        List<Path> opened = new ArrayList<>();
-        new MacOpenFiles.Handler(null, opened::add, false).handleOpenFilesAction(null, 0, new String[] {"a.jpg"});
-        assertEquals(List.of(Path.of("a.jpg")), opened);
     }
 
     @Test

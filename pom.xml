@@ -210,7 +210,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <!-- For the tests, which are compiled into the module: MacOpenFilesTest. -->
+                    <!-- The tests are compiled into the module and see what it sees. -->
                     <compilerArgs>
                         <arg>--add-exports=javafx.graphics/com.sun.glass.ui=com.mirada</arg>
                     </compilerArgs>
@@ -226,8 +226,8 @@
                                 <arg>-XDcompilePolicy=simple</arg>
                                 <arg>--should-stop=ifError=FLOW</arg>
                                 <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR -XepOpt:NullAway:OnlyNullMarked=true -XepOpt:NullAway:JSpecifyMode=true</arg>
-                                <!-- JavaFX's glass, for the macOS open-files handler (os.MacOpenFiles);
-                                     every JVM launcher passes the same. -->
+                                <!-- JavaFX's glass, which the macOS integration reaches into; every
+                                     JVM launcher passes the same. -->
                                 <arg>--add-exports=javafx.graphics/com.sun.glass.ui=com.mirada</arg>
                             </compilerArgs>
                             <annotationProcessorPaths>

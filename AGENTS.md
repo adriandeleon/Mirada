@@ -48,7 +48,7 @@ A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an en
 | `com.mirada.folder` | The "document": the images in one folder, in the chosen order (`Sorting`: natural name order, date or size), and which one is showing (`FolderImages`, `NaturalOrder`, `ImageFormats`) |
 | `com.mirada.image` | Loading: decoded images cached by path (`ImageCache`), EXIF orientation and the camera line (`Exif`, `Orientation`), the sidebar's camera card and every metadata tag (`ExifDetails`), the strip's thumbnails (`Thumbnails`) |
 | `com.mirada.edit` | The editor's rules and pixel work, none of it UI: the edit and its order (`Edit`: turn, flip, crop), the crop as fractions (`Crop`) and as a box being dragged (`CropBox`), the shapes (`AspectRatio`), turns and mirrors on ARGB ints (`Raster`), undo and redo (`History`), the EXIF and colour profile a saved edit keeps (`ExifBlock`, `IccProfile`, both reading through `Containers`), and writing JPEG, PNG, TIFF or BMP (`Encoder`) |
-| `com.mirada.os` | Platform glue: the macOS open-file handler (`MacOpenFiles`) and About and Settings in its application menu (`MacAppMenu`); moving a file to the desktop's trash, and the one rule for `java.awt.headless` (`Trash`) |
+| `com.mirada.os` | Platform glue: the files Finder opens Mirada with (`MacOpenFiles`) and About and Settings in its application menu (`MacAppMenu`); moving a file to the desktop's trash, and the one rule for `java.awt.headless` (`Trash`) |
 | `com.mirada.settings` | `~/.mirada/settings.properties` (`MIRADA_CONFIG_DIR` moves it): theme, what opens at start, how long the floating controls stay; clamped on read, written through on every change |
 | `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`, `Scrolling`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`); the editor (`Editor`, `CropView`); every command with its keys, name, description and group (`Command`), the command palette (`CommandPalette`), the macOS menu bar (`MacMenus`), `AboutWindow`, `SettingsWindow`, `ShortcutsWindow`, the rename rules (`Renaming`), the theme, the symbolic icons (`Icons`) |
 
@@ -310,17 +310,20 @@ a prefetched neighbour is 2–8 ms for every format.
   `META-INF/services`; none of them calls `ServiceLoader` itself, so no `uses` is needed. A new
   dependency that is an automatic module needs an entry there, or `-Pdist` fails at jlink.
 - **macOS does not pass a double-clicked file as an argument.** Linux (`Exec=… %f`) and Windows do.
-  macOS sends an "open documents" Apple Event to the application's delegate, which is JavaFX's
-  glass, not AWT: AWT's `Desktop.setOpenFileHandler` never hears of it once JavaFX owns the
-  application, and JavaFX's own glass handler drops it. 0.1.0 relied on AWT and opened nothing from
-  Finder; jpackage's launcher, which turns the launching event into an argument, had hidden that
-  until the native image replaced it. `MacOpenFiles` puts a handler of ours in front of JavaFX's
-  (`com.sun.glass.ui.Application.setEventHandler`, every other event passed on), installed from
-  `App.start` after the first image is asked for; glass keeps the launching files and hands them to
-  the new handler. The package is not exported, so the compiler and every JVM launcher pass
-  `--add-exports=javafx.graphics/com.sun.glass.ui=com.mirada` (the native image is built from the
-  class path and needs nothing). CI opens the fixtures through `open -a` (`smoke-test.sh` given
-  `Mirada.app`), the Apple Event route.
+  macOS sends an "open documents" Apple Event, which AppKit gives the application's delegate,
+  JavaFX's `GlassApplication`. Since JavaFX 25 (JDK-8354631) that delegate answers
+  `application:openURLs:`, which AppKit prefers to `application:openFiles:`, and only posts an
+  `AWTEmbeddedEvent` notification with each URL, for an AWT embedded in JavaFX: glass's own
+  open-files event (`Application.EventHandler.handleOpenFilesAction`) never fires, and AWT's
+  `Desktop` handlers start too late for the event that launched the app. So 0.1.0 opened nothing from
+  Finder (jpackage's launcher had hidden it before the native image replaced it), and so did a glass
+  handler. `MacOpenFiles` observes the notification itself: an Objective-C class made at run time
+  through FFM, its method an upcall, registered from `App.main` before `launch`; files that arrive
+  before the window are held until `App.start` asks. A file named on the command line also arrives
+  as an event and is dropped once (`besides`). The upcall, its lookup and the `objc_msgSend` shapes
+  are in the native metadata by hand: the tracing agent never sees a Finder event. Proved on CI's
+  Macs, not by hand: the smoke test given `Mirada.app` opens a fixture through `open -a`, then
+  again in the running app. If JavaFX starts calling `openFiles:` again, check this is not doubled.
 - **The macOS menu bar is JavaFX's system `MenuBar`, the application menu is glass's.** `MacMenus`
   builds File, Image, View, Go and Help from `Command` after the first paint, unmanaged in the scene
   (it draws nothing there). Only chords with Cmd are key equivalents: a bare one could be taken by

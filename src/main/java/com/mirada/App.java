@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.util.List;
 
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.stage.Stage;
 
 import com.mirada.image.HeadStart;
@@ -21,6 +20,9 @@ import com.mirada.ui.ViewerWindow;
  */
 public final class App extends Application {
 
+    /** What {@link MacOpenFiles#listen} did, for the perf trace. */
+    private static String openFiles = "none (not started)";
+
     public static void main(String[] args) {
         // First, before any AWT class can load. ImageIO and BufferedImage are java.desktop and need no
         // display, so AWT is headless — except on macOS, where Move to Trash is AWT's Desktop (Trash).
@@ -29,6 +31,10 @@ public final class App extends Application {
         // The first image decodes while the toolkit starts, which is most of what comes before the
         // window (HeadStart). After the headless property: ImageIO is AWT.
         HeadStart.begin(List.of(args));
+        // Before the toolkit: on macOS the file Finder launched Mirada for arrives while it starts,
+        // and only what is listening by then hears it (MacOpenFiles). Elsewhere it returns at once.
+        openFiles = MacOpenFiles.listen();
+        Startup.mark("open-files-listening");
         launch(args);
     }
 
@@ -44,13 +50,12 @@ public final class App extends Application {
         Startup.mark("window-shown");
         List<String> args = getParameters().getUnnamed();
         if (!args.isEmpty()) window.open(Path.of(args.getFirst()));
-        // After the first image is asked for, so a launch with an argument starts decoding first. On
-        // Linux and Windows it returns at once. A macOS launch by double-click has no argument, and
-        // its event waits in JavaFX's glass until this installs (MacOpenFiles).
-        String handler = MacOpenFiles.install(args.isEmpty() ? null : Path.of(args.getFirst()), file -> {
+        // After the first image is asked for, so a launch with an argument starts decoding first. A
+        // macOS launch by double-click has no argument; its file has waited for this.
+        if (Startup.enabled()) System.out.println("[perf] open-file handler: " + openFiles);
+        MacOpenFiles.receive(args.isEmpty() ? null : Path.of(args.getFirst()), file -> {
             if (Startup.enabled()) System.out.println("[perf] open-files " + file);
-            Platform.runLater(() -> window.open(file));
+            window.open(file);
         });
-        if (Startup.enabled()) System.out.println("[perf] open-file handler: " + handler);
     }
 }
