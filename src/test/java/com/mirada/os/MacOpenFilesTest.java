@@ -52,7 +52,7 @@ class MacOpenFilesTest {
                 javafx.add("open");
             }
         };
-        MacOpenFiles.Handler handler = new MacOpenFiles.Handler(quantum, opened::add);
+        MacOpenFiles.Handler handler = new MacOpenFiles.Handler(quantum, opened::add, false);
 
         handler.handleOpenFilesAction(null, 0, new String[] {"/photos/a.jpg", "/photos/b.jpg"});
         handler.handleQuitAction(null, 0);
@@ -65,7 +65,7 @@ class MacOpenFilesTest {
     @Test
     void withoutJavaFxsHandlerTheFilesStillOpen() {
         List<Path> opened = new ArrayList<>();
-        new MacOpenFiles.Handler(null, opened::add).handleOpenFilesAction(null, 0, new String[] {"a.jpg"});
+        new MacOpenFiles.Handler(null, opened::add, false).handleOpenFilesAction(null, 0, new String[] {"a.jpg"});
         assertEquals(List.of(Path.of("a.jpg")), opened);
     }
 

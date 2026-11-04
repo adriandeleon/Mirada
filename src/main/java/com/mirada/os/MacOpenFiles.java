@@ -14,6 +14,7 @@ import java.util.function.Consumer;
 
 import javafx.application.Platform;
 
+import com.mirada.perf.Startup;
 import com.sun.glass.ui.Application;
 import org.jspecify.annotations.Nullable;
 
@@ -113,7 +114,7 @@ public final class MacOpenFiles {
         static String install(Consumer<Path> open) {
             Application glass = Application.GetApplication();
             if (glass == null) return "none (no glass application)";
-            glass.setEventHandler(new Handler(glass.getEventHandler(), open));
+            glass.setEventHandler(new Handler(glass.getEventHandler(), open, Startup.enabled()));
             return "files";
         }
     }
@@ -123,80 +124,101 @@ public final class MacOpenFiles {
 
         private final Application.EventHandler javafx;
         private final Consumer<Path> open;
+        /** Under MIRADA_PERF, every event glass sends is printed: which arrive, and in what order. */
+        private final boolean trace;
 
-        Handler(Application.@Nullable EventHandler javafx, Consumer<Path> open) {
+        Handler(Application.@Nullable EventHandler javafx, Consumer<Path> open, boolean trace) {
             this.javafx = javafx == null ? new Application.EventHandler() : javafx;
             this.open = open;
+            this.trace = trace;
+        }
+
+        private void note(String event) {
+            if (trace) System.out.println("[perf] glass " + event);
         }
 
         @Override
         public void handleOpenFilesAction(Application app, long time, String[] files) {
+            note("openFiles " + Arrays.toString(files));
             javafx.handleOpenFilesAction(app, time, files);
             first(files).ifPresent(open);
         }
 
         @Override
         public void handleWillFinishLaunchingAction(Application app, long time) {
+            note("WillFinishLaunching");
             javafx.handleWillFinishLaunchingAction(app, time);
         }
 
         @Override
         public void handleDidFinishLaunchingAction(Application app, long time) {
+            note("DidFinishLaunching");
             javafx.handleDidFinishLaunchingAction(app, time);
         }
 
         @Override
         public void handleWillBecomeActiveAction(Application app, long time) {
+            note("WillBecomeActive");
             javafx.handleWillBecomeActiveAction(app, time);
         }
 
         @Override
         public void handleDidBecomeActiveAction(Application app, long time) {
+            note("DidBecomeActive");
             javafx.handleDidBecomeActiveAction(app, time);
         }
 
         @Override
         public void handleWillResignActiveAction(Application app, long time) {
+            note("WillResignActive");
             javafx.handleWillResignActiveAction(app, time);
         }
 
         @Override
         public void handleDidResignActiveAction(Application app, long time) {
+            note("DidResignActive");
             javafx.handleDidResignActiveAction(app, time);
         }
 
         @Override
         public void handleDidReceiveMemoryWarning(Application app, long time) {
+            note("DidReceiveMemoryWarning");
             javafx.handleDidReceiveMemoryWarning(app, time);
         }
 
         @Override
         public void handleWillHideAction(Application app, long time) {
+            note("WillHide");
             javafx.handleWillHideAction(app, time);
         }
 
         @Override
         public void handleDidHideAction(Application app, long time) {
+            note("DidHide");
             javafx.handleDidHideAction(app, time);
         }
 
         @Override
         public void handleWillUnhideAction(Application app, long time) {
+            note("WillUnhide");
             javafx.handleWillUnhideAction(app, time);
         }
 
         @Override
         public void handleDidUnhideAction(Application app, long time) {
+            note("DidUnhide");
             javafx.handleDidUnhideAction(app, time);
         }
 
         @Override
         public void handleQuitAction(Application app, long time) {
+            note("Quit");
             javafx.handleQuitAction(app, time);
         }
 
         @Override
         public void handlePreferencesChanged(Map<String, Object> preferences) {
+            note("PreferencesChanged");
             javafx.handlePreferencesChanged(preferences);
         }
     }

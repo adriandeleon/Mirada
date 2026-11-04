@@ -43,7 +43,16 @@ if [ -n "$bundle" ]; then
         -a "$bundle" "$first" &
     waiting=$!
     waited=0
-    while [ "$waited" -lt 120 ] && kill -0 "$waiting" 2>/dev/null; do sleep 1; waited=$((waited + 1)); done
+    while [ "$waited" -lt 120 ] && kill -0 "$waiting" 2>/dev/null; do
+        sleep 1
+        waited=$((waited + 1))
+        # Not there after 30 s: lost at launch, or never delivered? A second open goes to the
+        # running instance, as a double-click while Mirada is open does.
+        if [ "$waited" = 30 ] && ! grep -q '^\[perf\] open-files' "$log"; then
+            echo "[smoke] nothing opened after 30s: opening $(basename "$first") again in the running app"
+            open -a "$bundle" "$first" || echo "[smoke] the second open failed: $?"
+        fi
+    done
     if kill -0 "$waiting" 2>/dev/null; then
         echo "[smoke] still running after ${waited}s: stopped"
         pkill -f "$bundle/Contents/MacOS/" || true
@@ -53,7 +62,7 @@ if [ -n "$bundle" ]; then
     echo "[smoke] open -a $(basename "$bundle") $(basename "$first"): exit $status after ${waited}s"
     out=$(cat "$log")
     rm -f "$log"
-    printf '%s\n' "$out" | grep -E '^\[perf\] open-file|^\[mirada\]' || true
+    printf '%s\n' "$out" | grep -E '^\[perf\] (open-file|glass)|^\[mirada\]' || true
 elif [ "$(uname -s)" = "Linux" ] && [ -z "${DISPLAY:-}" ]; then
     command -v xvfb-run >/dev/null || { echo "::error::no display and no xvfb-run"; exit 1; }
     out=$(${limit[@]+"${limit[@]}"} xvfb-run -a "$launcher" "$folder" 2>&1 || true)
