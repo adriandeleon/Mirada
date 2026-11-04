@@ -33,19 +33,27 @@ if command -v cygpath >/dev/null 2>&1; then folder=$(cygpath -w "$folder"); fi
 if [ -n "$bundle" ]; then
     # `open -W` waits for the app to quit, which the tour does after the last image; macOS has no
     # `timeout`, so the limit is a loop, and a stalled app is killed.
+    # A file, not the folder: LaunchServices hands an app only the kinds it registered for, and
+    # Mirada registers image types (packaging/file-types.txt). The first in name order, so the tour
+    # still steps through every image after it.
+    first=$(find "$folder" -maxdepth 1 -type f | LC_ALL=C sort | head -1)
     log=$(mktemp)
     open -W -n --stdout "$log" --stderr "$log" \
         --env MIRADA_PERF=1 --env MIRADA_PERF_TOUR=1 --env MIRADA_PERF_T0="$start" \
-        -a "$bundle" "$folder" &
+        -a "$bundle" "$first" &
     waiting=$!
-    for _ in $(seq 120); do kill -0 "$waiting" 2>/dev/null || break; sleep 1; done
+    waited=0
+    while [ "$waited" -lt 120 ] && kill -0 "$waiting" 2>/dev/null; do sleep 1; waited=$((waited + 1)); done
     if kill -0 "$waiting" 2>/dev/null; then
+        echo "[smoke] still running after ${waited}s: stopped"
         pkill -f "$bundle/Contents/MacOS/" || true
         kill "$waiting" 2>/dev/null || true
     fi
-    wait "$waiting" 2>/dev/null || true
+    wait "$waiting" 2>/dev/null && status=0 || status=$?
+    echo "[smoke] open -a $(basename "$bundle") $(basename "$first"): exit $status after ${waited}s"
     out=$(cat "$log")
     rm -f "$log"
+    printf '%s\n' "$out" | grep -E '^\[perf\] open-file|^\[mirada\]' || true
 elif [ "$(uname -s)" = "Linux" ] && [ -z "${DISPLAY:-}" ]; then
     command -v xvfb-run >/dev/null || { echo "::error::no display and no xvfb-run"; exit 1; }
     out=$(${limit[@]+"${limit[@]}"} xvfb-run -a "$launcher" "$folder" 2>&1 || true)

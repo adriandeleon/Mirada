@@ -47,6 +47,10 @@ public final class App extends Application {
         // After the first image is asked for, so a launch with an argument starts decoding first. On
         // Linux and Windows it returns at once. A macOS launch by double-click has no argument, and
         // its event waits in JavaFX's glass until this installs (MacOpenFiles).
-        MacOpenFiles.install(file -> Platform.runLater(() -> window.open(file)));
+        String handler = MacOpenFiles.install(args.isEmpty() ? null : Path.of(args.getFirst()), file -> {
+            if (Startup.enabled()) System.out.println("[perf] open-files " + file);
+            Platform.runLater(() -> window.open(file));
+        });
+        if (Startup.enabled()) System.out.println("[perf] open-file handler: " + handler);
     }
 }

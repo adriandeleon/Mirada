@@ -1,5 +1,7 @@
 package com.mirada.os;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -7,6 +9,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 import javafx.application.Platform;
@@ -40,10 +43,11 @@ public final class MacOpenFiles {
 
     /**
      * Installs the handler, on the FX thread, which hands the first file of each event to {@code
-     * open} on the FX thread (the launching event's possibly from within this call). Returns what it
-     * did, or why it did nothing.
+     * open} on the FX thread (the launching event's possibly from within this call), except the
+     * event that repeats {@code argument}, the file on the command line ({@link #besides}). Returns
+     * what it did, or why it did nothing.
      */
-    public static String install(Consumer<Path> open) {
+    public static String install(@Nullable Path argument, Consumer<Path> open) {
         if (!isMac(System.getProperty("os.name"))) return "none (not macOS)";
         // Touching a glass class without the export is an IllegalAccessError: ask first. On the class
         // path, as the native image is built, everything is exported to everything.
@@ -51,7 +55,31 @@ public final class MacOpenFiles {
             System.err.println("[mirada] no open-file handler: com.sun.glass.ui is not exported to Mirada");
             return "none (com.sun.glass.ui not exported)";
         }
-        return Glass.install(open);
+        return Glass.install(besides(argument, open));
+    }
+
+    /**
+     * {@code open}, less the event that repeats the command line. AppKit turns a file named on it into
+     * an "open documents" event as well, so a launch with an argument would open it twice, the second
+     * time starting the folder over. Only the first event is dropped, and only when it names the same
+     * file: a later double-click on it is the user's.
+     */
+    static Consumer<Path> besides(@Nullable Path argument, Consumer<Path> open) {
+        if (argument == null) return open;
+        AtomicBoolean first = new AtomicBoolean(true);
+        return file -> {
+            if (first.getAndSet(false) && same(file, argument)) return;
+            open.accept(file);
+        };
+    }
+
+    /** The same file, however each was spelled (AppKit's is absolute, the argument as typed). */
+    static boolean same(Path a, Path b) {
+        try {
+            return Files.isSameFile(a, b);
+        } catch (IOException | SecurityException e) {
+            return a.toAbsolutePath().normalize().equals(b.toAbsolutePath().normalize());
+        }
     }
 
     static boolean isMac(@Nullable String osName) {
