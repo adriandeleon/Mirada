@@ -25,6 +25,10 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **macOS: a menu bar.** File, Image, View, Go and Help hold every command, with Preview's ⌘ keys
+  beside them and ticks on what is on (the panels, the order); About and Settings… (⌘,) are in the
+  Mirada menu, and the Help menu's search finds any command by name. The header's ☰ menu is gone
+  on a Mac.
 - **A saved edit keeps the photo's colour profile**, in JPEG and PNG: a wide-gamut photo (an
   iPhone's Display P3, a camera's Adobe RGB) no longer saves duller than it was in apps that manage
   colour. Read from JPEG, PNG, WebP, HEIC and AVIF.

@@ -27,6 +27,7 @@ import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
@@ -51,6 +52,7 @@ import com.mirada.folder.Sorting;
 import com.mirada.image.Animation;
 import com.mirada.image.ImageCache;
 import com.mirada.image.Orientation;
+import com.mirada.os.MacAppMenu;
 import com.mirada.os.Trash;
 import com.mirada.perf.Startup;
 import com.mirada.perf.Tour;
@@ -223,6 +225,7 @@ public final class ViewerWindow {
         updateControls();
         afterFirstPaint(titleBar::finish);
         afterFirstPaint(() -> WindowIcon.applyTo(stage));
+        if (Command.MAC) afterFirstPaint(() -> installMacMenus(overlay));
         // A window opened without an image has no first paint to wait for.
         PauseTransition fallback = new PauseTransition(Duration.millis(500));
         fallback.setOnFinished(e -> releaseAfterFirstPaint());
@@ -230,6 +233,27 @@ public final class ViewerWindow {
         // What the settings open at start; after the listeners above, so they build what they show.
         thumbnailsShowing.set(settings.startWithThumbnails());
         infoShowing.set(settings.startWithInfo());
+    }
+
+    /**
+     * The menu bar along the top of a Mac's screen, and About and Settings in its application menu.
+     * After the first paint, like the rest of the chrome: nobody reaches for a menu before the image.
+     */
+    private void installMacMenus(StackPane overlay) {
+        MenuBar bar = MacMenus.build(
+                command -> {
+                    // A menu's key equivalent can arrive while the palette is up; the palette goes.
+                    palette.hide();
+                    run(command);
+                },
+                this::unavailable,
+                this::ticked,
+                this::label);
+        bar.setManaged(false);
+        overlay.getChildren().add(bar);
+        String appMenu = MacAppMenu.install(
+                Command.ABOUT.label(), () -> run(Command.ABOUT), "Settings…", () -> run(Command.SETTINGS));
+        if (Startup.enabled()) System.out.println("[perf] application menu: " + appMenu);
     }
 
     private void afterFirstPaint(Runnable task) {
@@ -799,11 +823,30 @@ public final class ViewerWindow {
 
     /** A context-menu row, named as the palette names it and greyed when the palette would grey it. */
     private MenuItem item(Command command) {
-        String label = command == Command.FULL_SCREEN && stage.isFullScreen() ? "Leave Full Screen" : command.label();
-        MenuItem item = new MenuItem(label);
+        MenuItem item = new MenuItem(label(command));
         item.setOnAction(e -> run(command));
         item.setDisable(unavailable(command) != null);
         return item;
+    }
+
+    /** What a menu calls {@code command} now: its label, but for full screen while in it. */
+    private String label(Command command) {
+        return command == Command.FULL_SCREEN && stage.isFullScreen() ? "Leave Full Screen" : command.label();
+    }
+
+    /** Whether a setting or panel the Mac menus tick ({@link MacMenus#TICKED}) is on. */
+    private boolean ticked(Command command) {
+        Sorting sorting = settings.sorting();
+        return switch (command) {
+            case KEEP_ZOOM -> settings.keepZoom();
+            case INFO -> infoShowing.get();
+            case THUMBNAILS -> thumbnailsShowing.get();
+            case SORT_BY_NAME -> sorting.by() == Sorting.By.NAME;
+            case SORT_BY_DATE -> sorting.by() == Sorting.By.DATE;
+            case SORT_BY_SIZE -> sorting.by() == Sorting.By.SIZE;
+            case REVERSE_ORDER -> sorting.reversed();
+            default -> false;
+        };
     }
 
     private static String fileName(Path file) {

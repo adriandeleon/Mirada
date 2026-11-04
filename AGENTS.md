@@ -48,9 +48,9 @@ A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an en
 | `com.mirada.folder` | The "document": the images in one folder, in the chosen order (`Sorting`: natural name order, date or size), and which one is showing (`FolderImages`, `NaturalOrder`, `ImageFormats`) |
 | `com.mirada.image` | Loading: decoded images cached by path (`ImageCache`), EXIF orientation and the camera line (`Exif`, `Orientation`), the sidebar's camera card and every metadata tag (`ExifDetails`), the strip's thumbnails (`Thumbnails`) |
 | `com.mirada.edit` | The editor's rules and pixel work, none of it UI: the edit and its order (`Edit`: turn, flip, crop), the crop as fractions (`Crop`) and as a box being dragged (`CropBox`), the shapes (`AspectRatio`), turns and mirrors on ARGB ints (`Raster`), undo and redo (`History`), the EXIF and colour profile a saved edit keeps (`ExifBlock`, `IccProfile`, both reading through `Containers`), and writing JPEG, PNG, TIFF or BMP (`Encoder`) |
-| `com.mirada.os` | Platform glue: the macOS open-file handler (`MacOpenFiles`); moving a file to the desktop's trash, and the one rule for `java.awt.headless` (`Trash`) |
+| `com.mirada.os` | Platform glue: the macOS open-file handler (`MacOpenFiles`) and About and Settings in its application menu (`MacAppMenu`); moving a file to the desktop's trash, and the one rule for `java.awt.headless` (`Trash`) |
 | `com.mirada.settings` | `~/.mirada/settings.properties` (`MIRADA_CONFIG_DIR` moves it): theme, what opens at start, how long the floating controls stay; clamped on read, written through on every change |
-| `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`, `Scrolling`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`); the editor (`Editor`, `CropView`); every command with its keys, name, description and group (`Command`), the command palette (`CommandPalette`), `AboutWindow`, `SettingsWindow`, `ShortcutsWindow`, the rename rules (`Renaming`), the theme, the symbolic icons (`Icons`) |
+| `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`, `Scrolling`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`); the editor (`Editor`, `CropView`); every command with its keys, name, description and group (`Command`), the command palette (`CommandPalette`), the macOS menu bar (`MacMenus`), `AboutWindow`, `SettingsWindow`, `ShortcutsWindow`, the rename rules (`Renaming`), the theme, the symbolic icons (`Icons`) |
 
 Six decoders (`ImageFormats.Decoder`, by extension). JavaFX's own `Image` decodes BMP, GIF
 (animated) and PNG in its background thread, and the JPEGs libjpeg-turbo declines; a decoder with
@@ -321,6 +321,18 @@ a prefetched neighbour is 2–8 ms for every format.
   `--add-exports=javafx.graphics/com.sun.glass.ui=com.mirada` (the native image is built from the
   class path and needs nothing). CI opens the fixtures through `open -a` (`smoke-test.sh` given
   `Mirada.app`), the Apple Event route.
+- **The macOS menu bar is JavaFX's system `MenuBar`, the application menu is glass's.** `MacMenus`
+  builds File, Image, View, Go and Help from `Command` after the first paint, unmanaged in the scene
+  (it draws nothing there). Only chords with Cmd are key equivalents: a bare one could be taken by
+  the menu while the palette's field has focus. Items grey only while their menu is open
+  (`onShowing`, by `Command.unavailable`) and are enabled again on close, so a key equivalent never
+  meets a stale state. JavaFX gives no way into the application menu (Hide, Quit), so `MacAppMenu`
+  gets it from `com.sun.glass.ui.mac.MacApplication.getAppleMenu`, by reflection, since that
+  package exists only in macOS's JavaFX: macOS's launchers pass `--add-exports
+  javafx.graphics/com.sun.glass.ui.mac=com.mirada` (the pom's `glass.mac.option`, a harmless `-D`
+  elsewhere, as the export would warn; `dev-run.sh` and `aot-train.sh` add it on Darwin, and the
+  AOT cache needs training and launch to agree), and the native image has the method in its
+  reflection metadata, added by hand. Untested on a Mac.
 - **The icon is rendered with librsvg, not ImageMagick.** ImageMagick's built-in SVG renderer, used
   when `rsvg-convert` is missing, draws only the tile of these icons (Termina's too). `branding/`
   holds the SVG and the PNG, ICO and ICNS made from it.

@@ -21,6 +21,10 @@
         <build.timestamp>${maven.build.timestamp}</build.timestamp>
 
         <javafx.version>27</javafx.version>
+        <!-- One more JVM option for every launcher, macOS's export of glass's Mac package
+             (os.MacAppMenu, set in os-mac); elsewhere a harmless property, as the package does not
+             exist there and exporting it would warn on every start. -->
+        <glass.mac.option>-Dmirada.glassMac=none</glass.mac.option>
         <atlantafx.version>3.0.0</atlantafx.version>
         <!-- EXIF: orientation (phone photos are stored sideways and tagged), camera and exposure
              for the info line. 2.21 and later carry Automatic-Module-Name com.drew.metadata. Its
@@ -297,6 +301,7 @@
                     <options>
                         <option>--enable-native-access=javafx.graphics,com.mirada</option>
                         <option>--add-exports=javafx.graphics/com.sun.glass.ui=com.mirada</option>
+                        <option>${glass.mac.option}</option>
                         <option>-Dprism.order=${prism.pipeline}</option>
                         <!-- The codec bundle (scripts/build-codecs.sh, or the release the build
                              downloads). Absent, the system's libheif and libjxl are used. -->
@@ -316,6 +321,7 @@
             <activation><os><family>mac</family></os></activation>
             <properties>
                 <prism.pipeline>mtl,es2,sw</prism.pipeline>
+                <glass.mac.option>--add-exports=javafx.graphics/com.sun.glass.ui.mac=com.mirada</glass.mac.option>
                 <jpackage.imageName>Mirada.app</jpackage.imageName>
                 <jpackage.icon>${project.basedir}/branding/mirada.icns</jpackage.icon>
             </properties>
@@ -558,6 +564,7 @@
                                     <javaOptions>
                                         <javaOption>--enable-native-access=javafx.graphics,com.mirada</javaOption>
                                         <javaOption>--add-exports=javafx.graphics/com.sun.glass.ui=com.mirada</javaOption>
+                                        <javaOption>${glass.mac.option}</javaOption>
                                         <javaOption>-Dprism.order=${prism.pipeline}</javaOption>
                                         <!-- $APPDIR is the installed image's app directory, so both
                                              survive the bundle being moved. scripts/add-codecs.sh

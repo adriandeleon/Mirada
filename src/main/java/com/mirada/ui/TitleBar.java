@@ -25,7 +25,8 @@ import javafx.stage.StageStyle;
 
 /**
  * The window's top row, GNOME Image Viewer's: full screen on the left, the file name in the middle,
- * rotate, info and the main menu on the right, and the window buttons after them.
+ * rotate, info and the main menu on the right (no menu on a Mac, which has its menu bar), and the
+ * window buttons after them.
  *
  * <p>Where the platform supports JavaFX 27's extended windows this is a {@link HeaderBar}: the stage
  * gives up its title bar and keeps its window buttons, drawn over the right of this row. Termina's
@@ -72,7 +73,8 @@ final class TitleBar {
         menu.getStyleClass().addAll("header-button", "flat", "no-arrow");
         for (Node node : new Node[] {fullScreen, rotate, info, menu}) node.setFocusTraversable(false);
 
-        HBox right = new HBox(4, rotate, info, menu);
+        // On a Mac the menu bar along the top of the screen holds the menu's items (MacMenus).
+        HBox right = Command.MAC ? new HBox(4, rotate, info) : new HBox(4, rotate, info, menu);
         right.setAlignment(Pos.CENTER_RIGHT);
         HBox left = new HBox(4, fullScreen);
         left.setAlignment(Pos.CENTER_LEFT);
@@ -102,6 +104,7 @@ final class TitleBar {
         fullScreen.setTooltip(new Tooltip("Full Screen (F)"));
         rotate.setTooltip(new Tooltip("Rotate Right (R); Shift-click rotates left"));
         info.setTooltip(new Tooltip("Image Properties (I)"));
+        if (Command.MAC) return; // the menu is not shown there
         menu.setTooltip(new Tooltip("Main Menu"));
         menu.getItems()
                 .addAll(

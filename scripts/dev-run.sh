@@ -61,11 +61,16 @@ for arg in "$@"; do
     esac
 done
 
+# Glass's Mac package exists only on macOS (os.MacAppMenu); elsewhere exporting it would warn.
+mac_exports=()
+if [ "$(uname -s)" = "Darwin" ]; then mac_exports=(--add-exports=javafx.graphics/com.sun.glass.ui.mac=com.mirada); fi
+
 exec java \
     --module-path "$MODULE_PATH:target/classes" \
     --add-modules com.mirada \
     --enable-native-access=javafx.graphics,com.mirada \
     --add-exports=javafx.graphics/com.sun.glass.ui=com.mirada \
+    ${mac_exports[@]+"${mac_exports[@]}"} \
     "-Dprism.order=$PRISM" \
     -Dmirada.codecs=target/codecs \
     ${jvm[@]+"${jvm[@]}"} \

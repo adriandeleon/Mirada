@@ -584,6 +584,10 @@
       "jniAccessible": true,
       "methods": [
         {
+          "name": "getAppleMenu",
+          "parameterTypes": []
+        },
+        {
           "name": "notifyApplicationDidTerminate",
           "parameterTypes": []
         },

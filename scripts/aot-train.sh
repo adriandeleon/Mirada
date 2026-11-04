@@ -44,6 +44,11 @@ rm -f "$cache"
 # MinGW hands a Windows java a POSIX path as is; cygpath gives it the drive-letter form.
 native() { if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s' "$1"; fi; }
 
+# The launcher's options, as the cache is only used under the same module options: macOS's
+# launcher also exports glass's Mac package (the pom's glass.mac.option).
+mac_exports=()
+if [ "$(uname -s)" = "Darwin" ]; then mac_exports=(--add-exports=javafx.graphics/com.sun.glass.ui.mac=com.mirada); fi
+
 # es2/sw, never the platform default: CI runners' virtual GPUs abort Metal on macOS (Termina's and
 # Editora's lesson). The commas are inside option values, not separators.
 # shellcheck disable=SC2054
@@ -53,6 +58,7 @@ opts=(-XX:AOTCacheOutput="$(native "$cache")"
       -Dmirada.codecs="$(native "$appdir/codecs")"
       --enable-native-access=javafx.graphics,com.mirada
       --add-exports=javafx.graphics/com.sun.glass.ui=com.mirada
+      ${mac_exports[@]+"${mac_exports[@]}"}
       -m com.mirada/com.mirada.App
       "$(native "$training")")
 
