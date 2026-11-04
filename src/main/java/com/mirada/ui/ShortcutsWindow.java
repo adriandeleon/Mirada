@@ -53,9 +53,7 @@ final class ShortcutsWindow {
             }
             groups.getChildren().add(new VBox(8, heading, rows));
         }
-        Label also = new Label(
-                "Also: Space and Page Down for the next image, Shift+Space, Page Up and Backspace for the"
-                        + " previous; F11 for full screen; F1 for the command palette, which finds every command by name.");
+        Label also = new Label(also(Command.MAC));
         also.setWrapText(true);
         also.getStyleClass().add("about-credits");
         groups.getChildren().add(also);
@@ -70,6 +68,15 @@ final class ShortcutsWindow {
         });
         stage.setScene(scene);
         groups.setAlignment(Pos.TOP_LEFT);
+    }
+
+    /** The keys that are not a command's shown chord: the second ways to do things. */
+    static String also(boolean mac) {
+        String steps = "Also: Space and Page Down for the next image, Shift+Space, Page Up and Backspace for the"
+                + " previous; F1 for the command palette, which finds every command by name.";
+        return mac
+                ? steps + " As in Preview: ⌘R and ⌘L to rotate, ⌘I for the properties, ⌃⌘F for full screen."
+                : steps + " F11 for full screen; Ctrl+R and Ctrl+Shift+R to rotate.";
     }
 
     /** The commands with a key, by group, in the order {@link Command} declares them. */

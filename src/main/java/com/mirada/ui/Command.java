@@ -2,6 +2,7 @@ package com.mirada.ui;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 import javafx.scene.input.KeyCharacterCombination;
 import javafx.scene.input.KeyCode;
@@ -77,8 +78,12 @@ enum Command {
             "Shows the folder's images in a strip along the bottom.",
             "filmstrip strip gallery browse folder",
             key(KeyCode.T)),
-    /** Leaves full screen, or closes the window: look, then go. */
-    ESCAPE("Escape", "Leaves full screen, or closes the window.", "", key(KeyCode.ESCAPE)),
+    /** Leaves full screen, or on Linux closes the window: look, then go ({@link #escapeCloses}). */
+    ESCAPE(
+            "Escape",
+            "Stops the slideshow or leaves full screen; on Linux, otherwise closes the window.",
+            "",
+            key(KeyCode.ESCAPE)),
     SETTINGS(
             "Settings",
             "Theme, what opens at start, and how long the floating controls stay.",
@@ -101,6 +106,9 @@ enum Command {
             "Finds and runs any command by name.",
             "",
             new KeyCodeCombination(KeyCode.P, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN));
+
+    /** Whether this is macOS, read once: its keys differ ({@link #forKey}, {@link #chord(boolean)}). */
+    static final boolean MAC = isMac(System.getProperty("os.name", ""));
 
     private final String label;
     private final String description;
@@ -130,7 +138,21 @@ enum Command {
 
     /** The chord shown beside the command: its main key, one of those {@link #forKey} accepts. */
     KeyCombination chord() {
-        return chord;
+        return chord(MAC);
+    }
+
+    /**
+     * The chord shown on macOS or elsewhere. A Mac keyboard has no forward Delete, and F2 is a
+     * brightness key there, so trashing and renaming show Finder's keys instead: Cmd-Backspace and
+     * Return. Package-visible so both platforms are testable.
+     */
+    KeyCombination chord(boolean mac) {
+        if (!mac) return chord;
+        return switch (this) {
+            case MOVE_TO_TRASH -> shortcut(KeyCode.BACK_SPACE);
+            case RENAME -> key(KeyCode.ENTER);
+            default -> chord;
+        };
     }
 
     /**
@@ -190,14 +212,26 @@ enum Command {
 
     /**
      * The command for a key press, or null when the key is not one of Mirada's. {@code shortcut}
-     * is Ctrl, or Cmd on macOS. Navigation and zoom take bare keys: there is no text to type into.
+     * is Ctrl, or Cmd on macOS; {@code control} is the Ctrl key itself, the same as {@code shortcut}
+     * except on a Mac. Navigation and zoom take bare keys: there is no text to type into.
+     *
+     * <p>macOS adds Preview's and Finder's keys, because its laptops' function keys are media keys
+     * and its keyboards' Delete is Backspace: Cmd-Backspace trashes (Backspace alone still steps
+     * back, so it never deletes anything), Return renames, Cmd-I shows the properties, Cmd-L turns
+     * left and Ctrl-Cmd-F is full screen. Ctrl-R and Ctrl-Shift-R turn on every platform, as in
+     * GNOME's viewer and Windows' Photos.
      */
-    static @Nullable Command forKey(KeyCode code, boolean shift, boolean shortcut) {
+    static @Nullable Command forKey(KeyCode code, boolean shift, boolean shortcut, boolean control, boolean mac) {
+        if (mac && shortcut && control) return code == KeyCode.F ? FULL_SCREEN : null;
         if (shortcut) {
             return switch (code) {
                 case O -> OPEN;
                 case W, Q -> CLOSE;
                 case P -> shift ? PALETTE : null;
+                case R -> shift ? ROTATE_COUNTERCLOCKWISE : ROTATE_CLOCKWISE;
+                case L -> mac && !shift ? ROTATE_COUNTERCLOCKWISE : null;
+                case I -> mac && !shift ? INFO : null;
+                case BACK_SPACE, DELETE -> mac && !shift ? MOVE_TO_TRASH : null;
                 case COMMA -> SETTINGS;
                 case SLASH -> SHORTCUTS;
                 case EQUALS, PLUS, ADD -> ZOOM_IN;
@@ -227,6 +261,7 @@ enum Command {
             case T -> THUMBNAILS;
             case F1 -> PALETTE;
             case F2 -> RENAME;
+            case ENTER -> mac && !shift ? RENAME : null;
             case F5 -> SLIDESHOW;
             case Z -> KEEP_ZOOM;
             case E -> EDIT;
@@ -235,6 +270,19 @@ enum Command {
             case ESCAPE -> ESCAPE;
             default -> null;
         };
+    }
+
+    /**
+     * Whether Escape, with nothing to leave, closes the window. GNOME's viewer does, and Linux keeps
+     * it; on macOS and Windows no viewer does, and a stray press would lose the user's place.
+     */
+    static boolean escapeCloses(String osName) {
+        String os = osName.toLowerCase(Locale.ROOT);
+        return !os.startsWith("mac") && !os.startsWith("windows");
+    }
+
+    static boolean isMac(String osName) {
+        return osName.toLowerCase(Locale.ROOT).startsWith("mac");
     }
 
     private static KeyCombination key(KeyCode code) {

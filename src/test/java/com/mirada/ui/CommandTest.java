@@ -4,72 +4,127 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CommandTest {
 
     @Test
     void arrowsAndPagesWalkTheFolder() {
-        assertEquals(Command.NEXT, Command.forKey(KeyCode.RIGHT, false, false));
-        assertEquals(Command.NEXT, Command.forKey(KeyCode.PAGE_DOWN, false, false));
-        assertEquals(Command.PREVIOUS, Command.forKey(KeyCode.LEFT, false, false));
-        assertEquals(Command.PREVIOUS, Command.forKey(KeyCode.BACK_SPACE, false, false));
-        assertEquals(Command.FIRST, Command.forKey(KeyCode.HOME, false, false));
-        assertEquals(Command.LAST, Command.forKey(KeyCode.END, false, false));
+        assertEquals(Command.NEXT, key(KeyCode.RIGHT, false, false));
+        assertEquals(Command.NEXT, key(KeyCode.PAGE_DOWN, false, false));
+        assertEquals(Command.PREVIOUS, key(KeyCode.LEFT, false, false));
+        assertEquals(Command.PREVIOUS, key(KeyCode.BACK_SPACE, false, false));
+        assertEquals(Command.FIRST, key(KeyCode.HOME, false, false));
+        assertEquals(Command.LAST, key(KeyCode.END, false, false));
     }
 
     @Test
     void spaceGoesForwardAndShiftSpaceBack() {
-        assertEquals(Command.NEXT, Command.forKey(KeyCode.SPACE, false, false));
-        assertEquals(Command.PREVIOUS, Command.forKey(KeyCode.SPACE, true, false));
+        assertEquals(Command.NEXT, key(KeyCode.SPACE, false, false));
+        assertEquals(Command.PREVIOUS, key(KeyCode.SPACE, true, false));
     }
 
     @Test
     void zoomWorksBareAndWithTheShortcut() {
         for (boolean shortcut : new boolean[] {false, true}) {
-            assertEquals(Command.ZOOM_IN, Command.forKey(KeyCode.EQUALS, false, shortcut));
-            assertEquals(Command.ZOOM_OUT, Command.forKey(KeyCode.MINUS, false, shortcut));
-            assertEquals(Command.FIT, Command.forKey(KeyCode.DIGIT0, false, shortcut));
-            assertEquals(Command.ACTUAL_SIZE, Command.forKey(KeyCode.DIGIT1, false, shortcut));
+            assertEquals(Command.ZOOM_IN, key(KeyCode.EQUALS, false, shortcut));
+            assertEquals(Command.ZOOM_OUT, key(KeyCode.MINUS, false, shortcut));
+            assertEquals(Command.FIT, key(KeyCode.DIGIT0, false, shortcut));
+            assertEquals(Command.ACTUAL_SIZE, key(KeyCode.DIGIT1, false, shortcut));
         }
     }
 
     @Test
     void shiftReversesTheTurn() {
-        assertEquals(Command.ROTATE_CLOCKWISE, Command.forKey(KeyCode.R, false, false));
-        assertEquals(Command.ROTATE_COUNTERCLOCKWISE, Command.forKey(KeyCode.R, true, false));
+        assertEquals(Command.ROTATE_CLOCKWISE, key(KeyCode.R, false, false));
+        assertEquals(Command.ROTATE_COUNTERCLOCKWISE, key(KeyCode.R, true, false));
     }
 
     @Test
     void windowCommandsNeedTheShortcut() {
-        assertEquals(Command.OPEN, Command.forKey(KeyCode.O, false, true));
-        assertEquals(Command.CLOSE, Command.forKey(KeyCode.W, false, true));
-        assertNull(Command.forKey(KeyCode.O, false, false));
-        assertNull(Command.forKey(KeyCode.W, false, false));
+        assertEquals(Command.OPEN, key(KeyCode.O, false, true));
+        assertEquals(Command.CLOSE, key(KeyCode.W, false, true));
+        assertNull(key(KeyCode.O, false, false));
+        assertNull(key(KeyCode.W, false, false));
         // The shortcut does not turn a navigation key into something else.
-        assertNull(Command.forKey(KeyCode.RIGHT, false, true));
+        assertNull(key(KeyCode.RIGHT, false, true));
     }
 
     @Test
     void thePaletteOpensOnShortcutShiftPAndF1() {
-        assertEquals(Command.PALETTE, Command.forKey(KeyCode.P, true, true));
-        assertEquals(Command.PALETTE, Command.forKey(KeyCode.F1, false, false));
-        assertNull(Command.forKey(KeyCode.P, false, true));
+        assertEquals(Command.PALETTE, key(KeyCode.P, true, true));
+        assertEquals(Command.PALETTE, key(KeyCode.F1, false, false));
+        assertNull(key(KeyCode.P, false, true));
     }
 
     /** The chord a command shows, in the palette and the context menu, must be one that runs it. */
     @Test
     void everyShownChordRunsItsCommand() {
-        for (Command command : Command.values()) {
-            if (!(command.chord() instanceof KeyCodeCombination chord)) continue; // + and -, by character
-            boolean shift = chord.getShift() == KeyCombination.ModifierValue.DOWN;
-            boolean shortcut = chord.getShortcut() == KeyCombination.ModifierValue.DOWN;
-            assertEquals(command, Command.forKey(chord.getCode(), shift, shortcut), command.name());
+        for (boolean mac : new boolean[] {false, true}) {
+            for (Command command : Command.values()) {
+                if (!(command.chord(mac) instanceof KeyCodeCombination chord)) continue; // + and -, by character
+                boolean shift = chord.getShift() == KeyCombination.ModifierValue.DOWN;
+                boolean shortcut = chord.getShortcut() == KeyCombination.ModifierValue.DOWN;
+                boolean control = mac ? chord.getControl() == KeyCombination.ModifierValue.DOWN : shortcut;
+                assertEquals(
+                        command,
+                        Command.forKey(chord.getCode(), shift, shortcut, control, mac),
+                        command.name() + (mac ? " on macOS" : ""));
+            }
         }
+    }
+
+    @Test
+    void aMacTrashesWithCommandBackspaceAndBackspaceAloneStillStepsBack() {
+        assertEquals(Command.MOVE_TO_TRASH, mac(KeyCode.BACK_SPACE, false, true, false));
+        assertEquals(Command.PREVIOUS, mac(KeyCode.BACK_SPACE, false, false, false));
+        assertEquals(Command.MOVE_TO_TRASH, mac(KeyCode.DELETE, false, false, false));
+        assertEquals(
+                new KeyCodeCombination(KeyCode.BACK_SPACE, KeyCombination.SHORTCUT_DOWN),
+                Command.MOVE_TO_TRASH.chord(true));
+        // Elsewhere Ctrl-Backspace is a text key, never a delete.
+        assertNull(key(KeyCode.BACK_SPACE, false, true));
+    }
+
+    @Test
+    void aMacHasPreviewsAndFindersKeys() {
+        assertEquals(Command.RENAME, mac(KeyCode.ENTER, false, false, false));
+        assertEquals(Command.INFO, mac(KeyCode.I, false, true, false));
+        assertEquals(Command.ROTATE_CLOCKWISE, mac(KeyCode.R, false, true, false));
+        assertEquals(Command.ROTATE_COUNTERCLOCKWISE, mac(KeyCode.L, false, true, false));
+        assertEquals(Command.FULL_SCREEN, mac(KeyCode.F, false, true, true));
+        // Ctrl-Cmd takes nothing else.
+        assertNull(mac(KeyCode.O, false, true, true));
+        // The function keys still work for those who have them.
+        assertEquals(Command.RENAME, mac(KeyCode.F2, false, false, false));
+    }
+
+    @Test
+    void returnAndTheMacChordsAreNotOursElsewhere() {
+        assertNull(key(KeyCode.ENTER, false, false));
+        assertNull(key(KeyCode.L, false, true));
+        assertNull(key(KeyCode.I, false, true));
+        assertEquals(new KeyCodeCombination(KeyCode.F2), Command.RENAME.chord(false));
+        assertEquals(new KeyCodeCombination(KeyCode.DELETE), Command.MOVE_TO_TRASH.chord(false));
+    }
+
+    @Test
+    void ctrlRTurnsEverywhere() {
+        assertEquals(Command.ROTATE_CLOCKWISE, key(KeyCode.R, false, true));
+        assertEquals(Command.ROTATE_COUNTERCLOCKWISE, key(KeyCode.R, true, true));
+    }
+
+    @Test
+    void escapeClosesTheWindowOnlyOnLinux() {
+        assertTrue(Command.escapeCloses("Linux"));
+        assertFalse(Command.escapeCloses("Mac OS X"));
+        assertFalse(Command.escapeCloses("Windows 11"));
     }
 
     @Test
@@ -86,20 +141,20 @@ class CommandTest {
 
     @Test
     void shiftArrowsPanAndBareArrowsStep() {
-        assertEquals(Command.PAN_LEFT, Command.forKey(KeyCode.LEFT, true, false));
-        assertEquals(Command.PAN_RIGHT, Command.forKey(KeyCode.RIGHT, true, false));
-        assertEquals(Command.PAN_UP, Command.forKey(KeyCode.UP, false, false));
-        assertEquals(Command.PAN_DOWN, Command.forKey(KeyCode.DOWN, true, false));
-        assertEquals(Command.NEXT, Command.forKey(KeyCode.RIGHT, false, false));
+        assertEquals(Command.PAN_LEFT, key(KeyCode.LEFT, true, false));
+        assertEquals(Command.PAN_RIGHT, key(KeyCode.RIGHT, true, false));
+        assertEquals(Command.PAN_UP, key(KeyCode.UP, false, false));
+        assertEquals(Command.PAN_DOWN, key(KeyCode.DOWN, true, false));
+        assertEquals(Command.NEXT, key(KeyCode.RIGHT, false, false));
     }
 
     @Test
     void fileKeysAreTheDesktopsOwn() {
-        assertEquals(Command.MOVE_TO_TRASH, Command.forKey(KeyCode.DELETE, false, false));
-        assertEquals(Command.RENAME, Command.forKey(KeyCode.F2, false, false));
-        assertEquals(Command.SLIDESHOW, Command.forKey(KeyCode.F5, false, false));
-        assertEquals(Command.SHORTCUTS, Command.forKey(KeyCode.SLASH, true, true));
-        assertEquals(Command.KEEP_ZOOM, Command.forKey(KeyCode.Z, false, false));
+        assertEquals(Command.MOVE_TO_TRASH, key(KeyCode.DELETE, false, false));
+        assertEquals(Command.RENAME, key(KeyCode.F2, false, false));
+        assertEquals(Command.SLIDESHOW, key(KeyCode.F5, false, false));
+        assertEquals(Command.SHORTCUTS, key(KeyCode.SLASH, true, true));
+        assertEquals(Command.KEEP_ZOOM, key(KeyCode.Z, false, false));
     }
 
     @Test
@@ -144,6 +199,16 @@ class CommandTest {
 
     @Test
     void otherKeysAreNotOurs() {
-        assertNull(Command.forKey(KeyCode.A, false, false));
+        assertNull(key(KeyCode.A, false, false));
+    }
+
+    /** A press on Linux or Windows, where the shortcut is the Ctrl key. */
+    private static @Nullable Command key(KeyCode code, boolean shift, boolean shortcut) {
+        return Command.forKey(code, shift, shortcut, shortcut, false);
+    }
+
+    /** A press on macOS: {@code shortcut} is Cmd, {@code control} the Ctrl key. */
+    private static @Nullable Command mac(KeyCode code, boolean shift, boolean shortcut, boolean control) {
+        return Command.forKey(code, shift, shortcut, control, true);
     }
 }

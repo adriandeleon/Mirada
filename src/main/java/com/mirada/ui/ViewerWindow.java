@@ -73,11 +73,13 @@ public final class ViewerWindow {
     /** Reads the sidebar's details; a virtual thread per read, as the metadata reads in ImageCache. */
     private static final Executor DETAILS_READER = Executors.newVirtualThreadPerTaskExecutor();
 
-    private static final String EMPTY_HINT = "Open an image with Ctrl+O, or drop one here";
+    /** Whether Escape closes the window once there is nothing to leave: Linux's habit, not the others'. */
+    private static final boolean ESCAPE_CLOSES = Command.escapeCloses(System.getProperty("os.name", ""));
 
     private final Stage stage;
     private final ImageViewport viewport = new ImageViewport();
-    private final Label placeholder = new Label(EMPTY_HINT);
+    private final Label placeholder =
+            new Label("Open an image with " + Command.OPEN.chord().getDisplayText() + ", or drop one here");
     private final BorderPane root;
     private final TitleBar titleBar;
     /** Built on the first pointer movement over the image: hidden until then anyway. */
@@ -203,6 +205,7 @@ public final class ViewerWindow {
         scene.addEventFilter(KeyEvent.KEY_PRESSED, this::onKey);
         scene.setOnDragOver(this::onDragOver);
         scene.setOnDragDropped(this::onDragDropped);
+        viewport.setOnSwipe(step -> run(step > 0 ? Command.NEXT : Command.PREVIOUS));
         viewport.setOnContextMenuRequested(e -> contextMenu().show(viewport, e.getScreenX(), e.getScreenY()));
 
         stage.setScene(scene);
@@ -433,7 +436,8 @@ public final class ViewerWindow {
             if (open.onKey(e)) e.consume();
             return;
         }
-        Command command = Command.forKey(e.getCode(), e.isShiftDown(), e.isShortcutDown());
+        Command command =
+                Command.forKey(e.getCode(), e.isShiftDown(), e.isShortcutDown(), e.isControlDown(), Command.MAC);
         // While the palette is up, keys are its own (typing "r" must not rotate the image); only its
         // chord reaches here, to close it again.
         if (palette.isShowing()) {
@@ -472,7 +476,7 @@ public final class ViewerWindow {
                     stopSlideshow();
                 } else if (stage.isFullScreen()) {
                     stage.setFullScreen(false);
-                } else {
+                } else if (ESCAPE_CLOSES) {
                     stage.close();
                 }
             }

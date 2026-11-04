@@ -9,6 +9,19 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 - **macOS: an image opened from Finder shows**: a double-click, "Open With" or a file dropped on the
   Dock icon opened an empty window in 0.1.0, because the file never reached Mirada.
+- **macOS: Move to Trash has a key**: ⌘⌫, as in Finder. Its Delete key is Backspace, which steps
+  back an image and never deletes.
+- **macOS and Windows: Escape no longer closes the window**; it stops the slideshow and leaves full
+  screen. Linux keeps GNOME's habit.
+
+### Changed
+
+- **A trackpad pans and swipes**: pinch to zoom, two fingers to move about a zoomed-in image, and a
+  sideways swipe for the next or previous image when there is nothing to pan. A mouse wheel still
+  zooms, and Ctrl or ⌘ with any scroll zooms (a Windows touchpad's pinch arrives that way).
+- **macOS has Preview's and Finder's keys** besides Mirada's own: Return renames, ⌘I shows the
+  properties, ⌘R and ⌘L rotate, ⌃⌘F is full screen; the function keys still work. Ctrl+R and
+  Ctrl+Shift+R rotate on every platform.
 
 ### Added
 

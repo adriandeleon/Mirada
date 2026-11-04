@@ -50,7 +50,7 @@ A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an en
 | `com.mirada.edit` | The editor's rules and pixel work, none of it UI: the edit and its order (`Edit`: turn, flip, crop), the crop as fractions (`Crop`) and as a box being dragged (`CropBox`), the shapes (`AspectRatio`), turns and mirrors on ARGB ints (`Raster`), undo and redo (`History`), the EXIF and colour profile a saved edit keeps (`ExifBlock`, `IccProfile`, both reading through `Containers`), and writing JPEG, PNG, TIFF or BMP (`Encoder`) |
 | `com.mirada.os` | Platform glue: the macOS open-file handler (`MacOpenFiles`); moving a file to the desktop's trash, and the one rule for `java.awt.headless` (`Trash`) |
 | `com.mirada.settings` | `~/.mirada/settings.properties` (`MIRADA_CONFIG_DIR` moves it): theme, what opens at start, how long the floating controls stay; clamped on read, written through on every change |
-| `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`); the editor (`Editor`, `CropView`); every command with its keys, name, description and group (`Command`), the command palette (`CommandPalette`), `AboutWindow`, `SettingsWindow`, `ShortcutsWindow`, the rename rules (`Renaming`), the theme, the symbolic icons (`Icons`) |
+| `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`, `Scrolling`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`); the editor (`Editor`, `CropView`); every command with its keys, name, description and group (`Command`), the command palette (`CommandPalette`), `AboutWindow`, `SettingsWindow`, `ShortcutsWindow`, the rename rules (`Renaming`), the theme, the symbolic icons (`Icons`) |
 
 Six decoders (`ImageFormats.Decoder`, by extension). JavaFX's own `Image` decodes BMP, GIF
 (animated) and PNG in its background thread, and the JPEGs libjpeg-turbo declines; a decoder with
@@ -252,7 +252,7 @@ a prefetched neighbour is 2–8 ms for every format.
 - **Escape is ours, not the stage's.** JavaFX's full-screen exit key would leave full screen and
   then let the same press reach the key filter, which would close the window.
   `setFullScreenExitKeyCombination(NO_MATCH)` hands it to `Command.ESCAPE`: leave full screen if in
-  it, otherwise close.
+  it, otherwise close — on Linux only (`Command.escapeCloses`); macOS and Windows keep the window.
 - **The cache holds full resolution, so it is small.** A decoded image is four bytes a pixel: a
   48-megapixel photo is about 190 MB. Three entries (the current image and one either side).
   Downsampled previews for the fitted view would let it hold more; not done.
@@ -345,7 +345,13 @@ a prefetched neighbour is 2–8 ms for every format.
   close it. Escape is the palette's then, not the window's.
 - **Every command has one name and one chord, in `Command`.** The key filter (`forKey`), the
   palette and the context menu all read from it; `CommandTest.everyShownChordRunsItsCommand` checks
-  the chord a command shows is one that runs it. A command that cannot run (`Command.unavailable`)
+  the chord a command shows is one that runs it, on both platforms. macOS shows its own for two
+  (`chord(boolean mac)`): ⌘⌫ to trash, as a Mac's Delete key is Backspace, which steps back; Return
+  to rename, as F2 is a brightness key. `forKey` takes the Ctrl key apart from the shortcut for ⌃⌘F.
+- **A scroll is a wheel's or a trackpad's** (`Scrolling`): macOS reports the fingers
+  (`ScrollEvent.getTouchCount`), and those scrolls pan, or swipe once a gesture when there is nothing
+  to pan; a wheel zooms. Windows and Linux touchpads report no fingers and so still zoom; Windows
+  sends a pinch as Ctrl+wheel. Untested on a real Mac trackpad. A command that cannot run (`Command.unavailable`)
   is greyed with its reason in the palette and disabled in the context menu.
 - **Screenshots on this Wayland desktop go through XWayland.** JavaFX has no Wayland backend, so
   the window is an X window: `xwininfo -root -tree | grep com.mirada.App` finds it and

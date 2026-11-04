@@ -1,5 +1,7 @@
 package com.mirada.ui;
 
+import java.util.function.IntConsumer;
+
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -10,6 +12,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.ZoomEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.Rectangle;
 
@@ -25,7 +28,9 @@ import org.jspecify.annotations.Nullable;
  * fitted}), and the image's top-left corner on screen ({@code offsetX}, {@code offsetY}) as the
  * upright, turned image would stand.
  *
- * <p>Wheel zooms about the pointer, drag pans, double-click toggles between fitting and 100 %.
+ * <p>Wheel and pinch zoom about the pointer, drag pans, double-click toggles between fitting and
+ * 100 %. A trackpad's scroll pans what is zoomed in and otherwise swipes to the next image
+ * ({@link Scrolling}), and so does a three-finger swipe where macOS sends one.
  */
 public final class ImageViewport extends Region {
 
@@ -53,6 +58,12 @@ public final class ImageViewport extends Region {
     private double offsetY;
     private double dragX;
     private double dragY;
+    /** How far this trackpad gesture has swiped, and whether it has stepped already: once a gesture. */
+    private double swipeX;
+
+    private double swipeY;
+    private boolean swiped;
+    private @Nullable IntConsumer onSwipe;
 
     public ImageViewport() {
         getStyleClass().add("viewport");
@@ -66,6 +77,14 @@ public final class ImageViewport extends Region {
         setClip(clip);
 
         setOnScroll(this::onScroll);
+        addEventHandler(ScrollEvent.SCROLL_STARTED, e -> {
+            swipeX = 0;
+            swipeY = 0;
+            swiped = false;
+        });
+        setOnZoom(this::onZoom);
+        setOnSwipeLeft(e -> swipe(1));
+        setOnSwipeRight(e -> swipe(-1));
         setOnMousePressed(this::onPressed);
         setOnMouseDragged(this::onDragged);
         setOnMouseReleased(e -> setCursor(Cursor.DEFAULT));
@@ -100,6 +119,11 @@ public final class ImageViewport extends Region {
 
     public void setKeepZoom(boolean keep) {
         keepZoom = keep;
+    }
+
+    /** What a swipe does: given +1 for the next image, -1 for the previous. */
+    public void setOnSwipe(IntConsumer step) {
+        onSwipe = step;
     }
 
     /**
@@ -225,9 +249,42 @@ public final class ImageViewport extends Region {
     }
 
     private void onScroll(ScrollEvent e) {
-        if (e.getDeltaY() == 0 || image == null) return;
-        zoomTo(scale.get() * Math.pow(WHEEL_RATE, e.getDeltaY()), e.getX(), e.getY());
+        if (image == null) return;
+        // macOS counts the fingers on a trackpad; the glide after they lift is inertia.
+        boolean trackpad = e.getTouchCount() > 0 || e.isInertia();
+        switch (Scrolling.of(trackpad, e.isShortcutDown() || e.isControlDown(), pannable())) {
+            case ZOOM -> {
+                if (e.getDeltaY() == 0) return;
+                zoomTo(scale.get() * Math.pow(WHEEL_RATE, e.getDeltaY()), e.getX(), e.getY());
+            }
+            case PAN -> {
+                offsetX += e.getDeltaX();
+                offsetY += e.getDeltaY();
+                requestLayout();
+            }
+            case SWIPE -> {
+                if (e.isInertia() || swiped) break;
+                swipeX += e.getDeltaX();
+                swipeY += e.getDeltaY();
+                int step = Scrolling.swipeStep(swipeX, swipeY);
+                if (step != 0) {
+                    swiped = true;
+                    swipe(step);
+                }
+            }
+        }
         e.consume();
+    }
+
+    private void onZoom(ZoomEvent e) {
+        if (image == null || e.getZoomFactor() <= 0) return;
+        zoomTo(scale.get() * e.getZoomFactor(), e.getX(), e.getY());
+        e.consume();
+    }
+
+    private void swipe(int step) {
+        IntConsumer handler = onSwipe;
+        if (handler != null && image != null) handler.accept(step);
     }
 
     private void onPressed(MouseEvent e) {
