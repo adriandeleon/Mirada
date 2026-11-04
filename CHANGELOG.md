@@ -8,7 +8,8 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 ### Fixed
 
 - **macOS: an image opened from Finder shows**: a double-click, "Open With" or a file dropped on the
-  Dock icon opened an empty window in 0.1.0, because the file never reached Mirada.
+  Dock icon opened an empty window in 0.1.0, because the file never reached Mirada. On an Intel
+  Mac, the file reaches Mirada only when it is already open.
 - **macOS: Move to Trash has a key**: ⌘⌫, as in Finder. Its Delete key is Backspace, which steps
   back an image and never deletes.
 - **macOS and Windows: Escape no longer closes the window**; it stops the slideshow and leaves full

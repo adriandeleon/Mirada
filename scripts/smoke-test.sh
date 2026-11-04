@@ -43,6 +43,7 @@ if [ -n "$bundle" ]; then
         -a "$bundle" "$first" &
     waiting=$!
     waited=0
+    retried=""
     while [ "$waited" -lt 120 ] && kill -0 "$waiting" 2>/dev/null; do
         sleep 1
         waited=$((waited + 1))
@@ -51,6 +52,7 @@ if [ -n "$bundle" ]; then
         if [ "$waited" = 30 ] && ! grep -q '^\[perf\] open-files' "$log"; then
             echo "[smoke] nothing opened after 30s: opening $(basename "$first") again in the running app"
             open -a "$bundle" "$first" || echo "[smoke] the second open failed: $?"
+            retried=1
         fi
     done
     if kill -0 "$waiting" 2>/dev/null; then
@@ -84,5 +86,17 @@ if [ "$steps" -ne $((images - 1)) ]; then
     echo "::error::showed $((steps + 1)) of $images images (the first failed, or the run stopped)"
     printf '%s\n' "$out" | tail -20
     exit 1
+fi
+# The file that launched the app must arrive with the launch. The JVM image (Intel) misses it:
+# jpackage's launcher starts Java on a second thread while the main thread waits without AppKit,
+# and the event comes and goes in between. It opens files sent to it once running, which is what
+# the retry shows; the native image must not need the retry.
+if [ -n "${retried:-}" ]; then
+    if [ -d "$bundle/Contents/runtime" ]; then
+        echo "::warning::the JVM image missed the file it was launched with; the running app received it"
+    else
+        echo "::error::the file that launched the app never arrived; only the running app received it"
+        exit 1
+    fi
 fi
 echo "smoke test: all $images images shown by the packaged app"

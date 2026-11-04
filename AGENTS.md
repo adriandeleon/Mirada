@@ -324,6 +324,10 @@ a prefetched neighbour is 2–8 ms for every format.
   are in the native metadata by hand: the tracing agent never sees a Finder event. Proved on CI's
   Macs, not by hand: the smoke test given `Mirada.app` opens a fixture through `open -a`, then
   again in the running app. If JavaFX starts calling `openFiles:` again, check this is not doubled.
+  **The JVM image (Intel) misses the launching file**: jpackage's launcher (`JLI_Launch`) starts
+  Java on a second thread while the main thread waits without AppKit, and the event comes and goes
+  in between. Files sent to a running Mirada arrive; the smoke test warns there and fails the
+  native image.
 - **The macOS menu bar is JavaFX's system `MenuBar`, the application menu is glass's.** `MacMenus`
   builds File, Image, View, Go and Help from `Command` after the first paint, unmanaged in the scene
   (it draws nothing there). Only chords with Cmd are key equivalents: a bare one could be taken by
@@ -402,4 +406,4 @@ Signing:
 Developer ID and notarization on macOS (wired, waiting for the secrets), a code-signing certificate
 on Windows. An AppImage; a Homebrew cask (Homebrew takes only notarized apps); winget-pkgs has not been sent Mirada yet. XMP in a saved edit, EXIF and the colour profile in a
 saved TIFF, a profile for a HEIF with nclx colours or a JPEG XL; a Brotli-compressed JPEG XL Exif box. Trash on Windows and macOS is untested. HEIC grids are untested against a real iPhone photo. The app itself has not been run on Windows
-or macOS by hand; CI only tests there, and the macOS Finder double-click is tested only through `open -a` on CI.
+or macOS by hand; CI only tests there, and the macOS Finder double-click is tested only through `open -a` on CI; on an Intel Mac (the JVM image) a launch from Finder still opens an empty window.
