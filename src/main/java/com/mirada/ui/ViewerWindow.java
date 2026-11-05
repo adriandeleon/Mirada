@@ -690,12 +690,13 @@ public final class ViewerWindow {
                 Platform.runLater(() -> {
                     FolderImages rest = folder.without(file);
                     folder = rest;
-                    say("Moved " + fileName(file) + " to the Trash");
+                    say("Moved " + fileName(file) + " to the " + Command.trash(Command.WINDOWS));
                     if (rest.isEmpty()) showMessage("No images left in this folder");
                     else showCurrent();
                 });
             } catch (IOException | RuntimeException e) {
-                Platform.runLater(() -> say("Couldn't move " + fileName(file) + " to the Trash: " + e.getMessage()));
+                Platform.runLater(() -> say("Couldn't move " + fileName(file) + " to the "
+                        + Command.trash(Command.WINDOWS) + ": " + e.getMessage()));
             }
         });
     }

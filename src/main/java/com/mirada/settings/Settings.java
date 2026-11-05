@@ -18,8 +18,9 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Mirada's settings: theme, what opens at start, how long the floating controls stay, the folder's
- * order, whether stepping keeps the zoom, and the slideshow's pace. In {@code ~/.mirada/settings.properties} ({@code MIRADA_CONFIG_DIR} moves the
- * folder, for tests and timing runs), Termina's way: a plain file meant to be hand-edited, every
+ * order, whether stepping keeps the zoom, and the slideshow's pace. In {@code settings.properties},
+ * in the platform's folder for it ({@link #folder}; {@code MIRADA_CONFIG_DIR} moves it, for tests
+ * and timing runs), Termina's way: a plain file meant to be hand-edited, every
  * value clamped on read as well as on write, so a bad edit cannot break the next start, and every
  * change written through at once (the settings window has no OK button).
  *
@@ -64,14 +65,64 @@ public final class Settings {
         this.file = file;
     }
 
-    /** {@code ~/.mirada/settings.properties}, or under {@code MIRADA_CONFIG_DIR} when it is set. */
+    /**
+     * The settings file in the platform's folder ({@link #folder}), or under {@code
+     * MIRADA_CONFIG_DIR} when it is set. A file left in {@code ~/.mirada} by 0.1.0 on macOS or
+     * Windows is moved there the first time ({@link #movedFrom}).
+     */
     public static Path defaultFile() {
-        return defaultFile(System.getenv("MIRADA_CONFIG_DIR"), System.getProperty("user.home", "."));
+        String override = System.getenv("MIRADA_CONFIG_DIR");
+        String home = System.getProperty("user.home", ".");
+        Path file = folder(override, home, System.getProperty("os.name", ""), System.getenv("APPDATA"))
+                .resolve(FILE_NAME);
+        if (override != null && !override.isBlank()) return file;
+        return movedFrom(Path.of(home, ".mirada", FILE_NAME), file);
     }
 
-    static Path defaultFile(@Nullable String override, String home) {
-        Path folder = override != null && !override.isBlank() ? Path.of(override.trim()) : Path.of(home, ".mirada");
-        return folder.resolve("settings.properties");
+    static final String FILE_NAME = "settings.properties";
+
+    /**
+     * Where each platform keeps an application's settings: {@code ~/Library/Application
+     * Support/Mirada} on macOS, {@code %APPDATA%\Mirada} on Windows (its roaming folder, which
+     * travels with the user's account), {@code ~/.mirada} elsewhere, as Termina and Torrenta do.
+     * {@code override} wins when set.
+     */
+    static Path folder(@Nullable String override, String home, String osName, @Nullable String appData) {
+        if (override != null && !override.isBlank()) return Path.of(override.trim());
+        String os = osName.toLowerCase(Locale.ROOT);
+        if (os.startsWith("mac")) return Path.of(home, "Library", "Application Support", "Mirada");
+        if (os.startsWith("windows")) {
+            return appData != null && !appData.isBlank()
+                    ? Path.of(appData.trim(), "Mirada")
+                    : Path.of(home, "AppData", "Roaming", "Mirada");
+        }
+        return Path.of(home, ".mirada");
+    }
+
+    /**
+     * {@code file}, after moving the settings there from {@code old} if only {@code old} has them;
+     * {@code old} itself if the move fails, so the settings are never lost to a start. The emptied
+     * {@code ~/.mirada} is removed when nothing else is in it. One check when there is nothing to
+     * move, and none on Linux, where the two are the same.
+     */
+    static Path movedFrom(Path old, Path file) {
+        if (old.equals(file) || Files.exists(file) || !Files.isRegularFile(old)) return file;
+        try {
+            Path folder = file.getParent();
+            if (folder != null) Files.createDirectories(folder);
+            Files.move(old, file);
+        } catch (IOException e) {
+            return old;
+        }
+        Path oldFolder = old.getParent();
+        if (oldFolder != null) {
+            try {
+                Files.deleteIfExists(oldFolder);
+            } catch (IOException e) {
+                // Something else is in it: it stays.
+            }
+        }
+        return file;
     }
 
     public Path file() {

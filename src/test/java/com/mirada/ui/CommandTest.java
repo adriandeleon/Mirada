@@ -121,6 +121,13 @@ class CommandTest {
     }
 
     @Test
+    void windowsCallsTheTrashTheRecycleBin() {
+        assertEquals("Move to Recycle Bin", Command.MOVE_TO_TRASH.label(true));
+        assertEquals("Move to Trash", Command.MOVE_TO_TRASH.label(false));
+        assertEquals("Rename…", Command.RENAME.label(true));
+    }
+
+    @Test
     void escapeClosesTheWindowOnlyOnLinux() {
         assertTrue(Command.escapeCloses("Linux"));
         assertFalse(Command.escapeCloses("Mac OS X"));

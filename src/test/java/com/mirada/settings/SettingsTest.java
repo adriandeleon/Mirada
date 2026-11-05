@@ -80,9 +80,48 @@ class SettingsTest {
     }
 
     @Test
-    void theFileLivesInDotMiradaUnlessMoved() {
-        assertEquals(Path.of("/home/a/.mirada/settings.properties"), Settings.defaultFile(null, "/home/a"));
-        assertEquals(Path.of("/tmp/x/settings.properties"), Settings.defaultFile("/tmp/x", "/home/a"));
-        assertEquals(Path.of("/home/a/.mirada/settings.properties"), Settings.defaultFile("  ", "/home/a"));
+    void eachPlatformKeepsTheSettingsInItsOwnFolder() {
+        assertEquals(Path.of("/home/a/.mirada"), Settings.folder(null, "/home/a", "Linux", null));
+        assertEquals(
+                Path.of("/Users/a/Library/Application Support/Mirada"),
+                Settings.folder(null, "/Users/a", "Mac OS X", null));
+        assertEquals(
+                Path.of("C:/Users/a/AppData/Roaming", "Mirada"),
+                Settings.folder(null, "C:/Users/a", "Windows 11", "C:/Users/a/AppData/Roaming"));
+        // Without APPDATA, where it would be.
+        assertEquals(
+                Path.of("C:/Users/a", "AppData", "Roaming", "Mirada"),
+                Settings.folder(null, "C:/Users/a", "Windows 11", null));
+    }
+
+    @Test
+    void theOverrideWinsEverywhere() {
+        assertEquals(Path.of("/tmp/x"), Settings.folder("/tmp/x", "/home/a", "Mac OS X", null));
+        assertEquals(Path.of("/home/a/.mirada"), Settings.folder("  ", "/home/a", "Linux", null));
+    }
+
+    @Test
+    void settingsLeftInDotMiradaMoveToTheNewFolderOnce(@TempDir Path home) throws IOException {
+        Path old = home.resolve(".mirada").resolve(Settings.FILE_NAME);
+        Files.createDirectories(old.getParent());
+        Files.writeString(old, "theme=dark\n");
+        Path now = home.resolve("Library/Application Support/Mirada").resolve(Settings.FILE_NAME);
+
+        assertEquals(now, Settings.movedFrom(old, now));
+        assertEquals("theme=dark\n", Files.readString(now));
+        assertFalse(Files.exists(old.getParent()), "the emptied folder goes");
+        // Done once: the new file is not replaced by a later old one.
+        Files.createDirectories(old.getParent());
+        Files.writeString(old, "theme=light\n");
+        assertEquals(now, Settings.movedFrom(old, now));
+        assertEquals("theme=dark\n", Files.readString(now));
+    }
+
+    @Test
+    void nothingToMoveIsTheNewFile(@TempDir Path home) {
+        Path old = home.resolve(".mirada").resolve(Settings.FILE_NAME);
+        Path now = home.resolve("Mirada").resolve(Settings.FILE_NAME);
+        assertEquals(now, Settings.movedFrom(old, now));
+        assertEquals(old, Settings.movedFrom(old, old));
     }
 }

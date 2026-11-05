@@ -60,7 +60,7 @@ enum Command {
     MOVE_TO_TRASH(
             "Move to Trash",
             "Moves the image to the Trash, from where it can be put back, and shows the next.",
-            "delete remove bin recycle",
+            "delete remove bin recycle trash",
             key(KeyCode.DELETE)),
     SORT_BY_NAME("Sort by Name", "Orders the folder by file name, as a person counts.", "order", none()),
     SORT_BY_DATE(
@@ -110,6 +110,10 @@ enum Command {
     /** Whether this is macOS, read once: its keys differ ({@link #forKey}, {@link #chord(boolean)}). */
     static final boolean MAC = isMac(System.getProperty("os.name", ""));
 
+    /** Whether this is Windows, read once: its trash is the Recycle Bin ({@link #label(boolean)}). */
+    static final boolean WINDOWS =
+            System.getProperty("os.name", "").toLowerCase(Locale.ROOT).startsWith("windows");
+
     private final String label;
     private final String description;
     private final String keywords;
@@ -123,12 +127,22 @@ enum Command {
     }
 
     String label() {
-        return label;
+        return label(WINDOWS);
+    }
+
+    /** The label on Windows or elsewhere: Windows calls its trash the Recycle Bin. Testable. */
+    String label(boolean windows) {
+        return this == MOVE_TO_TRASH ? "Move to " + trash(windows) : label;
+    }
+
+    /** What the desktop calls the place a deleted file can be put back from. */
+    static String trash(boolean windows) {
+        return windows ? "Recycle Bin" : "Trash";
     }
 
     /** One line, shown under the palette's list for the highlighted command. */
     String description() {
-        return description;
+        return this == MOVE_TO_TRASH ? description.replace("Trash", trash(WINDOWS)) : description;
     }
 
     /** Words the palette also finds the command by, besides its label. */
