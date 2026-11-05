@@ -285,6 +285,10 @@
                             <url>https://github.com/adriandeleon/Mirada/releases/download/${codecs.release}/mirada-codecs-${codecs.platform}.zip</url>
                             <sha256>${codecs.sha256}</sha256>
                             <unpack>true</unpack>
+                            <!-- The default, 3 s, failed every job of a release run on a day GitHub's
+                                 release downloads were slow. -->
+                            <readTimeOut>60000</readTimeOut>
+                            <retries>4</retries>
                             <outputDirectory>${codecs.dir}</outputDirectory>
                             <skip>${codecs.skip}</skip>
                         </configuration>
