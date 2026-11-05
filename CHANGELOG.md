@@ -20,6 +20,8 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 - **A trackpad pans and swipes**: pinch to zoom, two fingers to move about a zoomed-in image, and a
   sideways swipe for the next or previous image when there is nothing to pan. A mouse wheel still
   zooms, and Ctrl or ⌘ with any scroll zooms (a Windows touchpad's pinch arrives that way).
+- **The header follows the platform**: no full-screen button on a Mac, whose green window button
+  is one, and the title on the left on Windows, as its own title bars have it.
 - **macOS has Preview's and Finder's keys** besides Mirada's own: Return renames, ⌘I shows the
   properties, ⌘R and ⌘L rotate, ⌃⌘F is full screen; the function keys still work. Ctrl+R and
   Ctrl+Shift+R rotate on every platform.

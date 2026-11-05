@@ -1,5 +1,6 @@
 package com.mirada.ui;
 
+import java.util.Locale;
 import java.util.function.Consumer;
 
 import javafx.application.ConditionalFeature;
@@ -23,10 +24,12 @@ import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * The window's top row, GNOME Image Viewer's: full screen on the left, the file name in the middle,
- * rotate, info and the main menu on the right (no menu on a Mac, which has its menu bar), and the
- * window buttons after them.
+ * rotate, info and the main menu on the right, and the window buttons after them. macOS and Windows
+ * get their own conventions ({@link Layout}).
  *
  * <p>Where the platform supports JavaFX 27's extended windows this is a {@link HeaderBar}: the stage
  * gives up its title bar and keeps its window buttons, drawn over the right of this row. Termina's
@@ -36,6 +39,24 @@ import javafx.stage.StageStyle;
  * unless their height is set to zero ({@link #fullScreen}).
  */
 final class TitleBar {
+
+    /**
+     * What the row holds on a platform. A Mac has no full-screen button, as its green window button
+     * is one and sits beside it, and no menu, as the menu bar holds its items ({@link MacMenus});
+     * its title stays centred, as AppKit centres one. Windows puts the title on the left, after the
+     * button, as its own title bars do. Linux is GNOME's.
+     */
+    record Layout(boolean fullScreenButton, boolean menuButton, boolean titleLeft) {
+
+        static Layout of(String osName) {
+            String os = osName.toLowerCase(Locale.ROOT);
+            if (os.startsWith("mac")) return new Layout(false, false, false);
+            if (os.startsWith("windows")) return new Layout(true, true, true);
+            return new Layout(true, true, false);
+        }
+    }
+
+    private static final Layout LAYOUT = Layout.of(System.getProperty("os.name", ""));
 
     private final Stage stage;
     private final Label title = new Label();
@@ -73,24 +94,27 @@ final class TitleBar {
         menu.getStyleClass().addAll("header-button", "flat", "no-arrow");
         for (Node node : new Node[] {fullScreen, rotate, info, menu}) node.setFocusTraversable(false);
 
-        // On a Mac the menu bar along the top of the screen holds the menu's items (MacMenus).
-        HBox right = Command.MAC ? new HBox(4, rotate, info) : new HBox(4, rotate, info, menu);
+        HBox right = new HBox(4, rotate, info);
+        if (LAYOUT.menuButton()) right.getChildren().add(menu);
         right.setAlignment(Pos.CENTER_RIGHT);
-        HBox left = new HBox(4, fullScreen);
+        HBox left = new HBox(4);
+        if (LAYOUT.fullScreenButton()) left.getChildren().add(fullScreen);
+        if (LAYOUT.titleLeft()) left.getChildren().add(title);
         left.setAlignment(Pos.CENTER_LEFT);
+        @Nullable Label centre = LAYOUT.titleLeft() ? null : title;
         if (extended) {
             if (!stage.isShowing()) stage.initStyle(StageStyle.EXTENDED);
             HeaderBar bar = new HeaderBar();
             bar.getStyleClass().add("header-bar");
             bar.setLeft(left);
-            bar.setCenter(title);
+            bar.setCenter(centre);
             bar.setRight(right);
             // The bar drags the window by its background; the title is a label, so it is marked to
             // drag too: a title bar you cannot drag by its title is a trap.
             HeaderBar.setDragType(title, HeaderDragType.DRAGGABLE);
             row = bar;
         } else {
-            BorderPane plain = new BorderPane(title, null, right, null, left);
+            BorderPane plain = new BorderPane(centre, null, right, null, left);
             plain.getStyleClass().addAll("header-bar", "header-row");
             row = plain;
         }
@@ -104,7 +128,7 @@ final class TitleBar {
         fullScreen.setTooltip(new Tooltip("Full Screen (F)"));
         rotate.setTooltip(new Tooltip("Rotate Right (R); Shift-click rotates left"));
         info.setTooltip(new Tooltip("Image Properties (I)"));
-        if (Command.MAC) return; // the menu is not shown there
+        if (!LAYOUT.menuButton()) return;
         menu.setTooltip(new Tooltip("Main Menu"));
         menu.getItems()
                 .addAll(
