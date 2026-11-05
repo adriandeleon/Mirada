@@ -5,6 +5,12 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## 0.3.0 — unreleased
 
+### Fixed
+
+- **Linux x64: Mirada starts again on Debian 13, Ubuntu 24.04 and 22.04.** 0.2.0 and 0.2.1 were
+  built on Ubuntu 26.04 and needed its glibc 2.43 ("version `GLIBC_2.43' not found"). The arm64
+  packages were not affected.
+
 ## 0.2.1 — 2026-11-05
 
 ### Fixed

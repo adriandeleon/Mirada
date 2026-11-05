@@ -36,8 +36,11 @@ jobs:
       matrix:
         # The native image (GraalVM + StaticFX) wherever GraalVM 25.4 builds one; Intel macOS, which
         # it no longer targets, gets the jlink image with its AOT cache.
+        # Linux is pinned, never ubuntu-latest: the native image takes the build host's newest glibc
+        # symbol versions, and 26.04's made 0.2.0 and 0.2.1 need glibc 2.43 (check-linux-packages.sh
+        # now refuses anything above Ubuntu 22.04's 2.35).
         include:
-          - { os: ubuntu-latest,    target: linux-x64,   build: native }
+          - { os: ubuntu-24.04,     target: linux-x64,   build: native }
           - { os: ubuntu-24.04-arm, target: linux-arm64, build: native }
           - { os: macos-latest,     target: macos-arm64, build: native }
           - { os: macos-15-intel,   target: macos-x64,   build: jlink }

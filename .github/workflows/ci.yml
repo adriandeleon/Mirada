@@ -77,7 +77,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest,  target: linux-x64,   build: native }
+          # Pinned as in release.yml: the native image takes the build host's glibc symbol versions.
+          - { os: ubuntu-24.04,   target: linux-x64,   build: native }
           - { os: macos-latest,   target: macos-arm64, build: native }
           - { os: windows-latest, target: windows-x64, build: native }
           - { os: macos-15-intel, target: macos-x64,   build: jlink }

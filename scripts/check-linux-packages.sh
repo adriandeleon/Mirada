@@ -11,6 +11,9 @@
 #   - the icon is branding/mirada.png, byte for byte
 #   - the dependencies name GTK and nothing from the sound stack, and the deb names no t64 package
 #     without its pre-t64 alternative (or it would not install on Debian 12 or Ubuntu 22.04)
+#   - no binary needs a glibc newer than Ubuntu 22.04's (2.35), the oldest the dependencies allow:
+#     the native image takes the build host's symbol versions, and ubuntu-latest's move to 26.04
+#     made 0.2.0 and 0.2.1 for x64 need 2.43 (sqrtf), so they did not start on Debian 13
 #   - every maintainer script parses (sh -n), and the deb's prerm lets an upgrade through
 #     ("failed-upgrade" exits 0): 0.1.0 and 0.2.0 shipped a prerm that did not parse, as jpackage put
 #     multi-line text where a comment named one of its placeholders, and dpkg falls back to the new
@@ -25,11 +28,18 @@ icon="${2:?icon required}"
 dir="$(cd "$dir" && pwd)"
 icon="$(cd "$(dirname "$icon")" && pwd)/$(basename "$icon")"
 failures=0
+glibc_floor=2.35
 fail() { echo "::error::$1"; failures=$((failures + 1)); }
 
 check_tree() { # <package-label> <extracted-root> <depends-text>
     local label="$1" tree="$2" deps="$3" app="$2/opt/mirada"
-    local codecs
+    local codecs elf needed
+    while IFS= read -r elf; do
+        needed=$(readelf -V -W "$elf" 2>/dev/null | grep -o 'GLIBC_[0-9.]*' | sed 's/GLIBC_//' | sort -uV | tail -1 || true)
+        [ -n "$needed" ] || continue
+        [ "$(printf '%s\n%s\n' "$needed" "$glibc_floor" | sort -V | tail -1)" = "$glibc_floor" ] ||
+            fail "$label: ${elf#"$tree"/} needs glibc $needed, newer than $glibc_floor (Ubuntu 22.04)"
+    done < <(find "$app" -type f \( -name '*.so*' -o -perm -u+x \) -exec sh -c 'head -c 4 "$1" | grep -q ELF' _ {} \; -print)
     if [ "$(head -c 4 "$app/bin/Mirada" | tr -d '\0')" = $'\x7fELF' ]; then
         codecs="$app/bin/codecs"
         [ -f "$app/bin/libawt.so" ] || fail "$label: native image without libawt.so beside it"

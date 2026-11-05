@@ -241,6 +241,10 @@ a prefetched neighbour is 2–8 ms for every format.
   image reaches, as the build host's dpkg names it: for a native image that is the whole GTK
   closure under Debian 13's names (`libgtk-3-0t64`), which Debian 12 and Ubuntu 22.04 cannot
   install. `build-installers.sh` replaces the field; `check-linux-packages.sh` fails a bare t64 name.
+- **The Linux runners are pinned, never `ubuntu-latest`.** A native image takes the build host's
+  newest glibc symbol versions: built on 26.04, 0.2.0 and 0.2.1 for x64 needed glibc 2.43 for one
+  `sqrtf` and started nowhere older. `check-linux-packages.sh` fails any binary needing more than
+  Ubuntu 22.04's 2.35; move the runner only when that check passes.
 - **jpackage substitutes its tokens in the deb's scripts, comments included.** A comment in
   `packaging/linux/prerm` naming a desktop-menu token broke 0.1.0's and 0.2.0's removal script, and
   with it every upgrade and removal (packaging/linux/NOTES.md). `check-linux-packages.sh` parses
