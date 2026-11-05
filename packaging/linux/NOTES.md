@@ -34,5 +34,12 @@ rebuilds the finished deb with the menu entry as a file the package owns,
 MIME caches, and removal deletes it like any other file. The rpm keeps jpackage's spec: a failing
 `%post` there is a warning, not a failed install.
 
+**jpackage substitutes its tokens everywhere in these scripts, comments included.** 0.1.0 and 0.2.0
+named the desktop-menu tokens in the header comment; jpackage put its multi-line commands there, the
+second line fell out of the comment, and the prerm stopped parsing (exit 2), so every upgrade and
+removal of those versions failed. dpkg then runs the new package's prerm with `failed-upgrade`, which
+succeeds, so upgrading to a fixed version works, with a warning about the old script. Name no token
+in a comment; `check-linux-packages.sh` parses every maintainer script and runs `prerm failed-upgrade`.
+
 CI and the release install the built deb with `apt` on a clean runner and smoke-test the installed
 copy; `check-linux-packages.sh` fails if the `postinst` calls `xdg-desktop-menu` again.

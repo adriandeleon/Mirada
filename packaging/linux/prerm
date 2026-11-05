@@ -1,8 +1,10 @@
 #!/bin/sh
-# prerm script for APPLICATION_PACKAGE
+# prerm script for mirada
 #
-# jpackage's own template (JDK 25, template.prerm) without its DESKTOP_COMMANDS_UNINSTALL (the menu
-# entry is a file dpkg removes itself; see postinst), and removing the `mirada` link postinst made.
+# jpackage's own template (JDK 25, template.prerm) without its desktop-menu uninstall commands (the
+# menu entry is a file dpkg removes itself; see postinst), and removing the `mirada` link postinst
+# made. No comment here may name one of jpackage's placeholders: it substitutes them everywhere, and
+# a multi-line one breaks out of the comment (0.1.0 and 0.2.0 shipped a prerm that could not parse).
 #
 # see: dh_installdeb(1)
 

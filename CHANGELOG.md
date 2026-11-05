@@ -5,6 +5,13 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## 0.3.0 — unreleased
 
+### Fixed
+
+- **Linux: the deb upgrades and uninstalls.** Installing a new version over 0.1.0 or 0.2.0 failed
+  with "pre-removal script subprocess returned error exit status 2", as did removing them: their
+  removal script did not parse. Installing this version over either works (dpkg warns about the old
+  script once).
+
 ## 0.2.0 — 2026-11-05
 
 ### Added

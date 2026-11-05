@@ -241,6 +241,10 @@ a prefetched neighbour is 2–8 ms for every format.
   image reaches, as the build host's dpkg names it: for a native image that is the whole GTK
   closure under Debian 13's names (`libgtk-3-0t64`), which Debian 12 and Ubuntu 22.04 cannot
   install. `build-installers.sh` replaces the field; `check-linux-packages.sh` fails a bare t64 name.
+- **jpackage substitutes its tokens in the deb's scripts, comments included.** A comment in
+  `packaging/linux/prerm` naming a desktop-menu token broke 0.1.0's and 0.2.0's removal script, and
+  with it every upgrade and removal (packaging/linux/NOTES.md). `check-linux-packages.sh` parses
+  every maintainer script.
 - **jpackage puts the whole launcher in the MSI as its Add/Remove Programs icon**, uncompressed in
   the Icon table. Its own launcher is a 100 KB stub; ours is the 78 MB native image, which made the
   MSI 110 MB around 36 MB of compressed files. Its `main.wxs` takes that file from the `JpIcon`

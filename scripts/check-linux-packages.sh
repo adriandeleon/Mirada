@@ -11,6 +11,10 @@
 #   - the icon is branding/mirada.png, byte for byte
 #   - the dependencies name GTK and nothing from the sound stack, and the deb names no t64 package
 #     without its pre-t64 alternative (or it would not install on Debian 12 or Ubuntu 22.04)
+#   - every maintainer script parses (sh -n), and the deb's prerm lets an upgrade through
+#     ("failed-upgrade" exits 0): 0.1.0 and 0.2.0 shipped a prerm that did not parse, as jpackage put
+#     multi-line text where a comment named one of its placeholders, and dpkg falls back to the new
+#     package's prerm when the old one fails
 #
 # Usage: check-linux-packages.sh <installers-dir> <icon.png>
 set -euo pipefail
@@ -89,6 +93,14 @@ for deb in "${debs[@]}"; do
     if dpkg-deb -I "$deb" postinst | grep -v '^[[:space:]]*#' | grep -q 'xdg-desktop-menu'; then
         fail "$(basename "$deb"): postinst calls xdg-desktop-menu"
     fi
+    for script in preinst postinst prerm postrm; do
+        dpkg-deb -I "$deb" "$script" > "$tree.$script" 2>/dev/null || continue
+        sh -n "$tree.$script" 2>/dev/null || fail "$(basename "$deb"): $script does not parse: $(sh -n "$tree.$script" 2>&1)"
+    done
+    # What dpkg runs when the installed version's prerm fails; its first lines are jpackage's helper
+    # functions, the case below them does nothing for this argument.
+    [ -f "$tree.prerm" ] && { sh "$tree.prerm" failed-upgrade 0.0.0 > /dev/null 2>&1 || fail "$(basename "$deb"): prerm failed-upgrade does not exit 0"; }
+    rm -f "$tree".{preinst,postinst,prerm,postrm}
     dpkg-deb -x "$deb" "$tree"
     check_tree "$(basename "$deb")" "$tree" "$(dpkg-deb -f "$deb" Depends)"
     rm -rf "$tree"
@@ -96,6 +108,16 @@ done
 for rpm in "${rpms[@]}"; do
     tree="$(mktemp -d)"
     (cd "$tree" && rpm2cpio "$rpm" | cpio -idm --quiet)
+    # Each scriptlet as rpm runs it, under /bin/sh: a header line, then the body.
+    rpm -qp --queryformat '%{PREIN}\n' "$rpm" > "$tree.pre" 2>/dev/null
+    rpm -qp --queryformat '%{POSTIN}\n' "$rpm" > "$tree.post" 2>/dev/null
+    rpm -qp --queryformat '%{PREUN}\n' "$rpm" > "$tree.preun" 2>/dev/null
+    rpm -qp --queryformat '%{POSTUN}\n' "$rpm" > "$tree.postun" 2>/dev/null
+    for script in pre post preun postun; do
+        grep -qx '(none)' "$tree.$script" && continue
+        sh -n "$tree.$script" 2>/dev/null || fail "$(basename "$rpm"): %$script does not parse: $(sh -n "$tree.$script" 2>&1)"
+    done
+    rm -f "$tree".{pre,post,preun,postun}
     check_tree "$(basename "$rpm")" "$tree" "$(rpm -qp --requires "$rpm" 2>/dev/null)"
     rm -rf "$tree"
 done

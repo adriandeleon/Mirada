@@ -1,7 +1,7 @@
 #!/bin/sh
-# postinst script for APPLICATION_PACKAGE
+# postinst script for mirada
 #
-# jpackage's own template (JDK 25, template.postinst) without its DESKTOP_COMMANDS_INSTALL, which
+# jpackage's own template (JDK 25, template.postinst) without its desktop-menu install commands, which
 # runs `xdg-desktop-menu install` and fails the whole install ("No writable system menu directory
 # found") on a system with no desktop menu directory: a server, a container, a fresh CI runner. The
 # menu entry is a file the package owns instead, /usr/share/applications/mirada.desktop, and dpkg's
