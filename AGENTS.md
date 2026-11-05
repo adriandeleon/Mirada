@@ -211,6 +211,11 @@ a prefetched neighbour is 2–8 ms for every format.
   when libwebp is missing. Only an RGB profile is carried, as the edit is RGB: a CMYK JPEG's profile
   is dropped. A HEIF that gives its colours as nclx codes has no profile to carry; one is not made
   up for it. `NativeDecodersTest` checks each decoder against P3-tagged fixtures.
+- **Settings changes are frequent now; theme changes are not.** The window's place is saved as it
+  closes (and from `App.stop`, as Cmd-Q may not hide it first), the recent folders on every folder
+  opened (after the first paint: writing the settings is not start-up's), and every change runs every
+  settings listener. `Theme.apply` returns at once unless the theme itself changed, as restyling
+  every window costs tens of milliseconds.
 - **Undo is a history of whole steps** (`History`): each records the edit and the shape. A drag
   records once, when the mouse is released; a run of arrow presses records once, as a "run" that
   joins steps until something else happens. Setting the shape from code (open, reset, undo) goes

@@ -23,6 +23,15 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 - **The thumbnail strip can stand down the left side and list file names instead of pictures**:
   Thumbnails at the Side and Names Instead of Thumbnails, in the palette, the menus and Settings.
   Names load no thumbnails at all, which suits a folder of thousands.
+- **The window opens where it was**, at its size, and maximised if it was; a place no longer on any
+  screen (a monitor unplugged) is left to the system.
+- **Open Recent** (Ctrl+Shift+O, ⇧⌘O): the palette over the last ten folders, by name, the path under
+  the list.
+- **Drag a photo out**: a fitted image, or a thumbnail, drags its file into a chat, a mail or a
+  folder. Zoomed in, dragging still pans.
+- **A checkerboard behind transparent images**, so their transparent parts show as such.
+- **The pointer hides in full screen** after the same rest as the floating controls.
+- **Screen readers name the icon buttons** in the header and the floating controls.
 - **Names under thumbnails**: each thumbnail can have its file name centred under it, along the
   bottom or down the side (Names Under Thumbnails, in the palette, the menus and Settings).
 - **The header names the folder being shown**, under the file name, with its whole path as the

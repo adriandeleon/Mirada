@@ -3,6 +3,7 @@ package com.mirada.settings;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import com.mirada.folder.Sorting;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SettingsTest {
@@ -42,6 +44,51 @@ class SettingsTest {
         assertEquals(12, again.slideshowSeconds());
         assertEquals(Settings.MAX_SLIDESHOW_SECONDS, Settings.slideshowSecondsOf("600"));
         assertEquals(5, Settings.slideshowSecondsOf("fast"));
+    }
+
+    @Test
+    void recentFoldersAreKeptLatestFirstWithoutCopies(@TempDir Path dir) {
+        Path file = dir.resolve("settings.properties");
+        Settings settings = new Settings(file);
+        settings.load();
+        settings.addRecent(Path.of("/photos/a"));
+        settings.addRecent(Path.of("/photos/b"));
+        settings.addRecent(Path.of("/photos/a"));
+
+        Settings again = new Settings(file);
+        again.load();
+        assertEquals(List.of(Path.of("/photos/a"), Path.of("/photos/b")), again.recent());
+    }
+
+    @Test
+    void onlyTheLatestTenAreKept() {
+        List<Path> folders = List.of();
+        for (int i = 0; i < 15; i++) folders = Settings.withRecent(folders, Path.of("/f" + i));
+        assertEquals(Settings.MAX_RECENT, folders.size());
+        assertEquals(Path.of("/f14"), folders.getFirst());
+        assertEquals(Path.of("/f5"), folders.getLast());
+    }
+
+    @Test
+    void theWindowsPlaceIsKept(@TempDir Path dir) {
+        Path file = dir.resolve("settings.properties");
+        Settings settings = new Settings(file);
+        settings.load();
+        assertNull(settings.window());
+        settings.setWindow(new Settings.WindowPlace(-1200, 40, 1400, 900, true));
+
+        Settings again = new Settings(file);
+        again.load();
+        assertEquals(new Settings.WindowPlace(-1200, 40, 1400, 900, true), again.window());
+    }
+
+    @Test
+    void aBadWindowPlaceIsNone() {
+        assertNull(Settings.windowOf("10,20,800", null));
+        assertNull(Settings.windowOf("10,20,800,x", null));
+        assertNull(Settings.windowOf("10,20,30,40", null)); // too small to be a window
+        assertNull(Settings.windowOf("NaN,20,800,600", null));
+        assertEquals(new Settings.WindowPlace(10, 20, 800, 600, false), Settings.windowOf(" 10, 20,800 ,600", "nope"));
     }
 
     @Test

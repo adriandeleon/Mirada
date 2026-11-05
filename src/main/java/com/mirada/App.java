@@ -13,6 +13,7 @@ import com.mirada.perf.Startup;
 import com.mirada.settings.Settings;
 import com.mirada.ui.Theme;
 import com.mirada.ui.ViewerWindow;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Entry point. {@code mirada [file-or-folder]}: a file opens with its folder behind it, a folder
@@ -38,6 +39,16 @@ public final class App extends Application {
         launch(args);
     }
 
+    /** The window, for {@link #stop}; null until it is made. */
+    private @Nullable ViewerWindow window;
+
+    /** Quitting (Cmd-Q) may not hide the window first: its place is saved here too. */
+    @Override
+    public void stop() {
+        ViewerWindow shown = window;
+        if (shown != null) shown.rememberPlace();
+    }
+
     @Override
     public void start(Stage stage) {
         Startup.mark("fx-start");
@@ -46,6 +57,7 @@ public final class App extends Application {
         Theme.apply(settings.theme());
         settings.addListener(() -> Theme.apply(settings.theme()));
         ViewerWindow window = new ViewerWindow(stage, settings, getHostServices()::showDocument);
+        this.window = window;
         window.show();
         Startup.mark("window-shown");
         List<String> args = getParameters().getUnnamed();

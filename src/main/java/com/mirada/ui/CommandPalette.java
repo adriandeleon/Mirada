@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
+import java.util.function.IntFunction;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -92,6 +93,8 @@ final class CommandPalette {
     private int currentImage;
 
     private IntConsumer goTo = index -> {};
+
+    private Choices choices = new Choices(Command.GO_TO_IMAGE, "", "", "go", List.of(), -1, index -> "", index -> "");
     private boolean findingImages;
 
     CommandPalette(StackPane host, Consumer<Command> run) {
@@ -177,23 +180,58 @@ final class CommandPalette {
      * cursor on {@code current}; choosing one hands its index to {@code goTo}.
      */
     void showImages(List<String> names, int current, IntConsumer goTo) {
-        if (isShowing()) return;
-        this.images = List.copyOf(names);
-        this.currentImage = current;
-        this.goTo = goTo;
-        open(true, Command.GO_TO_IMAGE, "Go to image…", "No matching images");
+        int size = names.size();
+        showChoices(
+                new Choices(
+                        Command.GO_TO_IMAGE,
+                        "Go to image…",
+                        "No matching images",
+                        "go",
+                        names,
+                        current,
+                        index -> "Image " + (index + 1) + " of " + size,
+                        index -> Integer.toString(index + 1)),
+                goTo);
     }
 
-    /** Whether the palette is up over the folder's images, not the commands. */
-    boolean isFindingImages() {
-        return isShowing() && findingImages;
+    /**
+     * A list to choose one from by name, other than the commands: the folder's images, the recent
+     * folders. Each is ranked as a file name ({@link #orderedImages}).
+     *
+     * @param openedBy the command whose chord the chip shows
+     * @param verb what Enter does, for the legend
+     * @param current the one under the cursor before anything is typed, or -1 for the first
+     * @param describe the line under the list for the one under the cursor
+     * @param detail what stands on the right of each row
+     */
+    record Choices(
+            Command openedBy,
+            String prompt,
+            String nothing,
+            String verb,
+            List<String> names,
+            int current,
+            IntFunction<String> describe,
+            IntFunction<String> detail) {}
+
+    void showChoices(Choices choices, IntConsumer choose) {
+        if (isShowing()) return;
+        this.choices = choices;
+        this.images = List.copyOf(choices.names());
+        this.currentImage = choices.current();
+        this.goTo = choose;
+        open(true, choices.openedBy(), choices.prompt(), choices.nothing(), choices.verb());
     }
 
     private void open(boolean findingImages, Command openedBy, String prompt, String nothing) {
+        open(findingImages, openedBy, prompt, nothing, "run");
+    }
+
+    private void open(boolean findingImages, Command openedBy, String prompt, String nothing, String verb) {
         this.findingImages = findingImages;
         prefixChip.setText(openedBy.chord().getDisplayText());
         input.setPromptText(prompt);
-        hint.setText(PaletteKeys.legend(PaletteKeys.hint(findingImages ? "go" : "run", "↵")));
+        hint.setText(PaletteKeys.legend(PaletteKeys.hint(verb, "↵")));
         list.setPlaceholder(new Label(nothing));
         input.clear();
         filter("");
@@ -215,7 +253,7 @@ final class CommandPalette {
         return switch (row) {
             case null -> "";
             case CommandRow(Command command) -> command.description();
-            case ImageRow(int index, String _) -> "Image " + (index + 1) + " of " + images.size();
+            case ImageRow(int index, String _) -> choices.describe().apply(index);
         };
     }
 
@@ -376,7 +414,7 @@ final class CommandPalette {
             setTooltip(null); // cells are recycled: never leave a previous row's explanation behind
             if (item instanceof ImageRow(int index, String name)) {
                 title.getChildren().setAll(MatchText.runs(name, currentQuery));
-                chord.setText(Integer.toString(index + 1));
+                chord.setText(choices.detail().apply(index));
                 setGraphic(layout);
                 return;
             }

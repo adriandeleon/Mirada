@@ -107,6 +107,11 @@ final class TitleBar {
         menu.setGraphic(Icons.of(Icons.MENU));
         menu.getStyleClass().addAll("header-button", "flat", "no-arrow");
         for (Node node : new Node[] {fullScreen, rotate, info, menu}) node.setFocusTraversable(false);
+        // Icons only: these are what a screen reader says for them (VoiceOver, Narrator, Orca).
+        fullScreen.setAccessibleText(Command.FULL_SCREEN.label());
+        rotate.setAccessibleText(Command.ROTATE_CLOCKWISE.label());
+        info.setAccessibleText(Command.INFO.label());
+        menu.setAccessibleText("Main Menu");
 
         HBox right = new HBox(4, rotate, info);
         if (LAYOUT.menuButton()) right.getChildren().add(menu);
@@ -152,6 +157,7 @@ final class TitleBar {
         menu.getItems()
                 .addAll(
                         item(Command.OPEN, run),
+                        item(Command.OPEN_RECENT, run),
                         new SeparatorMenuItem(),
                         item(Command.PALETTE, run),
                         new SeparatorMenuItem(),
@@ -205,6 +211,7 @@ final class TitleBar {
     void fullScreen(BorderPane root, boolean full) {
         root.setTop(full ? null : row);
         fullScreen.setGraphic(Icons.of(full ? Icons.LEAVE_FULL_SCREEN : Icons.FULL_SCREEN));
+        fullScreen.setAccessibleText(full ? "Leave Full Screen" : Command.FULL_SCREEN.label());
         if (extended) HeaderBar.setSystemButtonHeight(stage, full ? 0 : HeaderBar.USE_DEFAULT_SIZE);
     }
 

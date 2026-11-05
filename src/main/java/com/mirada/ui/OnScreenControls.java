@@ -49,6 +49,7 @@ final class OnScreenControls {
         zoom.setOnAction(e -> run.accept(fitted ? Command.ACTUAL_SIZE : Command.FIT));
         zoomMenu.setGraphic(Icons.of(Icons.CHEVRON_DOWN));
         zoomMenu.setTooltip(new Tooltip("Zoom"));
+        zoomMenu.setAccessibleText("Zoom");
         zoomMenu.getStyleClass().addAll("osd-button", "flat", "no-arrow");
         zoomMenu.setFocusTraversable(false);
         zoomMenu.getItems()
@@ -104,7 +105,9 @@ final class OnScreenControls {
         previous.setDisable(Command.PREVIOUS.unavailable(index, size, imageShowing) != null);
         next.setDisable(Command.NEXT.unavailable(index, size, imageShowing) != null);
         zoom.setGraphic(Icons.of(fittedNow ? Icons.ZOOM_IN : Icons.ZOOM_FIT));
-        zoom.getTooltip().setText(fittedNow ? "Actual Size (1)" : "Zoom to Fit (0)");
+        String tip = fittedNow ? "Actual Size (1)" : "Zoom to Fit (0)";
+        zoom.getTooltip().setText(tip);
+        zoom.setAccessibleText(spoken(tip));
         zoom.setDisable(!imageShowing);
         zoomMenu.setDisable(!imageShowing);
         if (!imageShowing) fade(false);
@@ -140,10 +143,18 @@ final class OnScreenControls {
         return pill;
     }
 
+    /** A tooltip's words without the key in brackets after them: "Next Image (→)" is "Next Image". */
+    static String spoken(String tooltip) {
+        int bracket = tooltip.lastIndexOf(" (");
+        return bracket > 0 && tooltip.endsWith(")") ? tooltip.substring(0, bracket) : tooltip;
+    }
+
     private static Button button(String icon, String tip) {
         Button button = new Button();
         button.setGraphic(Icons.of(icon));
         button.setTooltip(new Tooltip(tip));
+        // What a screen reader says: the tooltip without its key.
+        button.setAccessibleText(spoken(tip));
         button.getStyleClass().addAll("osd-button", "flat");
         button.setFocusTraversable(false);
         return button;

@@ -135,6 +135,11 @@ enum Command {
             "version help credits",
             key(KeyCode.F12)),
     OPEN("Open…", "Opens an image, with its folder, or a folder.", "file", shortcut(KeyCode.O)),
+    OPEN_RECENT(
+            "Open Recent…",
+            "Finds a folder opened lately by its name, and opens it.",
+            "recent history folders previous last",
+            new KeyCodeCombination(KeyCode.O, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN)),
     CLOSE("Close Window", "Closes Mirada.", "quit exit", shortcut(KeyCode.W)),
     PALETTE(
             "Command Palette",
@@ -273,7 +278,7 @@ enum Command {
                     SHOW_IN_FOLDER -> "Image";
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER -> "Order";
             case INFO, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES, THUMBNAIL_CAPTIONS -> "Panels";
-            case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, CLOSE, PALETTE -> "Mirada";
+            case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, OPEN_RECENT, CLOSE, PALETTE -> "Mirada";
         };
     }
 
@@ -292,7 +297,7 @@ enum Command {
         if (mac && shortcut && control) return code == KeyCode.F ? FULL_SCREEN : null;
         if (shortcut) {
             return switch (code) {
-                case O -> OPEN;
+                case O -> shift ? OPEN_RECENT : OPEN;
                 case C -> shift ? null : COPY;
                 case Z -> shift ? null : UNDO_TRASH;
                 case W, Q -> CLOSE;

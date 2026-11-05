@@ -6,6 +6,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
@@ -45,6 +46,12 @@ public final class Settings {
     static final String THUMBNAILS_AT_SIDE = "thumbnails.side";
     static final String THUMBNAIL_NAMES = "thumbnails.names";
     static final String THUMBNAIL_CAPTIONS = "thumbnails.captions";
+    static final String WINDOW_BOUNDS = "window.bounds";
+    /** {@code recent.0} to {@code recent.9}, the latest first. */
+    static final String RECENT = "recent.";
+
+    public static final int MAX_RECENT = 10;
+    static final String WINDOW_MAXIMIZED = "window.maximized";
     static final String SLIDESHOW_SECONDS = "slideshow.seconds";
 
     public static final int MIN_HIDE_SECONDS = 1;
@@ -65,6 +72,8 @@ public final class Settings {
     private boolean thumbnailsAtSide;
     private boolean thumbnailNames;
     private boolean thumbnailCaptions;
+    private @Nullable WindowPlace window;
+    private List<Path> recent = List.of();
     private int slideshowSeconds = DEFAULT_SLIDESHOW_SECONDS;
 
     public Settings(Path file) {
@@ -163,6 +172,18 @@ public final class Settings {
                 properties.getProperty(THUMBNAIL_NAMES, "false").trim());
         thumbnailCaptions = Boolean.parseBoolean(
                 properties.getProperty(THUMBNAIL_CAPTIONS, "false").trim());
+        window = windowOf(properties.getProperty(WINDOW_BOUNDS), properties.getProperty(WINDOW_MAXIMIZED));
+        List<Path> folders = new ArrayList<>();
+        for (int i = 0; i < MAX_RECENT; i++) {
+            String folder = properties.getProperty(RECENT + i);
+            if (folder == null || folder.isBlank()) continue;
+            try {
+                folders.add(Path.of(folder.trim()));
+            } catch (InvalidPathException e) {
+                // A bad edit: that one is dropped.
+            }
+        }
+        recent = List.copyOf(folders);
         slideshowSeconds = slideshowSecondsOf(properties.getProperty(SLIDESHOW_SECONDS));
     }
 
@@ -227,6 +248,67 @@ public final class Settings {
     /** Whether the thumbnail strip lists file names instead of pictures. */
     public boolean thumbnailNames() {
         return thumbnailNames;
+    }
+
+    /**
+     * Where the window was when it last closed: its size and place when not maximised, and whether
+     * it was. Screen coordinates.
+     */
+    public record WindowPlace(double x, double y, double width, double height, boolean maximized) {}
+
+    /** Where the window last was, or null before it has closed once (or after a bad edit). */
+    public @Nullable WindowPlace window() {
+        return window;
+    }
+
+    public void setWindow(WindowPlace value) {
+        window = value;
+        changed();
+    }
+
+    /** {@code x,y,width,height}, or null for anything that is not four finite numbers of a sane size. */
+    static @Nullable WindowPlace windowOf(@Nullable String bounds, @Nullable String maximized) {
+        if (bounds == null) return null;
+        String[] parts = bounds.split(",");
+        if (parts.length != 4) return null;
+        double[] values = new double[4];
+        try {
+            for (int i = 0; i < 4; i++) values[i] = Double.parseDouble(parts[i].trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        for (double value : values) if (!Double.isFinite(value)) return null;
+        if (values[2] < 100 || values[3] < 100) return null;
+        return new WindowPlace(
+                values[0],
+                values[1],
+                values[2],
+                values[3],
+                Boolean.parseBoolean(String.valueOf(maximized).trim()));
+    }
+
+    /** The folders opened lately, the latest first; some may be gone since. */
+    public List<Path> recent() {
+        return recent;
+    }
+
+    /** Puts {@code folder} first among the recent ones; nothing is written when it already is. */
+    public void addRecent(Path folder) {
+        List<Path> next = withRecent(recent, folder);
+        if (next.equals(recent)) return;
+        recent = next;
+        changed();
+    }
+
+    /** {@code folders} with {@code folder} first and no copy of it further down, at most {@link #MAX_RECENT}. */
+    static List<Path> withRecent(List<Path> folders, Path folder) {
+        List<Path> next = new ArrayList<>(MAX_RECENT);
+        next.add(folder);
+        for (Path other : folders) {
+            if (next.size() == MAX_RECENT) break;
+            if (!other.equals(folder)) next.add(other);
+        }
+        return List.copyOf(next);
     }
 
     /** Whether each thumbnail has its file name under it. */
@@ -314,6 +396,16 @@ public final class Settings {
         properties.setProperty(THUMBNAILS_AT_SIDE, Boolean.toString(thumbnailsAtSide));
         properties.setProperty(THUMBNAIL_NAMES, Boolean.toString(thumbnailNames));
         properties.setProperty(THUMBNAIL_CAPTIONS, Boolean.toString(thumbnailCaptions));
+        for (int i = 0; i < recent.size(); i++)
+            properties.setProperty(RECENT + i, recent.get(i).toString());
+        WindowPlace place = window;
+        if (place != null) {
+            properties.setProperty(
+                    WINDOW_BOUNDS,
+                    Math.round(place.x()) + "," + Math.round(place.y()) + "," + Math.round(place.width()) + ","
+                            + Math.round(place.height()));
+            properties.setProperty(WINDOW_MAXIMIZED, Boolean.toString(place.maximized()));
+        }
         properties.setProperty(SLIDESHOW_SECONDS, Integer.toString(slideshowSeconds));
         try {
             Path folder = file.toAbsolutePath().getParent();

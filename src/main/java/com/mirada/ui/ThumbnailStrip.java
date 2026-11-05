@@ -10,10 +10,12 @@ import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.OverrunStyle;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Region;
@@ -21,6 +23,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
 import com.mirada.image.Thumbnails;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The folder as a strip along the bottom of the window, or a column down its left side, of
@@ -60,13 +63,22 @@ final class ThumbnailStrip {
     private boolean captions;
     private boolean laidOut;
 
-    /** @param pick shows the image at an index of the folder */
-    ThumbnailStrip(IntConsumer pick) {
+    /** Starts dragging a file out, from a node, with a picture under the pointer. */
+    @FunctionalInterface
+    interface Dragger {
+        void drag(Node source, Path file, @Nullable Image picture);
+    }
+
+    /**
+     * @param pick shows the image at an index of the folder
+     * @param drag starts a drag of a cell's file out of the window
+     */
+    ThumbnailStrip(IntConsumer pick, Dragger drag) {
         list.setItems(items);
         list.getStyleClass().add("thumbnail-strip");
         // The keyboard is the viewer's: arrows step the folder, not the list's selection.
         list.setFocusTraversable(false);
-        list.setCellFactory(view -> new Cell(pick));
+        list.setCellFactory(view -> new Cell(pick, drag));
         setLayout(false, false, false);
     }
 
@@ -145,7 +157,7 @@ final class ThumbnailStrip {
         private final Label caption = new Label();
         private final VBox captioned = new VBox(2);
 
-        Cell(IntConsumer pick) {
+        Cell(IntConsumer pick, Dragger drag) {
             picture.setPreserveRatio(true);
             picture.setSmooth(true);
             // A square box: a portrait thumbnail and a landscape one, turned or not, both fit it.
@@ -167,6 +179,12 @@ final class ThumbnailStrip {
             captioned.setAlignment(Pos.TOP_CENTER);
             setOnMouseClicked(e -> {
                 if (e.getButton() == MouseButton.PRIMARY && !isEmpty()) pick.accept(getIndex());
+            });
+            setOnDragDetected(e -> {
+                Path file = getItem();
+                if (e.getButton() != MouseButton.PRIMARY || isEmpty() || file == null) return;
+                drag.drag(this, file, picture.getImage());
+                e.consume();
             });
         }
 

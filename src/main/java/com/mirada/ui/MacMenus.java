@@ -37,7 +37,11 @@ final class MacMenus {
 
     static final List<Heading> HEADINGS = List.of(
             new Heading(
-                    "File", List.of(List.of(Command.OPEN), List.of(Command.SHOW_IN_FOLDER), List.of(Command.CLOSE))),
+                    "File",
+                    List.of(
+                            List.of(Command.OPEN, Command.OPEN_RECENT),
+                            List.of(Command.SHOW_IN_FOLDER),
+                            List.of(Command.CLOSE))),
             new Heading("Edit", List.of(List.of(Command.UNDO_TRASH), List.of(Command.COPY))),
             new Heading(
                     "Image",

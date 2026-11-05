@@ -38,6 +38,8 @@ public final class Theme {
     private Theme() {}
 
     public static void apply(Settings.ThemeChoice value) {
+        // Called on every change of every setting: restyling every window is for the theme's own.
+        if (following && value == choice) return;
         choice = value;
         if (!following) {
             following = true;

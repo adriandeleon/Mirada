@@ -24,6 +24,8 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
@@ -46,6 +48,7 @@ import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -149,6 +152,12 @@ public final class ViewerWindow {
     private FolderImages folder = FolderImages.EMPTY;
     /** The image asked for most recently; a load that finishes for any other is dropped. */
     private @Nullable Path wanted;
+    /** The window's size and place when last neither maximised nor full screen. */
+    private @Nullable Rectangle2D normalPlace;
+    /** The pointer's rest before it hides in full screen ({@link #showPointer}). */
+    private final PauseTransition pointerIdle = new PauseTransition();
+
+    private boolean remembered;
     /** What Move to Trash can put back, the latest first; only Linux's trash says where a file went. */
     private final Deque<Trash.Trashed> trashed = new ArrayDeque<>();
 
@@ -185,11 +194,19 @@ public final class ViewerWindow {
                 refreshStrip();
             }
         });
-        stage.setOnHidden(e -> slideshow.stop());
+        stage.setOnHidden(e -> {
+            slideshow.stop();
+            rememberPlace();
+        });
         canvas = new StackPane(viewport, placeholder, toast);
         canvas.getStyleClass().add("canvas");
         canvas.addEventFilter(MouseEvent.MOUSE_MOVED, e -> {
             if (controls == null) onScreenControls().wake();
+            showPointer();
+        });
+        canvas.addEventFilter(MouseEvent.MOUSE_DRAGGED, e -> showPointer());
+        pointerIdle.setOnFinished(e -> {
+            if (stage.isFullScreen()) canvas.setCursor(Cursor.NONE);
         });
         settings.addListener(() -> {
             OnScreenControls built = controls;
@@ -217,11 +234,13 @@ public final class ViewerWindow {
         scene.setOnDragOver(this::onDragOver);
         scene.setOnDragDropped(this::onDragDropped);
         viewport.setOnSwipe(step -> run(step > 0 ? Command.NEXT : Command.PREVIOUS));
+        viewport.setOnDragOut(() -> folder.current());
         viewport.setOnContextMenuRequested(e -> contextMenu().show(viewport, e.getScreenX(), e.getScreenY()));
 
         stage.setScene(scene);
         stage.setMinWidth(480);
         stage.setMinHeight(320);
+        restorePlace();
         stage.setTitle(AppInfo.NAME);
         // Escape is ours (Command.ESCAPE): JavaFX's own exit key would leave full screen and then
         // let the same press reach the filter, which would close the window.
@@ -230,6 +249,7 @@ public final class ViewerWindow {
         stage.fullScreenProperty().addListener((obs, was, now) -> {
             titleBar.fullScreen(root, now);
             root.pseudoClassStateChanged(FULL_SCREEN, now);
+            showPointer();
         });
         updateControls();
         afterFirstPaint(titleBar::finish);
@@ -308,7 +328,7 @@ public final class ViewerWindow {
     private ThumbnailStrip thumbnailStrip() {
         ThumbnailStrip made = strip;
         if (made == null) {
-            made = new ThumbnailStrip(index -> go(folder.jump(index)));
+            made = new ThumbnailStrip(index -> go(folder.jump(index)), viewport.thumbnailDragger());
             strip = made;
         }
         return made;
@@ -379,6 +399,51 @@ public final class ViewerWindow {
 
     public void show() {
         stage.show();
+        // A first start, or a place no longer on a screen: where the system put it is the place.
+        if (normalPlace == null && !stage.isMaximized()) {
+            normalPlace = new Rectangle2D(stage.getX(), stage.getY(), stage.getWidth(), stage.getHeight());
+        }
+    }
+
+    /**
+     * Puts the window where it was when it last closed, if that is still on a screen
+     * ({@link WindowPlacement}), and maximised if it was. From then on its size and place are
+     * followed while it is neither maximised nor full screen, so a window closed maximised opens
+     * maximised and, restored, goes back to its own size.
+     */
+    private void restorePlace() {
+        Settings.WindowPlace saved = settings.window();
+        if (saved != null) {
+            List<Rectangle2D> screens = new ArrayList<>();
+            for (Screen screen : Screen.getScreens()) screens.add(screen.getVisualBounds());
+            Rectangle2D placed = WindowPlacement.placed(
+                    new Rectangle2D(saved.x(), saved.y(), saved.width(), saved.height()), screens);
+            if (placed != null) {
+                stage.setX(placed.getMinX());
+                stage.setY(placed.getMinY());
+                stage.setWidth(placed.getWidth());
+                stage.setHeight(placed.getHeight());
+                normalPlace = placed;
+            }
+            if (saved.maximized()) stage.setMaximized(true);
+        }
+        for (var property :
+                List.of(stage.xProperty(), stage.yProperty(), stage.widthProperty(), stage.heightProperty())) {
+            property.addListener((o, was, now) -> {
+                if (stage.isShowing() && !stage.isMaximized() && !stage.isFullScreen() && !stage.isIconified()) {
+                    normalPlace = new Rectangle2D(stage.getX(), stage.getY(), stage.getWidth(), stage.getHeight());
+                }
+            });
+        }
+    }
+
+    /** Saves where the window is, for the next start: once, as it closes or the app quits. */
+    public void rememberPlace() {
+        Rectangle2D place = normalPlace;
+        if (place == null || remembered) return;
+        remembered = true;
+        settings.setWindow(new Settings.WindowPlace(
+                place.getMinX(), place.getMinY(), place.getWidth(), place.getHeight(), stage.isMaximized()));
     }
 
     /** Opens a file with its folder behind it, or a folder at its first image. */
@@ -396,6 +461,10 @@ public final class ViewerWindow {
             return;
         }
         showCurrent();
+        // Remembered for Open Recent once the image is up: writing the settings is not start-up's.
+        Path first = folder.current();
+        Path opened = first == null ? null : first.toAbsolutePath().getParent();
+        if (opened != null) afterFirstPaint(() -> settings.addRecent(opened));
     }
 
     private void showCurrent() {
@@ -540,6 +609,7 @@ public final class ViewerWindow {
             case CLOSE -> stage.close();
             case PALETTE -> palette.show(Command.inPalette(), this::unavailable);
             case GO_TO_IMAGE -> goToImage();
+            case OPEN_RECENT -> openRecent();
             case INFO -> infoShowing.set(!infoShowing.get());
             case THUMBNAILS -> thumbnailsShowing.set(!thumbnailsShowing.get());
             case THUMBNAILS_AT_SIDE -> {
@@ -598,6 +668,20 @@ public final class ViewerWindow {
         toast.setText(message);
         toast.setVisible(true);
         toastTimer.playFromStart();
+    }
+
+    /**
+     * Shows the pointer, and in full screen hides it again after the same rest as the floating
+     * controls: over a photo filling the screen, an arrow is in the way. Outside full screen it stays.
+     */
+    private void showPointer() {
+        if (canvas.getCursor() == Cursor.NONE) canvas.setCursor(null);
+        if (stage.isFullScreen()) {
+            pointerIdle.setDuration(Duration.seconds(settings.controlsHideSeconds()));
+            pointerIdle.playFromStart();
+        } else {
+            pointerIdle.stop();
+        }
     }
 
     private void startSlideshow() {
@@ -803,6 +887,36 @@ public final class ViewerWindow {
         palette.showImages(names, folder.index(), index -> go(folder.jump(index)));
     }
 
+    /**
+     * The palette over the folders opened lately, the latest first, by name with the whole path
+     * under the list; one gone since is left out. The one on screen is not offered.
+     */
+    private void openRecent() {
+        Path shown = folder.current();
+        Path here = shown == null ? null : shown.toAbsolutePath().getParent();
+        List<Path> folders = new ArrayList<>();
+        for (Path recent : settings.recent()) {
+            if (!recent.equals(here) && Files.isDirectory(recent)) folders.add(recent);
+        }
+        if (folders.isEmpty()) {
+            say("No other folder has been opened lately");
+            return;
+        }
+        List<String> names = new ArrayList<>(folders.size());
+        for (Path recent : folders) names.add(fileName(recent));
+        palette.showChoices(
+                new CommandPalette.Choices(
+                        Command.OPEN_RECENT,
+                        "Open recent folder…",
+                        "No matching folders",
+                        "open",
+                        names,
+                        0,
+                        index -> folders.get(index).toString(),
+                        index -> ""),
+                index -> open(folders.get(index)));
+    }
+
     /** Opens the file manager on the image's folder with the image selected ({@link Reveal}). */
     private void showInFolder() {
         Path file = folder.current();
@@ -868,6 +982,7 @@ public final class ViewerWindow {
 
     /** Why {@code command} cannot run right now, or null when it can. */
     private @Nullable String unavailable(Command command) {
+        if (command == Command.OPEN_RECENT && settings.recent().isEmpty()) return "No folder has been opened yet.";
         if (command == Command.UNDO_TRASH && trashed.isEmpty()) {
             String trash = Command.trash(Command.WINDOWS);
             return Trash.restores()
@@ -906,7 +1021,10 @@ public final class ViewerWindow {
     }
 
     private void onDragOver(DragEvent e) {
-        if (e.getDragboard().hasFiles()) e.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+        // A file dragged out of this window is for somewhere else, not to be opened again here.
+        if (e.getDragboard().hasFiles() && e.getGestureSource() == null) {
+            e.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+        }
         e.consume();
     }
 

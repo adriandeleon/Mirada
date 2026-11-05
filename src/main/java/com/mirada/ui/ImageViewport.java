@@ -1,19 +1,31 @@
 package com.mirada.ui;
 
+import java.nio.file.Path;
+import java.util.List;
 import java.util.function.IntConsumer;
+import java.util.function.Supplier;
 
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.scene.Cursor;
+import javafx.scene.Node;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.PixelWriter;
+import javafx.scene.image.WritableImage;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.TransferMode;
 import javafx.scene.input.ZoomEvent;
 import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.ImagePattern;
 import javafx.scene.shape.Rectangle;
 
 import com.mirada.image.Orientation;
@@ -38,6 +50,9 @@ public final class ImageViewport extends Region {
     private static final double WHEEL_RATE = 1.005;
 
     private final ImageView view = new ImageView();
+    /** The checkerboard under the image, where a transparent one lets it show. */
+    private final Rectangle checkers = new Rectangle();
+
     private final ReadOnlyDoubleWrapper scale = new ReadOnlyDoubleWrapper(this, "scale", 1);
     private final ReadOnlyBooleanWrapper fitted = new ReadOnlyBooleanWrapper(this, "fitted", true);
 
@@ -64,12 +79,19 @@ public final class ImageViewport extends Region {
     private double swipeY;
     private boolean swiped;
     private @Nullable IntConsumer onSwipe;
+    private Supplier<@Nullable Path> dragOut = () -> null;
+
+    /** The longest side of the picture under the pointer while dragging a file out. */
+    private static final double DRAG_VIEW = 128;
 
     public ImageViewport() {
         getStyleClass().add("viewport");
         view.setPreserveRatio(false);
         view.setManaged(false);
-        getChildren().add(view);
+        checkers.setManaged(false);
+        checkers.setFill(checkerPattern());
+        checkers.setMouseTransparent(true);
+        getChildren().addAll(checkers, view);
 
         Rectangle clip = new Rectangle();
         clip.widthProperty().bind(widthProperty());
@@ -87,8 +109,49 @@ public final class ImageViewport extends Region {
         setOnSwipeRight(e -> swipe(-1));
         setOnMousePressed(this::onPressed);
         setOnMouseDragged(this::onDragged);
-        setOnMouseReleased(e -> setCursor(Cursor.DEFAULT));
+        // Back to none of its own, so the window's (hidden in full screen) shows through.
+        setOnMouseReleased(e -> setCursor(null));
         setOnMouseClicked(this::onClicked);
+        setOnDragDetected(this::onDragDetected);
+    }
+
+    /**
+     * What a drag out of the image carries: the file showing, or null for nothing. A drag pans an
+     * image zoomed in; one that fits has nothing to pan, so dragging it hands its file to wherever
+     * it is dropped, a chat, a mail or a folder, as a file manager's drag does.
+     */
+    public void setOnDragOut(Supplier<@Nullable Path> file) {
+        dragOut = file;
+    }
+
+    private void onDragDetected(MouseEvent e) {
+        Path file = dragOut.get();
+        if (e.getButton() != MouseButton.PRIMARY || pannable() || file == null) return;
+        startDrag(this, file, image);
+        e.consume();
+    }
+
+    /** Starts a drag of {@code file} from {@code source}, showing a small {@code picture} under the pointer. */
+    static void startDrag(Node source, Path file, @Nullable Image picture) {
+        Dragboard board = source.startDragAndDrop(TransferMode.COPY);
+        ClipboardContent content = new ClipboardContent();
+        content.putFiles(List.of(file.toFile()));
+        board.setContent(content);
+        if (picture != null && picture.getWidth() > 0 && picture.getHeight() > 0) {
+            // The drag view is the picture itself at a small size: no pixels are copied for it.
+            double scale = Math.min(1, DRAG_VIEW / Math.max(picture.getWidth(), picture.getHeight()));
+            ImageView small = new ImageView(picture);
+            small.setFitWidth(picture.getWidth() * scale);
+            small.setFitHeight(picture.getHeight() * scale);
+            SnapshotParameters transparent = new SnapshotParameters();
+            transparent.setFill(Color.TRANSPARENT);
+            board.setDragView(small.snapshot(transparent, null));
+        }
+    }
+
+    /** For the strip's cells, which drag the same way. */
+    ThumbnailStrip.Dragger thumbnailDragger() {
+        return ImageViewport::startDrag;
     }
 
     /** Whether a newly shown image keeps the zoom and position, rather than being fitted. */
@@ -215,6 +278,7 @@ public final class ImageViewport extends Region {
     protected void layoutChildren() {
         if (image == null || imageWidth <= 0 || imageHeight <= 0) {
             view.setVisible(false);
+            checkers.setVisible(false);
             return;
         }
         double width = contentWidth();
@@ -238,6 +302,32 @@ public final class ImageViewport extends Region {
         view.setRotate(totalDegrees());
         view.setSmooth(s < Zoom.CRISP_FROM);
         view.setVisible(true);
+        // Under the image, a pixel in from its edges so an opaque photo shows no fringe of it.
+        double inset = Math.min(1, Math.min(viewWidth, viewHeight) / 4);
+        checkers.setX(view.getLayoutX() + inset);
+        checkers.setY(view.getLayoutY() + inset);
+        checkers.setWidth(Math.max(0, viewWidth - 2 * inset));
+        checkers.setHeight(Math.max(0, viewHeight - 2 * inset));
+        checkers.setRotate(view.getRotate());
+        checkers.setVisible(true);
+    }
+
+    /**
+     * Two greys in 8-pixel squares, the usual sign of transparency: drawn under every image, where an
+     * opaque one covers it, so nothing has to find out first whether a file has an alpha channel.
+     */
+    private static ImagePattern checkerPattern() {
+        int square = 8;
+        WritableImage tile = new WritableImage(2 * square, 2 * square);
+        PixelWriter pixels = tile.getPixelWriter();
+        Color light = Color.rgb(160, 160, 160);
+        Color dark = Color.rgb(122, 122, 122);
+        for (int y = 0; y < 2 * square; y++) {
+            for (int x = 0; x < 2 * square; x++) {
+                pixels.setColor(x, y, (x / square + y / square) % 2 == 0 ? light : dark);
+            }
+        }
+        return new ImagePattern(tile, 0, 0, 2 * square, 2 * square, false);
     }
 
     private int totalDegrees() {
