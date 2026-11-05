@@ -32,7 +32,11 @@ class CommandPaletteTest {
     void keywordsFindWhatTheLabelDoesNot() {
         assertEquals(Command.CLOSE, find("quit").getFirst());
         assertEquals(Command.ACTUAL_SIZE, find("100").getFirst());
-        assertEquals(Command.OPEN, find("file").getFirst());
+        // On Windows "Show in File Explorer" has "file" in its label, and outranks it rightly.
+        List<Command> file = find("file").stream()
+                .filter(command -> !command.label().toLowerCase().contains("file"))
+                .toList();
+        assertEquals(Command.OPEN, file.getFirst());
     }
 
     @Test
