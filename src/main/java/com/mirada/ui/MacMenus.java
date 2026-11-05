@@ -19,7 +19,7 @@ import javafx.scene.input.KeyCombination;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The macOS menu bar: File, Image, View, Go and Help across the top of the screen, every item a
+ * The macOS menu bar: File, Edit, Image, View, Go and Help across the top of the screen, every item a
  * {@link Command}. A Mac app without one looks unfinished, and the Help menu's search finds every
  * item by name, as the palette does. About and Settings go in the application menu instead
  * ({@code os.MacAppMenu}).
@@ -36,7 +36,9 @@ final class MacMenus {
     record Heading(String title, List<List<Command>> groups) {}
 
     static final List<Heading> HEADINGS = List.of(
-            new Heading("File", List.of(List.of(Command.OPEN), List.of(Command.CLOSE))),
+            new Heading(
+                    "File", List.of(List.of(Command.OPEN), List.of(Command.SHOW_IN_FOLDER), List.of(Command.CLOSE))),
+            new Heading("Edit", List.of(List.of(Command.COPY))),
             new Heading(
                     "Image",
                     List.of(

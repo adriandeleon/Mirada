@@ -122,9 +122,24 @@ class CommandTest {
 
     @Test
     void windowsCallsTheTrashTheRecycleBin() {
-        assertEquals("Move to Recycle Bin", Command.MOVE_TO_TRASH.label(true));
-        assertEquals("Move to Trash", Command.MOVE_TO_TRASH.label(false));
-        assertEquals("Rename…", Command.RENAME.label(true));
+        assertEquals("Move to Recycle Bin", Command.MOVE_TO_TRASH.label(false, true));
+        assertEquals("Move to Trash", Command.MOVE_TO_TRASH.label(true, false));
+        assertEquals("Move to Trash", Command.MOVE_TO_TRASH.label(false, false));
+        assertEquals("Rename…", Command.RENAME.label(false, true));
+    }
+
+    @Test
+    void theFileManagerIsNamedWhereItHasOneName() {
+        assertEquals("Show in Finder", Command.SHOW_IN_FOLDER.label(true, false));
+        assertEquals("Show in File Explorer", Command.SHOW_IN_FOLDER.label(false, true));
+        assertEquals("Show in Folder", Command.SHOW_IN_FOLDER.label(false, false));
+    }
+
+    @Test
+    void theShortcutCCopiesEverywhere() {
+        assertEquals(Command.COPY, key(KeyCode.C, false, true));
+        assertEquals(Command.COPY, mac(KeyCode.C, false, true, false));
+        assertNull(key(KeyCode.C, false, false));
     }
 
     @Test

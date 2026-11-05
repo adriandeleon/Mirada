@@ -188,6 +188,11 @@ public final class ImageViewport extends Region {
         zoomTo(1, getWidth() / 2, getHeight() / 2);
     }
 
+    /** The user's quarter turns clockwise on top of the file's orientation, 0 to 3. */
+    public int turns() {
+        return turns;
+    }
+
     /** Turns the image a quarter clockwise ({@code +1}) or counterclockwise ({@code -1}). */
     public void rotate(int quarterTurns) {
         turns = Math.floorMod(turns + quarterTurns, 4);

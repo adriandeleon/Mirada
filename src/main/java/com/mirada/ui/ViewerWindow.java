@@ -34,6 +34,8 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
@@ -46,6 +48,8 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import com.mirada.AppInfo;
+import com.mirada.edit.Edit;
+import com.mirada.edit.Raster;
 import com.mirada.folder.FolderImages;
 import com.mirada.folder.ImageFormats;
 import com.mirada.folder.Sorting;
@@ -53,6 +57,7 @@ import com.mirada.image.Animation;
 import com.mirada.image.ImageCache;
 import com.mirada.image.Orientation;
 import com.mirada.os.MacAppMenu;
+import com.mirada.os.Reveal;
 import com.mirada.os.Trash;
 import com.mirada.perf.Startup;
 import com.mirada.perf.Tour;
@@ -527,6 +532,8 @@ public final class ViewerWindow {
             case EDIT -> edit();
             case RENAME -> rename();
             case MOVE_TO_TRASH -> moveToTrash();
+            case COPY -> copy();
+            case SHOW_IN_FOLDER -> showInFolder();
             case SORT_BY_NAME -> sort(settings.sorting().by(Sorting.By.NAME));
             case SORT_BY_DATE -> sort(settings.sorting().by(Sorting.By.DATE));
             case SORT_BY_SIZE -> sort(settings.sorting().by(Sorting.By.SIZE));
@@ -701,6 +708,56 @@ public final class ViewerWindow {
         });
     }
 
+    /**
+     * Puts the image showing on the clipboard as it stands on screen, upright by the file's
+     * orientation and the user's turns, and its file beside it: an app that takes images pastes the
+     * picture, a folder the file. Turning a large photo takes a moment, so it is done off the FX
+     * thread; one that needs no turning goes as it is.
+     */
+    private void copy() {
+        Image image = shownImage;
+        Path file = folder.current();
+        if (image == null || file == null) {
+            say("The image is still loading");
+            return;
+        }
+        Orientation orientation = shownOrientation;
+        int turns = viewport.turns();
+        if (orientation == Orientation.NORMAL && turns == 0) {
+            putOnClipboard(image, file);
+            return;
+        }
+        Thread.ofVirtual().name("copy").start(() -> {
+            try {
+                Raster upright = Edit.upright(Editor.raster(image), orientation).turned(turns);
+                Platform.runLater(() -> putOnClipboard(Editor.image(upright), file));
+            } catch (RuntimeException | OutOfMemoryError e) {
+                Platform.runLater(() -> say("Couldn't copy " + fileName(file) + ": " + e.getMessage()));
+            }
+        });
+    }
+
+    private void putOnClipboard(Image image, Path file) {
+        ClipboardContent content = new ClipboardContent();
+        content.putImage(image);
+        content.putFiles(List.of(file.toFile()));
+        Clipboard.getSystemClipboard().setContent(content);
+        say("Copied " + fileName(file));
+    }
+
+    /** Opens the file manager on the image's folder with the image selected ({@link Reveal}). */
+    private void showInFolder() {
+        Path file = folder.current();
+        if (file == null) return;
+        Thread.ofVirtual().name("reveal").start(() -> {
+            try {
+                Reveal.show(file);
+            } catch (IOException e) {
+                Platform.runLater(() -> say("Couldn't show " + fileName(file) + ": " + e.getMessage()));
+            }
+        });
+    }
+
     private ShortcutsWindow shortcutsWindow() {
         ShortcutsWindow made = shortcutsWindow;
         if (made == null) {
@@ -784,6 +841,9 @@ public final class ViewerWindow {
                 item(Command.ACTUAL_SIZE),
                 item(Command.ROTATE_CLOCKWISE),
                 item(Command.ROTATE_COUNTERCLOCKWISE),
+                new SeparatorMenuItem(),
+                item(Command.COPY),
+                item(Command.SHOW_IN_FOLDER),
                 new SeparatorMenuItem(),
                 item(Command.RENAME),
                 item(Command.MOVE_TO_TRASH),

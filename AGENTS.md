@@ -48,7 +48,7 @@ A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an en
 | `com.mirada.folder` | The "document": the images in one folder, in the chosen order (`Sorting`: natural name order, date or size), and which one is showing (`FolderImages`, `NaturalOrder`, `ImageFormats`) |
 | `com.mirada.image` | Loading: decoded images cached by path (`ImageCache`), EXIF orientation and the camera line (`Exif`, `Orientation`), the sidebar's camera card and every metadata tag (`ExifDetails`), the strip's thumbnails (`Thumbnails`) |
 | `com.mirada.edit` | The editor's rules and pixel work, none of it UI: the edit and its order (`Edit`: turn, flip, crop), the crop as fractions (`Crop`) and as a box being dragged (`CropBox`), the shapes (`AspectRatio`), turns and mirrors on ARGB ints (`Raster`), undo and redo (`History`), the EXIF and colour profile a saved edit keeps (`ExifBlock`, `IccProfile`, both reading through `Containers`), and writing JPEG, PNG, TIFF or BMP (`Encoder`) |
-| `com.mirada.os` | Platform glue: the files Finder opens Mirada with (`MacOpenFiles`) and About and Settings in its application menu (`MacAppMenu`); moving a file to the desktop's trash, and the one rule for `java.awt.headless` (`Trash`) |
+| `com.mirada.os` | Platform glue: the files Finder opens Mirada with (`MacOpenFiles`) and About and Settings in its application menu (`MacAppMenu`); moving a file to the desktop's trash, and the one rule for `java.awt.headless` (`Trash`); showing a file in Finder, File Explorer or the freedesktop file manager (`Reveal`) |
 | `com.mirada.settings` | `settings.properties` in `~/.mirada`, `~/Library/Application Support/Mirada` on macOS or `%APPDATA%\Mirada` on Windows, moved there once from `~/.mirada` (`MIRADA_CONFIG_DIR` moves it): theme, what opens at start, how long the floating controls stay; clamped on read, written through on every change |
 | `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`, `Scrolling`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`); the editor (`Editor`, `CropView`); every command with its keys, name, description and group (`Command`), the command palette (`CommandPalette`), the macOS menu bar (`MacMenus`), `AboutWindow`, `SettingsWindow`, `ShortcutsWindow`, the rename rules (`Renaming`), the theme and, on macOS and Windows, the system's accent colour (`Theme`, `Accent`), the symbolic icons (`Icons`) |
 
@@ -215,6 +215,12 @@ a prefetched neighbour is 2–8 ms for every format.
   records once, when the mouse is released; a run of arrow presses records once, as a "run" that
   joins steps until something else happens. Setting the shape from code (open, reset, undo) goes
   through `Editor.quiet`, or its listener would record a step of its own.
+- **Copy puts the picture as it stands on screen and the file.** `ViewerWindow.copy` turns the
+  full image upright by the file's orientation and the user's turns (`Edit.upright`, then
+  `Raster.turned`, off the FX thread) and puts it on the clipboard with the file, so an app that
+  takes images pastes the picture and a folder the file. The native image's clipboard metadata was
+  recorded before Copy existed: re-record (`scripts/native-metadata.sh`, and the Native metadata
+  workflow) before trusting it there.
 - **Move to Trash is three implementations.** Linux follows the freedesktop.org spec itself (info
   file first, created exclusively to reserve the name, then an atomic move) and leaves a file on
   another drive to `gio trash`; Windows calls `SHFileOperationW` through FFM with undo; macOS uses

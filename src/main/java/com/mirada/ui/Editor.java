@@ -382,7 +382,7 @@ final class Editor {
     }
 
     /** Every pixel of a loaded image, premultiplied. Any thread. */
-    private static Raster raster(Image image) {
+    static Raster raster(Image image) {
         int width = (int) image.getWidth();
         int height = (int) image.getHeight();
         int[] pixels = new int[width * height];
@@ -390,7 +390,7 @@ final class Editor {
         return new Raster(width, height, pixels);
     }
 
-    private static Image image(Raster raster) {
+    static Image image(Raster raster) {
         return new WritableImage(new PixelBuffer<>(
                 raster.width(), raster.height(), IntBuffer.wrap(raster.pixels()), PixelFormat.getIntArgbPreInstance()));
     }

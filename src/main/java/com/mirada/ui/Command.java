@@ -57,6 +57,16 @@ enum Command {
             "crop rotate flip edit save",
             key(KeyCode.E)),
     RENAME("Rename…", "Renames the image's file.", "file name", key(KeyCode.F2)),
+    COPY(
+            "Copy",
+            "Copies the image, as it stands on screen, and its file, to paste into another app or a folder.",
+            "clipboard",
+            shortcut(KeyCode.C)),
+    SHOW_IN_FOLDER(
+            "Show in Folder",
+            "Opens the image's folder in the file manager, with the image selected.",
+            "reveal finder explorer files locate open containing",
+            none()),
     MOVE_TO_TRASH(
             "Move to Trash",
             "Moves the image to the Trash, from where it can be put back, and shows the next.",
@@ -110,7 +120,7 @@ enum Command {
     /** Whether this is macOS, read once: its keys differ ({@link #forKey}, {@link #chord(boolean)}). */
     static final boolean MAC = isMac(System.getProperty("os.name", ""));
 
-    /** Whether this is Windows, read once: its trash is the Recycle Bin ({@link #label(boolean)}). */
+    /** Whether this is Windows, read once: its trash is the Recycle Bin ({@link #label(boolean, boolean)}). */
     static final boolean WINDOWS =
             System.getProperty("os.name", "").toLowerCase(Locale.ROOT).startsWith("windows");
 
@@ -127,12 +137,19 @@ enum Command {
     }
 
     String label() {
-        return label(WINDOWS);
+        return label(MAC, WINDOWS);
     }
 
-    /** The label on Windows or elsewhere: Windows calls its trash the Recycle Bin. Testable. */
-    String label(boolean windows) {
-        return this == MOVE_TO_TRASH ? "Move to " + trash(windows) : label;
+    /**
+     * The label on macOS, Windows or Linux: Windows calls its trash the Recycle Bin, and the file
+     * manager is named where it has one name. Testable.
+     */
+    String label(boolean mac, boolean windows) {
+        return switch (this) {
+            case MOVE_TO_TRASH -> "Move to " + trash(windows);
+            case SHOW_IN_FOLDER -> mac ? "Show in Finder" : windows ? "Show in File Explorer" : label;
+            default -> label;
+        };
     }
 
     /** What the desktop calls the place a deleted file can be put back from. */
@@ -191,7 +208,9 @@ enum Command {
                     PAN_DOWN,
                     EDIT,
                     RENAME,
-                    MOVE_TO_TRASH -> imageShowing ? null : "No image is showing.";
+                    MOVE_TO_TRASH,
+                    COPY,
+                    SHOW_IN_FOLDER -> imageShowing ? null : "No image is showing.";
             case SLIDESHOW -> size < 2 ? "A slideshow needs a folder with more than one image." : null;
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER -> size == 0 ? "No folder is open." : null;
             default -> null;
@@ -217,7 +236,8 @@ enum Command {
             case NEXT, PREVIOUS, FIRST, LAST, SLIDESHOW -> "Folder";
             case ZOOM_IN, ZOOM_OUT, FIT, ACTUAL_SIZE, KEEP_ZOOM, PAN_LEFT, PAN_RIGHT, PAN_UP, PAN_DOWN, FULL_SCREEN ->
                 "View";
-            case ROTATE_CLOCKWISE, ROTATE_COUNTERCLOCKWISE, EDIT, RENAME, MOVE_TO_TRASH -> "Image";
+            case ROTATE_CLOCKWISE, ROTATE_COUNTERCLOCKWISE, EDIT, RENAME, MOVE_TO_TRASH, COPY, SHOW_IN_FOLDER ->
+                "Image";
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER -> "Order";
             case INFO, THUMBNAILS -> "Panels";
             case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, CLOSE, PALETTE -> "Mirada";
@@ -240,6 +260,7 @@ enum Command {
         if (shortcut) {
             return switch (code) {
                 case O -> OPEN;
+                case C -> shift ? null : COPY;
                 case W, Q -> CLOSE;
                 case P -> shift ? PALETTE : null;
                 case R -> shift ? ROTATE_COUNTERCLOCKWISE : ROTATE_CLOCKWISE;
