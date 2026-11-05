@@ -18,6 +18,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 
 import com.mirada.image.Thumbnails;
 
@@ -41,6 +42,10 @@ final class ThumbnailStrip {
     static final double NAME_WIDTH = 180;
     /** The column of names: wide enough for a camera's file name and most people's. */
     static final double NAMES_COLUMN = 240;
+    /** A thumbnail with its name under it: wider, for the name, and a line taller. */
+    static final double CAPTIONED_WIDTH = 124;
+
+    static final double CAPTION = 20;
     /** The list's own padding and border, and room for a scroll bar across it. */
     private static final double CHROME = 18;
 
@@ -52,6 +57,7 @@ final class ThumbnailStrip {
     private final Thumbnails thumbnails = new Thumbnails();
     private boolean side;
     private boolean names;
+    private boolean captions;
     private boolean laidOut;
 
     /** @param pick shows the image at an index of the folder */
@@ -61,7 +67,7 @@ final class ThumbnailStrip {
         // The keyboard is the viewer's: arrows step the folder, not the list's selection.
         list.setFocusTraversable(false);
         list.setCellFactory(view -> new Cell(pick));
-        setLayout(false, false);
+        setLayout(false, false, false);
     }
 
     ListView<Path> node() {
@@ -75,16 +81,19 @@ final class ThumbnailStrip {
 
     /**
      * A column down the side or a row along the bottom ({@code side}), of file names or of pictures
-     * ({@code names}). The cells are made again, as each kind is laid out for one of them.
+     * ({@code names}), the pictures with their names under them or not ({@code captions}). The cells
+     * are made again, as each kind is laid out for one of them.
      */
-    void setLayout(boolean side, boolean names) {
-        if (laidOut && side == this.side && names == this.names) return;
+    void setLayout(boolean side, boolean names, boolean captions) {
+        if (laidOut && side == this.side && names == this.names && captions == this.captions) return;
         laidOut = true;
         this.side = side;
         this.names = names;
+        this.captions = captions;
         list.setOrientation(side ? Orientation.VERTICAL : Orientation.HORIZONTAL);
-        list.setFixedCellSize(names ? (side ? NAME_ROW : NAME_WIDTH) : CELL);
-        double thickness = names ? (side ? NAMES_COLUMN : NAME_ROW + CHROME) : CELL + CHROME;
+        Size size = size(side, names, captions);
+        list.setFixedCellSize(size.cell());
+        double thickness = size.thickness();
         list.pseudoClassStateChanged(SIDE, side);
         list.pseudoClassStateChanged(NAMES, names);
         if (side) {
@@ -93,6 +102,17 @@ final class ThumbnailStrip {
             fix(Region.USE_COMPUTED_SIZE, thickness);
         }
         list.refresh();
+    }
+
+    /** A cell's length along the strip, and the strip's thickness across it. */
+    record Size(double cell, double thickness) {}
+
+    static Size size(boolean side, boolean names, boolean captions) {
+        if (names) return side ? new Size(NAME_ROW, NAMES_COLUMN) : new Size(NAME_WIDTH, NAME_ROW + CHROME);
+        if (!captions) return new Size(CELL, CELL + CHROME);
+        return side
+                ? new Size(CELL + CAPTION, CAPTIONED_WIDTH + CHROME)
+                : new Size(CAPTIONED_WIDTH, CELL + CAPTION + CHROME);
     }
 
     private void fix(double width, double height) {
@@ -122,6 +142,8 @@ final class ThumbnailStrip {
         private final ImageView picture = new ImageView();
         private final StackPane frame = new StackPane(picture);
         private final Label name = new Label();
+        private final Label caption = new Label();
+        private final VBox captioned = new VBox(2);
 
         Cell(IntConsumer pick) {
             picture.setPreserveRatio(true);
@@ -132,10 +154,17 @@ final class ThumbnailStrip {
             frame.getStyleClass().add("thumbnail");
             frame.setAlignment(Pos.CENTER);
             frame.setPrefSize(CELL - 8, CELL - 8);
+            // Square in a captioned cell too, which is wider than the picture.
+            frame.setMaxSize(CELL - 8, CELL - 8);
             name.getStyleClass().add("thumbnail-name");
             name.setMaxWidth(Double.MAX_VALUE);
             // The extension and the number at the end tell a burst apart: cut the middle.
             name.setTextOverrun(OverrunStyle.CENTER_ELLIPSIS);
+            caption.getStyleClass().add("thumbnail-caption");
+            caption.setMaxWidth(CAPTIONED_WIDTH - 8);
+            caption.setTextOverrun(OverrunStyle.CENTER_ELLIPSIS);
+            caption.setAlignment(Pos.CENTER);
+            captioned.setAlignment(Pos.TOP_CENTER);
             setOnMouseClicked(e -> {
                 if (e.getButton() == MouseButton.PRIMARY && !isEmpty()) pick.accept(getIndex());
             });
@@ -149,13 +178,22 @@ final class ThumbnailStrip {
                 setGraphic(null);
                 return;
             }
+            Path fileName = file.getFileName();
+            String text = fileName == null ? file.toString() : fileName.toString();
             if (names) {
-                Path fileName = file.getFileName();
-                name.setText(fileName == null ? file.toString() : fileName.toString());
+                name.setText(text);
                 setGraphic(name);
                 return;
             }
-            setGraphic(frame);
+            if (captions) {
+                caption.setText(text);
+                // The frame moves between the two shapes as the setting changes; never in both.
+                captioned.getChildren().setAll(frame, caption);
+                setGraphic(captioned);
+            } else {
+                captioned.getChildren().clear();
+                setGraphic(frame);
+            }
             thumbnails
                     .get(file)
                     .thenAcceptAsync(

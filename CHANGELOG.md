@@ -23,6 +23,8 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 - **The thumbnail strip can stand down the left side and list file names instead of pictures**:
   Thumbnails at the Side and Names Instead of Thumbnails, in the palette, the menus and Settings.
   Names load no thumbnails at all, which suits a folder of thousands.
+- **Names under thumbnails**: each thumbnail can have its file name centred under it, along the
+  bottom or down the side (Names Under Thumbnails, in the palette, the menus and Settings).
 - **The header names the folder being shown**, under the file name, with its whole path as the
   tooltip.
 - **Icons in the menus**: the main menu, the right-click menu and the zoom menu show each command's

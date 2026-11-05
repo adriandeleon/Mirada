@@ -108,6 +108,11 @@ enum Command {
             "Lists the folder by file name in the strip, instead of pictures.",
             "names list text filmstrip strip filenames",
             none()),
+    THUMBNAIL_CAPTIONS(
+            "Names Under Thumbnails",
+            "Writes each image's file name under its thumbnail in the strip.",
+            "captions labels titles filmstrip strip filenames",
+            none()),
     /** Leaves full screen, or on Linux closes the window: look, then go ({@link #escapeCloses}). */
     ESCAPE(
             "Escape",
@@ -267,7 +272,7 @@ enum Command {
                     COPY,
                     SHOW_IN_FOLDER -> "Image";
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER -> "Order";
-            case INFO, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES -> "Panels";
+            case INFO, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES, THUMBNAIL_CAPTIONS -> "Panels";
             case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, CLOSE, PALETTE -> "Mirada";
         };
     }

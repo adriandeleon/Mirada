@@ -51,6 +51,7 @@ final class Icons {
     static final String LOCK = "M6 11 H18 V20 H6 Z M8.5 11 V8 A3.5 3.5 0 0 1 15.5 8 V11";
     static final String SORT = "M7 4 V20 M4 17 L7 20 L10 17 M13 6 H20 M13 12 H18 M13 18 H16";
     static final String SIDEBAR = "M3 5 H21 V19 H3 Z M9 5 V19";
+    static final String CAPTION = "M4 4 H20 V15 H4 Z M7 19.5 H17";
     static final String LIST = "M8 6 H20 M8 12 H20 M8 18 H20 M4 6 H4.1 M4 12 H4.1 M4 18 H4.1";
 
     private Icons() {}
@@ -82,6 +83,7 @@ final class Icons {
             case THUMBNAILS -> STRIP;
             case THUMBNAILS_AT_SIDE -> SIDEBAR;
             case THUMBNAIL_NAMES -> LIST;
+            case THUMBNAIL_CAPTIONS -> CAPTION;
             case SETTINGS -> SLIDERS;
             case SHORTCUTS -> KEYBOARD;
             case OPEN -> FOLDER_OPEN;

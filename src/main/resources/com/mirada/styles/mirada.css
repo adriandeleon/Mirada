@@ -200,6 +200,16 @@
     -fx-background-radius: 6;
 }
 
+/* A name under each thumbnail: small and quiet, the current one in the accent. */
+.thumbnail-strip .thumbnail-caption {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 0.85em;
+}
+
+.thumbnail-strip .list-cell:selected .thumbnail-caption {
+    -fx-text-fill: -color-accent-fg;
+}
+
 .thumbnail-strip:names .list-cell {
     -fx-padding: 1 2 1 2;
 }

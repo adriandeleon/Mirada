@@ -329,7 +329,7 @@ public final class ViewerWindow {
         }
         ThumbnailStrip shown = thumbnailStrip();
         boolean side = settings.thumbnailsAtSide();
-        shown.setLayout(side, settings.thumbnailNames());
+        shown.setLayout(side, settings.thumbnailNames(), settings.thumbnailCaptions());
         root.setBottom(side ? null : shown.node());
         root.setLeft(side ? shown.node() : null);
         refreshStrip();
@@ -548,6 +548,10 @@ public final class ViewerWindow {
             }
             case THUMBNAIL_NAMES -> {
                 settings.setThumbnailNames(!settings.thumbnailNames());
+                thumbnailsShowing.set(true);
+            }
+            case THUMBNAIL_CAPTIONS -> {
+                settings.setThumbnailCaptions(!settings.thumbnailCaptions());
                 thumbnailsShowing.set(true);
             }
             case SETTINGS -> settingsWindow().show(stage);
@@ -935,6 +939,7 @@ public final class ViewerWindow {
                 item(Command.INFO),
                 item(Command.THUMBNAILS),
                 item(Command.THUMBNAILS_AT_SIDE),
+                item(Command.THUMBNAIL_CAPTIONS),
                 item(Command.THUMBNAIL_NAMES),
                 item(Command.FULL_SCREEN),
                 item(Command.SLIDESHOW));
@@ -997,6 +1002,7 @@ public final class ViewerWindow {
             case THUMBNAILS -> thumbnailsShowing.get();
             case THUMBNAILS_AT_SIDE -> settings.thumbnailsAtSide();
             case THUMBNAIL_NAMES -> settings.thumbnailNames();
+            case THUMBNAIL_CAPTIONS -> settings.thumbnailCaptions();
             case SORT_BY_NAME -> sorting.by() == Sorting.By.NAME;
             case SORT_BY_DATE -> sorting.by() == Sorting.By.DATE;
             case SORT_BY_SIZE -> sorting.by() == Sorting.By.SIZE;

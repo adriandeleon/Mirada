@@ -44,6 +44,7 @@ public final class Settings {
     static final String KEEP_ZOOM = "view.keepZoom";
     static final String THUMBNAILS_AT_SIDE = "thumbnails.side";
     static final String THUMBNAIL_NAMES = "thumbnails.names";
+    static final String THUMBNAIL_CAPTIONS = "thumbnails.captions";
     static final String SLIDESHOW_SECONDS = "slideshow.seconds";
 
     public static final int MIN_HIDE_SECONDS = 1;
@@ -63,6 +64,7 @@ public final class Settings {
     private boolean keepZoom;
     private boolean thumbnailsAtSide;
     private boolean thumbnailNames;
+    private boolean thumbnailCaptions;
     private int slideshowSeconds = DEFAULT_SLIDESHOW_SECONDS;
 
     public Settings(Path file) {
@@ -159,6 +161,8 @@ public final class Settings {
                 properties.getProperty(THUMBNAILS_AT_SIDE, "false").trim());
         thumbnailNames = Boolean.parseBoolean(
                 properties.getProperty(THUMBNAIL_NAMES, "false").trim());
+        thumbnailCaptions = Boolean.parseBoolean(
+                properties.getProperty(THUMBNAIL_CAPTIONS, "false").trim());
         slideshowSeconds = slideshowSecondsOf(properties.getProperty(SLIDESHOW_SECONDS));
     }
 
@@ -223,6 +227,16 @@ public final class Settings {
     /** Whether the thumbnail strip lists file names instead of pictures. */
     public boolean thumbnailNames() {
         return thumbnailNames;
+    }
+
+    /** Whether each thumbnail has its file name under it. */
+    public boolean thumbnailCaptions() {
+        return thumbnailCaptions;
+    }
+
+    public void setThumbnailCaptions(boolean value) {
+        thumbnailCaptions = value;
+        changed();
     }
 
     public void setThumbnailsAtSide(boolean value) {
@@ -299,6 +313,7 @@ public final class Settings {
         properties.setProperty(KEEP_ZOOM, Boolean.toString(keepZoom));
         properties.setProperty(THUMBNAILS_AT_SIDE, Boolean.toString(thumbnailsAtSide));
         properties.setProperty(THUMBNAIL_NAMES, Boolean.toString(thumbnailNames));
+        properties.setProperty(THUMBNAIL_CAPTIONS, Boolean.toString(thumbnailCaptions));
         properties.setProperty(SLIDESHOW_SECONDS, Integer.toString(slideshowSeconds));
         try {
             Path folder = file.toAbsolutePath().getParent();

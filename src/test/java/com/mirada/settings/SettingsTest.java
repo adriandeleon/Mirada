@@ -52,12 +52,15 @@ class SettingsTest {
         assertFalse(settings.thumbnailsAtSide());
         assertFalse(settings.thumbnailNames());
         settings.setThumbnailsAtSide(true);
+        assertFalse(settings.thumbnailCaptions());
         settings.setThumbnailNames(true);
+        settings.setThumbnailCaptions(true);
 
         Settings again = new Settings(file);
         again.load();
         assertTrue(again.thumbnailsAtSide());
         assertTrue(again.thumbnailNames());
+        assertTrue(again.thumbnailCaptions());
     }
 
     @Test

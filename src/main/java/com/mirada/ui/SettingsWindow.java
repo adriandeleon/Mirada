@@ -110,6 +110,11 @@ final class SettingsWindow {
         atSide.selectedProperty().addListener((o, was, now) -> {
             if (now != settings.thumbnailsAtSide()) settings.setThumbnailsAtSide(now);
         });
+        CheckBox captions = new CheckBox();
+        captions.setSelected(settings.thumbnailCaptions());
+        captions.selectedProperty().addListener((o, was, now) -> {
+            if (now != settings.thumbnailCaptions()) settings.setThumbnailCaptions(now);
+        });
         CheckBox names = new CheckBox();
         names.setSelected(settings.thumbnailNames());
         names.selectedProperty().addListener((o, was, now) -> {
@@ -134,6 +139,7 @@ final class SettingsWindow {
             keepZoom.setSelected(settings.keepZoom());
             atSide.setSelected(settings.thumbnailsAtSide());
             names.setSelected(settings.thumbnailNames());
+            captions.setSelected(settings.thumbnailCaptions());
         });
 
         VBox root = new VBox(
@@ -149,6 +155,10 @@ final class SettingsWindow {
                                 "Thumbnails at the side",
                                 "A column down the left of the window instead of a row along the bottom.",
                                 atSide),
+                        row(
+                                "File names under thumbnails",
+                                "Each thumbnail has its file name written under it.",
+                                captions),
                         row(
                                 "File names instead of pictures",
                                 "The strip lists the folder by name, and loads no thumbnails.",

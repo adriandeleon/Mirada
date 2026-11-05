@@ -51,7 +51,7 @@ final class MacMenus {
                             List.of(Command.ZOOM_IN, Command.ZOOM_OUT, Command.FIT, Command.ACTUAL_SIZE),
                             List.of(Command.KEEP_ZOOM),
                             List.of(Command.INFO, Command.THUMBNAILS),
-                            List.of(Command.THUMBNAILS_AT_SIDE, Command.THUMBNAIL_NAMES),
+                            List.of(Command.THUMBNAILS_AT_SIDE, Command.THUMBNAIL_CAPTIONS, Command.THUMBNAIL_NAMES),
                             List.of(Command.FULL_SCREEN))),
             new Heading(
                     "Go",
@@ -73,6 +73,7 @@ final class MacMenus {
             Command.THUMBNAILS,
             Command.THUMBNAILS_AT_SIDE,
             Command.THUMBNAIL_NAMES,
+            Command.THUMBNAIL_CAPTIONS,
             Command.SORT_BY_NAME,
             Command.SORT_BY_DATE,
             Command.SORT_BY_SIZE,
