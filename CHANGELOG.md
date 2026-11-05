@@ -20,6 +20,9 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 - **A trackpad pans and swipes**: pinch to zoom, two fingers to move about a zoomed-in image, and a
   sideways swipe for the next or previous image when there is nothing to pan. A mouse wheel still
   zooms, and Ctrl or ⌘ with any scroll zooms (a Windows touchpad's pinch arrives that way).
+- **macOS and Windows: the system's accent colour** for the current thumbnail, the palette's
+  highlighted row and every selection, in place of a fixed blue, and followed as it changes. A pale
+  or deep accent is adjusted for text so it stays legible. Linux keeps the blue.
 - **Settings are kept where each platform keeps them**: `~/Library/Application Support/Mirada` on
   macOS and `%APPDATA%\Mirada` on Windows, moved there from `~/.mirada` on the first start. Linux
   keeps `~/.mirada`.
