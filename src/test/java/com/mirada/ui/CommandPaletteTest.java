@@ -47,6 +47,25 @@ class CommandPaletteTest {
         assertTrue(find("qqqq").isEmpty());
     }
 
+    private static final List<String> FOLDER =
+            List.of("IMG_0412.jpg", "IMG_0413.jpg", "beach.heic", "IMG_1412.jpg", "sunset beach.png");
+
+    @Test
+    void anEmptyQueryListsTheFolderInItsOrder() {
+        assertEquals(List.of(0, 1, 2, 3, 4), CommandPalette.orderedImages(FOLDER, ""));
+    }
+
+    @Test
+    void imagesMatchByNameAndTiesKeepTheFolderOrder() {
+        List<Integer> found = CommandPalette.orderedImages(FOLDER, "412");
+        assertEquals(List.of(0, 3), found.stream().sorted().toList());
+        assertEquals(2, CommandPalette.orderedImages(FOLDER, "beach").getFirst());
+        // IMG_0412 and IMG_0413 score alike for "img": they stay in the folder's order.
+        List<Integer> img = CommandPalette.orderedImages(FOLDER, "img");
+        assertTrue(img.indexOf(0) < img.indexOf(1));
+        assertTrue(CommandPalette.orderedImages(FOLDER, "qqqq").isEmpty());
+    }
+
     @Test
     void theListShowsWholeRows() {
         assertEquals(CommandPalette.VISIBLE_ROWS * CommandPalette.ROW_HEIGHT + 4, CommandPalette.listHeight(4));

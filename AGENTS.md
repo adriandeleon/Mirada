@@ -364,6 +364,11 @@ a prefetched neighbour is 2–8 ms for every format.
   navigation change belongs in all three projects, or the palettes stop agreeing. One fix went the
   other way and is not in Termina yet: `TextInputKeys.actionFor` checks for a null chord, because a
   bare Ctrl or Shift press has none and `Map.ofEntries` throws on a null key.
+- **The palette also finds images** (`Command.GO_TO_IMAGE`, `CommandPalette.showImages`): its rows
+  are `Row`s, a command or an image of the folder, and file names rank by the same `FuzzyMatch`,
+  ties in the folder's order (`orderedImages`). Ctrl+P opens it but does not close it: inside the
+  palette Ctrl+P is the Emacs key for the row above, so only Shift+Ctrl+P (the commands' chord)
+  closes from the keyboard, as before; Escape closes either.
 - **While the palette is up, the scene's key filter stands aside.** Filters run from the scene down,
   so `ViewerWindow.onKey` sees every key before the palette's card does; it returns early while the
   palette shows (or typing "r" would rotate the image) and handles only the palette's own chord, to

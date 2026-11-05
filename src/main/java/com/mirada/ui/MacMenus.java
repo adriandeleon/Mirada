@@ -56,6 +56,7 @@ final class MacMenus {
                     "Go",
                     List.of(
                             List.of(Command.NEXT, Command.PREVIOUS, Command.FIRST, Command.LAST),
+                            List.of(Command.GO_TO_IMAGE),
                             List.of(Command.SLIDESHOW),
                             List.of(
                                     Command.SORT_BY_NAME,

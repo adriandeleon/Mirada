@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntConsumer;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -41,6 +42,10 @@ import org.jspecify.annotations.Nullable;
  * <p>An in-scene overlay rather than a window of its own, so the image stays where it is and the
  * next key after the palette closes reaches the viewer again.
  *
+ * <p>The same card finds an image of the folder by its name ({@link #showImages}, Go to Image),
+ * as an editor's Ctrl+P finds a file: the rows are then the folder's file names, in the folder's
+ * order until something is typed, the current one under the cursor.
+ *
  * <p>The commands are {@link Command}'s; matching ({@link FuzzyMatch}), the keys ({@link
  * PaletteKeys}, {@link TextInputKeys}) and the highlighting ({@link MatchText}) are Termina's,
  * verbatim, so a ranking or navigation fix belongs in all three projects.
@@ -56,13 +61,21 @@ final class CommandPalette {
     /** What a match through a keyword loses against any match on the label: more than a label can score. */
     static final int KEYWORD_PENALTY = 1_000_000;
 
+    /** A row: a command to run, or an image of the folder to go to. */
+    sealed interface Row permits CommandRow, ImageRow {}
+
+    record CommandRow(Command command) implements Row {}
+
+    /** The folder's image at {@code index}, by its file name. */
+    record ImageRow(int index, String name) implements Row {}
+
     private final StackPane host;
     private final Consumer<Command> run;
 
     private final TextField input = new TextField();
     private final Label prefixChip = new Label();
-    private final ListView<Command> list = new ListView<>();
-    private final ObservableList<Command> items = FXCollections.observableArrayList();
+    private final ListView<Row> list = new ListView<>();
+    private final ObservableList<Row> items = FXCollections.observableArrayList();
     private final Label desc = new Label();
     private final Label hint = new Label();
     private final VBox card = new VBox(6);
@@ -73,6 +86,13 @@ final class CommandPalette {
     private String currentQuery = "";
     /** Why a command cannot run right now, or null when it can. */
     private Function<Command, @Nullable String> unavailable = command -> null;
+    /** The folder's file names while finding an image, in the folder's order; empty for commands. */
+    private List<String> images = List.of();
+    /** The image showing, which an empty query puts the cursor on. */
+    private int currentImage;
+
+    private IntConsumer goTo = index -> {};
+    private boolean findingImages;
 
     CommandPalette(StackPane host, Consumer<Command> run) {
         this.host = host;
@@ -87,7 +107,6 @@ final class CommandPalette {
         });
 
         prefixChip.getStyleClass().add("palette-prefix");
-        prefixChip.setText(Command.PALETTE.chord().getDisplayText());
         input.getStyleClass().add("palette-input");
         input.setPromptText("Run command…");
         input.textProperty().addListener((o, was, now) -> filter(now));
@@ -103,12 +122,12 @@ final class CommandPalette {
         list.setFixedCellSize(ROW_HEIGHT);
         list.setPrefHeight(listHeight(0));
         list.insetsProperty().addListener((o, was, in) -> list.setPrefHeight(listHeight(in.getTop() + in.getBottom())));
-        list.setCellFactory(view -> new CommandCell());
+        list.setCellFactory(view -> new RowCell());
         // The query field keeps the keyboard; the list is driven from it.
         list.setFocusTraversable(false);
         list.addEventFilter(MouseEvent.MOUSE_PRESSED, e -> input.requestFocus());
         list.getSelectionModel().selectedItemProperty().addListener((o, was, selected) -> {
-            String d = selected == null ? "" : selected.description();
+            String d = description(selected);
             desc.setText(d.isEmpty() ? " " : d); // one line tall always, so the card never jitters
         });
 
@@ -117,7 +136,6 @@ final class CommandPalette {
         desc.setTextOverrun(OverrunStyle.ELLIPSIS);
         desc.setText(" ");
         hint.getStyleClass().add("palette-hint");
-        hint.setText(PaletteKeys.legend(PaletteKeys.hint("run", "↵")));
 
         card.getStyleClass().add("command-palette");
         card.getChildren().addAll(inputRow, list, desc, hint);
@@ -151,6 +169,32 @@ final class CommandPalette {
         if (isShowing()) return;
         this.commands = List.copyOf(commands);
         this.unavailable = unavailable;
+        open(false, Command.PALETTE, "Run command…", "No matching commands");
+    }
+
+    /**
+     * Shows the palette over the folder's images, by {@code names} in the folder's order, with the
+     * cursor on {@code current}; choosing one hands its index to {@code goTo}.
+     */
+    void showImages(List<String> names, int current, IntConsumer goTo) {
+        if (isShowing()) return;
+        this.images = List.copyOf(names);
+        this.currentImage = current;
+        this.goTo = goTo;
+        open(true, Command.GO_TO_IMAGE, "Go to image…", "No matching images");
+    }
+
+    /** Whether the palette is up over the folder's images, not the commands. */
+    boolean isFindingImages() {
+        return isShowing() && findingImages;
+    }
+
+    private void open(boolean findingImages, Command openedBy, String prompt, String nothing) {
+        this.findingImages = findingImages;
+        prefixChip.setText(openedBy.chord().getDisplayText());
+        input.setPromptText(prompt);
+        hint.setText(PaletteKeys.legend(PaletteKeys.hint(findingImages ? "go" : "run", "↵")));
+        list.setPlaceholder(new Label(nothing));
         input.clear();
         filter("");
         host.getChildren().addAll(backdrop, card);
@@ -160,10 +204,19 @@ final class CommandPalette {
     void hide() {
         if (!isShowing()) return;
         host.getChildren().removeAll(backdrop, card);
+        images = List.of(); // a large folder's names are not kept while the palette is closed
     }
 
-    private boolean isEnabled(Command command) {
-        return unavailable.apply(command) == null;
+    private boolean isEnabled(Row row) {
+        return !(row instanceof CommandRow(Command command)) || unavailable.apply(command) == null;
+    }
+
+    private String description(@Nullable Row row) {
+        return switch (row) {
+            case null -> "";
+            case CommandRow(Command command) -> command.description();
+            case ImageRow(int index, String _) -> "Image " + (index + 1) + " of " + images.size();
+        };
     }
 
     private void onKey(KeyEvent e) {
@@ -180,17 +233,54 @@ final class CommandPalette {
     }
 
     private void runSelected() {
-        Command command = list.getSelectionModel().getSelectedItem();
-        if (command == null || !isEnabled(command)) return;
+        Row row = list.getSelectionModel().getSelectedItem();
+        if (row == null || !isEnabled(row)) return;
         // Hidden first: the command may open a dialog, and the palette must not sit over it.
+        IntConsumer go = goTo;
         hide();
-        run.accept(command);
+        switch (row) {
+            case CommandRow(Command command) -> run.accept(command);
+            case ImageRow(int index, String _) -> go.accept(index);
+        }
     }
 
     private void filter(@Nullable String query) {
         currentQuery = query == null ? "" : query.trim();
-        items.setAll(orderedMatches(commands, currentQuery));
-        selectFirstEnabled();
+        List<Row> rows = new ArrayList<>();
+        if (findingImages) {
+            for (int index : orderedImages(images, currentQuery)) rows.add(new ImageRow(index, images.get(index)));
+        } else {
+            for (Command command : orderedMatches(commands, currentQuery)) rows.add(new CommandRow(command));
+        }
+        items.setAll(rows);
+        if (findingImages && currentQuery.isEmpty() && currentImage >= 0 && currentImage < rows.size()) {
+            list.getSelectionModel().select(currentImage);
+            list.scrollTo(Math.max(0, currentImage - VISIBLE_ROWS / 2));
+        } else {
+            selectFirstEnabled();
+        }
+    }
+
+    /**
+     * The images matching {@code query}, as indices into {@code names}: all of them in the folder's
+     * order for an empty query, otherwise by fuzzy score, ties in the folder's order, so a burst of
+     * IMG_0412, IMG_0413… keeps its sequence under the cursor.
+     */
+    static List<Integer> orderedImages(List<String> names, @Nullable String query) {
+        String q = query == null ? "" : query.trim();
+        List<Integer> indices = new ArrayList<>(names.size());
+        if (q.isEmpty()) {
+            for (int i = 0; i < names.size(); i++) indices.add(i);
+            return indices;
+        }
+        int[] scores = new int[names.size()];
+        for (int i = 0; i < names.size(); i++) {
+            scores[i] = FuzzyMatch.scoreOf(names.get(i), q);
+            if (scores[i] != FuzzyMatch.NO_SCORE) indices.add(i);
+        }
+        indices.sort(
+                Comparator.comparingInt((Integer i) -> scores[i]).reversed().thenComparingInt(i -> i));
+        return indices;
     }
 
     /**
@@ -248,8 +338,11 @@ final class CommandPalette {
         list.getSelectionModel().clearSelection();
     }
 
-    /** A row: the command on the left with the match emboldened, its chord right-aligned. */
-    private final class CommandCell extends ListCell<Command> {
+    /**
+     * A row: the command or file name on the left with the match emboldened; a command's chord, or
+     * an image's place in the folder, right-aligned.
+     */
+    private final class RowCell extends ListCell<Row> {
         private final TextFlow title = new TextFlow();
         private final Label chord = new Label();
         private final HBox layout = new HBox(10, title, spacer(), chord);
@@ -260,11 +353,11 @@ final class CommandPalette {
             return region;
         }
 
-        CommandCell() {
+        RowCell() {
             chord.getStyleClass().add("keybinding");
             layout.setAlignment(Pos.CENTER_LEFT);
             setOnMouseClicked(e -> {
-                Command item = getItem();
+                Row item = getItem();
                 if (e.getButton() != MouseButton.PRIMARY || isEmpty() || item == null || !isEnabled(item)) return;
                 getListView().getSelectionModel().select(item);
                 runSelected();
@@ -272,18 +365,25 @@ final class CommandPalette {
         }
 
         @Override
-        protected void updateItem(@Nullable Command item, boolean empty) {
+        protected void updateItem(@Nullable Row item, boolean empty) {
             super.updateItem(item, empty);
             if (empty || item == null) {
                 setGraphic(null);
                 setTooltip(null);
                 return;
             }
-            title.getChildren().setAll(MatchText.runs(item.label(), currentQuery));
-            chord.setText(item.chord().getDisplayText());
             layout.getStyleClass().remove("palette-disabled");
             setTooltip(null); // cells are recycled: never leave a previous row's explanation behind
-            String why = unavailable.apply(item);
+            if (item instanceof ImageRow(int index, String name)) {
+                title.getChildren().setAll(MatchText.runs(name, currentQuery));
+                chord.setText(Integer.toString(index + 1));
+                setGraphic(layout);
+                return;
+            }
+            Command command = ((CommandRow) item).command();
+            title.getChildren().setAll(MatchText.runs(command.label(), currentQuery));
+            chord.setText(command.chord().getDisplayText());
+            String why = unavailable.apply(command);
             if (why != null) {
                 layout.getStyleClass().add("palette-disabled");
                 Tooltip tip = new Tooltip(why);

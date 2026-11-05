@@ -21,6 +21,11 @@ enum Command {
     PREVIOUS("Previous Image", "Shows the previous image in the folder.", "go navigate back", key(KeyCode.LEFT)),
     FIRST("First Image", "Jumps to the first image in the folder.", "go navigate start", key(KeyCode.HOME)),
     LAST("Last Image", "Jumps to the last image in the folder.", "go navigate end", key(KeyCode.END)),
+    GO_TO_IMAGE(
+            "Go to Image…",
+            "Finds an image in the folder by its name, and shows it.",
+            "find search name jump navigate",
+            shortcut(KeyCode.P)),
     SLIDESHOW(
             "Slideshow",
             "Shows the folder's images one after another, full screen. Escape stops it.",
@@ -212,7 +217,8 @@ enum Command {
                     COPY,
                     SHOW_IN_FOLDER -> imageShowing ? null : "No image is showing.";
             case SLIDESHOW -> size < 2 ? "A slideshow needs a folder with more than one image." : null;
-            case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER -> size == 0 ? "No folder is open." : null;
+            case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER, GO_TO_IMAGE ->
+                size == 0 ? "No folder is open." : null;
             default -> null;
         };
     }
@@ -233,7 +239,7 @@ enum Command {
     /** The heading this command comes under in the shortcuts window. */
     String group() {
         return switch (this) {
-            case NEXT, PREVIOUS, FIRST, LAST, SLIDESHOW -> "Folder";
+            case NEXT, PREVIOUS, FIRST, LAST, GO_TO_IMAGE, SLIDESHOW -> "Folder";
             case ZOOM_IN, ZOOM_OUT, FIT, ACTUAL_SIZE, KEEP_ZOOM, PAN_LEFT, PAN_RIGHT, PAN_UP, PAN_DOWN, FULL_SCREEN ->
                 "View";
             case ROTATE_CLOCKWISE, ROTATE_COUNTERCLOCKWISE, EDIT, RENAME, MOVE_TO_TRASH, COPY, SHOW_IN_FOLDER ->
@@ -262,7 +268,7 @@ enum Command {
                 case O -> OPEN;
                 case C -> shift ? null : COPY;
                 case W, Q -> CLOSE;
-                case P -> shift ? PALETTE : null;
+                case P -> shift ? PALETTE : GO_TO_IMAGE;
                 case R -> shift ? ROTATE_COUNTERCLOCKWISE : ROTATE_CLOCKWISE;
                 case L -> mac && !shift ? ROTATE_COUNTERCLOCKWISE : null;
                 case I -> mac && !shift ? INFO : null;

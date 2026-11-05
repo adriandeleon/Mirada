@@ -512,6 +512,7 @@ public final class ViewerWindow {
             case OPEN -> chooseFile();
             case CLOSE -> stage.close();
             case PALETTE -> palette.show(Command.inPalette(), this::unavailable);
+            case GO_TO_IMAGE -> goToImage();
             case INFO -> infoShowing.set(!infoShowing.get());
             case THUMBNAILS -> thumbnailsShowing.set(!thumbnailsShowing.get());
             case SETTINGS -> settingsWindow().show(stage);
@@ -743,6 +744,17 @@ public final class ViewerWindow {
         content.putFiles(List.of(file.toFile()));
         Clipboard.getSystemClipboard().setContent(content);
         say("Copied " + fileName(file));
+    }
+
+    /**
+     * The palette over the folder's file names, the current one under the cursor. Ctrl+P does not
+     * close it again, as Shift+Ctrl+P closes the commands: inside the palette it is the Emacs key for
+     * the row above, and stays that.
+     */
+    private void goToImage() {
+        List<String> names = new ArrayList<>(folder.size());
+        for (Path image : folder.images()) names.add(fileName(image));
+        palette.showImages(names, folder.index(), index -> go(folder.jump(index)));
     }
 
     /** Opens the file manager on the image's folder with the image selected ({@link Reveal}). */

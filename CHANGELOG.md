@@ -20,6 +20,8 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 - **A trackpad pans and swipes**: pinch to zoom, two fingers to move about a zoomed-in image, and a
   sideways swipe for the next or previous image when there is nothing to pan. A mouse wheel still
   zooms, and Ctrl or ⌘ with any scroll zooms (a Windows touchpad's pinch arrives that way).
+- **Go to Image** (Ctrl+P, ⌘P): the palette over the folder's file names, the current one under the
+  cursor; type part of a name and press Enter to show it.
 - **Copy** (Ctrl+C, ⌘C): the image as it stands on screen, turned as shown, and its file, so it
   pastes into an app as a picture and into a folder as the file.
 - **Show in Finder / Show in File Explorer / Show in Folder**: the image's folder in the file

@@ -60,7 +60,7 @@ class CommandTest {
     void thePaletteOpensOnShortcutShiftPAndF1() {
         assertEquals(Command.PALETTE, key(KeyCode.P, true, true));
         assertEquals(Command.PALETTE, key(KeyCode.F1, false, false));
-        assertNull(key(KeyCode.P, false, true));
+        assertEquals(Command.GO_TO_IMAGE, key(KeyCode.P, false, true));
     }
 
     /** The chord a command shows, in the palette and the context menu, must be one that runs it. */
