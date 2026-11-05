@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
@@ -40,6 +41,10 @@ import static java.lang.foreign.ValueLayout.JAVA_SHORT;
  *   <li><b>Windows</b>: the Recycle Bin, through the shell's {@code SHFileOperationW} with undo.
  *   <li><b>macOS</b>: AWT's {@code Desktop.moveToTrash}, AWT being headful there ({@link #headless}).
  * </ul>
+ *
+ * <p>Only Linux's own trash can be put back from here ({@link #restore}): Mirada wrote the info file
+ * and knows where the file went. The Recycle Bin and the Mac's Trash say nothing of where it went,
+ * and reading the Mac's needs Full Disk Access; the user puts those back from the desktop's own.
  */
 public final class Trash {
 
@@ -54,28 +59,69 @@ public final class Trash {
         return !MacOpenFiles.isMac(osName);
     }
 
+    /**
+     * A file moved to the trash: where it was, and, when Mirada can put it back, where it is now
+     * and the info file that records it.
+     */
+    public record Trashed(
+            Path original, @Nullable Path inTrash, @Nullable Path info) {
+
+        public static Trashed gone(Path original) {
+            return new Trashed(original, null, null);
+        }
+
+        public boolean restorable() {
+            return inTrash != null && info != null;
+        }
+    }
+
+    /** Whether a trashed file can be put back from here on this platform: Linux's own trash only. */
+    public static boolean restores() {
+        String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+        return !os.startsWith("windows") && !os.startsWith("mac");
+    }
+
     /** Moves {@code file} to the trash, or says why it could not. */
-    public static void move(Path file) throws IOException {
+    public static Trashed move(Path file) throws IOException {
         String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
         if (os.startsWith("windows")) {
             recycle(file);
+            return Trashed.gone(file);
         } else if (os.startsWith("mac")) {
             if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.MOVE_TO_TRASH)) {
                 throw new IOException("the Trash is not available");
             }
             if (!Desktop.getDesktop().moveToTrash(file.toFile())) throw new IOException("Finder refused");
+            return Trashed.gone(file);
         } else {
-            freedesktop(file);
+            return freedesktop(file);
         }
+    }
+
+    /**
+     * Puts a trashed file back where it was, and removes its info file, as the file manager's
+     * Restore does. Refuses rather than overwrite: a file of that name may have come since.
+     */
+    public static void restore(Trashed trashed) throws IOException {
+        Path inTrash = trashed.inTrash();
+        Path info = trashed.info();
+        if (inTrash == null || info == null) throw new IOException("it can only be put back from the desktop's trash");
+        if (!Files.exists(inTrash, LinkOption.NOFOLLOW_LINKS)) throw new IOException("it is no longer in the Trash");
+        if (Files.exists(trashed.original(), LinkOption.NOFOLLOW_LINKS)) {
+            throw new FileAlreadyExistsException(
+                    trashed.original().toString(), null, "a file of that name is there now");
+        }
+        Files.move(inTrash, trashed.original(), StandardCopyOption.ATOMIC_MOVE);
+        Files.deleteIfExists(info);
     }
 
     // ---- Linux ----
 
-    private static void freedesktop(Path file) throws IOException {
-        freedesktop(file, homeTrash(System.getenv("XDG_DATA_HOME"), System.getProperty("user.home", ".")));
+    private static Trashed freedesktop(Path file) throws IOException {
+        return freedesktop(file, homeTrash(System.getenv("XDG_DATA_HOME"), System.getProperty("user.home", ".")));
     }
 
-    static void freedesktop(Path file, Path trash) throws IOException {
+    static Trashed freedesktop(Path file, Path trash) throws IOException {
         Path files = trash.resolve("files");
         Path info = trash.resolve("info");
         Files.createDirectories(files);
@@ -96,12 +142,13 @@ public final class Trash {
                 continue;
             }
             try {
-                Files.move(file, files.resolve(name), StandardCopyOption.ATOMIC_MOVE);
-                return;
+                Path inTrash = files.resolve(name);
+                Files.move(file, inTrash, StandardCopyOption.ATOMIC_MOVE);
+                return new Trashed(file.toAbsolutePath(), inTrash, infoFile);
             } catch (AtomicMoveNotSupportedException otherFileSystem) {
                 Files.deleteIfExists(infoFile);
                 gioTrash(file);
-                return;
+                return Trashed.gone(file);
             } catch (IOException e) {
                 Files.deleteIfExists(infoFile);
                 throw e;

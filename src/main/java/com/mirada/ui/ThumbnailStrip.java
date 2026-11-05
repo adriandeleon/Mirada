@@ -7,49 +7,101 @@ import java.util.function.IntConsumer;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.css.PseudoClass;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.OverrunStyle;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
 import com.mirada.image.Thumbnails;
 
 /**
- * The folder as a strip of thumbnails along the bottom of the window: optional, closed until asked
- * for (Command.THUMBNAILS), and built the first time it opens, so it costs start-up nothing.
+ * The folder as a strip along the bottom of the window, or a column down its left side, of
+ * thumbnails or of file names: optional, closed until asked for (Command.THUMBNAILS), and built the
+ * first time it opens, so it costs start-up nothing. Where it stands and what it shows are settings
+ * ({@link #setLayout}).
  *
- * <p>A horizontal list view, so only the cells on screen exist and only they ask for a thumbnail;
- * scrolling a folder of thousands asks for the few dozen in view. The image on screen is the
- * selected cell, kept in view as the arrow keys step. A click shows that image.
+ * <p>A list view, so only the cells on screen exist and only they ask for a thumbnail; scrolling a
+ * folder of thousands asks for the few dozen in view, and the names asks for none. The image on
+ * screen is the selected cell, kept in view as the arrow keys step. A click shows that image.
  */
 final class ThumbnailStrip {
 
     static final double CELL = 92;
     static final double PICTURE = 76;
+    /** A name's row in the column, and its width across the bottom. */
+    static final double NAME_ROW = 30;
+
+    static final double NAME_WIDTH = 180;
+    /** The column of names: wide enough for a camera's file name and most people's. */
+    static final double NAMES_COLUMN = 240;
+    /** The list's own padding and border, and room for a scroll bar across it. */
+    private static final double CHROME = 18;
+
+    private static final PseudoClass SIDE = PseudoClass.getPseudoClass("side");
+    private static final PseudoClass NAMES = PseudoClass.getPseudoClass("names");
 
     private final ListView<Path> list = new ListView<>();
     private final ObservableList<Path> items = FXCollections.observableArrayList();
     private final Thumbnails thumbnails = new Thumbnails();
+    private boolean side;
+    private boolean names;
+    private boolean laidOut;
 
     /** @param pick shows the image at an index of the folder */
     ThumbnailStrip(IntConsumer pick) {
         list.setItems(items);
-        list.setOrientation(Orientation.HORIZONTAL);
         list.getStyleClass().add("thumbnail-strip");
-        list.setFixedCellSize(CELL);
-        list.setPrefHeight(CELL + 14);
-        list.setMinHeight(CELL + 14);
-        list.setMaxHeight(CELL + 14);
         // The keyboard is the viewer's: arrows step the folder, not the list's selection.
         list.setFocusTraversable(false);
         list.setCellFactory(view -> new Cell(pick));
+        setLayout(false, false);
     }
 
     ListView<Path> node() {
         return list;
+    }
+
+    /** Whether it stands down the left side; along the bottom otherwise. */
+    boolean atSide() {
+        return side;
+    }
+
+    /**
+     * A column down the side or a row along the bottom ({@code side}), of file names or of pictures
+     * ({@code names}). The cells are made again, as each kind is laid out for one of them.
+     */
+    void setLayout(boolean side, boolean names) {
+        if (laidOut && side == this.side && names == this.names) return;
+        laidOut = true;
+        this.side = side;
+        this.names = names;
+        list.setOrientation(side ? Orientation.VERTICAL : Orientation.HORIZONTAL);
+        list.setFixedCellSize(names ? (side ? NAME_ROW : NAME_WIDTH) : CELL);
+        double thickness = names ? (side ? NAMES_COLUMN : NAME_ROW + CHROME) : CELL + CHROME;
+        list.pseudoClassStateChanged(SIDE, side);
+        list.pseudoClassStateChanged(NAMES, names);
+        if (side) {
+            fix(thickness, Region.USE_COMPUTED_SIZE);
+        } else {
+            fix(Region.USE_COMPUTED_SIZE, thickness);
+        }
+        list.refresh();
+    }
+
+    private void fix(double width, double height) {
+        list.setMinWidth(width);
+        list.setPrefWidth(width);
+        list.setMaxWidth(width == Region.USE_COMPUTED_SIZE ? Double.MAX_VALUE : width);
+        list.setMinHeight(height);
+        list.setPrefHeight(height);
+        list.setMaxHeight(height == Region.USE_COMPUTED_SIZE ? Double.MAX_VALUE : height);
     }
 
     /** Shows {@code images}, the one at {@code index} selected and in view. */
@@ -61,13 +113,15 @@ final class ThumbnailStrip {
         }
         list.getSelectionModel().select(index);
         // Scrolled so the current cell sits about the middle, where the eye already is.
-        int visible = (int) Math.max(1, list.getWidth() / CELL);
+        double extent = side ? list.getHeight() : list.getWidth();
+        int visible = (int) Math.max(1, extent / list.getFixedCellSize());
         list.scrollTo(Math.max(0, index - visible / 2));
     }
 
     private final class Cell extends ListCell<Path> {
         private final ImageView picture = new ImageView();
         private final StackPane frame = new StackPane(picture);
+        private final Label name = new Label();
 
         Cell(IntConsumer pick) {
             picture.setPreserveRatio(true);
@@ -78,6 +132,10 @@ final class ThumbnailStrip {
             frame.getStyleClass().add("thumbnail");
             frame.setAlignment(Pos.CENTER);
             frame.setPrefSize(CELL - 8, CELL - 8);
+            name.getStyleClass().add("thumbnail-name");
+            name.setMaxWidth(Double.MAX_VALUE);
+            // The extension and the number at the end tell a burst apart: cut the middle.
+            name.setTextOverrun(OverrunStyle.CENTER_ELLIPSIS);
             setOnMouseClicked(e -> {
                 if (e.getButton() == MouseButton.PRIMARY && !isEmpty()) pick.accept(getIndex());
             });
@@ -91,13 +149,19 @@ final class ThumbnailStrip {
                 setGraphic(null);
                 return;
             }
+            if (names) {
+                Path fileName = file.getFileName();
+                name.setText(fileName == null ? file.toString() : fileName.toString());
+                setGraphic(name);
+                return;
+            }
             setGraphic(frame);
             thumbnails
                     .get(file)
                     .thenAcceptAsync(
                             thumbnail -> {
                                 // Cells are recycled while scrolling: only the file this cell still shows.
-                                if (!file.equals(getItem())) return;
+                                if (!file.equals(getItem()) || names) return;
                                 picture.setRotate(thumbnail.orientation().degrees());
                                 picture.setScaleX(thumbnail.orientation().mirrored() ? -1 : 1);
                                 picture.setImage(thumbnail.image());

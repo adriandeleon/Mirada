@@ -50,7 +50,7 @@ A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an en
 | `com.mirada.edit` | The editor's rules and pixel work, none of it UI: the edit and its order (`Edit`: turn, flip, crop), the crop as fractions (`Crop`) and as a box being dragged (`CropBox`), the shapes (`AspectRatio`), turns and mirrors on ARGB ints (`Raster`), undo and redo (`History`), the EXIF and colour profile a saved edit keeps (`ExifBlock`, `IccProfile`, both reading through `Containers`), and writing JPEG, PNG, TIFF or BMP (`Encoder`) |
 | `com.mirada.os` | Platform glue: the files Finder opens Mirada with (`MacOpenFiles`) and About and Settings in its application menu (`MacAppMenu`); moving a file to the desktop's trash, and the one rule for `java.awt.headless` (`Trash`); showing a file in Finder, File Explorer or the freedesktop file manager (`Reveal`) |
 | `com.mirada.settings` | `settings.properties` in `~/.mirada`, `~/Library/Application Support/Mirada` on macOS or `%APPDATA%\Mirada` on Windows, moved there once from `~/.mirada` (`MIRADA_CONFIG_DIR` moves it): theme, what opens at start, how long the floating controls stay; clamped on read, written through on every change |
-| `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`, `Scrolling`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`); the editor (`Editor`, `CropView`); every command with its keys, name, description and group (`Command`), the command palette (`CommandPalette`), the macOS menu bar (`MacMenus`), `AboutWindow`, `SettingsWindow`, `ShortcutsWindow`, the rename rules (`Renaming`), the theme and, on macOS and Windows, the system's accent colour (`Theme`, `Accent`), the symbolic icons (`Icons`) |
+| `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`, `Scrolling`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`, along the bottom or down the left, pictures or names, as the settings say); the editor (`Editor`, `CropView`); every command with its keys, name, description and group (`Command`), the command palette (`CommandPalette`), the macOS menu bar (`MacMenus`), `AboutWindow`, `SettingsWindow`, `ShortcutsWindow`, the rename rules (`Renaming`), the theme and, on macOS and Windows, the system's accent colour (`Theme`, `Accent`), the symbolic icons, each command's included (`Icons`) |
 
 Six decoders (`ImageFormats.Decoder`, by extension). JavaFX's own `Image` decodes BMP, GIF
 (animated) and PNG in its background thread, and the JPEGs libjpeg-turbo declines; a decoder with
@@ -225,7 +225,10 @@ a prefetched neighbour is 2–8 ms for every format.
   file first, created exclusively to reserve the name, then an atomic move) and leaves a file on
   another drive to `gio trash`; Windows calls `SHFileOperationW` through FFM with undo; macOS uses
   AWT's `Desktop`, AWT being headful there. Only Linux's is tested here (`TrashTest`, against a
-  temporary trash).
+  temporary trash). Only Linux's can be undone (`Trash.restore`, `Command.UNDO_TRASH`): Mirada
+  wrote the info file, so it knows where the file went; it never overwrites a file that came since.
+  A file sent to `gio trash` (another drive) cannot be, nor the Recycle Bin's or the Mac's, whose
+  Trash needs Full Disk Access to read.
 - **A preview stands in at the full image's size.** `ImageViewport` lays out by `imageWidth` and
   `imageHeight`, not the `Image`'s own, so a 1280-pixel preview fills exactly what the full image
   will, and `replace` swaps the pixels without touching zoom or turns.

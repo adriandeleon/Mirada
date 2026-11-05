@@ -20,6 +20,16 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 - **A trackpad pans and swipes**: pinch to zoom, two fingers to move about a zoomed-in image, and a
   sideways swipe for the next or previous image when there is nothing to pan. A mouse wheel still
   zooms, and Ctrl or ⌘ with any scroll zooms (a Windows touchpad's pinch arrives that way).
+- **The thumbnail strip can stand down the left side and list file names instead of pictures**:
+  Thumbnails at the Side and Names Instead of Thumbnails, in the palette, the menus and Settings.
+  Names load no thumbnails at all, which suits a folder of thousands.
+- **The header names the folder being shown**, under the file name, with its whole path as the
+  tooltip.
+- **Icons in the menus**: the main menu, the right-click menu and the zoom menu show each command's
+  icon, and settings and panels are ticked when on.
+- **Undo Move to Trash** (Ctrl+Z) on Linux: puts the last image moved to the Trash back where it
+  was, and again for the one before, up to twenty. The Recycle Bin and the Mac's Trash do not say
+  where a file went, so there it is put back from the desktop's own.
 - **Go to Image** (Ctrl+P, ⌘P): the palette over the folder's file names, the current one under the
   cursor; type part of a name and press Enter to show it.
 - **Copy** (Ctrl+C, ⌘C): the image as it stands on screen, turned as shown, and its file, so it

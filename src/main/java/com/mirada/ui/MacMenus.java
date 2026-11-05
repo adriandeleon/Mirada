@@ -38,7 +38,7 @@ final class MacMenus {
     static final List<Heading> HEADINGS = List.of(
             new Heading(
                     "File", List.of(List.of(Command.OPEN), List.of(Command.SHOW_IN_FOLDER), List.of(Command.CLOSE))),
-            new Heading("Edit", List.of(List.of(Command.COPY))),
+            new Heading("Edit", List.of(List.of(Command.UNDO_TRASH), List.of(Command.COPY))),
             new Heading(
                     "Image",
                     List.of(
@@ -51,6 +51,7 @@ final class MacMenus {
                             List.of(Command.ZOOM_IN, Command.ZOOM_OUT, Command.FIT, Command.ACTUAL_SIZE),
                             List.of(Command.KEEP_ZOOM),
                             List.of(Command.INFO, Command.THUMBNAILS),
+                            List.of(Command.THUMBNAILS_AT_SIDE, Command.THUMBNAIL_NAMES),
                             List.of(Command.FULL_SCREEN))),
             new Heading(
                     "Go",
@@ -70,6 +71,8 @@ final class MacMenus {
             Command.KEEP_ZOOM,
             Command.INFO,
             Command.THUMBNAILS,
+            Command.THUMBNAILS_AT_SIDE,
+            Command.THUMBNAIL_NAMES,
             Command.SORT_BY_NAME,
             Command.SORT_BY_DATE,
             Command.SORT_BY_SIZE,

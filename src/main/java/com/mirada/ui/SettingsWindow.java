@@ -105,6 +105,17 @@ final class SettingsWindow {
                 settings.setSorting(settings.sorting().reverse());
         });
 
+        CheckBox atSide = new CheckBox();
+        atSide.setSelected(settings.thumbnailsAtSide());
+        atSide.selectedProperty().addListener((o, was, now) -> {
+            if (now != settings.thumbnailsAtSide()) settings.setThumbnailsAtSide(now);
+        });
+        CheckBox names = new CheckBox();
+        names.setSelected(settings.thumbnailNames());
+        names.selectedProperty().addListener((o, was, now) -> {
+            if (now != settings.thumbnailNames()) settings.setThumbnailNames(now);
+        });
+
         CheckBox keepZoom = new CheckBox();
         keepZoom.setSelected(settings.keepZoom());
         keepZoom.selectedProperty().addListener((o, was, now) -> settings.setKeepZoom(now));
@@ -121,6 +132,8 @@ final class SettingsWindow {
             sortBy.setValue(settings.sorting().by());
             reversed.setSelected(settings.sorting().reversed());
             keepZoom.setSelected(settings.keepZoom());
+            atSide.setSelected(settings.thumbnailsAtSide());
+            names.setSelected(settings.thumbnailNames());
         });
 
         VBox root = new VBox(
@@ -132,6 +145,14 @@ final class SettingsWindow {
                                 "Thumbnails at start",
                                 "Opens the thumbnail strip when Mirada starts. T toggles it.",
                                 thumbnails),
+                        row(
+                                "Thumbnails at the side",
+                                "A column down the left of the window instead of a row along the bottom.",
+                                atSide),
+                        row(
+                                "File names instead of pictures",
+                                "The strip lists the folder by name, and loads no thumbnails.",
+                                names),
                         row(
                                 "Properties at start",
                                 "Opens the properties sidebar when Mirada starts. I toggles it.",

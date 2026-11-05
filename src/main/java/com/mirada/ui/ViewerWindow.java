@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -147,6 +149,10 @@ public final class ViewerWindow {
     private FolderImages folder = FolderImages.EMPTY;
     /** The image asked for most recently; a load that finishes for any other is dropped. */
     private @Nullable Path wanted;
+    /** What Move to Trash can put back, the latest first; only Linux's trash says where a file went. */
+    private final Deque<Trash.Trashed> trashed = new ArrayDeque<>();
+
+    private static final int UNDO_DEPTH = 20;
     /** The image whose preview the viewport shows until its full resolution arrives; else null. */
     private @Nullable Path previewing;
 
@@ -171,6 +177,7 @@ public final class ViewerWindow {
         viewport.setKeepZoom(settings.keepZoom());
         settings.addListener(() -> {
             viewport.setKeepZoom(settings.keepZoom());
+            if (strip != null) placeStrip();
             // From the menu, the palette or the settings window: the open folder follows.
             if (!settings.sorting().equals(sortedBy)) {
                 sortedBy = settings.sorting();
@@ -198,10 +205,7 @@ public final class ViewerWindow {
             root.setRight(now ? infoPanel().node() : null);
             refreshInfo();
         });
-        thumbnailsShowing.addListener((o, was, now) -> {
-            root.setBottom(now ? thumbnailStrip().node() : null);
-            refreshStrip();
-        });
+        thumbnailsShowing.addListener((o, was, now) -> placeStrip());
 
         // The palette lays its card and backdrop over everything, the header included.
         StackPane overlay = new StackPane(root);
@@ -310,6 +314,27 @@ public final class ViewerWindow {
         return made;
     }
 
+    /**
+     * Puts the strip where the settings say, along the bottom or down the left, laid out for
+     * pictures or names, or takes it away when it is closed. Building it waits for its first opening.
+     */
+    private void placeStrip() {
+        ThumbnailStrip built = strip;
+        if (!thumbnailsShowing.get()) {
+            if (built != null) {
+                if (root.getBottom() == built.node()) root.setBottom(null);
+                if (root.getLeft() == built.node()) root.setLeft(null);
+            }
+            return;
+        }
+        ThumbnailStrip shown = thumbnailStrip();
+        boolean side = settings.thumbnailsAtSide();
+        shown.setLayout(side, settings.thumbnailNames());
+        root.setBottom(side ? null : shown.node());
+        root.setLeft(side ? shown.node() : null);
+        refreshStrip();
+    }
+
     /** The strip, when it is open, on the folder's current image. */
     private void refreshStrip() {
         ThumbnailStrip shown = strip;
@@ -379,6 +404,7 @@ public final class ViewerWindow {
         wanted = file;
         stage.setTitle(fileName(file) + " — " + AppInfo.NAME);
         titleBar.setTitle(fileName(file));
+        titleBar.setFolder(file.toAbsolutePath().getParent());
         refreshStrip();
 
         if (!ImageFormats.isImage(file)) {
@@ -452,6 +478,7 @@ public final class ViewerWindow {
         placeholder.setVisible(true);
         if (folder.isEmpty()) {
             titleBar.setTitle(AppInfo.NAME);
+            titleBar.setFolder(null);
             stage.setTitle(AppInfo.NAME);
         }
         updateControls();
@@ -515,6 +542,14 @@ public final class ViewerWindow {
             case GO_TO_IMAGE -> goToImage();
             case INFO -> infoShowing.set(!infoShowing.get());
             case THUMBNAILS -> thumbnailsShowing.set(!thumbnailsShowing.get());
+            case THUMBNAILS_AT_SIDE -> {
+                settings.setThumbnailsAtSide(!settings.thumbnailsAtSide());
+                thumbnailsShowing.set(true);
+            }
+            case THUMBNAIL_NAMES -> {
+                settings.setThumbnailNames(!settings.thumbnailNames());
+                thumbnailsShowing.set(true);
+            }
             case SETTINGS -> settingsWindow().show(stage);
             case ABOUT -> aboutWindow().show(stage);
             case SHORTCUTS -> shortcutsWindow().show(stage);
@@ -533,6 +568,7 @@ public final class ViewerWindow {
             case EDIT -> edit();
             case RENAME -> rename();
             case MOVE_TO_TRASH -> moveToTrash();
+            case UNDO_TRASH -> undoTrash();
             case COPY -> copy();
             case SHOW_IN_FOLDER -> showInFolder();
             case SORT_BY_NAME -> sort(settings.sorting().by(Sorting.By.NAME));
@@ -694,11 +730,17 @@ public final class ViewerWindow {
         if (file == null) return;
         Thread.ofVirtual().name("trash").start(() -> {
             try {
-                Trash.move(file);
+                Trash.Trashed moved = Trash.move(file);
                 Platform.runLater(() -> {
                     FolderImages rest = folder.without(file);
                     folder = rest;
-                    say("Moved " + fileName(file) + " to the " + Command.trash(Command.WINDOWS));
+                    String said = "Moved " + fileName(file) + " to the " + Command.trash(Command.WINDOWS);
+                    if (moved.restorable()) {
+                        trashed.push(moved);
+                        while (trashed.size() > UNDO_DEPTH) trashed.removeLast();
+                        said += ". " + Command.UNDO_TRASH.chord().getDisplayText() + " puts it back";
+                    }
+                    say(said);
                     if (rest.isEmpty()) showMessage("No images left in this folder");
                     else showCurrent();
                 });
@@ -770,6 +812,29 @@ public final class ViewerWindow {
         });
     }
 
+    /**
+     * Puts the image last trashed back, and shows it when it belongs to the folder on screen. Off the
+     * FX thread, as the move was; taken off the list first, so a second press puts back the one before.
+     */
+    private void undoTrash() {
+        Trash.Trashed last = trashed.poll();
+        if (last == null) return;
+        Path file = last.original();
+        Thread.ofVirtual().name("untrash").start(() -> {
+            try {
+                Trash.restore(last);
+                Platform.runLater(() -> {
+                    Path shown = folder.current();
+                    Path here = shown == null ? null : shown.getParent();
+                    if (here == null || here.equals(file.getParent())) open(file);
+                    say("Put back " + fileName(file));
+                });
+            } catch (IOException | RuntimeException e) {
+                Platform.runLater(() -> say("Couldn't put back " + fileName(file) + ": " + e.getMessage()));
+            }
+        });
+    }
+
     private ShortcutsWindow shortcutsWindow() {
         ShortcutsWindow made = shortcutsWindow;
         if (made == null) {
@@ -799,6 +864,12 @@ public final class ViewerWindow {
 
     /** Why {@code command} cannot run right now, or null when it can. */
     private @Nullable String unavailable(Command command) {
+        if (command == Command.UNDO_TRASH && trashed.isEmpty()) {
+            String trash = Command.trash(Command.WINDOWS);
+            return Trash.restores()
+                    ? "Nothing has been moved to the " + trash + " yet."
+                    : "Put it back from the " + trash + " itself.";
+        }
         return command.unavailable(folder.index(), folder.size(), !placeholder.isVisible());
     }
 
@@ -863,6 +934,8 @@ public final class ViewerWindow {
                 sortMenu(),
                 item(Command.INFO),
                 item(Command.THUMBNAILS),
+                item(Command.THUMBNAILS_AT_SIDE),
+                item(Command.THUMBNAIL_NAMES),
                 item(Command.FULL_SCREEN),
                 item(Command.SLIDESHOW));
         menu.setAutoHide(true);
@@ -873,7 +946,7 @@ public final class ViewerWindow {
     private Menu sortMenu() {
         Sorting sorting = settings.sorting();
         ToggleGroup group = new ToggleGroup();
-        Menu menu = new Menu("Sort");
+        Menu menu = new Menu("Sort", Icons.of(Icons.SORT));
         for (Command command : List.of(Command.SORT_BY_NAME, Command.SORT_BY_DATE, Command.SORT_BY_SIZE)) {
             RadioMenuItem item = new RadioMenuItem(command.label());
             item.setToggleGroup(group);
@@ -896,7 +969,15 @@ public final class ViewerWindow {
 
     /** A context-menu row, named as the palette names it and greyed when the palette would grey it. */
     private MenuItem item(Command command) {
-        MenuItem item = new MenuItem(label(command));
+        MenuItem item;
+        if (MacMenus.TICKED.contains(command)) {
+            // A setting or a panel: ticked when on, as the Mac's menus tick it.
+            CheckMenuItem check = new CheckMenuItem(label(command), Icons.menu(command));
+            check.setSelected(ticked(command));
+            item = check;
+        } else {
+            item = new MenuItem(label(command), Icons.menu(command));
+        }
         item.setOnAction(e -> run(command));
         item.setDisable(unavailable(command) != null);
         return item;
@@ -914,6 +995,8 @@ public final class ViewerWindow {
             case KEEP_ZOOM -> settings.keepZoom();
             case INFO -> infoShowing.get();
             case THUMBNAILS -> thumbnailsShowing.get();
+            case THUMBNAILS_AT_SIDE -> settings.thumbnailsAtSide();
+            case THUMBNAIL_NAMES -> settings.thumbnailNames();
             case SORT_BY_NAME -> sorting.by() == Sorting.By.NAME;
             case SORT_BY_DATE -> sorting.by() == Sorting.By.DATE;
             case SORT_BY_SIZE -> sorting.by() == Sorting.By.SIZE;

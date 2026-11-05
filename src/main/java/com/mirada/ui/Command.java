@@ -62,6 +62,11 @@ enum Command {
             "crop rotate flip edit save",
             key(KeyCode.E)),
     RENAME("Rename…", "Renames the image's file.", "file name", key(KeyCode.F2)),
+    UNDO_TRASH(
+            "Undo Move to Trash",
+            "Puts the image last moved to the Trash back where it was.",
+            "restore put back undelete recover",
+            shortcut(KeyCode.Z)),
     COPY(
             "Copy",
             "Copies the image, as it stands on screen, and its file, to paste into another app or a folder.",
@@ -93,6 +98,16 @@ enum Command {
             "Shows the folder's images in a strip along the bottom.",
             "filmstrip strip gallery browse folder",
             key(KeyCode.T)),
+    THUMBNAILS_AT_SIDE(
+            "Thumbnails at the Side",
+            "Stands the thumbnails in a column down the left instead of a row along the bottom.",
+            "vertical column filmstrip strip left layout",
+            none()),
+    THUMBNAIL_NAMES(
+            "Names Instead of Thumbnails",
+            "Lists the folder by file name in the strip, instead of pictures.",
+            "names list text filmstrip strip filenames",
+            none()),
     /** Leaves full screen, or on Linux closes the window: look, then go ({@link #escapeCloses}). */
     ESCAPE(
             "Escape",
@@ -152,6 +167,7 @@ enum Command {
     String label(boolean mac, boolean windows) {
         return switch (this) {
             case MOVE_TO_TRASH -> "Move to " + trash(windows);
+            case UNDO_TRASH -> "Undo Move to " + trash(windows);
             case SHOW_IN_FOLDER -> mac ? "Show in Finder" : windows ? "Show in File Explorer" : label;
             default -> label;
         };
@@ -242,10 +258,16 @@ enum Command {
             case NEXT, PREVIOUS, FIRST, LAST, GO_TO_IMAGE, SLIDESHOW -> "Folder";
             case ZOOM_IN, ZOOM_OUT, FIT, ACTUAL_SIZE, KEEP_ZOOM, PAN_LEFT, PAN_RIGHT, PAN_UP, PAN_DOWN, FULL_SCREEN ->
                 "View";
-            case ROTATE_CLOCKWISE, ROTATE_COUNTERCLOCKWISE, EDIT, RENAME, MOVE_TO_TRASH, COPY, SHOW_IN_FOLDER ->
-                "Image";
+            case ROTATE_CLOCKWISE,
+                    ROTATE_COUNTERCLOCKWISE,
+                    EDIT,
+                    RENAME,
+                    MOVE_TO_TRASH,
+                    UNDO_TRASH,
+                    COPY,
+                    SHOW_IN_FOLDER -> "Image";
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER -> "Order";
-            case INFO, THUMBNAILS -> "Panels";
+            case INFO, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES -> "Panels";
             case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, CLOSE, PALETTE -> "Mirada";
         };
     }
@@ -267,6 +289,7 @@ enum Command {
             return switch (code) {
                 case O -> OPEN;
                 case C -> shift ? null : COPY;
+                case Z -> shift ? null : UNDO_TRASH;
                 case W, Q -> CLOSE;
                 case P -> shift ? PALETTE : GO_TO_IMAGE;
                 case R -> shift ? ROTATE_COUNTERCLOCKWISE : ROTATE_CLOCKWISE;

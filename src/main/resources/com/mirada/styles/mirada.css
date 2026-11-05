@@ -35,6 +35,13 @@
     -fx-padding: 0 12 0 12;
 }
 
+/* The folder being shown, under the file name: smaller and quieter. */
+.header-subtitle {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 0.85em;
+    -fx-padding: 0 12 0 12;
+}
+
 .header-button,
 .osd-button,
 .info-action {
@@ -80,8 +87,14 @@
 }
 
 .button:disabled .icon,
-.menu-button:disabled .icon {
+.menu-button:disabled .icon,
+.menu-item:disabled .icon {
     -fx-stroke: -color-fg-subtle;
+}
+
+/* A menu row's icon takes the row's text colour when the row is highlighted, as its label does. */
+.menu-item:focused .icon {
+    -fx-stroke: -color-fg-emphasis;
 }
 
 /*
@@ -172,6 +185,32 @@
 .thumbnail-strip .list-cell:selected .thumbnail {
     -fx-border-color: -color-accent-emphasis;
     -fx-background-color: -color-accent-subtle;
+}
+
+/* Down the left side: the border on the image's side. */
+.thumbnail-strip:side {
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 8 6 8 6;
+}
+
+/* File names instead of pictures: a row each, the current one in the accent's pill. */
+.thumbnail-strip .thumbnail-name {
+    -fx-text-fill: -color-fg-default;
+    -fx-padding: 4 10 4 10;
+    -fx-background-radius: 6;
+}
+
+.thumbnail-strip:names .list-cell {
+    -fx-padding: 1 2 1 2;
+}
+
+.thumbnail-strip .list-cell:hover .thumbnail-name {
+    -fx-background-color: -color-bg-default;
+}
+
+.thumbnail-strip .list-cell:selected .thumbnail-name {
+    -fx-background-color: -color-accent-subtle;
+    -fx-text-fill: -color-accent-fg;
 }
 
 /* "All Metadata": a folded card listing every tag, smaller than the rows above it. */

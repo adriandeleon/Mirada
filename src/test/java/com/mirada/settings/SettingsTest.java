@@ -45,6 +45,22 @@ class SettingsTest {
     }
 
     @Test
+    void theStripsSideAndNamesAreKept(@TempDir Path dir) {
+        Path file = dir.resolve("settings.properties");
+        Settings settings = new Settings(file);
+        settings.load();
+        assertFalse(settings.thumbnailsAtSide());
+        assertFalse(settings.thumbnailNames());
+        settings.setThumbnailsAtSide(true);
+        settings.setThumbnailNames(true);
+
+        Settings again = new Settings(file);
+        again.load();
+        assertTrue(again.thumbnailsAtSide());
+        assertTrue(again.thumbnailNames());
+    }
+
+    @Test
     void everyChangeIsWrittenThroughAndReadBack(@TempDir Path dir) {
         Path file = dir.resolve("nested/settings.properties");
         Settings settings = new Settings(file);

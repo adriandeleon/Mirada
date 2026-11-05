@@ -1,6 +1,7 @@
 package com.mirada.os;
 
 import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TrashTest {
@@ -56,5 +58,37 @@ class TrashTest {
         assertEquals("second", Files.readString(trash.resolve("files/photo.2.jpg")));
         assertTrue(Files.readString(trash.resolve("info/photo.2.jpg.trashinfo"))
                 .contains("Path=" + Trash.encodePath(photo.toAbsolutePath().toString())));
+    }
+
+    @Test
+    void aTrashedFileIsPutBackWhereItWasAndItsInfoRemoved(@TempDir Path dir) throws IOException {
+        Path trash = dir.resolve("Trash");
+        Path photo = Files.writeString(dir.resolve("photo.jpg"), "pixels");
+        Trash.Trashed trashed = Trash.freedesktop(photo, trash);
+        assertTrue(trashed.restorable());
+
+        Trash.restore(trashed);
+
+        assertEquals("pixels", Files.readString(photo));
+        assertFalse(Files.exists(trash.resolve("files/photo.jpg")));
+        assertFalse(Files.exists(trash.resolve("info/photo.jpg.trashinfo")));
+    }
+
+    @Test
+    void aFileThatCameSinceIsNeverOverwritten(@TempDir Path dir) throws IOException {
+        Path trash = dir.resolve("Trash");
+        Path photo = Files.writeString(dir.resolve("photo.jpg"), "old");
+        Trash.Trashed trashed = Trash.freedesktop(photo, trash);
+        Files.writeString(photo, "new");
+
+        assertThrows(FileAlreadyExistsException.class, () -> Trash.restore(trashed));
+        assertEquals("new", Files.readString(photo));
+        assertEquals("old", Files.readString(trash.resolve("files/photo.jpg")));
+    }
+
+    @Test
+    void whatTheDesktopTrashedCannotBePutBackFromHere() {
+        assertFalse(Trash.Trashed.gone(Path.of("photo.jpg")).restorable());
+        assertThrows(IOException.class, () -> Trash.restore(Trash.Trashed.gone(Path.of("photo.jpg"))));
     }
 }

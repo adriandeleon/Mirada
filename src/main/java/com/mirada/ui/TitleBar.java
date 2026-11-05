@@ -1,6 +1,8 @@
 package com.mirada.ui;
 
+import java.nio.file.Path;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import javafx.application.ConditionalFeature;
@@ -21,6 +23,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.HeaderDragType;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
@@ -60,6 +63,12 @@ final class TitleBar {
 
     private final Stage stage;
     private final Label title = new Label();
+    /** The folder being shown, under the file name; its full path is its tooltip. */
+    private final Label folder = new Label();
+
+    private final VBox heading = new VBox(title, folder);
+    private @Nullable Tooltip folderTip;
+    private @Nullable Path folderShown;
     private final Button fullScreen = button(Icons.FULL_SCREEN);
     private final Button rotate = button(Icons.ROTATE);
     private final Consumer<Command> run;
@@ -78,6 +87,11 @@ final class TitleBar {
         this.extended = Platform.isSupported(ConditionalFeature.EXTENDED_WINDOW);
 
         title.getStyleClass().add("header-title");
+        folder.getStyleClass().add("header-subtitle");
+        folder.setVisible(false);
+        folder.setManaged(false);
+        heading.setAlignment(LAYOUT.titleLeft() ? Pos.CENTER_LEFT : Pos.CENTER);
+        heading.setMinWidth(0);
         fullScreen.setOnAction(e -> run.accept(Command.FULL_SCREEN));
         // A shift-click turns the other way. An ActionEvent carries no modifiers, so the press that
         // leads to it records them.
@@ -99,9 +113,9 @@ final class TitleBar {
         right.setAlignment(Pos.CENTER_RIGHT);
         HBox left = new HBox(4);
         if (LAYOUT.fullScreenButton()) left.getChildren().add(fullScreen);
-        if (LAYOUT.titleLeft()) left.getChildren().add(title);
+        if (LAYOUT.titleLeft()) left.getChildren().add(heading);
         left.setAlignment(Pos.CENTER_LEFT);
-        @Nullable Label centre = LAYOUT.titleLeft() ? null : title;
+        @Nullable VBox centre = LAYOUT.titleLeft() ? null : heading;
         if (extended) {
             if (!stage.isShowing()) stage.initStyle(StageStyle.EXTENDED);
             HeaderBar bar = new HeaderBar();
@@ -111,7 +125,9 @@ final class TitleBar {
             bar.setRight(right);
             // The bar drags the window by its background; the title is a label, so it is marked to
             // drag too: a title bar you cannot drag by its title is a trap.
-            HeaderBar.setDragType(title, HeaderDragType.DRAGGABLE);
+            for (Node node : new Node[] {heading, title, folder}) {
+                HeaderBar.setDragType(node, HeaderDragType.DRAGGABLE);
+            }
             row = bar;
         } else {
             BorderPane plain = new BorderPane(centre, null, right, null, left);
@@ -126,6 +142,9 @@ final class TitleBar {
      */
     void finish() {
         fullScreen.setTooltip(new Tooltip("Full Screen (F)"));
+        Tooltip tip = new Tooltip(folderShown == null ? "" : folderShown.toString());
+        folderTip = tip;
+        folder.setTooltip(tip);
         rotate.setTooltip(new Tooltip("Rotate Right (R); Shift-click rotates left"));
         info.setTooltip(new Tooltip("Image Properties (I)"));
         if (!LAYOUT.menuButton()) return;
@@ -159,6 +178,21 @@ final class TitleBar {
         title.setText(text);
     }
 
+    /**
+     * Names the folder being shown under the file name, or none ({@code null}): its own name, the
+     * whole path in the tooltip. Stepping within a folder changes nothing here.
+     */
+    void setFolder(@Nullable Path shown) {
+        if (Objects.equals(shown, folderShown)) return;
+        folderShown = shown;
+        Path name = shown == null ? null : shown.getFileName();
+        folder.setText(shown == null ? "" : name == null ? shown.toString() : name.toString());
+        folder.setVisible(shown != null);
+        folder.setManaged(shown != null);
+        Tooltip tip = folderTip;
+        if (tip != null) tip.setText(shown == null ? "" : shown.toString());
+    }
+
     /** Disables what needs an image on screen. */
     void setImageShowing(boolean showing) {
         rotate.setDisable(!showing);
@@ -182,7 +216,7 @@ final class TitleBar {
     }
 
     private static MenuItem item(Command command, Consumer<Command> run) {
-        MenuItem item = new MenuItem(command.label());
+        MenuItem item = new MenuItem(command.label(), Icons.menu(command));
         item.setOnAction(e -> run.accept(command));
         return item;
     }

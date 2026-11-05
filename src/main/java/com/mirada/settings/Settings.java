@@ -42,6 +42,8 @@ public final class Settings {
     static final String SORT_BY = "sort.by";
     static final String SORT_REVERSED = "sort.reversed";
     static final String KEEP_ZOOM = "view.keepZoom";
+    static final String THUMBNAILS_AT_SIDE = "thumbnails.side";
+    static final String THUMBNAIL_NAMES = "thumbnails.names";
     static final String SLIDESHOW_SECONDS = "slideshow.seconds";
 
     public static final int MIN_HIDE_SECONDS = 1;
@@ -59,6 +61,8 @@ public final class Settings {
     private int controlsHideSeconds = 2;
     private Sorting sorting = Sorting.DEFAULT;
     private boolean keepZoom;
+    private boolean thumbnailsAtSide;
+    private boolean thumbnailNames;
     private int slideshowSeconds = DEFAULT_SLIDESHOW_SECONDS;
 
     public Settings(Path file) {
@@ -151,6 +155,10 @@ public final class Settings {
                         properties.getProperty(SORT_REVERSED, "false").trim()));
         keepZoom =
                 Boolean.parseBoolean(properties.getProperty(KEEP_ZOOM, "false").trim());
+        thumbnailsAtSide = Boolean.parseBoolean(
+                properties.getProperty(THUMBNAILS_AT_SIDE, "false").trim());
+        thumbnailNames = Boolean.parseBoolean(
+                properties.getProperty(THUMBNAIL_NAMES, "false").trim());
         slideshowSeconds = slideshowSecondsOf(properties.getProperty(SLIDESHOW_SECONDS));
     }
 
@@ -205,6 +213,26 @@ public final class Settings {
     /** Whether stepping to another image keeps the zoom and position instead of fitting it. */
     public boolean keepZoom() {
         return keepZoom;
+    }
+
+    /** Whether the thumbnails stand in a column on the left instead of a row along the bottom. */
+    public boolean thumbnailsAtSide() {
+        return thumbnailsAtSide;
+    }
+
+    /** Whether the thumbnail strip lists file names instead of pictures. */
+    public boolean thumbnailNames() {
+        return thumbnailNames;
+    }
+
+    public void setThumbnailsAtSide(boolean value) {
+        thumbnailsAtSide = value;
+        changed();
+    }
+
+    public void setThumbnailNames(boolean value) {
+        thumbnailNames = value;
+        changed();
     }
 
     public int slideshowSeconds() {
@@ -269,6 +297,8 @@ public final class Settings {
         properties.setProperty(SORT_BY, sorting.by().name().toLowerCase(Locale.ROOT));
         properties.setProperty(SORT_REVERSED, Boolean.toString(sorting.reversed()));
         properties.setProperty(KEEP_ZOOM, Boolean.toString(keepZoom));
+        properties.setProperty(THUMBNAILS_AT_SIDE, Boolean.toString(thumbnailsAtSide));
+        properties.setProperty(THUMBNAIL_NAMES, Boolean.toString(thumbnailNames));
         properties.setProperty(SLIDESHOW_SECONDS, Integer.toString(slideshowSeconds));
         try {
             Path folder = file.toAbsolutePath().getParent();
