@@ -3,7 +3,62 @@
 Notable changes, newest first. Versions follow [semantic versioning](https://semver.org); until
 1.0.0 the minor number moves for anything user-visible.
 
-## 0.2.0 — unreleased
+## 0.2.0 — 2026-11-05
+
+### Added
+
+- **macOS: a menu bar.** File, Image, View, Go and Help hold every command, with Preview's ⌘ keys
+  beside them and ticks on what is on (the panels, the order); About and Settings… (⌘,) are in the
+  Mirada menu, and the Help menu's search finds any command by name. The header's ☰ menu is gone
+  on a Mac.
+- **Go to Image** (Ctrl+P, ⌘P): the palette over the folder's file names, the current one under the
+  cursor; type part of a name and press Enter to show it.
+- **Open Recent** (Ctrl+Shift+O, ⇧⌘O): the palette over the last ten folders, by name, the path under
+  the list.
+- **Copy** (Ctrl+C, ⌘C): the image as it stands on screen, turned as shown, and its file, so it
+  pastes into an app as a picture and into a folder as the file.
+- **Show in Finder / Show in File Explorer / Show in Folder**: the image's folder in the file
+  manager, with the image selected.
+- **Undo Move to Trash** (Ctrl+Z) on Linux: puts the last image moved to the Trash back where it
+  was, and again for the one before, up to twenty. The Recycle Bin and the Mac's Trash do not say
+  where a file went, so there it is put back from the desktop's own.
+- **Drag a photo out**: a fitted image, or a thumbnail, drags its file into a chat, a mail or a
+  folder. Zoomed in, dragging still pans.
+- **The thumbnail strip can stand down the left side and list file names instead of pictures**:
+  Thumbnails at the Side and Names Instead of Thumbnails, in the palette, the menus and Settings.
+  Names load no thumbnails at all, which suits a folder of thousands.
+- **Names under thumbnails**: each thumbnail can have its file name centred under it, along the
+  bottom or down the side (Names Under Thumbnails, in the palette, the menus and Settings).
+- **The header names the folder being shown**, under the file name, with its whole path as the
+  tooltip.
+- **Icons in the menus**: the main menu, the right-click menu and the zoom menu show each command's
+  icon, and settings and panels are ticked when on.
+- **A checkerboard behind transparent images**, so their transparent parts show as such.
+- **Screen readers name the icon buttons** in the header and the floating controls.
+- **A saved edit keeps the photo's colour profile**, in JPEG and PNG: a wide-gamut photo (an
+  iPhone's Display P3, a camera's Adobe RGB) no longer saves duller than it was in apps that manage
+  colour. Read from JPEG, PNG, WebP, HEIC and AVIF.
+
+### Changed
+
+- **A trackpad pans and swipes**: pinch to zoom, two fingers to move about a zoomed-in image, and a
+  sideways swipe for the next or previous image when there is nothing to pan. A mouse wheel still
+  zooms, and Ctrl or ⌘ with any scroll zooms (a Windows touchpad's pinch arrives that way).
+- **macOS has Preview's and Finder's keys** besides Mirada's own: Return renames, ⌘I shows the
+  properties, ⌘R and ⌘L rotate, ⌃⌘F is full screen; the function keys still work. Ctrl+R and
+  Ctrl+Shift+R rotate on every platform.
+- **The header follows the platform**: no full-screen button on a Mac, whose green window button
+  is one, and the title on the left on Windows, as its own title bars have it.
+- **macOS and Windows: the system's accent colour** for the current thumbnail, the palette's
+  highlighted row and every selection, in place of a fixed blue, and followed as it changes. A pale
+  or deep accent is adjusted for text so it stays legible. Linux keeps the blue.
+- **Settings are kept where each platform keeps them**: `~/Library/Application Support/Mirada` on
+  macOS and `%APPDATA%\Mirada` on Windows, moved there from `~/.mirada` on the first start. Linux
+  keeps `~/.mirada`.
+- **Windows calls it the Recycle Bin**: "Move to Recycle Bin", and so do the messages.
+- **The window opens where it was**, at its size, and maximised if it was; a place no longer on any
+  screen (a monitor unplugged) is left to the system.
+- **The pointer hides in full screen** after the same rest as the floating controls.
 
 ### Fixed
 
@@ -14,61 +69,6 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   back an image and never deletes.
 - **macOS and Windows: Escape no longer closes the window**; it stops the slideshow and leaves full
   screen. Linux keeps GNOME's habit.
-
-### Changed
-
-- **A trackpad pans and swipes**: pinch to zoom, two fingers to move about a zoomed-in image, and a
-  sideways swipe for the next or previous image when there is nothing to pan. A mouse wheel still
-  zooms, and Ctrl or ⌘ with any scroll zooms (a Windows touchpad's pinch arrives that way).
-- **The thumbnail strip can stand down the left side and list file names instead of pictures**:
-  Thumbnails at the Side and Names Instead of Thumbnails, in the palette, the menus and Settings.
-  Names load no thumbnails at all, which suits a folder of thousands.
-- **The window opens where it was**, at its size, and maximised if it was; a place no longer on any
-  screen (a monitor unplugged) is left to the system.
-- **Open Recent** (Ctrl+Shift+O, ⇧⌘O): the palette over the last ten folders, by name, the path under
-  the list.
-- **Drag a photo out**: a fitted image, or a thumbnail, drags its file into a chat, a mail or a
-  folder. Zoomed in, dragging still pans.
-- **A checkerboard behind transparent images**, so their transparent parts show as such.
-- **The pointer hides in full screen** after the same rest as the floating controls.
-- **Screen readers name the icon buttons** in the header and the floating controls.
-- **Names under thumbnails**: each thumbnail can have its file name centred under it, along the
-  bottom or down the side (Names Under Thumbnails, in the palette, the menus and Settings).
-- **The header names the folder being shown**, under the file name, with its whole path as the
-  tooltip.
-- **Icons in the menus**: the main menu, the right-click menu and the zoom menu show each command's
-  icon, and settings and panels are ticked when on.
-- **Undo Move to Trash** (Ctrl+Z) on Linux: puts the last image moved to the Trash back where it
-  was, and again for the one before, up to twenty. The Recycle Bin and the Mac's Trash do not say
-  where a file went, so there it is put back from the desktop's own.
-- **Go to Image** (Ctrl+P, ⌘P): the palette over the folder's file names, the current one under the
-  cursor; type part of a name and press Enter to show it.
-- **Copy** (Ctrl+C, ⌘C): the image as it stands on screen, turned as shown, and its file, so it
-  pastes into an app as a picture and into a folder as the file.
-- **Show in Finder / Show in File Explorer / Show in Folder**: the image's folder in the file
-  manager, with the image selected.
-- **macOS and Windows: the system's accent colour** for the current thumbnail, the palette's
-  highlighted row and every selection, in place of a fixed blue, and followed as it changes. A pale
-  or deep accent is adjusted for text so it stays legible. Linux keeps the blue.
-- **Settings are kept where each platform keeps them**: `~/Library/Application Support/Mirada` on
-  macOS and `%APPDATA%\Mirada` on Windows, moved there from `~/.mirada` on the first start. Linux
-  keeps `~/.mirada`.
-- **Windows calls it the Recycle Bin**: "Move to Recycle Bin", and so do the messages.
-- **The header follows the platform**: no full-screen button on a Mac, whose green window button
-  is one, and the title on the left on Windows, as its own title bars have it.
-- **macOS has Preview's and Finder's keys** besides Mirada's own: Return renames, ⌘I shows the
-  properties, ⌘R and ⌘L rotate, ⌃⌘F is full screen; the function keys still work. Ctrl+R and
-  Ctrl+Shift+R rotate on every platform.
-
-### Added
-
-- **macOS: a menu bar.** File, Image, View, Go and Help hold every command, with Preview's ⌘ keys
-  beside them and ticks on what is on (the panels, the order); About and Settings… (⌘,) are in the
-  Mirada menu, and the Help menu's search finds any command by name. The header's ☰ menu is gone
-  on a Mac.
-- **A saved edit keeps the photo's colour profile**, in JPEG and PNG: a wide-gamut photo (an
-  iPhone's Display P3, a camera's Adobe RGB) no longer saves duller than it was in apps that manage
-  colour. Read from JPEG, PNG, WebP, HEIC and AVIF.
 
 ## 0.1.0 — 2026-11-01
 
