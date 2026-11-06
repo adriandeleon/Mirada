@@ -31,7 +31,8 @@ Installers for Linux (x64 and arm64), macOS (Apple silicon and Intel) and Window
 types it opens. Until the first signed release, each platform asks once:
 
 - **Linux** — `sudo apt install ./Mirada-<version>-linux-x64.deb` (apt fetches what it needs), or
-  the `.rpm` with `dnf`. The `.tar.gz` runs from wherever it is unpacked: `bin/Mirada`.
+  the `.rpm` with `dnf`. The `.AppImage` runs as it is, on any distribution with GTK 3
+  (`chmod +x`, then run it); the `.tar.gz` runs from wherever it is unpacked: `bin/Mirada`.
 - **macOS** — open the `.dmg` and drag Mirada to Applications. macOS refuses the first launch of an
   unnotarized app: open **System Settings → Privacy & Security**, find Mirada near the bottom, and
   choose **Open Anyway**.

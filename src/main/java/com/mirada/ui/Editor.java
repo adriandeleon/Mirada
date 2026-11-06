@@ -37,6 +37,7 @@ import com.mirada.edit.ExifBlock;
 import com.mirada.edit.History;
 import com.mirada.edit.IccProfile;
 import com.mirada.edit.Raster;
+import com.mirada.edit.Xmp;
 import com.mirada.image.ImageCache;
 import com.mirada.image.Orientation;
 import com.mirada.image.Shrink;
@@ -358,7 +359,8 @@ final class Editor {
                         result,
                         target,
                         ExifBlock.carried(file, result.width(), result.height()),
-                        ImageCache.keepsColours(file) ? IccProfile.carried(file) : null);
+                        ImageCache.keepsColours(file) ? IccProfile.carried(file) : null,
+                        Xmp.carried(file, result.width(), result.height()));
                 Platform.runLater(() -> {
                     saving = false;
                     close();

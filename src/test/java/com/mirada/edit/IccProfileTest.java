@@ -125,7 +125,8 @@ class IccProfileTest {
     void aJpegMissingOneOfItsSegmentsHasNone(@TempDir Path dir) throws Exception {
         byte[] large = Arrays.copyOf(p3(), Encoder.ICC_CHUNK + 1000);
         ByteBuffer.wrap(large).putInt(0, large.length);
-        byte[] jpeg = Encoder.withSegments(Files.readAllBytes(fixture("/com/mirada/image/exif.jpg")), null, large);
+        byte[] jpeg =
+                Encoder.withSegments(Files.readAllBytes(fixture("/com/mirada/image/exif.jpg")), null, large, null);
         // Turn the second APP2 into an APP3, which no reader takes for a profile.
         int found = 0;
         for (int at = 2; (jpeg[at + 1] & 0xFF) != 0xDA; at += 2 + ((jpeg[at + 2] & 0xFF) << 8 | jpeg[at + 3] & 0xFF)) {

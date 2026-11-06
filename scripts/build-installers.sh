@@ -5,7 +5,7 @@
 #
 #   macOS    .dmg
 #   Windows  .msi
-#   Linux    .deb, .rpm and .tar.gz
+#   Linux    .deb, .rpm, .tar.gz and .AppImage (build-appimage.sh)
 #
 # Each registers Mirada for its image types (packaging/file-types.txt), so a double-click opens it.
 # On Linux and Windows the file arrives as Mirada's argument; macOS sends an "open" event, which
@@ -156,6 +156,8 @@ case "$(uname -s)" in
             echo "::warning::[installers] no rpmbuild here, so no rpm (CI and the release install it)" >&2
         fi
         build_tarball
+        bash "$root/scripts/build-appimage.sh" "$image" "$version" "$dest" "$icon" ||
+            { echo "::error::[installers] AppImage failed" >&2; exit 1; }
         ;;
     *)
         # jpackage takes the Add/Remove Programs icon from the main launcher and stores the whole

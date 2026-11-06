@@ -6,8 +6,6 @@ import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
-import java.util.zip.DataFormatException;
-import java.util.zip.Inflater;
 
 import org.jspecify.annotations.Nullable;
 
@@ -119,7 +117,7 @@ public final class IccProfile {
                 int zero = 0;
                 while (zero < data.length && data[zero] != 0) zero++;
                 if (zero == 0 || zero > 79 || zero + 2 > data.length || data[zero + 1] != 0) return null;
-                return inflated(data, zero + 2);
+                return Containers.inflated(data, zero + 2, MAX_SIZE);
             }
             at += 12 + length;
         }
@@ -218,25 +216,5 @@ public final class IccProfile {
         int type = box[0] + 8;
         if (!is(data, type, "prof") && !is(data, type, "rICC")) return null;
         return Arrays.copyOfRange(data, type + 4, box[0] + box[1]);
-    }
-
-    private static byte @Nullable [] inflated(byte[] data, int from) {
-        Inflater inflater = new Inflater();
-        try {
-            inflater.setInput(data, from, data.length - from);
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            byte[] buffer = new byte[16 << 10];
-            while (!inflater.finished()) {
-                int n = inflater.inflate(buffer);
-                if (n == 0 && (inflater.needsInput() || inflater.needsDictionary())) return null;
-                out.write(buffer, 0, n);
-                if (out.size() > MAX_SIZE) return null;
-            }
-            return out.toByteArray();
-        } catch (DataFormatException e) {
-            return null;
-        } finally {
-            inflater.end();
-        }
     }
 }

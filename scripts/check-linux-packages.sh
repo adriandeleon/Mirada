@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Checks the built .deb and .rpm, not the tree: every mistake here produces a package that installs
-# and looks wrong (Termina's packages shipped a stock Java icon and a menu entry jpackage ignored).
+# Checks the built .deb, .rpm and .AppImage, not the tree: every mistake here produces a package
+# that installs and looks wrong (Termina's packages shipped a stock Java icon and a menu entry
+# jpackage ignored).
 #
 #   - native image (-Pdist,native): bin/Mirada is the executable, with AWT's libraries and the codec
 #     bundle beside it, and no Java runtime
@@ -14,6 +15,8 @@
 #   - no binary needs a glibc newer than Ubuntu 22.04's (2.35), the oldest the dependencies allow:
 #     the native image takes the build host's symbol versions, and ubuntu-latest's move to 26.04
 #     made 0.2.0 and 0.2.1 for x64 need 2.43 (sqrtf), so they did not start on Debian 13
+#   - the AppImage holds the same tree at opt/mirada, starts it from AppRun, and its menu entry and
+#     AppStream metadata validate; it declares no dependencies, taking GTK from the system
 #   - every maintainer script parses (sh -n), and the deb's prerm lets an upgrade through
 #     ("failed-upgrade" exits 0): 0.1.0 and 0.2.0 shipped a prerm that did not parse, as jpackage put
 #     multi-line text where a comment named one of its placeholders, and dpkg falls back to the new
@@ -31,8 +34,8 @@ failures=0
 glibc_floor=2.35
 fail() { echo "::error::$1"; failures=$((failures + 1)); }
 
-check_tree() { # <package-label> <extracted-root> <depends-text>
-    local label="$1" tree="$2" deps="$3" app="$2/opt/mirada"
+check_tree() { # <package-label> <extracted-root> <depends-text> <menu-entry>
+    local label="$1" tree="$2" deps="$3" entry="$4" app="$2/opt/mirada"
     local codecs elf needed
     while IFS= read -r elf; do
         needed=$(readelf -V -W "$elf" 2>/dev/null | grep -o 'GLIBC_[0-9.]*' | sed 's/GLIBC_//' | sort -uV | tail -1 || true)
@@ -61,7 +64,6 @@ check_tree() { # <package-label> <extracted-root> <depends-text>
             ;;
     esac
 
-    local entry="$app/lib/mirada-Mirada.desktop"
     if [ -f "$entry" ]; then
         grep -q '^Exec=.* %f$' "$entry" || fail "$label: menu entry does not pass the file (%f)"
         for mime in image/jpeg image/heic image/avif image/jxl image/webp; do
@@ -79,8 +81,13 @@ check_tree() { # <package-label> <extracted-root> <depends-text>
     if [ "$(sha256sum < "$app/lib/Mirada.png")" != "$(sha256sum < "$icon")" ]; then
         fail "$label: lib/Mirada.png is not $icon (the bundler's stock icon?)"
     fi
-    printf '%s' "$deps" | grep -q 'gtk-3' || fail "$label: dependencies do not name GTK 3"
-    printf '%s' "$deps" | grep -q -i 'asound' && fail "$label: depends on ALSA (libjsound back in the image?)"
+    case "$label" in
+        *.AppImage) ;;
+        *)
+            printf '%s' "$deps" | grep -q 'gtk-3' || fail "$label: dependencies do not name GTK 3"
+            printf '%s' "$deps" | grep -q -i 'asound' && fail "$label: depends on ALSA (libjsound back in the image?)"
+            ;;
+    esac
     case "$label" in
         *.deb)
             local bare
@@ -94,7 +101,9 @@ check_tree() { # <package-label> <extracted-root> <depends-text>
 shopt -s nullglob
 debs=("$dir"/*.deb)
 rpms=("$dir"/*.rpm)
+appimages=("$dir"/*.AppImage)
 [ ${#debs[@]} -gt 0 ] || fail "no .deb in $dir"
+[ ${#appimages[@]} -gt 0 ] || fail "no .AppImage in $dir"
 
 for deb in "${debs[@]}"; do
     tree="$(mktemp -d)"
@@ -112,7 +121,7 @@ for deb in "${debs[@]}"; do
     [ -f "$tree.prerm" ] && { sh "$tree.prerm" failed-upgrade 0.0.0 > /dev/null 2>&1 || fail "$(basename "$deb"): prerm failed-upgrade does not exit 0"; }
     rm -f "$tree".{preinst,postinst,prerm,postrm}
     dpkg-deb -x "$deb" "$tree"
-    check_tree "$(basename "$deb")" "$tree" "$(dpkg-deb -f "$deb" Depends)"
+    check_tree "$(basename "$deb")" "$tree" "$(dpkg-deb -f "$deb" Depends)" "$tree/opt/mirada/lib/mirada-Mirada.desktop"
     rm -rf "$tree"
 done
 for rpm in "${rpms[@]}"; do
@@ -128,7 +137,34 @@ for rpm in "${rpms[@]}"; do
         sh -n "$tree.$script" 2>/dev/null || fail "$(basename "$rpm"): %$script does not parse: $(sh -n "$tree.$script" 2>&1)"
     done
     rm -f "$tree".{pre,post,preun,postun}
-    check_tree "$(basename "$rpm")" "$tree" "$(rpm -qp --requires "$rpm" 2>/dev/null)"
+    check_tree "$(basename "$rpm")" "$tree" "$(rpm -qp --requires "$rpm" 2>/dev/null)" "$tree/opt/mirada/lib/mirada-Mirada.desktop"
+    rm -rf "$tree"
+done
+
+for appimage in "${appimages[@]}"; do
+    label="$(basename "$appimage")"
+    tree="$(mktemp -d)"
+    # The runtime unpacks its own image without FUSE; the tree lands in squashfs-root.
+    chmod +x "$appimage"
+    (cd "$tree" && "$appimage" --appimage-extract > /dev/null)
+    root_dir="$tree/squashfs-root"
+    if [ -x "$root_dir/AppRun" ]; then
+        grep -q 'opt/mirada/bin/Mirada' "$root_dir/AppRun" || fail "$label: AppRun does not start opt/mirada/bin/Mirada"
+    else
+        fail "$label: no AppRun"
+    fi
+    [ -e "$root_dir/.DirIcon" ] || fail "$label: no .DirIcon"
+    entries=("$root_dir"/*.desktop)
+    [ ${#entries[@]} = 1 ] || fail "$label: ${#entries[@]} menu entries at its root, not one"
+    metainfo=("$root_dir"/usr/share/metainfo/*.xml)
+    if [ ${#metainfo[@]} = 1 ]; then
+        if command -v appstreamcli >/dev/null; then
+            appstreamcli validate --no-net "${metainfo[0]}" > /dev/null || fail "$label: AppStream metadata does not validate"
+        fi
+    else
+        fail "$label: no AppStream metadata"
+    fi
+    check_tree "$label" "$root_dir" "" "${entries[0]:-}"
     rm -rf "$tree"
 done
 

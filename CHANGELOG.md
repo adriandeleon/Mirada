@@ -24,11 +24,18 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   A bookmarked image wears a bookmark in its corner and in the thumbnail strip, its note is a
   click away over the image, and the properties sidebar shows both, the folder's too. A rename in
   Mirada keeps them.
+- **An AppImage for Linux** (x64 and arm64): one file that runs on any distribution with GTK 3,
+  without installing anything or needing root.
 
 ### Changed
 
 - **The header shows the folder before the file name**, as "folder / photo.jpg" on one line. It
   stood on a second line under the name, which the header was too short to show.
+- **A saved edit keeps the photo's XMP**: its title, description, keywords, rating and rights, as
+  Lightroom, Photos or a phone wrote them, in a JPEG, PNG or TIFF; the orientation and size in it
+  become the edit's.
+- **A saved TIFF keeps the EXIF and the colour profile**, as JPEG and PNG already did: the camera,
+  the date, the exposure, the location, and the colours of a wide-gamut photo.
 
 ## 0.3.0 — 2026-11-05
 

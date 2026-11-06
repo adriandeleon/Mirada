@@ -7,7 +7,8 @@
 # JVM; CI's native job opens all of them in the native image. Re-run this to add a variant; the
 # files are committed, so the tests do not need ImageMagick.
 #
-# Needs: ImageMagick 7 with HEIC/AVIF (libheif), Python with libjxl for the JPEG XL ones, and
+# Needs: ImageMagick 7 with HEIC/AVIF (libheif), Python with libheif 1.19 or later and its x265
+# plugin, Python with libjxl for the JPEG XL ones, and
 # ffmpeg with libaom for the AVIF sequence.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -68,6 +69,9 @@ base -depth 10 -quality 80 avif-10bit.avif
 ffmpeg -hide_banner -loglevel error -y -f lavfi -i "color=c=red:s=48x32:r=4" -f lavfi -i "color=c=blue:s=48x32:r=4" \
     -filter_complex "[0][1]overlay=x='if(gte(n,1),0,48)':y=0,format=yuv420p" -frames:v 3 \
     -c:v libaom-av1 -still-picture 0 -f avif "$out/avif-animated.avif"
+# An iPhone-style grid (cropped tiles, irot and EXIF orientation 6, the profile on the tiles), which
+# ImageMagick cannot write either
+python3 -I "$root/scripts/write-heic-grid.py" "$root/src/test/resources/com/mirada/edit/display-p3.icc" heic-grid.heic
 # JPEG XL, through libjxl's encoder (ImageMagick here cannot write it)
 base -depth 8 rgb:"$out/.jxl-rgb.raw"
 python3 -I "$root/scripts/write-jxl.py" "$out/.jxl-rgb.raw" 48 32 3 jxl-rgb.jxl

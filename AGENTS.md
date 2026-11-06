@@ -24,9 +24,9 @@ In this order, when they pull against each other:
   the codec bundle beside it. `clean` is required (jlink reads `target/classes`).
 - The JVM app image (Intel Macs, and any JDK 25): `./mvnw clean -Pdist -DskipTests package`, with
   a trained AOT cache in place of the native executable.
-- Installers too: add `-Dskip.installers=false` ⇒ `target/installers` (deb, rpm and tar.gz on Linux,
-  dmg on macOS, msi on Windows); `scripts/check-linux-packages.sh target/installers branding/mirada.png`
-  checks the Linux ones.
+- Installers too: add `-Dskip.installers=false` ⇒ `target/installers` (deb, rpm, tar.gz and
+  AppImage on Linux, dmg on macOS, msi on Windows);
+  `scripts/check-linux-packages.sh target/installers branding/mirada.png` checks the Linux ones.
 - Run without Maven (any JVM option, no build time counted): `scripts/dev-run.sh [-D…] photo.jpg`
 - Start-up, median of warm runs: `scripts/measure-startup.sh -n 7 target/dist/Mirada/bin/Mirada photo.jpg`
   (or `MIRADA_NO_BUILD=1 … scripts/dev-run.sh photo.jpg`). Stepping: `MIRADA_PERF=1 MIRADA_PERF_TOUR=1`
@@ -47,7 +47,7 @@ A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an en
 |---|---|
 | `com.mirada.folder` | The "document": the images in one folder, in the chosen order (`Sorting`: natural name order, date or size), and which one is showing (`FolderImages`, `NaturalOrder`, `ImageFormats`) |
 | `com.mirada.image` | Loading: decoded images cached by path (`ImageCache`), EXIF orientation and the camera line (`Exif`, `Orientation`), the sidebar's camera card and every metadata tag (`ExifDetails`), the strip's thumbnails (`Thumbnails`) |
-| `com.mirada.edit` | The editor's rules and pixel work, none of it UI: the edit and its order (`Edit`: turn, flip, crop), the crop as fractions (`Crop`) and as a box being dragged (`CropBox`), the shapes (`AspectRatio`), turns and mirrors on ARGB ints (`Raster`), undo and redo (`History`), the EXIF and colour profile a saved edit keeps (`ExifBlock`, `IccProfile`, both reading through `Containers`), and writing JPEG, PNG, TIFF or BMP (`Encoder`) |
+| `com.mirada.edit` | The editor's rules and pixel work, none of it UI: the edit and its order (`Edit`: turn, flip, crop), the crop as fractions (`Crop`) and as a box being dragged (`CropBox`), the shapes (`AspectRatio`), turns and mirrors on ARGB ints (`Raster`), undo and redo (`History`), the EXIF, colour profile and XMP a saved edit keeps (`ExifBlock`, `IccProfile`, `Xmp`, all reading through `Containers`), and writing JPEG, PNG, TIFF or BMP (`Encoder`) |
 | `com.mirada.os` | Platform glue: the files Finder opens Mirada with (`MacOpenFiles`) and About and Settings in its application menu (`MacAppMenu`); moving a file to the desktop's trash, and the one rule for `java.awt.headless` (`Trash`); showing a file in Finder, File Explorer or the freedesktop file manager (`Reveal`) |
 | `com.mirada.settings` | `settings.properties` in `~/.mirada`, `~/Library/Application Support/Mirada` on macOS or `%APPDATA%\Mirada` on Windows, moved there once from `~/.mirada` (`MIRADA_CONFIG_DIR` moves it): theme, what opens at start, how long the floating controls stay; clamped on read, written through on every change. Beside it, `bookmarks.properties`: the user's bookmarks and notes on images and folders (`Bookmarks`), read after the first paint, re-read before every change so two windows add to each other's |
 | `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`, `Scrolling`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`, along the bottom or down the left, pictures or names, as the settings say); the editor (`Editor`, `CropView`); every command with its keys, name, description and group (`Command`), the command palette (`CommandPalette`), the macOS menu bar (`MacMenus`), `AboutWindow`, `SettingsWindow`, `ShortcutsWindow`, the rename rules (`Renaming`), the theme and, on macOS and Windows, the system's accent colour (`Theme`, `Accent`), the symbolic icons, each command's included (`Icons`) |
@@ -200,12 +200,21 @@ a prefetched neighbour is 2–8 ms for every format.
   XL's Exif box) and changes only fixed-size values: orientation to 1, the image sizes to the
   edit's (a SHORT entry widened to LONG in place), and IFD0's link to the thumbnail cut. Nothing
   moves, so maker notes, whose offsets other tools break, survive. `Encoder` puts it into JPEG
-  (after JFIF) and PNG (after IHDR); TIFF and BMP get none, nor does a block over JPEG's 64 KB.
-  XMP is left behind because it repeats the orientation.
+  (after JFIF) and PNG (after IHDR), but not a block over JPEG's 64 KB; BMP gets none.
+- **A saved TIFF is written by `Encoder.writeTiff`, not ImageIO, around the EXIF block.** The
+  block is a TIFF structure whose offsets count from its own header, so the file *starts* with it,
+  in its byte order: every offset, maker notes' too, stays true unread. Uncompressed strips and a
+  new IFD0 follow, and the header points there; that IFD0 takes the block's IFD0 tags except those
+  saying how pixels are stored (`STORAGE_TAGS`), and the profile and XMP as tags 34675 and 700.
+- **A saved edit keeps the XMP, as text with a few values changed** (`Xmp`): the orientation to 1
+  and the sizes to the edit's wherever it repeats EXIF's (`tiff:`, `exif:`, whatever prefixes the
+  packet binds them to), and the xmp: thumbnail, Camera Raw's crop and the extended-XMP note go. A
+  packet whose orientation it cannot find to set (another form, a default namespace) is dropped, as
+  it would turn the upright picture again. JPEG's extended XMP (past 64 KB) is not carried.
 - **A saved edit keeps the ICC profile only while it still describes the pixels.** `IccProfile`
   reads it (JPEG's APP2 segments, PNG's iCCP, WebP's ICCP, the HEIF primary item's colr through
-  ipma) and `Encoder` writes it into JPEG and PNG beside the EXIF. Mirada shows pixels as they are
-  stored, profile unapplied, so carrying it is right for every decoder that leaves them so;
+  ipma) and `Encoder` writes it into JPEG, PNG and TIFF beside the EXIF. Mirada shows pixels as
+  they are stored, profile unapplied, so carrying it is right for every decoder that leaves them so;
   `Decoder.keepsColours` names the two that do not: libjxl (asked for sRGB) and ImageIO, whose
   TwelveMonkeys WebP reader converts to sRGB. `ImageCache.keepsColours` counts a WebP as ImageIO's
   when libwebp is missing. Only an RGB profile is carried, as the edit is RGB: a CMYK JPEG's profile
@@ -265,6 +274,12 @@ a prefetched neighbour is 2–8 ms for every format.
   instead does not work: rewriting it to a new path drops the cabinet, and editing it in place
   keeps the old stream's space. The release fails an MSI larger than the app it installs, then
   installs it and smoke-tests the installed copy.
+- **The AppImage is the app image at `opt/mirada`**, as the deb installs it, so
+  `check-linux-packages.sh` checks the same tree in all three (`scripts/build-appimage.sh`).
+  appimagetool and the runtime are release builds pinned by SHA-256, cached in
+  `~/.cache/mirada/appimage`; `MIRADA_APPDIR_ONLY=1` stops at the AppDir, without them. Like the
+  deb it takes GTK and the rest from the system, so the glibc floor applies to it too. GitHub's
+  runners have no FUSE: the smoke test runs it with `APPIMAGE_EXTRACT_AND_RUN=1`.
 - **The macOS dmg is `hdiutil`, not jpackage**, whose dmg step wants the Java runtime inside the
   bundle. The document types are written into `Info.plist` by `fix-mac-bundle.sh` from
   `packaging/file-types.txt`, which the other installers' file associations read too.
@@ -299,8 +314,9 @@ a prefetched neighbour is 2–8 ms for every format.
 - **libheif and libjxl turn the image upright themselves; the EXIF orientation must then be
   skipped.** HEIF readers are required to apply the container's `irot`/`imir`, and iPhones write an
   EXIF orientation too; applying both turns the photo twice. `Decoder.turnsUpright` says which
-  decoders do it, and `ImageCache` hands those an `Exif.upright()`. Not yet checked against a real
-  iPhone photo.
+  decoders do it, and `ImageCache` hands those an `Exif.upright()`. The matrix's `heic-grid.heic`
+  is laid out as an iPhone's (`scripts/write-heic-grid.py`: cropped tiles, irot and EXIF 6, the
+  profile on the tiles), and `NativeDecodersTest` checks it is turned once; no real iPhone photo yet.
 - **The FFM bindings are hand-written against the C headers.** `heif_error` is returned by value (a
   struct; the handle takes a `SegmentAllocator` first), `JxlPixelFormat` has 4 bytes of padding
   before its `size_t`, and `JxlBasicInfo`'s offsets (`xsize` 4, `ysize` 8, `alpha_bits` 60) are
@@ -464,6 +480,5 @@ Termina and Torrenta. `mvn compile` fails on any null that can reach a type not 
 
 Signing:
 Developer ID and notarization on macOS (wired, waiting for the secrets), a code-signing certificate
-on Windows. An AppImage; a Homebrew cask (Homebrew takes only notarized apps); winget-pkgs has not been sent Mirada yet. XMP in a saved edit, EXIF and the colour profile in a
-saved TIFF, a profile for a HEIF with nclx colours or a JPEG XL; a Brotli-compressed JPEG XL Exif box. Trash on Windows and macOS is untested. HEIC grids are untested against a real iPhone photo. The app itself has not been run on Windows
+on Windows. A Homebrew cask (Homebrew takes only notarized apps); winget-pkgs has not been sent Mirada yet. A TIFF's own EXIF when an edit of it is saved; a profile for a HEIF with nclx colours or a JPEG XL; a Brotli-compressed JPEG XL Exif box. Trash on Windows and macOS is untested. HEIC grids are tested on an iPhone-style file, not a real iPhone photo. The app itself has not been run on Windows
 or macOS by hand; CI only tests there, and the macOS Finder double-click is tested only through `open -a` on CI; on an Intel Mac (the JVM image) a launch from Finder still opens an empty window.

@@ -9,10 +9,14 @@ import java.util.Objects;
 
 import javafx.scene.image.WritableImage;
 
+import com.mirada.edit.ExifBlock;
+import com.mirada.edit.IccProfile;
+import com.mirada.folder.ImageFormats;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -67,6 +71,34 @@ class NativeDecodersTest {
         assertEquals(32, image.getWidth());
         assertEquals(8, image.getHeight());
         assertRedThenBlue(image, 16);
+    }
+
+    /**
+     * An iPhone's HEIC: a grid of tiles whose last column and row are cut off, turned upright by irot
+     * and tagged with EXIF orientation 6 as well, its profile on the tiles rather than the grid
+     * (scripts/write-heic-grid.py). Upright it is 48 × 32, red on the left and blue on the right.
+     */
+    @Test
+    void decodesAnIphoneStyleGridTurnedOnce() throws Exception {
+        require(HeifDecoder.available(), "libheif");
+        Path grid = fixture("/com/mirada/matrix/heic-grid.heic");
+        WritableImage image = HeifDecoder.decode(grid);
+        assertEquals(48, image.getWidth(), "cropped to the grid's size, and turned by irot");
+        assertEquals(32, image.getHeight());
+        // Each corner, so every tile is where it belongs, the cut-off ones included.
+        for (int y : new int[] {1, 30}) {
+            assertNear(0xFFD0302A, image.getPixelReader().getArgb(1, y), 12);
+            assertNear(0xFFD0302A, image.getPixelReader().getArgb(22, y), 12);
+            assertNear(0xFF2A5FD0, image.getPixelReader().getArgb(25, y), 12);
+            assertNear(0xFF2A5FD0, image.getPixelReader().getArgb(46, y), 12);
+        }
+        // The EXIF says turn it too; libheif already has, so the viewer must not again.
+        assertEquals(Orientation.ROTATE_90, Exif.read(grid).orientation());
+        assertTrue(ImageFormats.Decoder.LIBHEIF.turnsUpright());
+        assertEquals(Orientation.NORMAL, Exif.read(grid).upright().orientation());
+        // What a saved edit carries: the EXIF, and the tiles' profile.
+        assertTrue(ExifBlock.read(grid) != null);
+        assertArrayEquals(Files.readAllBytes(fixture("/com/mirada/edit/display-p3.icc")), IccProfile.read(grid));
     }
 
     @Test

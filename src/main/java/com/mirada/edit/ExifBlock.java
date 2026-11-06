@@ -11,9 +11,7 @@ import org.jspecify.annotations.Nullable;
 import static com.mirada.edit.Containers.MAX_BLOCK;
 import static com.mirada.edit.Containers.box;
 import static com.mirada.edit.Containers.bytes;
-import static com.mirada.edit.Containers.child;
 import static com.mirada.edit.Containers.is;
-import static com.mirada.edit.Containers.sized;
 import static com.mirada.edit.Containers.u16;
 import static com.mirada.edit.Containers.u32;
 import static com.mirada.edit.Containers.u8;
@@ -129,16 +127,7 @@ public final class ExifBlock {
      * whose data is a four-byte offset to the TIFF header and then the block.
      */
     private static byte @Nullable [] fromHeif(FileChannel channel) throws IOException {
-        byte[] data = Containers.heifMeta(channel);
-        if (data == null) return null;
-        // The meta box is a full box: version and flags, then its children.
-        int[] iinf = child(data, 4, data.length, "iinf");
-        int[] iloc = child(data, 4, data.length, "iloc");
-        if (iinf == null || iloc == null) return null;
-        long item = exifItem(data, iinf[0], iinf[0] + iinf[1]);
-        if (item < 0) return null;
-        int[] idat = child(data, 4, data.length, "idat");
-        byte[] payload = itemData(channel, data, iloc[0], iloc[0] + iloc[1], item, idat);
+        byte[] payload = Containers.heifItem(channel, "Exif", null);
         return payload == null ? null : afterOffset(payload);
     }
 
@@ -154,88 +143,6 @@ public final class ExifBlock {
         if (payload.length < 4) return null;
         long offset = u32(payload, 0, false);
         return offset > payload.length - 4 ? null : tiff(payload, 4 + (int) offset);
-    }
-
-    /** The id of the first item of type "Exif" in an iinf box's content, or -1. */
-    private static long exifItem(byte[] data, int start, int end) {
-        int version = u8(data, start);
-        int at = start + 4 + (version == 0 ? 2 : 4);
-        while (at + 8 <= end) {
-            long size = u32(data, at, false);
-            if (size < 8 || at + size > end) return -1;
-            if (is(data, at + 4, "infe")) {
-                int infe = at + 8;
-                int infeVersion = u8(data, infe);
-                if (infeVersion >= 2) {
-                    int id = infe + 4;
-                    long itemId = infeVersion == 2 ? u16(data, id, false) : u32(data, id, false);
-                    int type = id + (infeVersion == 2 ? 2 : 4) + 2;
-                    if (type + 4 <= end && is(data, type, "Exif")) return itemId;
-                }
-            }
-            at += (int) size;
-        }
-        return -1;
-    }
-
-    /** An item's bytes, by its iloc entry: from the file (construction method 0) or the idat box (1). */
-    private static byte @Nullable [] itemData(
-            FileChannel channel, byte[] data, int start, int end, long item, int @Nullable [] idat) throws IOException {
-        int version = u8(data, start);
-        int at = start + 4;
-        if (at + 2 > end) return null;
-        int offsetSize = u8(data, at) >> 4;
-        int lengthSize = u8(data, at) & 0xF;
-        int baseSize = u8(data, at + 1) >> 4;
-        int indexSize = version == 0 ? 0 : u8(data, at + 1) & 0xF;
-        at += 2;
-        long count = version < 2 ? u16(data, at, false) : u32(data, at, false);
-        at += version < 2 ? 2 : 4;
-        int idSize = version < 2 ? 2 : 4;
-        for (long i = 0; i < count; i++) {
-            if (at + idSize + (version > 0 ? 2 : 0) + 2 + baseSize + 2 > end) return null;
-            long id = version < 2 ? u16(data, at, false) : u32(data, at, false);
-            at += idSize;
-            int method = 0;
-            if (version > 0) {
-                method = u16(data, at, false) & 0xF;
-                at += 2;
-            }
-            at += 2; // data_reference_index
-            long base = sized(data, at, baseSize);
-            at += baseSize;
-            int extents = u16(data, at, false);
-            at += 2;
-            int entrySize = indexSize + offsetSize + lengthSize;
-            if (at + (long) extents * entrySize > end) return null;
-            if (id != item) {
-                at += extents * entrySize;
-                continue;
-            }
-            byte[] out = new byte[0];
-            for (int e = 0; e < extents; e++) {
-                at += indexSize;
-                long offset = base + sized(data, at, offsetSize);
-                at += offsetSize;
-                long length = sized(data, at, lengthSize);
-                at += lengthSize;
-                if (length <= 0 || out.length + length > MAX_BLOCK) return null;
-                byte[] part;
-                if (method == 0) {
-                    part = bytes(channel, offset, (int) length);
-                } else if (method == 1 && idat != null && offset + length <= idat[1]) {
-                    part = Arrays.copyOfRange(data, idat[0] + (int) offset, idat[0] + (int) (offset + length));
-                } else {
-                    return null;
-                }
-                if (part == null) return null;
-                byte[] joined = Arrays.copyOf(out, out.length + part.length);
-                System.arraycopy(part, 0, joined, out.length, part.length);
-                out = joined;
-            }
-            return out;
-        }
-        return null;
     }
 
     /**
