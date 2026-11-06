@@ -252,6 +252,8 @@ final class TitleBar {
                         item(Command.ABOUT, run),
                         new SeparatorMenuItem(),
                         item(Command.CLOSE, run));
+        // The palette's keys may have changed since.
+        menu.setOnShowing(e -> MenuChord.refresh(menu.getItems()));
     }
 
     Region node() {
@@ -305,12 +307,14 @@ final class TitleBar {
     private static MenuItem panel(Command command, BooleanProperty showing) {
         CheckMenuItem item = new CheckMenuItem(command.label(), Icons.menu(command));
         item.selectedProperty().bindBidirectional(showing);
-        return item;
+        item.setUserData(command);
+        return MenuChord.on(item, command);
     }
 
     private static MenuItem item(Command command, Consumer<Command> run) {
         MenuItem item = new MenuItem(command.label(), Icons.menu(command));
         item.setOnAction(e -> run.accept(command));
-        return item;
+        item.setUserData(command);
+        return MenuChord.on(item, command);
     }
 }

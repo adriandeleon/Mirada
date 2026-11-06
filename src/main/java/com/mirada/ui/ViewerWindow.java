@@ -420,6 +420,7 @@ public final class ViewerWindow {
     private ContextMenu stripMenu() {
         MenuItem hide = new MenuItem("Hide Thumbnails", Icons.of(Icons.CLOSE));
         hide.setOnAction(e -> run(Command.THUMBNAILS));
+        MenuChord.on(hide, Command.THUMBNAILS);
         ContextMenu menu = new ContextMenu(
                 hide,
                 new SeparatorMenuItem(),
@@ -1388,11 +1389,12 @@ public final class ViewerWindow {
                         default -> sorting.by() == Sorting.By.NAME;
                     });
             item.setOnAction(e -> run(command));
-            menu.getItems().add(item);
+            menu.getItems().add(MenuChord.on(item, command));
         }
         CheckMenuItem reversed = new CheckMenuItem(Command.REVERSE_ORDER.label());
         reversed.setSelected(sorting.reversed());
         reversed.setOnAction(e -> run(Command.REVERSE_ORDER));
+        MenuChord.on(reversed, Command.REVERSE_ORDER);
         menu.getItems().addAll(new SeparatorMenuItem(), reversed);
         menu.setDisable(folder.isEmpty());
         return menu;
@@ -1411,7 +1413,7 @@ public final class ViewerWindow {
         }
         item.setOnAction(e -> run(command));
         item.setDisable(unavailable(command) != null);
-        return item;
+        return MenuChord.on(item, command);
     }
 
     /** What a menu calls {@code command} now: its label, but for full screen while in it. */

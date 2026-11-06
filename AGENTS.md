@@ -450,6 +450,11 @@ a prefetched neighbour is 2–8 ms for every format.
   Stepping follows the strip: while it stands down the side (`Command.vertical`, set by
   `ViewerWindow.stepAlong`) Up and Down step and Left and Right pan, and `chord()`, the floating
   arrows and the shortcuts window follow; the test checks both axes.
+- **A menu's keys are shown, never registered** (`MenuChord`). JavaFX puts a `MenuButton`'s and
+  a context menu's accelerators into the scene, where a bare one fires under the palette's text
+  field and any other runs a second time. `MenuChord` is a `KeyCombination` that names the
+  command's chord and never matches, so `Command.forKey` stays the only way in. Styled as Editora's
+  `.menu-item-chord`: 11px in its `-state-key` periwinkle, defined on `.root` in `mirada.css`.
 - **A scroll is a wheel's or a trackpad's** (`Scrolling`): macOS reports the fingers
   (`ScrollEvent.getTouchCount`), and those scrolls pan, or swipe once a gesture when there is nothing
   to pan; a wheel zooms. Windows and Linux touchpads report no fingers and so still zoom; Windows

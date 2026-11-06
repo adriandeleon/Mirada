@@ -181,6 +181,6 @@ final class OnScreenControls {
     private static MenuItem item(Command command, Consumer<Command> run) {
         MenuItem item = new MenuItem(command.label(), Icons.menu(command));
         item.setOnAction(e -> run.accept(command));
-        return item;
+        return MenuChord.on(item, command);
     }
 }

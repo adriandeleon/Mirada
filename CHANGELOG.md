@@ -7,6 +7,10 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **The menus show each command's key**, right-aligned beside it in Editora's small periwinkle: the
+  header's menu, the right-click menus over the image and the thumbnail strip, and the zoom menu.
+  The palette's is whichever key Settings gives it. They only name the keys: pressing one runs it as
+  before, and never twice, nor while typing in the palette.
 - **The thumbnail strip has a menu of its own**: right-click it to hide it, stand it at the side or
   along the bottom, or show names instead of pictures or under them. The header's menu ticks
   Thumbnails and Image Properties while they are open, and turns them on and off.

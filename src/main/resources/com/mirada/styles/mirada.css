@@ -122,6 +122,32 @@
 }
 
 /*
+ * The keyboard's periwinkle, Editora's -state-key: a deep ink on a light ground, a pale one on a dark
+ * ground, picked by the brightness of -color-bg-default. Same ladder as Editora's app.css.
+ */
+.root {
+    -state-key: ladder(-color-bg-default, #b0b6e0 0%, #b8bee5 10%, #cdd1f1 20%, #e3e6f9 30%, #ecedfb 49%, #3c4380 50%);
+}
+
+/*
+ * A menu row's key (MenuChord), as Editora's menus show it (.menu-item-chord): 11px, in the keyboard's
+ * periwinkle. On the highlighted row it takes the row's text colour, as the periwinkle is lost on the
+ * Cupertino accent; greyed, the row's grey.
+ */
+.menu-item .accelerator-text {
+    -fx-text-fill: -state-key;
+    -fx-font-size: 11px;
+}
+
+.menu-item:focused .accelerator-text {
+    -fx-text-fill: -color-fg-emphasis;
+}
+
+.menu-item:disabled .accelerator-text {
+    -fx-text-fill: -color-fg-subtle;
+}
+
+/*
  * The floating controls over the image: dark translucent pills, the same on light and dark themes,
  * because they sit on the photo, not on the window.
  */
