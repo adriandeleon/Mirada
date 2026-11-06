@@ -31,14 +31,23 @@ public record Exif(Orientation orientation, String summary) {
     }
 
     public static Exif read(Path file) {
-        Metadata metadata;
+        Metadata metadata = metadata(file);
+        return metadata == null ? NONE : of(metadata);
+    }
+
+    /** Everything metadata-extractor finds in the file, or null when it cannot read it. */
+    static @Nullable Metadata metadata(Path file) {
         try {
-            metadata = ImageMetadataReader.readMetadata(file.toFile());
+            return ImageMetadataReader.readMetadata(file.toFile());
         } catch (ImageProcessingException | IOException | RuntimeException | LinkageError e) {
             // LinkageError too: a metadata-extractor class that cannot initialise (a charset missing
             // from a native image, say) must cost the metadata, not the image.
-            return NONE;
+            return null;
         }
+    }
+
+    /** What {@link #read} makes of metadata already read. */
+    static Exif of(Metadata metadata) {
         ExifIFD0Directory camera = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
         ExifSubIFDDirectory shot = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
         Orientation orientation = Orientation.NORMAL;

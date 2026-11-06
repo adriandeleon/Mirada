@@ -5,6 +5,17 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## 0.3.0 — unreleased
 
+### Changed
+
+- **The thumbnail strip fills four to fifty times faster with photos**: a camera's or phone's JPEG
+  carries a small copy of itself, and the strip now shows that (when it is large enough and the
+  photo's shape) instead of decoding the photo. Up to four thumbnails are made at once, the ones on
+  screen first, and those scrolled past before they were made are no longer made at all.
+
+### Fixed
+
+- **The thumbnail strip no longer disappears when it is moved from the side back to the bottom.**
+
 ## 0.2.2 — 2026-11-05
 
 ### Fixed

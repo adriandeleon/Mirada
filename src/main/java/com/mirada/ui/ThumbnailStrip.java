@@ -18,6 +18,7 @@ import javafx.scene.control.OverrunStyle;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -116,6 +117,22 @@ final class ThumbnailStrip {
         list.refresh();
     }
 
+    /**
+     * Stands {@code strip} down {@code root}'s left side or along its bottom, out of the other place
+     * first. Setting a place adds the node to the pane's children, and one it still holds in the
+     * other place is a duplicate: going from the side back to the bottom threw, then emptying the
+     * side took the strip away altogether.
+     */
+    static void place(BorderPane root, Node strip, boolean side) {
+        if (root.getLeft() == strip) root.setLeft(null);
+        if (root.getBottom() == strip) root.setBottom(null);
+        if (side) {
+            root.setLeft(strip);
+        } else {
+            root.setBottom(strip);
+        }
+    }
+
     /** A cell's length along the strip, and the strip's thickness across it. */
     record Size(double cell, double thickness) {}
 
@@ -156,6 +173,8 @@ final class ThumbnailStrip {
         private final Label name = new Label();
         private final Label caption = new Label();
         private final VBox captioned = new VBox(2);
+        /** The file whose thumbnail this cell asked for, until it shows another. */
+        private @Nullable Path asked;
 
         Cell(IntConsumer pick, Dragger drag) {
             picture.setPreserveRatio(true);
@@ -192,6 +211,12 @@ final class ThumbnailStrip {
         protected void updateItem(Path file, boolean empty) {
             super.updateItem(file, empty);
             picture.setImage(null);
+            Path previous = asked;
+            if (previous != null && (names || empty || !previous.equals(file))) {
+                // Scrolled past before it was made: let the ones on screen go first.
+                thumbnails.release(previous);
+                asked = null;
+            }
             if (empty || file == null) {
                 setGraphic(null);
                 return;
@@ -212,6 +237,7 @@ final class ThumbnailStrip {
                 captioned.getChildren().clear();
                 setGraphic(frame);
             }
+            asked = file;
             thumbnails
                     .get(file)
                     .thenAcceptAsync(

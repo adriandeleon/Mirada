@@ -15,9 +15,12 @@ import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import javafx.scene.image.WritableImage;
+
+import org.jspecify.annotations.Nullable;
 
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static java.lang.foreign.ValueLayout.JAVA_INT;
@@ -78,10 +81,40 @@ final class TurboJpegDecoder {
      * shrinking. 0 for full size.
      */
     static ArgbPixels pixels(Path file, int atLeast) throws IOException {
-        Library tj = Library.INSTANCE.orElseThrow(() -> new IOException("libjpeg-turbo was not found"));
         try (Arena arena = Arena.ofConfined();
                 FileChannel channel = FileChannel.open(file, StandardOpenOption.READ)) {
             MemorySegment data = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size(), arena);
+            return Objects.requireNonNull(decode(arena, data, atLeast, (width, height) -> true));
+        }
+    }
+
+    /** Whether to go on with a JPEG of this size, read from its header. */
+    @FunctionalInterface
+    interface Shape {
+        boolean accept(int width, int height);
+    }
+
+    /**
+     * The JPEG of {@code length} bytes at {@code offset} in the file (the thumbnail a camera puts in
+     * the EXIF), scaled as {@link #pixels(Path, int)} scales, or null when those bytes are not a JPEG
+     * libjpeg-turbo decodes to RGB or {@code shape} turns its size down. Only the header is read
+     * before that answer.
+     */
+    static @Nullable ArgbPixels embedded(Path file, long offset, long length, int atLeast, Shape shape) {
+        try (Arena arena = Arena.ofConfined();
+                FileChannel channel = FileChannel.open(file, StandardOpenOption.READ)) {
+            if (offset < 0 || length <= 0 || offset > channel.size() - length) return null;
+            MemorySegment data = channel.map(FileChannel.MapMode.READ_ONLY, offset, length, arena);
+            return decode(arena, data, atLeast, shape);
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    private static @Nullable ArgbPixels decode(Arena arena, MemorySegment data, int atLeast, Shape shape)
+            throws IOException {
+        Library tj = Library.INSTANCE.orElseThrow(() -> new IOException("libjpeg-turbo was not found"));
+        try {
             MemorySegment handle = (MemorySegment) tj.init.invoke(TJINIT_DECOMPRESS);
             if (handle.equals(MemorySegment.NULL)) throw new IOException("libjpeg-turbo could not start");
             try {
@@ -94,6 +127,7 @@ final class TurboJpegDecoder {
                 if (precision != 8) throw new IOException(precision + "-bit JPEG is left to JavaFX");
                 int width = (int) tj.get.invoke(handle, TJPARAM_JPEGWIDTH);
                 int height = (int) tj.get.invoke(handle, TJPARAM_JPEGHEIGHT);
+                if (!shape.accept(width, height)) return null;
                 int denominator = denominator(Math.max(width, height), atLeast);
                 if (denominator > 1) {
                     MemorySegment factor = arena.allocate(SCALING_FACTOR);

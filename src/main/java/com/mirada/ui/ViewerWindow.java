@@ -350,8 +350,7 @@ public final class ViewerWindow {
         ThumbnailStrip shown = thumbnailStrip();
         boolean side = settings.thumbnailsAtSide();
         shown.setLayout(side, settings.thumbnailNames(), settings.thumbnailCaptions());
-        root.setBottom(side ? null : shown.node());
-        root.setLeft(side ? shown.node() : null);
+        ThumbnailStrip.place(root, shown.node(), side);
         refreshStrip();
     }
 

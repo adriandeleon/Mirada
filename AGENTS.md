@@ -275,6 +275,12 @@ a prefetched neighbour is 2–8 ms for every format.
   then let the same press reach the key filter, which would close the window.
   `setFullScreenExitKeyCombination(NO_MATCH)` hands it to `Command.ESCAPE`: leave full screen if in
   it, otherwise close — on Linux only (`Command.escapeCloses`); macOS and Windows keep the window.
+- **A strip thumbnail of a JPEG is usually the camera's own** (`Thumbnails.embedded`): IFD1's
+  JPEG, taken when it is at least 160 pixels and within 2 % of the photo's shape (`Thumbnails.fits`),
+  else the photo at an eighth. metadata-extractor's "adjusted" thumbnail offset counts from the APP1
+  segment, not the file, so `Thumbnails.exifTiff` walks the segments to find the TIFF block. On this
+  machine's photo folders that took 56–100 % of them and made each 1–5 ms instead of 13–52. The
+  queue is newest first and a cell scrolled past releases its request (`Thumbnails.release`).
 - **The cache holds full resolution, so it is small.** A decoded image is four bytes a pixel: a
   48-megapixel photo is about 190 MB. Three entries (the current image and one either side).
   Downsampled previews for the fitted view would let it hold more; not done.
