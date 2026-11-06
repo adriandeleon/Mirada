@@ -55,6 +55,11 @@ final class Icons {
     static final String CLOCK = "M12 3 A9 9 0 1 1 11.99 3 Z M12 7 V12 L15.5 14";
     static final String LIST = "M8 6 H20 M8 12 H20 M8 18 H20 M4 6 H4.1 M4 12 H4.1 M4 18 H4.1";
 
+    static final String BOOKMARK = "M6.5 3.5 H17.5 V20.5 L12 16 L6.5 20.5 Z";
+    static final String NOTE = "M5 4 H19 V14 L14 20 H5 Z M14 20 V14 H19 M8.5 8.5 H15.5 M8.5 12 H12.5";
+    static final String NEXT_BOOKMARK = "M4 3.5 H12 V17.5 L8 14 L4 17.5 Z M15 18 L20 12 L15 6";
+    static final String PREVIOUS_BOOKMARK = "M12 3.5 H20 V17.5 L16 14 L12 17.5 Z M9 18 L4 12 L9 6";
+
     private Icons() {}
 
     /** The icon a menu shows beside {@code command}, or null for none (the order's choices, a tick's). */
@@ -80,6 +85,10 @@ final class Icons {
             case UNDO_TRASH -> UNDO;
             case COPY -> COPY;
             case SHOW_IN_FOLDER -> FOLDER;
+            case BOOKMARK, BOOKMARK_FOLDER, GO_TO_BOOKMARK -> BOOKMARK;
+            case NOTE, FOLDER_NOTE -> NOTE;
+            case NEXT_BOOKMARK -> NEXT_BOOKMARK;
+            case PREVIOUS_BOOKMARK -> PREVIOUS_BOOKMARK;
             case INFO, ABOUT -> INFO;
             case THUMBNAILS -> STRIP;
             case THUMBNAILS_AT_SIDE -> SIDEBAR;

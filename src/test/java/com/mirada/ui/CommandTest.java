@@ -233,6 +233,23 @@ class CommandTest {
         return Command.forKey(code, shift, shortcut, shortcut, false);
     }
 
+    @Test
+    void bookmarksAndNotesAreBAndNFoldersWithShift() {
+        assertEquals(Command.BOOKMARK, key(KeyCode.B, false, false));
+        assertEquals(Command.BOOKMARK_FOLDER, key(KeyCode.B, true, false));
+        assertEquals(Command.NOTE, key(KeyCode.N, false, false));
+        assertEquals(Command.FOLDER_NOTE, key(KeyCode.N, true, false));
+        assertEquals(Command.NEXT_BOOKMARK, key(KeyCode.CLOSE_BRACKET, false, false));
+        assertEquals(Command.PREVIOUS_BOOKMARK, key(KeyCode.OPEN_BRACKET, false, false));
+        assertEquals(Command.GO_TO_BOOKMARK, key(KeyCode.B, false, true));
+        assertEquals(Command.GO_TO_BOOKMARK, mac(KeyCode.B, false, true, false));
+        assertNull(key(KeyCode.B, true, true));
+        assertEquals("No folder is open.", Command.BOOKMARK.unavailable(0, 0, false));
+        // A file that would not decode can still be bookmarked, to come back to.
+        assertNull(Command.NOTE.unavailable(0, 1, false));
+        assertEquals("Bookmarks", Command.GO_TO_BOOKMARK.group());
+    }
+
     /** A press on macOS: {@code shortcut} is Cmd, {@code control} the Ctrl key. */
     private static @Nullable Command mac(KeyCode code, boolean shift, boolean shortcut, boolean control) {
         return Command.forKey(code, shift, shortcut, control, true);

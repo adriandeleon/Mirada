@@ -65,7 +65,11 @@ properties sidebar and the main menu.
 | F5 | Slideshow |
 | `F`, F11 | Full screen |
 | Escape | Leave full screen, or close |
-| `I` | Properties sidebar: file, image and camera details |
+| `B` / Shift+`B` | Bookmark the image / its folder (again takes it off) |
+| `N` / Shift+`N` | A note of your own on the image / its folder, kept by Mirada, not in the file |
+| `]` / `[` | Next / previous bookmarked image in the folder |
+| Ctrl+B | Go to a bookmark or note, in any folder, by name or by the note's words |
+| `I` | Properties sidebar: file, image and camera details, bookmarks and notes |
 | `T` | Thumbnail strip |
 | Ctrl+Shift+P, Alt+X (M-x), F1 | Command palette: every command, by name. Its keys are yours to change in Settings |
 | Ctrl+, | Settings: theme, panels at start, sort order, slideshow speed |

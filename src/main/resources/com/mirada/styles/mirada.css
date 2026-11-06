@@ -465,3 +465,34 @@
     -fx-arc-width: 3;
     -fx-arc-height: 3;
 }
+
+/*
+ * Bookmarks: the bookmark is drawn filled, in the accent, wherever it marks an image (the strip's
+ * corner, after a name); over the image it is the floating controls' white, in their pill.
+ */
+.thumbnail-mark .icon {
+    -fx-fill: -color-accent-emphasis;
+    -fx-stroke: -color-accent-emphasis;
+    -fx-stroke-width: 1.5;
+}
+
+.thumbnail-strip .thumbnail .thumbnail-mark .icon {
+    -fx-stroke: white;
+}
+
+.marks-badge .icon {
+    -fx-stroke: #f2f2f2;
+}
+
+.marks-badge .mark-bookmark .icon {
+    -fx-fill: #f2f2f2;
+}
+
+.note-dialog .text-area {
+    -fx-pref-width: 460;
+}
+
+.note-hint {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 0.9em;
+}

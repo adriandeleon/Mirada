@@ -49,7 +49,7 @@ A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an en
 | `com.mirada.image` | Loading: decoded images cached by path (`ImageCache`), EXIF orientation and the camera line (`Exif`, `Orientation`), the sidebar's camera card and every metadata tag (`ExifDetails`), the strip's thumbnails (`Thumbnails`) |
 | `com.mirada.edit` | The editor's rules and pixel work, none of it UI: the edit and its order (`Edit`: turn, flip, crop), the crop as fractions (`Crop`) and as a box being dragged (`CropBox`), the shapes (`AspectRatio`), turns and mirrors on ARGB ints (`Raster`), undo and redo (`History`), the EXIF and colour profile a saved edit keeps (`ExifBlock`, `IccProfile`, both reading through `Containers`), and writing JPEG, PNG, TIFF or BMP (`Encoder`) |
 | `com.mirada.os` | Platform glue: the files Finder opens Mirada with (`MacOpenFiles`) and About and Settings in its application menu (`MacAppMenu`); moving a file to the desktop's trash, and the one rule for `java.awt.headless` (`Trash`); showing a file in Finder, File Explorer or the freedesktop file manager (`Reveal`) |
-| `com.mirada.settings` | `settings.properties` in `~/.mirada`, `~/Library/Application Support/Mirada` on macOS or `%APPDATA%\Mirada` on Windows, moved there once from `~/.mirada` (`MIRADA_CONFIG_DIR` moves it): theme, what opens at start, how long the floating controls stay; clamped on read, written through on every change |
+| `com.mirada.settings` | `settings.properties` in `~/.mirada`, `~/Library/Application Support/Mirada` on macOS or `%APPDATA%\Mirada` on Windows, moved there once from `~/.mirada` (`MIRADA_CONFIG_DIR` moves it): theme, what opens at start, how long the floating controls stay; clamped on read, written through on every change. Beside it, `bookmarks.properties`: the user's bookmarks and notes on images and folders (`Bookmarks`), read after the first paint, re-read before every change so two windows add to each other's |
 | `com.mirada.ui` | The window (`ViewerWindow`), laid out as GNOME Image Viewer's: the header bar (`TitleBar`), the zoom/pan canvas (`ImageViewport`, `Zoom`, `Scrolling`) with floating controls over it (`OnScreenControls`), the properties sidebar (`InfoPanel`, `ImageDetails`) and the thumbnail strip (`ThumbnailStrip`, along the bottom or down the left, pictures or names, as the settings say); the editor (`Editor`, `CropView`); every command with its keys, name, description and group (`Command`), the command palette (`CommandPalette`), the macOS menu bar (`MacMenus`), `AboutWindow`, `SettingsWindow`, `ShortcutsWindow`, the rename rules (`Renaming`), the theme and, on macOS and Windows, the system's accent colour (`Theme`, `Accent`), the symbolic icons, each command's included (`Icons`) |
 
 Six decoders (`ImageFormats.Decoder`, by extension). JavaFX's own `Image` decodes BMP, GIF
@@ -394,6 +394,15 @@ a prefetched neighbour is 2–8 ms for every format.
   navigation change belongs in all three projects, or the palettes stop agreeing. One fix went the
   other way and is not in Termina yet: `TextInputKeys.actionFor` checks for a null chord, because a
   bare Ctrl or Shift press has none and `Map.ofEntries` throws on a null key.
+- **Bookmarks and notes are Mirada's, never the file's** (`Bookmarks`, Editora's bookmarks and
+  personal notes moved to pictures). One mark per path, image or folder: bookmarked, a note, or
+  both; with neither it is dropped. Paths are kept absolute and normalised, as `FolderImages` lists
+  them, so `indexOf` finds a mark in the open folder. The file is read after the first paint
+  (`ViewerWindow.showMarks` does nothing before, so the first image never waits for it), and every
+  change reads it again before writing, so a second window's marks survive. A rename in Mirada
+  carries the mark (`Bookmarks.moved`); a file moved or renamed elsewhere loses it, and a mark
+  whose file is gone is kept (an unplugged drive) but left out of Go to Bookmark. The badge over
+  the image (`MarksBadge`) is built the first time a shown image has a mark.
 - **The palette also finds images** (`Command.GO_TO_IMAGE`, `CommandPalette.showImages`): its rows
   are `Row`s, a command or an image of the folder, and file names rank by the same `FuzzyMatch`,
   ties in the folder's order (`orderedImages`). Ctrl+P opens it but does not close it: inside the
