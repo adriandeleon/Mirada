@@ -172,7 +172,7 @@ public final class ViewerWindow {
         this.stage = stage;
         this.settings = settings;
         this.openLink = openLink;
-        this.tour = Tour.start(() -> go(folder.step(1)));
+        this.tour = Tour.start(() -> go(folder.step(1)), this::copy);
         this.sortedBy = settings.sorting();
 
         placeholder.getStyleClass().add("placeholder");
@@ -884,11 +884,21 @@ public final class ViewerWindow {
     }
 
     private void putOnClipboard(Image image, Path file) {
+        try {
+            putOnClipboard(image, file.toFile());
+        } catch (IllegalArgumentException e) {
+            // JavaFX's clipboard takes only RGB pixels, and a grey PNG loads as grey ("non-RGB
+            // image format"): those go as premultiplied ARGB.
+            putOnClipboard(Editor.image(Editor.raster(image)), file.toFile());
+        }
+        say("Copied " + fileName(file));
+    }
+
+    private static void putOnClipboard(Image image, File file) {
         ClipboardContent content = new ClipboardContent();
         content.putImage(image);
-        content.putFiles(List.of(file.toFile()));
+        content.putFiles(List.of(file));
         Clipboard.getSystemClipboard().setContent(content);
-        say("Copied " + fileName(file));
     }
 
     /**

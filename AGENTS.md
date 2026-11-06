@@ -223,9 +223,9 @@ a prefetched neighbour is 2–8 ms for every format.
 - **Copy puts the picture as it stands on screen and the file.** `ViewerWindow.copy` turns the
   full image upright by the file's orientation and the user's turns (`Edit.upright`, then
   `Raster.turned`, off the FX thread) and puts it on the clipboard with the file, so an app that
-  takes images pastes the picture and a folder the file. The native image's clipboard metadata was
-  recorded before Copy existed: re-record (`scripts/native-metadata.sh`, and the Native metadata
-  workflow) before trusting it there.
+  takes images pastes the picture and a folder the file. JavaFX's clipboard refuses grey pixels (a
+  grey PNG loads so): `putOnClipboard` converts those to ARGB. The metadata recording's tours copy
+  every image they show (`-Dmirada.tourCopies`), as nothing else there reaches the clipboard.
 - **Move to Trash is three implementations.** Linux follows the freedesktop.org spec itself (info
   file first, created exclusively to reserve the name, then an atomic move) and leaves a file on
   another drive to `gio trash`; Windows calls `SHFileOperationW` through FFM with undo; macOS uses

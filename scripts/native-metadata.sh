@@ -6,8 +6,10 @@
 # test fixtures (one file of every format) and the format matrix (every variant: bit depths, grey,
 # CMYK, alpha, compressions; scripts/make-format-matrix.sh). Together they reach every decoder,
 # ImageIO's plugins and the JDK's native image code behind them (JNI), the libheif and libjxl
-# bindings, the EXIF reader, the stylesheets and the icon. The second run merges into the first, and a
-# third writes one image in every format the editor saves (com.mirada.edit.Encoder's main).
+# bindings, the EXIF reader, the stylesheets and the icon. Each image shown is also copied
+# (-Dmirada.tourCopies), for the clipboard's natives, which nothing else on a tour reaches. The
+# second run merges into the first, and a third writes one image in every format the editor saves
+# (com.mirada.edit.Encoder's main).
 # It runs from the class path, as the native image is built. JavaFX's own metadata comes from StaticFX.
 #
 # Afterwards: JavaFX's own native libraries are dropped from the resources (StaticFX links them in), and
@@ -43,7 +45,7 @@ for folder in src/test/resources/com/mirada/image src/test/resources/com/mirada/
         "$graal/bin/java" \
         -agentlib:native-image-agent=$agent="$out" \
         --enable-native-access=ALL-UNNAMED \
-        -Dmirada.codecs=target/codecs \
+        -Dmirada.codecs=target/codecs -Dmirada.tourCopies=true \
         -cp "$classpath" com.mirada.Launcher "$folder"
     agent="config-merge-dir"
 done

@@ -46,6 +46,19 @@
       ]
     },
     {
+      "type": "com.mirada.os.MacOpenFiles$Observer",
+      "methods": [
+        {
+          "name": "received",
+          "parameterTypes": [
+            "java.lang.foreign.MemorySegment",
+            "java.lang.foreign.MemorySegment",
+            "java.lang.foreign.MemorySegment"
+          ]
+        }
+      ]
+    },
+    {
       "type": "com.sun.glass.ui.Application",
       "jniAccessible": true,
       "methods": [
@@ -1430,6 +1443,19 @@
       ]
     },
     {
+      "type": "com.sun.prism.shader.FillPgram_ImagePattern_Loader",
+      "methods": [
+        {
+          "name": "loadShader",
+          "parameterTypes": [
+            "com.sun.prism.ps.ShaderFactory",
+            "java.lang.String",
+            "java.io.InputStream"
+          ]
+        }
+      ]
+    },
+    {
       "type": "com.sun.prism.shader.FillRoundRect_Color_Loader",
       "methods": [
         {
@@ -1957,6 +1983,19 @@
       "jniAccessible": true,
       "methods": [
         {
+          "name": "<init>",
+          "parameterTypes": [
+            "byte[]",
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "getBytes",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
           "name": "toLowerCase",
           "parameterTypes": [
             "java.util.Locale"
@@ -2243,6 +2282,9 @@
       "type": "javafx.scene.image.ImageView"
     },
     {
+      "type": "javafx.scene.input.Clipboard"
+    },
+    {
       "type": "javafx.scene.layout.Pane"
     },
     {
@@ -2480,17 +2522,13 @@
       "type": "sun.util.resources.cldr.CalendarData"
     },
     {
-      "type": "com.mirada.os.MacOpenFiles$Observer",
-      "methods": [
-        {
-          "name": "received",
-          "parameterTypes": [
-            "java.lang.foreign.MemorySegment",
-            "java.lang.foreign.MemorySegment",
-            "java.lang.foreign.MemorySegment"
-          ]
-        }
-      ]
+      "type": "sun.util.resources.cldr.TimeZoneNames"
+    },
+    {
+      "type": "sun.util.resources.cldr.TimeZoneNames_en"
+    },
+    {
+      "type": "sun.util.resources.cldr.TimeZoneNames_en_US"
     }
   ],
   "resources": [
@@ -2585,6 +2623,9 @@
       "glob": "com/sun/prism/es2/glsl/FillPgram_Color.frag"
     },
     {
+      "glob": "com/sun/prism/es2/glsl/FillPgram_ImagePattern.frag"
+    },
+    {
       "glob": "com/sun/prism/es2/glsl/FillRoundRect_Color.frag"
     },
     {
@@ -2676,7 +2717,41 @@
     }
   ],
   "foreign": {
+    "upcalls": [
+      {
+        "returnType": "void",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "void*"
+        ]
+      }
+    ],
     "downcalls": [
+      {
+        "returnType": "void*",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "jlong"
+        ]
+      },
+      {
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "void*",
+        "parameterTypes": [
+          "void*",
+          "jint",
+          "void*"
+        ]
+      },
       {
         "returnType": "jint",
         "parameterTypes": [
@@ -2692,60 +2767,9 @@
         "returnType": "void*",
         "parameterTypes": [
           "void*",
-          "jint",
-          "void*"
-        ]
-      },
-      {
-        "returnType": "jint",
-        "parameterTypes": [
-          "void*",
-          "void*",
-          "void*"
-        ]
-      },
-      {
-        "returnType": "jint",
-        "parameterTypes": [
-          "void*",
-          "void*"
-        ]
-      },
-      {
-        "returnType": "void*",
-        "parameterTypes": [
-          "void*",
-          "jlong"
-        ]
-      },
-      {
-        "returnType": "void*",
-        "parameterTypes": [
-          "void*",
           "void*",
           "jint"
         ]
-      },
-      {
-        "returnType": "void*",
-        "parameterTypes": [
-          "void*",
-          "jint"
-        ]
-      },
-      {
-        "returnType": "struct(jint,jint,void*)",
-        "parameterTypes": [
-          "void*",
-          "void*",
-          "jint",
-          "jint",
-          "void*"
-        ]
-      },
-      {
-        "returnType": "jlong",
-        "parameterTypes": []
       },
       {
         "returnType": "void*",
@@ -2773,45 +2797,38 @@
         ]
       },
       {
-        "returnType": "jint",
+        "returnType": "void*",
         "parameterTypes": [
+          "void*",
           "void*"
         ]
       },
       {
-        "returnType": "void*",
+        "returnType": "jint",
         "parameterTypes": [
-          "jint"
+          "void*",
+          "void*",
+          "jlong"
+        ]
+      },
+      {
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "void*",
+          "jlong"
         ]
       },
       {
         "returnType": "void",
         "parameterTypes": [
-          "void*"
-        ]
-      },
-      {
-        "returnType": "jint",
-        "parameterTypes": [
           "void*",
           "void*",
-          "jlong"
-        ]
-      },
-      {
-        "returnType": "struct(jint,jint,void*)",
-        "parameterTypes": [
+          "void*",
+          "void*",
           "void*",
           "void*"
-        ]
-      },
-      {
-        "returnType": "jint",
-        "parameterTypes": [
-          "void*",
-          "void*",
-          "void*",
-          "jlong"
         ]
       },
       {
@@ -2837,13 +2854,7 @@
         ]
       },
       {
-        "returnType": "struct(jint,jint,void*)",
-        "parameterTypes": [
-          "void*"
-        ]
-      },
-      {
-        "returnType": "void*",
+        "returnType": "jint",
         "parameterTypes": [
           "void*",
           "void*"
@@ -2852,17 +2863,62 @@
       {
         "returnType": "void*",
         "parameterTypes": [
-          "void*",
-          "void*",
-          "void*"
-        ]
-      },
-      {
-        "returnType": "void*",
-        "parameterTypes": [
-          "void*",
           "void*",
           "jlong"
+        ]
+      },
+      {
+        "returnType": "void*",
+        "parameterTypes": [
+          "void*",
+          "jint"
+        ]
+      },
+      {
+        "returnType": "struct(jint,jint,void*)",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "jint",
+          "jint",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "jlong",
+        "parameterTypes": []
+      },
+      {
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*"
+        ]
+      },
+      {
+        "returnType": "void*",
+        "parameterTypes": [
+          "jint"
+        ]
+      },
+      {
+        "returnType": "void",
+        "parameterTypes": [
+          "void*"
+        ]
+      },
+      {
+        "returnType": "struct(jint,jint,void*)",
+        "parameterTypes": [
+          "void*",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "void*",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "void*"
         ]
       },
       {
@@ -2875,23 +2931,8 @@
         ]
       },
       {
-        "returnType": "void",
+        "returnType": "struct(jint,jint,void*)",
         "parameterTypes": [
-          "void*",
-          "void*",
-          "void*",
-          "void*",
-          "void*",
-          "void*"
-        ]
-      }
-    ],
-    "upcalls": [
-      {
-        "returnType": "void",
-        "parameterTypes": [
-          "void*",
-          "void*",
           "void*"
         ]
       }

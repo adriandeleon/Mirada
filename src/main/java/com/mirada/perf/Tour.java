@@ -33,14 +33,26 @@ public final class Tour {
      */
     private static final long PAUSE_MS = TRAINING ? 0 : pause(System.getenv("MIRADA_PERF_TOUR_PAUSE"));
 
+    /**
+     * Whether each image shown is also copied (Copy, Ctrl+C): the native image's metadata is
+     * recorded on a tour ({@code scripts/native-metadata.sh}), and nothing else in it reaches the
+     * clipboard's natives. Off for measuring and training, where it would only cost.
+     */
+    private static final boolean COPIES = Boolean.getBoolean("mirada.tourCopies");
+
     private final Runnable next;
+    private final Runnable copy;
     private long requestedAt;
     private boolean prefetched;
     private int steps;
 
-    /** @param next steps to the next image in the folder */
-    public Tour(Runnable next) {
+    /**
+     * @param next steps to the next image in the folder
+     * @param copy copies the image showing, as Copy does, when {@code mirada.tourCopies} is set
+     */
+    public Tour(Runnable next, Runnable copy) {
         this.next = next;
+        this.copy = copy;
     }
 
     public static boolean enabled() {
@@ -48,8 +60,8 @@ public final class Tour {
     }
 
     /** Creates a tour when one was asked for. */
-    public static @Nullable Tour start(Runnable next) {
-        return ENABLED ? new Tour(next) : null;
+    public static @Nullable Tour start(Runnable next, Runnable copy) {
+        return ENABLED ? new Tour(next, copy) : null;
     }
 
     /** An image was asked for; {@code ready} is whether its decode had already finished. */
@@ -71,6 +83,7 @@ public final class Tour {
             public void handle(long now) {
                 if (++ticks < 2) return;
                 stop();
+                if (COPIES) copy.run();
                 if (steps++ > 0) {
                     long millis = (System.nanoTime() - requestedAt) / 1_000_000L;
                     Path name = file.getFileName();

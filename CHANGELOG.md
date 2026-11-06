@@ -22,6 +22,8 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 ### Fixed
 
 - **The thumbnail strip no longer disappears when it is moved from the side back to the bottom.**
+- **Copy works on a greyscale PNG**: it did nothing, as the clipboard takes only colour pixels; it
+  now goes as colour.
 
 ## 0.2.2 — 2026-11-05
 
