@@ -47,6 +47,8 @@ final class Icons {
     static final String CLOSE = "M6 6 L18 18 M18 6 L6 18";
     static final String SEARCH = "M10.5 3.5 A7 7 0 1 1 10.49 3.5 Z M20.5 20.5 L15.5 15.5";
     static final String PROMPT = "M4 7 L9 12 L4 17 M12 17 H20";
+    static final String PICTURE =
+            "M3 5 H21 V19 H3 Z M3 16 L8.5 11 L13 15.5 M12 14.5 L15.5 11.5 L21 16.5 M15.5 8.5 H15.6";
     static final String FOLDER = "M3 6 H9 L11 8 H21 V19 H3 Z";
     static final String LOCK = "M6 11 H18 V20 H6 Z M8.5 11 V8 A3.5 3.5 0 0 1 15.5 8 V11";
     static final String SORT = "M7 4 V20 M4 17 L7 20 L10 17 M13 6 H20 M13 12 H18 M13 18 H16";
@@ -96,7 +98,8 @@ final class Icons {
             case THUMBNAIL_CAPTIONS -> CAPTION;
             case SETTINGS -> SLIDERS;
             case SHORTCUTS -> KEYBOARD;
-            case OPEN -> FOLDER_OPEN;
+            case OPEN -> PICTURE;
+            case OPEN_FOLDER -> FOLDER_OPEN;
             case OPEN_RECENT -> CLOCK;
             case CLOSE -> CLOSE;
             case PALETTE -> PROMPT;

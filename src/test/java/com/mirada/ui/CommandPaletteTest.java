@@ -36,7 +36,9 @@ class CommandPaletteTest {
         List<Command> file = find("file").stream()
                 .filter(command -> !command.label().toLowerCase().contains("file"))
                 .toList();
-        assertEquals(Command.OPEN, file.getFirst());
+        // Rename and Open Image both have "file" as a keyword; the shorter label comes first.
+        assertEquals(List.of(Command.RENAME, Command.OPEN), file.subList(0, 2));
+        assertEquals(Command.OPEN_FOLDER, find("directory").getFirst());
     }
 
     @Test

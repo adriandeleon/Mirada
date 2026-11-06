@@ -17,6 +17,16 @@
     -fx-text-alignment: center;
 }
 
+/* Open Image and Open Folder, under the placeholder while no folder is open. */
+.mirada .open-buttons {
+    -fx-spacing: 12;
+}
+
+.mirada .open-button {
+    -fx-graphic-text-gap: 8;
+    -fx-padding: 8 16 8 16;
+}
+
 /*
  * The header bar, GNOME Image Viewer's: flat icon buttons around the file name. HeaderBar ships with
  * no style class; TitleBar adds header-bar. The window buttons are drawn by the platform (or by

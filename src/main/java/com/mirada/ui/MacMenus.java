@@ -39,7 +39,7 @@ final class MacMenus {
             new Heading(
                     "File",
                     List.of(
-                            List.of(Command.OPEN, Command.OPEN_RECENT),
+                            List.of(Command.OPEN, Command.OPEN_FOLDER, Command.OPEN_RECENT),
                             List.of(Command.SHOW_IN_FOLDER),
                             List.of(Command.CLOSE))),
             new Heading("Edit", List.of(List.of(Command.UNDO_TRASH), List.of(Command.COPY))),

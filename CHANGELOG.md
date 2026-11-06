@@ -7,6 +7,9 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **Open Image and Open Folder buttons in an empty window**, under "Open an image with Ctrl+O",
+  and **Open Folder…** (Ctrl+Shift+F, ⇧⌘F on a Mac) in the menus and the palette: a folder can now
+  be opened without dropping it on the window. Open… is now called Open Image….
 - **Bookmarks and notes on images and folders**, as Editora keeps them on files. `B` bookmarks the
   image and Shift+`B` its folder; `N` writes a note of your own on the image and Shift+`N` on the
   folder, kept by Mirada (`bookmarks.properties`, beside the settings), never in the file.

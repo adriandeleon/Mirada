@@ -228,6 +228,7 @@ final class TitleBar {
         menu.getItems()
                 .addAll(
                         item(Command.OPEN, run),
+                        item(Command.OPEN_FOLDER, run),
                         item(Command.OPEN_RECENT, run),
                         new SeparatorMenuItem(),
                         item(Command.PALETTE, run),

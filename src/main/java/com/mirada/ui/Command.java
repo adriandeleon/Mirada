@@ -169,7 +169,12 @@ enum Command {
             "Version, licence, and the runtime and codec versions.",
             "version help credits",
             key(KeyCode.F12)),
-    OPEN("Open…", "Opens an image, with its folder, or a folder.", "file", shortcut(KeyCode.O)),
+    OPEN("Open Image…", "Opens an image, with the rest of its folder.", "file", shortcut(KeyCode.O)),
+    OPEN_FOLDER(
+            "Open Folder…",
+            "Opens a folder at its first image.",
+            "directory browse",
+            new KeyCodeCombination(KeyCode.F, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN)),
     OPEN_RECENT(
             "Open Recent…",
             "Finds a folder opened lately by its name, and opens it.",
@@ -318,7 +323,7 @@ enum Command {
                 "Bookmarks";
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER -> "Order";
             case INFO, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES, THUMBNAIL_CAPTIONS -> "Panels";
-            case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, OPEN_RECENT, CLOSE, PALETTE -> "Mirada";
+            case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, OPEN_FOLDER, OPEN_RECENT, CLOSE, PALETTE -> "Mirada";
         };
     }
 
@@ -338,6 +343,7 @@ enum Command {
         if (shortcut) {
             return switch (code) {
                 case O -> shift ? OPEN_RECENT : OPEN;
+                case F -> shift ? OPEN_FOLDER : null;
                 case C -> shift ? null : COPY;
                 case Z -> shift ? null : UNDO_TRASH;
                 case W, Q -> CLOSE;
