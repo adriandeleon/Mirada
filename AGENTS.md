@@ -389,15 +389,22 @@ a prefetched neighbour is 2–8 ms for every format.
 - **The palette also finds images** (`Command.GO_TO_IMAGE`, `CommandPalette.showImages`): its rows
   are `Row`s, a command or an image of the folder, and file names rank by the same `FuzzyMatch`,
   ties in the folder's order (`orderedImages`). Ctrl+P opens it but does not close it: inside the
-  palette Ctrl+P is the Emacs key for the row above, so only Shift+Ctrl+P (the commands' chord)
-  closes from the keyboard, as before; Escape closes either.
+  palette Ctrl+P is the Emacs key for the row above, so only the palette's own keys close it from
+  the keyboard; Escape closes either.
 - **While the palette is up, the scene's key filter stands aside.** Filters run from the scene down,
   so `ViewerWindow.onKey` sees every key before the palette's card does; it returns early while the
-  palette shows (or typing "r" would rotate the image) and handles only the palette's own chord, to
-  close it. Escape is the palette's then, not the window's.
+  palette shows (or typing "r" would rotate the image) and handles only the palette's own keys, to
+  close it, and not even those when the open palette moves or edits by them
+  (`PaletteChords.keptByPalette`: a user who binds C-p keeps C-p as the row above in there). Escape
+  is the palette's then, not the window's.
+- **The palette's keys are the user's** (`PaletteChords`, `palette.keys` in the settings, as
+  `KeyChord` tokens: `C-S-p M-x f1` by default, `Cmd-S-p` on a Mac). `onKey` asks them before
+  `Command.forKey`, which never answers `PALETTE`, so a chosen key wins over its built-in command.
+  The first is the one shown (`Command.PALETTE.chord()`), the Mac menu's is the first with Cmd, and
+  a setting with no readable key is the default. Parsed on the first key press, not at start-up.
 - **Every command has one name and one chord, in `Command`.** The key filter (`forKey`), the
   palette and the context menu all read from it; `CommandTest.everyShownChordRunsItsCommand` checks
-  the chord a command shows is one that runs it, on both platforms. macOS shows its own for two
+  the chord a command shows is one that runs it, on both platforms (the palette's excepted: above). macOS shows its own for two
   (`chord(boolean mac)`): ⌘⌫ to trash, as a Mac's Delete key is Backspace, which steps back; Return
   to rename, as F2 is a brightness key. `forKey` takes the Ctrl key apart from the shortcut for ⌃⌘F.
 - **A scroll is a wheel's or a trackpad's** (`Scrolling`): macOS reports the fingers

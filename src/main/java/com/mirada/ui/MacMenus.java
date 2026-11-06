@@ -101,6 +101,12 @@ final class MacMenus {
             case INFO -> cmd(KeyCode.I);
             case FULL_SCREEN ->
                 new KeyCodeCombination(KeyCode.F, KeyCombination.SHORTCUT_DOWN, KeyCombination.CONTROL_DOWN);
+            // The user's: the first of them with Cmd, if any has it.
+            case PALETTE ->
+                PaletteChords.current().stream()
+                        .filter(MacMenus::hasCommand)
+                        .findFirst()
+                        .orElse(null);
             default -> {
                 KeyCombination chord = command.chord(true);
                 yield chord.getShortcut() == KeyCombination.ModifierValue.DOWN ? chord : null;
@@ -152,6 +158,21 @@ final class MacMenus {
             bar.getMenus().add(menu);
         }
         return bar;
+    }
+
+    /** Sets every item's key equivalent again, after the palette's keys changed. */
+    static void refreshAccelerators(MenuBar bar) {
+        for (Menu menu : bar.getMenus()) {
+            for (MenuItem item : menu.getItems()) {
+                if (item.getUserData() instanceof Command command) item.setAccelerator(accelerator(command));
+            }
+        }
+    }
+
+    /** Cmd held: as the shortcut, or as Meta, which is what a {@code Cmd-} token reads as. */
+    private static boolean hasCommand(KeyCombination chord) {
+        return chord.getShortcut() == KeyCombination.ModifierValue.DOWN
+                || chord.getMeta() == KeyCombination.ModifierValue.DOWN;
     }
 
     private static KeyCombination cmd(KeyCode code) {

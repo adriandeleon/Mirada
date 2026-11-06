@@ -19,7 +19,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Mirada's settings: theme, what opens at start, how long the floating controls stay, the folder's
- * order, whether stepping keeps the zoom, and the slideshow's pace. In {@code settings.properties},
+ * order, whether stepping keeps the zoom, the slideshow's pace, and the keys that open the palette. In {@code settings.properties},
  * in the platform's folder for it ({@link #folder}; {@code MIRADA_CONFIG_DIR} moves it, for tests
  * and timing runs), Termina's way: a plain file meant to be hand-edited, every
  * value clamped on read as well as on write, so a bad edit cannot break the next start, and every
@@ -53,6 +53,7 @@ public final class Settings {
     public static final int MAX_RECENT = 10;
     static final String WINDOW_MAXIMIZED = "window.maximized";
     static final String SLIDESHOW_SECONDS = "slideshow.seconds";
+    static final String PALETTE_KEYS = "palette.keys";
 
     public static final int MIN_HIDE_SECONDS = 1;
     public static final int MAX_HIDE_SECONDS = 10;
@@ -75,6 +76,7 @@ public final class Settings {
     private @Nullable WindowPlace window;
     private List<Path> recent = List.of();
     private int slideshowSeconds = DEFAULT_SLIDESHOW_SECONDS;
+    private String paletteKeys = defaultPaletteKeys(isMac(System.getProperty("os.name", "")));
 
     public Settings(Path file) {
         this.file = file;
@@ -185,6 +187,32 @@ public final class Settings {
         }
         recent = List.copyOf(folders);
         slideshowSeconds = slideshowSecondsOf(properties.getProperty(SLIDESHOW_SECONDS));
+        paletteKeys = paletteKeysOf(properties.getProperty(PALETTE_KEYS), isMac(System.getProperty("os.name", "")));
+    }
+
+    /**
+     * The keys that open the command palette by default, as chord tokens ({@code C-S-p} is
+     * Ctrl+Shift+P, {@code M-x} is Alt+X, {@code Cmd-} is the Mac's Command key): the palette's own
+     * chord, Emacs's {@code M-x}, and F1.
+     */
+    public static String defaultPaletteKeys(boolean mac) {
+        return (mac ? "Cmd-S-p" : "C-S-p") + " M-x f1";
+    }
+
+    /**
+     * The palette's keys as written, spaces or commas between them, collapsed to single spaces; the
+     * default for a blank value. Whether each names a key is the window's to decide: one it cannot
+     * read is skipped there, and none readable is the default again.
+     */
+    static String paletteKeysOf(@Nullable String value, boolean mac) {
+        String keys = value == null
+                ? ""
+                : String.join(" ", value.trim().split("[\\s,]+")).trim();
+        return keys.isEmpty() ? defaultPaletteKeys(mac) : keys;
+    }
+
+    private static boolean isMac(String osName) {
+        return osName.toLowerCase(Locale.ROOT).startsWith("mac");
     }
 
     static int slideshowSecondsOf(@Nullable String value) {
@@ -335,6 +363,18 @@ public final class Settings {
         return slideshowSeconds;
     }
 
+    /** The keys that open the command palette, as chord tokens separated by spaces. */
+    public String paletteKeys() {
+        return paletteKeys;
+    }
+
+    public void setPaletteKeys(String value) {
+        String keys = paletteKeysOf(value, isMac(System.getProperty("os.name", "")));
+        if (keys.equals(paletteKeys)) return;
+        paletteKeys = keys;
+        changed();
+    }
+
     public void setSorting(Sorting value) {
         sorting = value;
         changed();
@@ -407,6 +447,7 @@ public final class Settings {
             properties.setProperty(WINDOW_MAXIMIZED, Boolean.toString(place.maximized()));
         }
         properties.setProperty(SLIDESHOW_SECONDS, Integer.toString(slideshowSeconds));
+        properties.setProperty(PALETTE_KEYS, paletteKeys);
         try {
             Path folder = file.toAbsolutePath().getParent();
             if (folder != null) Files.createDirectories(folder);

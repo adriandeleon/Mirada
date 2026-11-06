@@ -32,6 +32,7 @@ class MacMenusTest {
     @Test
     void everyMenuChordRunsItsCommandOnAMac() {
         for (Command command : Command.values()) {
+            if (command == Command.PALETTE) continue; // the user's keys: PaletteChordsTest
             if (!(MacMenus.accelerator(command) instanceof KeyCodeCombination chord)) continue;
             assertEquals(KeyCombination.ModifierValue.DOWN, chord.getShortcut(), command.name());
             boolean shift = chord.getShift() == KeyCombination.ModifierValue.DOWN;

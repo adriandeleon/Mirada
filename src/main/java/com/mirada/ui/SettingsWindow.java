@@ -1,14 +1,17 @@
 package com.mirada.ui;
 
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -19,6 +22,7 @@ import javafx.util.StringConverter;
 
 import com.mirada.folder.Sorting;
 import com.mirada.settings.Settings;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Settings, Termina's way: every control writes through at once, so there is no OK button, and each
@@ -28,6 +32,9 @@ import com.mirada.settings.Settings;
 final class SettingsWindow {
 
     private final Stage stage = new Stage();
+
+    /** Takes the next key pressed while "Add a key…" waits for one; null otherwise. */
+    private @Nullable EventHandler<KeyEvent> recording;
 
     SettingsWindow(Settings settings, String stylesheet) {
         stage.setTitle("Settings");
@@ -132,8 +139,35 @@ final class SettingsWindow {
             if (now != null) settings.setSlideshowSeconds(now);
         });
 
+        Label paletteKeys = new Label(shownKeys(settings));
+        paletteKeys.getStyleClass().add("shortcut-key");
+        Button addKey = new Button("Add a key…");
+        Button defaultKeys = new Button("Default");
+        defaultKeys.setOnAction(e -> settings.setPaletteKeys(Settings.defaultPaletteKeys(Command.MAC)));
+        addKey.setOnAction(e -> {
+            if (recording != null) return;
+            paletteKeys.setText("Press a key, or Esc");
+            EventHandler<KeyEvent> take = key -> {
+                String token = KeyChord.of(key);
+                if (token == null) return; // Ctrl or Shift on its own: wait for the key it goes with
+                key.consume();
+                stopRecording();
+                if (!token.equals("escape")) {
+                    settings.setPaletteKeys(PaletteChords.toggled(settings.paletteKeys(), token));
+                }
+                paletteKeys.setText(shownKeys(settings));
+            };
+            recording = take;
+            stage.getScene().addEventFilter(KeyEvent.KEY_PRESSED, take);
+        });
+        HBox keyButtons = new HBox(6, addKey, defaultKeys);
+        keyButtons.setAlignment(Pos.CENTER_RIGHT);
+        VBox paletteControl = new VBox(6, paletteKeys, keyButtons);
+        paletteControl.setAlignment(Pos.CENTER_RIGHT);
+
         // The same settings change from the keyboard and the context menu; follow them.
         settings.addListener(() -> {
+            if (recording == null) paletteKeys.setText(shownKeys(settings));
             sortBy.setValue(settings.sorting().by());
             reversed.setSelected(settings.sorting().reversed());
             keepZoom.setSelected(settings.keepZoom());
@@ -180,7 +214,14 @@ final class SettingsWindow {
                         "Folder",
                         row("Sort by", "The order images are stepped through.", sortBy),
                         row("Reverse order", "Last first: newest, largest, or Z to A.", reversed),
-                        row("Slideshow speed", "Seconds each image shows in a slideshow. F5 starts it.", slideshow)));
+                        row("Slideshow speed", "Seconds each image shows in a slideshow. F5 starts it.", slideshow)),
+                group(
+                        "Keys",
+                        row(
+                                "Command palette",
+                                "The keys that open the palette. Add a key, then press it; pressing one"
+                                        + " already listed takes it off.",
+                                paletteControl)));
         root.setPadding(new Insets(20));
         root.getStyleClass().add("settings");
         root.setPrefWidth(540);
@@ -190,6 +231,23 @@ final class SettingsWindow {
             if (e.getCode() == KeyCode.ESCAPE) stage.hide();
         });
         stage.setScene(scene);
+        stage.setOnHidden(e -> {
+            if (recording != null) {
+                stopRecording();
+                paletteKeys.setText(shownKeys(settings));
+            }
+        });
+    }
+
+    /** The palette's keys as the platform writes keys. */
+    private static String shownKeys(Settings settings) {
+        return PaletteChords.display(PaletteChords.parse(settings.paletteKeys(), Command.MAC));
+    }
+
+    private void stopRecording() {
+        EventHandler<KeyEvent> take = recording;
+        if (take != null) stage.getScene().removeEventFilter(KeyEvent.KEY_PRESSED, take);
+        recording = null;
     }
 
     void show(Window from) {

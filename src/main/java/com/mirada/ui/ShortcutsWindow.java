@@ -30,10 +30,29 @@ final class ShortcutsWindow {
 
     private final Stage stage = new Stage();
 
+    private final ScrollPane scroll = new ScrollPane();
+
     ShortcutsWindow(String stylesheet) {
         stage.setTitle("Keyboard Shortcuts");
         WindowIcon.applyTo(stage);
 
+        scroll.setContent(content());
+        scroll.setFitToWidth(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        Scene scene = new Scene(scroll, WIDTH, 620);
+        scene.getStylesheets().add(stylesheet);
+        scene.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ESCAPE) stage.hide();
+        });
+        stage.setScene(scene);
+    }
+
+    /** Reads the keys again, after the palette's changed in the settings. */
+    void refresh() {
+        scroll.setContent(content());
+    }
+
+    private static VBox content() {
         VBox groups = new VBox(18);
         groups.setPadding(new Insets(20));
         groups.getStyleClass().add("shortcuts");
@@ -54,32 +73,30 @@ final class ShortcutsWindow {
             }
             groups.getChildren().add(new VBox(8, heading, rows));
         }
-        Label also = new Label(also(Command.MAC));
+        Label also = new Label(also(Command.MAC, PaletteChords.current()));
         also.setWrapText(true);
         also.getStyleClass().add("about-credits");
         groups.getChildren().add(also);
-
-        ScrollPane scroll = new ScrollPane(groups);
-        scroll.setFitToWidth(true);
-        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        Scene scene = new Scene(scroll, WIDTH, 620);
-        scene.getStylesheets().add(stylesheet);
-        scene.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.ESCAPE) stage.hide();
-        });
-        stage.setScene(scene);
         groups.setAlignment(Pos.TOP_LEFT);
+        return groups;
     }
 
     /**
      * The keys that are not a command's shown chord: the second ways to do things, named as the
      * platform names keys ("Shift+Space" here, "⇧Space" on a Mac), as the rows above are.
      */
-    static String also(boolean mac) {
+    static String also(boolean mac, List<KeyCombination> paletteChords) {
+        List<String> palette = paletteChords.stream()
+                .skip(1)
+                .map(KeyCombination::getDisplayText)
+                .toList();
         String steps = "Also: " + key(KeyCode.SPACE) + " and " + key(KeyCode.PAGE_DOWN) + " for the next image, "
                 + key(KeyCode.SPACE, KeyCombination.SHIFT_DOWN) + ", " + key(KeyCode.PAGE_UP) + " and "
-                + key(KeyCode.BACK_SPACE) + " for the previous; " + key(KeyCode.F1)
-                + " for the command palette, which finds every command by name.";
+                + key(KeyCode.BACK_SPACE) + " for the previous"
+                + (palette.isEmpty()
+                        ? ""
+                        : "; " + inWords(palette) + " for the command palette, which finds every command by name")
+                + ".";
         KeyCombination.Modifier cmd = KeyCombination.SHORTCUT_DOWN;
         return mac
                 ? steps + " As in Preview: " + key(KeyCode.R, cmd) + " and " + key(KeyCode.L, cmd) + " to rotate, "
@@ -87,6 +104,12 @@ final class ShortcutsWindow {
                         + key(KeyCode.F, KeyCombination.CONTROL_DOWN, cmd) + " for full screen."
                 : steps + " " + key(KeyCode.F11) + " for full screen; " + key(KeyCode.R, cmd) + " and "
                         + key(KeyCode.R, cmd, KeyCombination.SHIFT_DOWN) + " to rotate.";
+    }
+
+    /** "A", "A and B", "A, B and C". */
+    static String inWords(List<String> items) {
+        if (items.size() < 2) return String.join("", items);
+        return String.join(", ", items.subList(0, items.size() - 1)) + " and " + items.getLast();
     }
 
     private static String key(KeyCode code, KeyCombination.Modifier... modifiers) {

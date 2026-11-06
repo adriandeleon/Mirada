@@ -108,6 +108,8 @@ public final class ViewerWindow {
     private @Nullable AboutWindow about;
 
     private @Nullable SettingsWindow settingsWindow;
+    /** The Mac's menu bar, once it is built after the first paint; its palette key follows the setting. */
+    private @Nullable MenuBar macMenus;
 
     private @Nullable ShortcutsWindow shortcutsWindow;
 
@@ -212,6 +214,14 @@ public final class ViewerWindow {
             OnScreenControls built = controls;
             if (built != null) built.setIdle(settings.controlsHideSeconds());
         });
+        PaletteChords.use(settings.paletteKeys());
+        settings.addListener(() -> {
+            if (!PaletteChords.use(settings.paletteKeys())) return;
+            MenuBar bar = macMenus;
+            if (bar != null) MacMenus.refreshAccelerators(bar);
+            ShortcutsWindow shortcuts = shortcutsWindow;
+            if (shortcuts != null) shortcuts.refresh();
+        });
         viewport.fittedProperty().addListener((o, was, now) -> updateControls());
 
         root = new BorderPane(canvas);
@@ -271,15 +281,18 @@ public final class ViewerWindow {
     private void installMacMenus(StackPane overlay) {
         MenuBar bar = MacMenus.build(
                 command -> {
-                    // A menu's key equivalent can arrive while the palette is up; the palette goes.
+                    // A menu's key equivalent can arrive while the palette is up; the palette goes,
+                    // and the palette's own key only closes it, as it does from the key filter.
+                    boolean wasShowing = palette.isShowing();
                     palette.hide();
-                    run(command);
+                    if (command != Command.PALETTE || !wasShowing) run(command);
                 },
                 this::unavailable,
                 this::ticked,
                 this::label);
         bar.setManaged(false);
         overlay.getChildren().add(bar);
+        macMenus = bar;
         String appMenu = MacAppMenu.install(
                 Command.ABOUT.label(), () -> run(Command.ABOUT), "Settings…", () -> run(Command.SETTINGS));
         if (Startup.enabled()) System.out.println("[perf] application menu: " + appMenu);
@@ -560,12 +573,15 @@ public final class ViewerWindow {
             if (open.onKey(e)) e.consume();
             return;
         }
-        Command command =
-                Command.forKey(e.getCode(), e.isShiftDown(), e.isShortcutDown(), e.isControlDown(), Command.MAC);
+        // The palette's keys are the user's, and win over a key's built-in command.
+        boolean paletteKey = PaletteChords.opens(e);
+        Command command = paletteKey
+                ? Command.PALETTE
+                : Command.forKey(e.getCode(), e.isShiftDown(), e.isShortcutDown(), e.isControlDown(), Command.MAC);
         // While the palette is up, keys are its own (typing "r" must not rotate the image); only its
-        // chord reaches here, to close it again.
+        // chord reaches here, to close it again — unless the palette moves by that key (C-p).
         if (palette.isShowing()) {
-            if (command == Command.PALETTE) {
+            if (paletteKey && !PaletteChords.keptByPalette(KeyChord.of(e))) {
                 palette.hide();
                 e.consume();
             }

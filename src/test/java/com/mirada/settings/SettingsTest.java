@@ -146,6 +146,19 @@ class SettingsTest {
     }
 
     @Test
+    void thePalettesKeysAreKeptAndBlankIsTheDefault(@TempDir Path dir) {
+        Path file = dir.resolve("settings.properties");
+        Settings settings = new Settings(file);
+        settings.setPaletteKeys(" M-x,  f1 ");
+        Settings again = new Settings(file);
+        again.load();
+        assertEquals("M-x f1", again.paletteKeys());
+        assertEquals("C-S-p M-x f1", Settings.paletteKeysOf("", false));
+        assertEquals("Cmd-S-p M-x f1", Settings.paletteKeysOf(null, true));
+        assertEquals("C-S-p M-x", Settings.paletteKeysOf(" C-S-p , M-x", false));
+    }
+
+    @Test
     void eachPlatformKeepsTheSettingsInItsOwnFolder() {
         assertEquals(Path.of("/home/a/.mirada"), Settings.folder(null, "/home/a", "Linux", null));
         assertEquals(

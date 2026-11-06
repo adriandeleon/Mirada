@@ -5,6 +5,13 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## 0.3.0 — unreleased
 
+### Added
+
+- **The command palette opens with M-x too** (Alt+X; Option+X on macOS), besides Ctrl+Shift+P and
+  F1, and **its keys are yours to choose**: Settings → Keys → Command palette adds a key by pressing
+  it, or takes one off by pressing it again; or edit `palette.keys` in `settings.properties`. A key
+  chosen there wins over what it did before.
+
 ### Changed
 
 - **The thumbnail strip fills four to fifty times faster with photos**: a camera's or phone's JPEG

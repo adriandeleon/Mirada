@@ -67,7 +67,7 @@ properties sidebar and the main menu.
 | Escape | Leave full screen, or close |
 | `I` | Properties sidebar: file, image and camera details |
 | `T` | Thumbnail strip |
-| Ctrl+Shift+P, F1 | Command palette: every command, by name |
+| Ctrl+Shift+P, Alt+X (M-x), F1 | Command palette: every command, by name. Its keys are yours to change in Settings |
 | Ctrl+, | Settings: theme, panels at start, sort order, slideshow speed |
 | Ctrl+? | Keyboard shortcuts |
 | F12 | About |

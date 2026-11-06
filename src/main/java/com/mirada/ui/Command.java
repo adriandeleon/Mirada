@@ -141,11 +141,8 @@ enum Command {
             "recent history folders previous last",
             new KeyCodeCombination(KeyCode.O, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN)),
     CLOSE("Close Window", "Closes Mirada.", "quit exit", shortcut(KeyCode.W)),
-    PALETTE(
-            "Command Palette",
-            "Finds and runs any command by name.",
-            "",
-            new KeyCodeCombination(KeyCode.P, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN));
+    /** Its keys are the user's ({@link PaletteChords}), so {@link #forKey} never answers it. */
+    PALETTE("Command Palette", "Finds and runs any command by name.", "", none());
 
     /** Whether this is macOS, read once: its keys differ ({@link #forKey}, {@link #chord(boolean)}). */
     static final boolean MAC = isMac(System.getProperty("os.name", ""));
@@ -198,7 +195,10 @@ enum Command {
         return keywords;
     }
 
-    /** The chord shown beside the command: its main key, one of those {@link #forKey} accepts. */
+    /**
+     * The chord shown beside the command: its main key, one of those {@link #forKey} accepts, or for
+     * the palette the first of the user's ({@link PaletteChords}).
+     */
     KeyCombination chord() {
         return chord(MAC);
     }
@@ -209,6 +209,7 @@ enum Command {
      * Return. Package-visible so both platforms are testable.
      */
     KeyCombination chord(boolean mac) {
+        if (this == PALETTE) return PaletteChords.current().getFirst();
         if (!mac) return chord;
         return switch (this) {
             case MOVE_TO_TRASH -> shortcut(KeyCode.BACK_SPACE);
@@ -301,7 +302,7 @@ enum Command {
                 case C -> shift ? null : COPY;
                 case Z -> shift ? null : UNDO_TRASH;
                 case W, Q -> CLOSE;
-                case P -> shift ? PALETTE : GO_TO_IMAGE;
+                case P -> shift ? null : GO_TO_IMAGE;
                 case R -> shift ? ROTATE_COUNTERCLOCKWISE : ROTATE_CLOCKWISE;
                 case L -> mac && !shift ? ROTATE_COUNTERCLOCKWISE : null;
                 case I -> mac && !shift ? INFO : null;
@@ -333,7 +334,6 @@ enum Command {
             case F, F11 -> FULL_SCREEN;
             case I -> INFO;
             case T -> THUMBNAILS;
-            case F1 -> PALETTE;
             case F2 -> RENAME;
             case ENTER -> mac && !shift ? RENAME : null;
             case F5 -> SLIDESHOW;

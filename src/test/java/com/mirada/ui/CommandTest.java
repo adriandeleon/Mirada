@@ -57,10 +57,13 @@ class CommandTest {
     }
 
     @Test
-    void thePaletteOpensOnShortcutShiftPAndF1() {
-        assertEquals(Command.PALETTE, key(KeyCode.P, true, true));
-        assertEquals(Command.PALETTE, key(KeyCode.F1, false, false));
+    void thePalettesKeysAreTheUsersNotForKeys() {
+        // PaletteChords answers them, from the setting, before forKey is asked.
+        assertNull(key(KeyCode.P, true, true));
+        assertNull(key(KeyCode.F1, false, false));
         assertEquals(Command.GO_TO_IMAGE, key(KeyCode.P, false, true));
+        assertEquals(PaletteChords.current().getFirst(), Command.PALETTE.chord());
+        assertEquals(PaletteChords.current().getFirst(), Command.PALETTE.chord(true));
     }
 
     /** The chord a command shows, in the palette and the context menu, must be one that runs it. */
@@ -68,6 +71,7 @@ class CommandTest {
     void everyShownChordRunsItsCommand() {
         for (boolean mac : new boolean[] {false, true}) {
             for (Command command : Command.values()) {
+                if (command == Command.PALETTE) continue; // PaletteChords' keys, tested there
                 if (!(command.chord(mac) instanceof KeyCodeCombination chord)) continue; // + and -, by character
                 boolean shift = chord.getShift() == KeyCombination.ModifierValue.DOWN;
                 boolean shortcut = chord.getShortcut() == KeyCombination.ModifierValue.DOWN;
