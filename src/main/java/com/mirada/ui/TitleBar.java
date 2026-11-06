@@ -8,7 +8,10 @@ import java.util.function.Consumer;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
+import javafx.geometry.HPos;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -23,7 +26,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.HeaderDragType;
 import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
@@ -61,12 +63,76 @@ final class TitleBar {
 
     private static final Layout LAYOUT = Layout.of(System.getProperty("os.name", ""));
 
+    /**
+     * "folder / name" on one line. Short of room, the file name keeps its width and the folder gives
+     * way: cut with an ellipsis, then gone with its slash once too little of it would show. An
+     * {@link HBox} would shrink both alike and cut the name while the folder still showed.
+     */
+    static final class Heading extends HBox {
+
+        /** Less of the folder than this tells nothing, and it goes. */
+        static final double MIN_FOLDER = 48;
+
+        private final Label folder;
+        private final Label slash;
+        private final Label title;
+
+        Heading(Label folder, Label slash, Label title) {
+            super(folder, slash, title);
+            this.folder = folder;
+            this.slash = slash;
+            this.title = title;
+            folder.setMinWidth(0);
+            title.setMinWidth(0);
+        }
+
+        /**
+         * The folder's width in {@code room}, given the others' preferred widths: all it asks for,
+         * what the name and slash leave, or none when that is under {@link #MIN_FOLDER}.
+         */
+        static double folderWidth(double room, double folder, double slash, double title, double spacing) {
+            double left = room - title - slash - 2 * spacing;
+            if (left >= folder) return folder;
+            return left >= MIN_FOLDER ? left : 0;
+        }
+
+        @Override
+        protected void layoutChildren() {
+            Insets insets = getInsets();
+            double room = Math.max(0, getWidth() - insets.getLeft() - insets.getRight());
+            double height = getHeight() - insets.getTop() - insets.getBottom();
+            double spacing = snapSpaceX(getSpacing());
+            double slashWidth = snapSizeX(slash.prefWidth(-1));
+            double titleWant = snapSizeX(title.prefWidth(-1));
+            double folderWidth = folder.isManaged()
+                    ? snapSizeX(folderWidth(room, folder.prefWidth(-1), slashWidth, titleWant, spacing))
+                    : 0;
+            boolean named = folderWidth > 0;
+            folder.setVisible(named);
+            slash.setVisible(named);
+            double before = named ? folderWidth + spacing + slashWidth + spacing : 0;
+            double titleWidth = Math.min(titleWant, room - before);
+            double x = insets.getLeft();
+            if (getAlignment().getHpos() == HPos.CENTER) x += Math.max(0, (room - before - titleWidth) / 2);
+            x = snapPositionX(x);
+            if (named) {
+                layoutInArea(folder, x, insets.getTop(), folderWidth, height, 0, HPos.LEFT, VPos.CENTER);
+                x += folderWidth + spacing;
+                layoutInArea(slash, x, insets.getTop(), slashWidth, height, 0, HPos.LEFT, VPos.CENTER);
+                x += slashWidth + spacing;
+            }
+            layoutInArea(title, x, insets.getTop(), titleWidth, height, 0, HPos.LEFT, VPos.CENTER);
+        }
+    }
+
     private final Stage stage;
     private final Label title = new Label();
-    /** The folder being shown, under the file name; its full path is its tooltip. */
+    /** The folder being shown, before the file name; its full path is its tooltip. */
     private final Label folder = new Label();
+    /** The "/" between the folder and the file name, shown with the folder. */
+    private final Label slash = new Label("/");
 
-    private final VBox heading = new VBox(title, folder);
+    private final Heading heading = new Heading(folder, slash, title);
     private @Nullable Tooltip folderTip;
     private @Nullable Path folderShown;
     private final Button fullScreen = button(Icons.FULL_SCREEN);
@@ -87,9 +153,14 @@ final class TitleBar {
         this.extended = Platform.isSupported(ConditionalFeature.EXTENDED_WINDOW);
 
         title.getStyleClass().add("header-title");
-        folder.getStyleClass().add("header-subtitle");
-        folder.setVisible(false);
-        folder.setManaged(false);
+        folder.getStyleClass().add("header-folder");
+        slash.getStyleClass().add("header-folder");
+        // Shown only while there is a folder (managed) and room for it (Heading.layoutChildren).
+        for (Label label : new Label[] {folder, slash}) {
+            label.setVisible(false);
+            label.setManaged(false);
+        }
+        heading.getStyleClass().add("header-heading");
         heading.setAlignment(LAYOUT.titleLeft() ? Pos.CENTER_LEFT : Pos.CENTER);
         heading.setMinWidth(0);
         fullScreen.setOnAction(e -> run.accept(Command.FULL_SCREEN));
@@ -120,7 +191,7 @@ final class TitleBar {
         if (LAYOUT.fullScreenButton()) left.getChildren().add(fullScreen);
         if (LAYOUT.titleLeft()) left.getChildren().add(heading);
         left.setAlignment(Pos.CENTER_LEFT);
-        @Nullable VBox centre = LAYOUT.titleLeft() ? null : heading;
+        @Nullable Heading centre = LAYOUT.titleLeft() ? null : heading;
         if (extended) {
             if (!stage.isShowing()) stage.initStyle(StageStyle.EXTENDED);
             HeaderBar bar = new HeaderBar();
@@ -130,7 +201,7 @@ final class TitleBar {
             bar.setRight(right);
             // The bar drags the window by its background; the title is a label, so it is marked to
             // drag too: a title bar you cannot drag by its title is a trap.
-            for (Node node : new Node[] {heading, title, folder}) {
+            for (Node node : new Node[] {heading, title, folder, slash}) {
                 HeaderBar.setDragType(node, HeaderDragType.DRAGGABLE);
             }
             row = bar;
@@ -186,16 +257,17 @@ final class TitleBar {
     }
 
     /**
-     * Names the folder being shown under the file name, or none ({@code null}): its own name, the
-     * whole path in the tooltip. Stepping within a folder changes nothing here.
+     * Names the folder being shown before the file name, as "folder / name", or none ({@code null}):
+     * its own name, the whole path in the tooltip. Stepping within a folder changes nothing here.
      */
     void setFolder(@Nullable Path shown) {
         if (Objects.equals(shown, folderShown)) return;
         folderShown = shown;
         Path name = shown == null ? null : shown.getFileName();
         folder.setText(shown == null ? "" : name == null ? shown.toString() : name.toString());
-        folder.setVisible(shown != null);
+        // Whether they show is the heading's to say, by the room it has.
         folder.setManaged(shown != null);
+        slash.setManaged(shown != null);
         Tooltip tip = folderTip;
         if (tip != null) tip.setText(shown == null ? "" : shown.toString());
     }

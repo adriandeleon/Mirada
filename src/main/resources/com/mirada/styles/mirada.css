@@ -39,17 +39,20 @@
     -fx-min-height: 46;
 }
 
-.header-title {
-    -fx-text-fill: -color-fg-default;
-    -fx-font-weight: bold;
+/* "folder / name.jpg", on one line. */
+.header-heading {
+    -fx-spacing: 6;
     -fx-padding: 0 12 0 12;
 }
 
-/* The folder being shown, under the file name: smaller and quieter. */
-.header-subtitle {
+.header-title {
+    -fx-text-fill: -color-fg-default;
+    -fx-font-weight: bold;
+}
+
+/* The folder being shown and the slash after it, before the file name: quieter. */
+.header-folder {
     -fx-text-fill: -color-fg-muted;
-    -fx-font-size: 0.85em;
-    -fx-padding: 0 12 0 12;
 }
 
 .header-button,

@@ -11,6 +11,11 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   and **Open Folder…** (Ctrl+Shift+F, ⇧⌘F on a Mac) in the menus and the palette: a folder can now
   be opened without dropping it on the window. Open… is now called Open Image….
 
+### Changed
+
+- **The header shows the folder before the file name**, as "folder / photo.jpg" on one line. It
+  stood on a second line under the name, which the header was too short to show.
+
 ## 0.3.0 — 2026-11-05
 
 ### Added
