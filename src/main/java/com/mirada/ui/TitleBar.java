@@ -14,6 +14,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
@@ -138,6 +139,8 @@ final class TitleBar {
     private final Button fullScreen = button(Icons.FULL_SCREEN);
     private final Button rotate = button(Icons.ROTATE);
     private final Consumer<Command> run;
+    private final BooleanProperty infoShowing;
+    private final BooleanProperty thumbnailsShowing;
     private final ToggleButton info = new ToggleButton();
     private final MenuButton menu = new MenuButton();
     private final Region row;
@@ -146,10 +149,13 @@ final class TitleBar {
     /**
      * @param run runs a command, the same as its key would
      * @param infoShowing the sidebar's state, which the info button shows and toggles
+     * @param thumbnailsShowing the strip's state, which the menu ticks and toggles
      */
-    TitleBar(Stage stage, Consumer<Command> run, BooleanProperty infoShowing) {
+    TitleBar(Stage stage, Consumer<Command> run, BooleanProperty infoShowing, BooleanProperty thumbnailsShowing) {
         this.stage = stage;
         this.run = run;
+        this.infoShowing = infoShowing;
+        this.thumbnailsShowing = thumbnailsShowing;
         this.extended = Platform.isSupported(ConditionalFeature.EXTENDED_WINDOW);
 
         title.getStyleClass().add("header-title");
@@ -233,8 +239,8 @@ final class TitleBar {
                         new SeparatorMenuItem(),
                         item(Command.PALETTE, run),
                         new SeparatorMenuItem(),
-                        item(Command.THUMBNAILS, run),
-                        item(Command.INFO, run),
+                        panel(Command.THUMBNAILS, thumbnailsShowing),
+                        panel(Command.INFO, infoShowing),
                         new SeparatorMenuItem(),
                         item(Command.EDIT, run),
                         item(Command.ROTATE_COUNTERCLOCKWISE, run),
@@ -293,6 +299,13 @@ final class TitleBar {
         button.setGraphic(Icons.of(icon));
         button.getStyleClass().addAll("header-button", "flat");
         return button;
+    }
+
+    /** A panel the menu ticks while it is open, and opens or closes as the key does. */
+    private static MenuItem panel(Command command, BooleanProperty showing) {
+        CheckMenuItem item = new CheckMenuItem(command.label(), Icons.menu(command));
+        item.selectedProperty().bindBidirectional(showing);
+        return item;
     }
 
     private static MenuItem item(Command command, Consumer<Command> run) {

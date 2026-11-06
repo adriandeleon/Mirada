@@ -191,6 +191,13 @@ enum Command {
     static final boolean WINDOWS =
             System.getProperty("os.name", "").toLowerCase(Locale.ROOT).startsWith("windows");
 
+    /**
+     * Whether the thumbnails stand down the side, so the folder steps along Up and Down and the
+     * arrows across pan ({@link #forKey}, {@link #chord(boolean, boolean)}). The window sets it as
+     * the strip moves or closes; on the FX thread, like everything that reads it.
+     */
+    private static boolean vertical;
+
     private final String label;
     private final String description;
     private final String keywords;
@@ -240,16 +247,44 @@ enum Command {
      * the palette the first of the user's ({@link PaletteChords}).
      */
     KeyCombination chord() {
-        return chord(MAC);
+        return chord(MAC, vertical);
+    }
+
+    /** Whether the folder steps along Up and Down: the thumbnails stand down the side. */
+    static boolean vertical() {
+        return vertical;
+    }
+
+    static void setVertical(boolean value) {
+        vertical = value;
+    }
+
+    /** The chord on macOS or elsewhere with the thumbnails along the bottom, or closed. */
+    KeyCombination chord(boolean mac) {
+        return chord(mac, false);
     }
 
     /**
      * The chord shown on macOS or elsewhere. A Mac keyboard has no forward Delete, and F2 is a
      * brightness key there, so trashing and renaming show Finder's keys instead: Cmd-Backspace and
-     * Return. Package-visible so both platforms are testable.
+     * Return. With the thumbnails down the side ({@code vertical}) the folder steps by Up and Down,
+     * and the arrows across pan. Package-visible so both platforms and both axes are testable.
      */
-    KeyCombination chord(boolean mac) {
+    KeyCombination chord(boolean mac, boolean vertical) {
         if (this == PALETTE) return PaletteChords.current().getFirst();
+        @Nullable
+        KeyCombination alongSide = vertical
+                ? switch (this) {
+                    case NEXT -> key(KeyCode.DOWN);
+                    case PREVIOUS -> key(KeyCode.UP);
+                    case PAN_LEFT -> key(KeyCode.LEFT);
+                    case PAN_RIGHT -> key(KeyCode.RIGHT);
+                    case PAN_UP -> shift(KeyCode.UP);
+                    case PAN_DOWN -> shift(KeyCode.DOWN);
+                    default -> null;
+                }
+                : null;
+        if (alongSide != null) return alongSide;
         if (!mac) return chord;
         return switch (this) {
             case MOVE_TO_TRASH -> shortcut(KeyCode.BACK_SPACE);
@@ -339,6 +374,16 @@ enum Command {
      * GNOME's viewer and Windows' Photos.
      */
     static @Nullable Command forKey(KeyCode code, boolean shift, boolean shortcut, boolean control, boolean mac) {
+        return forKey(code, shift, shortcut, control, mac, false);
+    }
+
+    /**
+     * {@link #forKey} along either axis. The folder steps along the strip: Left and Right with it
+     * along the bottom, Up and Down with it down the side ({@code vertical}). The other pair pans,
+     * and so does the stepping pair with Shift.
+     */
+    static @Nullable Command forKey(
+            KeyCode code, boolean shift, boolean shortcut, boolean control, boolean mac, boolean vertical) {
         if (mac && shortcut && control) return code == KeyCode.F ? FULL_SCREEN : null;
         if (shortcut) {
             return switch (code) {
@@ -363,10 +408,10 @@ enum Command {
             };
         }
         return switch (code) {
-            case RIGHT -> shift ? PAN_RIGHT : NEXT;
-            case LEFT -> shift ? PAN_LEFT : PREVIOUS;
-            case UP -> PAN_UP;
-            case DOWN -> PAN_DOWN;
+            case RIGHT -> shift || vertical ? PAN_RIGHT : NEXT;
+            case LEFT -> shift || vertical ? PAN_LEFT : PREVIOUS;
+            case UP -> vertical && !shift ? PREVIOUS : PAN_UP;
+            case DOWN -> vertical && !shift ? NEXT : PAN_DOWN;
             case PAGE_DOWN -> NEXT;
             case PAGE_UP, BACK_SPACE -> PREVIOUS;
             case SPACE -> shift ? PREVIOUS : NEXT;

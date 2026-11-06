@@ -7,6 +7,12 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **The thumbnail strip has a menu of its own**: right-click it to hide it, stand it at the side or
+  along the bottom, or show names instead of pictures or under them. The header's menu ticks
+  Thumbnails and Image Properties while they are open, and turns them on and off.
+- **With the thumbnails at the side, Up and Down step through the folder**, as the strip runs, and
+  the arrows over the image point up and down; Left and Right pan a zoomed-in image instead, and
+  Shift+Up and Shift+Down pan up and down. Along the bottom, the keys are as before.
 - **Open Image and Open Folder buttons in an empty window**, under "Open an image with Ctrl+O",
   and **Open Folder…** (Ctrl+Shift+F, ⇧⌘F on a Mac) in the menus and the palette: a folder can now
   be opened without dropping it on the window. Open… is now called Open Image….

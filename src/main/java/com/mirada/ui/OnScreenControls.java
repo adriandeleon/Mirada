@@ -40,6 +40,7 @@ final class OnScreenControls {
     private final PauseTransition idle = new PauseTransition(IDLE);
     private boolean fitted = true;
     private boolean hasImage;
+    private boolean vertical;
 
     OnScreenControls(StackPane canvas, Consumer<Command> run) {
         previous.setOnAction(e -> run.accept(Command.PREVIOUS));
@@ -81,6 +82,23 @@ final class OnScreenControls {
         });
         setVisible(navigation, false);
         setVisible(zooming, false);
+    }
+
+    /**
+     * Up and down arrows for previous and next while the thumbnails stand down the side, where the
+     * folder runs top to bottom and Up and Down step through it ({@link Command#vertical()}).
+     */
+    void setVertical(boolean value) {
+        if (value == vertical) return;
+        vertical = value;
+        point(previous, value ? Icons.UP : Icons.PREVIOUS, value ? "Previous Image (↑)" : "Previous Image (←)");
+        point(next, value ? Icons.DOWN : Icons.NEXT, value ? "Next Image (↓)" : "Next Image (→)");
+    }
+
+    private static void point(Button button, String icon, String tip) {
+        button.setGraphic(Icons.of(icon));
+        button.getTooltip().setText(tip);
+        button.setAccessibleText(spoken(tip));
     }
 
     /** How long the pointer may rest before the controls fade, in seconds (Settings). */

@@ -424,6 +424,9 @@ a prefetched neighbour is 2–8 ms for every format.
   the chord a command shows is one that runs it, on both platforms (the palette's excepted: above). macOS shows its own for two
   (`chord(boolean mac)`): ⌘⌫ to trash, as a Mac's Delete key is Backspace, which steps back; Return
   to rename, as F2 is a brightness key. `forKey` takes the Ctrl key apart from the shortcut for ⌃⌘F.
+  Stepping follows the strip: while it stands down the side (`Command.vertical`, set by
+  `ViewerWindow.stepAlong`) Up and Down step and Left and Right pan, and `chord()`, the floating
+  arrows and the shortcuts window follow; the test checks both axes.
 - **A scroll is a wheel's or a trackpad's** (`Scrolling`): macOS reports the fingers
   (`ScrollEvent.getTouchCount`), and those scrolls pan, or swipe once a gesture when there is nothing
   to pan; a wheel zooms. Windows and Linux touchpads report no fingers and so still zoom; Windows
