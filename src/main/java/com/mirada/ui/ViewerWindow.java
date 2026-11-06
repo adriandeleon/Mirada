@@ -66,6 +66,7 @@ import com.mirada.os.Reveal;
 import com.mirada.os.Trash;
 import com.mirada.perf.Startup;
 import com.mirada.perf.Tour;
+import com.mirada.settings.Bookmarks;
 import com.mirada.settings.Settings;
 import org.jspecify.annotations.Nullable;
 
@@ -103,6 +104,11 @@ public final class ViewerWindow {
 
     private final BooleanProperty infoShowing = new SimpleBooleanProperty(this, "infoShowing", false);
     private final Settings settings;
+    /** The user's bookmarks and notes; read after the first paint, or when first asked for. */
+    private final Bookmarks bookmarks;
+    /** The image's marks over its corner; built the first time an image on screen has one. */
+    private @Nullable MarksBadge marksBadge;
+
     private final Consumer<String> openLink;
     /** Built the first time each is opened. */
     private @Nullable AboutWindow about;
@@ -174,6 +180,11 @@ public final class ViewerWindow {
         this.openLink = openLink;
         this.tour = Tour.start(() -> go(folder.step(1)), this::copy);
         this.sortedBy = settings.sorting();
+        this.bookmarks = new Bookmarks(Bookmarks.fileBeside(settings.file()));
+        bookmarks.addListener(() -> {
+            showMarks();
+            refreshInfo();
+        });
 
         placeholder.getStyleClass().add("placeholder");
         placeholder.setWrapText(true);
@@ -264,6 +275,12 @@ public final class ViewerWindow {
         updateControls();
         afterFirstPaint(titleBar::finish);
         afterFirstPaint(() -> WindowIcon.applyTo(stage));
+        // The marks are not start-up's: read once the image is up, then shown on it.
+        afterFirstPaint(() -> {
+            bookmarks.ensureLoaded();
+            showMarks();
+            refreshInfo();
+        });
         if (Command.MAC) afterFirstPaint(() -> installMacMenus(overlay));
         // A window opened without an image has no first paint to wait for.
         PauseTransition fallback = new PauseTransition(Duration.millis(500));
@@ -332,7 +349,7 @@ public final class ViewerWindow {
     private InfoPanel infoPanel() {
         InfoPanel panel = info;
         if (panel == null) {
-            panel = new InfoPanel(folder -> openLink.accept(folder.toUri().toString()));
+            panel = new InfoPanel(folder -> openLink.accept(folder.toUri().toString()), this::run);
             info = panel;
         }
         return panel;
@@ -342,6 +359,7 @@ public final class ViewerWindow {
         ThumbnailStrip made = strip;
         if (made == null) {
             made = new ThumbnailStrip(index -> go(folder.jump(index)), viewport.thumbnailDragger());
+            made.setMarked(file -> bookmarks.loaded() && bookmarks.isBookmarked(file));
             strip = made;
         }
         return made;
@@ -382,9 +400,10 @@ public final class ViewerWindow {
         if (panel == null || !infoShowing.get()) return;
         Path file = folder.current();
         if (file == null || placeholder.isVisible()) {
-            panel.show(null);
+            panel.show(null, InfoPanel.Marks.NONE);
             return;
         }
+        InfoPanel.Marks marks = marks(file);
         int index = folder.index();
         int count = folder.size();
         double width = viewport.contentWidth();
@@ -392,9 +411,39 @@ public final class ViewerWindow {
         CompletableFuture.supplyAsync(() -> ImageDetails.read(file, index, count, width, height), DETAILS_READER)
                 .thenAcceptAsync(
                         details -> {
-                            if (file.equals(wanted) && infoShowing.get()) panel.show(details);
+                            if (file.equals(wanted) && infoShowing.get()) panel.show(details, marks);
                         },
                         Platform::runLater);
+    }
+
+    /** What the user keeps on {@code file} and its folder, for the sidebar; none until they are read. */
+    private InfoPanel.Marks marks(Path file) {
+        if (!bookmarks.loaded()) return InfoPanel.Marks.NONE;
+        Path parent = file.toAbsolutePath().getParent();
+        return new InfoPanel.Marks(
+                bookmarks.isBookmarked(file),
+                bookmarks.note(file),
+                parent != null && bookmarks.isBookmarked(parent),
+                parent == null ? "" : bookmarks.note(parent));
+    }
+
+    /**
+     * The marks of the image on screen over its corner, and the strip's badges. Nothing before the
+     * marks are read (after the first paint), so stepping onto the first image never waits for them.
+     */
+    private void showMarks() {
+        if (!bookmarks.loaded()) return;
+        Path file = folder.current();
+        boolean bookmarked = file != null && bookmarks.isBookmarked(file);
+        String note = file == null ? "" : bookmarks.note(file);
+        MarksBadge badge = marksBadge;
+        if (badge == null && (bookmarked || !note.isEmpty())) {
+            badge = new MarksBadge(canvas, this::run);
+            marksBadge = badge;
+        }
+        if (badge != null) badge.show(bookmarked, note, slideshowRunning || placeholder.isVisible());
+        ThumbnailStrip shown = strip;
+        if (shown != null) shown.refreshMarks();
     }
 
     private void updateControls() {
@@ -487,6 +536,7 @@ public final class ViewerWindow {
         titleBar.setTitle(fileName(file));
         titleBar.setFolder(file.toAbsolutePath().getParent());
         refreshStrip();
+        showMarks();
 
         if (!ImageFormats.isImage(file)) {
             String extension = ImageFormats.extension(file).toUpperCase(Locale.ROOT);
@@ -557,6 +607,8 @@ public final class ViewerWindow {
         viewport.clear();
         placeholder.setText(message);
         placeholder.setVisible(true);
+        MarksBadge badge = marksBadge;
+        if (badge != null) badge.show(false, "", true);
         if (folder.isEmpty()) {
             titleBar.setTitle(AppInfo.NAME);
             titleBar.setFolder(null);
@@ -664,13 +716,30 @@ public final class ViewerWindow {
             case SORT_BY_DATE -> sort(settings.sorting().by(Sorting.By.DATE));
             case SORT_BY_SIZE -> sort(settings.sorting().by(Sorting.By.SIZE));
             case REVERSE_ORDER -> sort(settings.sorting().reverse());
+            case BOOKMARK -> toggleBookmark(false);
+            case BOOKMARK_FOLDER -> toggleBookmark(true);
+            case NOTE -> editNote(false);
+            case FOLDER_NOTE -> editNote(true);
+            case NEXT_BOOKMARK -> stepToBookmark(1);
+            case PREVIOUS_BOOKMARK -> stepToBookmark(-1);
+            case GO_TO_BOOKMARK -> goToBookmark();
         }
     }
 
     /** The commands that leave the image alone, so they can run while the editor is open. */
     private static boolean duringEdit(Command command) {
         return switch (command) {
-            case FULL_SCREEN, INFO, THUMBNAILS, SETTINGS, SHORTCUTS, ABOUT, CLOSE -> true;
+            case FULL_SCREEN,
+                    INFO,
+                    THUMBNAILS,
+                    SETTINGS,
+                    SHORTCUTS,
+                    ABOUT,
+                    CLOSE,
+                    BOOKMARK,
+                    BOOKMARK_FOLDER,
+                    NOTE,
+                    FOLDER_NOTE -> true;
             default -> false;
         };
     }
@@ -704,6 +773,7 @@ public final class ViewerWindow {
         slideshowRunning = true;
         stage.setFullScreen(true);
         say("Slideshow: every " + settings.slideshowSeconds() + " s. Escape stops it.");
+        showMarks();
         restartSlideshowTimer();
     }
 
@@ -712,6 +782,7 @@ public final class ViewerWindow {
         slideshow.stop();
         stage.setFullScreen(false);
         say("Slideshow stopped");
+        showMarks();
     }
 
     private void restartSlideshowTimer() {
@@ -775,8 +846,111 @@ public final class ViewerWindow {
             return;
         }
         folder = folder.renamed(file, target, settings.sorting());
+        bookmarks.moved(file, target);
         showCurrent();
         say("Renamed to " + name);
+    }
+
+    /** The folder of the image on screen, absolute, or null when there is none. */
+    private @Nullable Path shownFolder() {
+        Path file = folder.current();
+        return file == null ? null : file.toAbsolutePath().getParent();
+    }
+
+    /** Bookmarks the image on screen or its folder, or takes the bookmark off. */
+    private void toggleBookmark(boolean ofFolder) {
+        Path target = ofFolder ? shownFolder() : folder.current();
+        if (target == null) return;
+        boolean now = bookmarks.toggle(target, ofFolder);
+        String what = ofFolder ? "the folder " + fileName(target) : fileName(target);
+        say(now ? "Bookmarked " + what : "Took the bookmark off " + what);
+    }
+
+    /** Asks for the note on the image on screen or its folder ({@link NoteDialog}); emptied, it goes. */
+    private void editNote(boolean ofFolder) {
+        Path target = ofFolder ? shownFolder() : folder.current();
+        if (target == null) return;
+        String was = bookmarks.note(target);
+        String what = ofFolder ? "the folder " + fileName(target) : fileName(target);
+        Optional<String> answer = NoteDialog.ask(stage, ofFolder ? "Folder Note" : "Note", what, was, stylesheet());
+        if (answer.isEmpty()) return;
+        bookmarks.setNote(target, ofFolder, answer.get());
+        String now = bookmarks.note(target);
+        if (now.equals(was)) return;
+        say(now.isEmpty() ? "Took the note off " + what : "Kept the note on " + what);
+    }
+
+    /** The next bookmarked image of the folder that way, or -1 when there is none. */
+    private int bookmarkFrom(int direction) {
+        return Bookmarks.step(folder.images(), folder.index(), direction, bookmarks::isBookmarked);
+    }
+
+    private void stepToBookmark(int direction) {
+        int index = bookmarkFrom(direction);
+        if (index < 0) {
+            say("No bookmarked image " + (direction > 0 ? "after" : "before") + " this one");
+            return;
+        }
+        go(folder.jump(index));
+    }
+
+    /**
+     * The palette over every bookmark and note, the latest first, found by name or by note; one whose
+     * file or folder has gone (or whose drive is not there) is left out. An image of the folder on
+     * screen is stepped to; any other opens with its folder.
+     */
+    private void goToBookmark() {
+        List<Bookmarks.Mark> marks = new ArrayList<>();
+        for (Bookmarks.Mark mark : bookmarks.all()) {
+            if (mark.folder() ? Files.isDirectory(mark.path()) : Files.isRegularFile(mark.path())) marks.add(mark);
+        }
+        if (marks.isEmpty()) {
+            say("Nothing is bookmarked or noted yet");
+            return;
+        }
+        List<String> names = new ArrayList<>(marks.size());
+        for (Bookmarks.Mark mark : marks) names.add(bookmarkName(mark));
+        palette.showChoices(
+                new CommandPalette.Choices(
+                        Command.GO_TO_BOOKMARK,
+                        "Go to bookmark…",
+                        "No matching bookmarks or notes",
+                        "open",
+                        names,
+                        0,
+                        index -> marks.get(index).path().toString(),
+                        index -> bookmarkDetail(marks.get(index))),
+                index -> openMark(marks.get(index)));
+    }
+
+    /**
+     * A mark's row in the palette: its name, a folder's with a slash after it, and the first line of
+     * its note, so typing a word of the note finds it.
+     */
+    static String bookmarkName(Bookmarks.Mark mark) {
+        String name = fileName(mark.path()) + (mark.folder() ? "/" : "");
+        if (!mark.hasNote()) return name;
+        String line = mark.note().lines().findFirst().orElse("").strip();
+        if (line.length() > NOTE_IN_ROW)
+            line = line.substring(0, NOTE_IN_ROW - 1).strip() + "…";
+        return name + " — " + line;
+    }
+
+    /** How much of a note the palette's row shows. */
+    private static final int NOTE_IN_ROW = 72;
+
+    /** What stands on the right of a mark's row: the image's folder, or that it is a folder. */
+    static String bookmarkDetail(Bookmarks.Mark mark) {
+        String kind = mark.bookmarked() ? "" : "Note · ";
+        if (mark.folder()) return kind + "Folder";
+        Path parent = mark.path().getParent();
+        return kind + (parent == null ? "" : fileName(parent));
+    }
+
+    private void openMark(Bookmarks.Mark mark) {
+        int index = mark.folder() ? -1 : folder.images().indexOf(mark.path());
+        if (index >= 0) go(folder.jump(index));
+        else open(mark.path());
     }
 
     /** Starts {@code file} moving once its frames are decoded, if it is an animation still on screen. */
@@ -1008,13 +1182,20 @@ public final class ViewerWindow {
     /** Why {@code command} cannot run right now, or null when it can. */
     private @Nullable String unavailable(Command command) {
         if (command == Command.OPEN_RECENT && settings.recent().isEmpty()) return "No folder has been opened yet.";
+        if (command == Command.GO_TO_BOOKMARK && bookmarks.all().isEmpty())
+            return "Nothing is bookmarked or noted yet.";
+        String folderReason = command.unavailable(folder.index(), folder.size(), !placeholder.isVisible());
+        if (folderReason == null && command == Command.NEXT_BOOKMARK && bookmarkFrom(1) < 0)
+            return "No bookmarked image after this one.";
+        if (folderReason == null && command == Command.PREVIOUS_BOOKMARK && bookmarkFrom(-1) < 0)
+            return "No bookmarked image before this one.";
         if (command == Command.UNDO_TRASH && trashed.isEmpty()) {
             String trash = Command.trash(Command.WINDOWS);
             return Trash.restores()
                     ? "Nothing has been moved to the " + trash + " yet."
                     : "Put it back from the " + trash + " itself.";
         }
-        return command.unavailable(folder.index(), folder.size(), !placeholder.isVisible());
+        return folderReason;
     }
 
     private void go(FolderImages next) {
@@ -1074,6 +1255,10 @@ public final class ViewerWindow {
                 new SeparatorMenuItem(),
                 item(Command.COPY),
                 item(Command.SHOW_IN_FOLDER),
+                new SeparatorMenuItem(),
+                item(Command.BOOKMARK),
+                item(Command.NOTE),
+                item(Command.GO_TO_BOOKMARK),
                 new SeparatorMenuItem(),
                 item(Command.RENAME),
                 item(Command.MOVE_TO_TRASH),
@@ -1141,6 +1326,14 @@ public final class ViewerWindow {
         Sorting sorting = settings.sorting();
         return switch (command) {
             case KEEP_ZOOM -> settings.keepZoom();
+            case BOOKMARK -> {
+                Path file = folder.current();
+                yield file != null && bookmarks.isBookmarked(file);
+            }
+            case BOOKMARK_FOLDER -> {
+                Path shown = shownFolder();
+                yield shown != null && bookmarks.isBookmarked(shown);
+            }
             case INFO -> infoShowing.get();
             case THUMBNAILS -> thumbnailsShowing.get();
             case THUMBNAILS_AT_SIDE -> settings.thumbnailsAtSide();

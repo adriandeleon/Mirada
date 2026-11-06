@@ -82,6 +82,41 @@ enum Command {
             "Moves the image to the Trash, from where it can be put back, and shows the next.",
             "delete remove bin recycle trash",
             key(KeyCode.DELETE)),
+    BOOKMARK(
+            "Bookmark Image",
+            "Marks the image, to find again with Go to Bookmark or step to in its folder. Again takes the mark off.",
+            "favourite favorite star flag mark pick keep",
+            key(KeyCode.B)),
+    BOOKMARK_FOLDER(
+            "Bookmark Folder",
+            "Marks the image's folder, to open again with Go to Bookmark. Again takes the mark off.",
+            "favourite favorite star flag mark directory",
+            shift(KeyCode.B)),
+    NOTE(
+            "Note on Image…",
+            "Writes a note of your own on the image. Mirada keeps it; the file is not changed.",
+            "comment annotate memo personal caption text",
+            key(KeyCode.N)),
+    FOLDER_NOTE(
+            "Note on Folder…",
+            "Writes a note of your own on the image's folder. Mirada keeps it; the folder is not changed.",
+            "comment annotate memo personal directory text",
+            shift(KeyCode.N)),
+    NEXT_BOOKMARK(
+            "Next Bookmarked Image",
+            "Steps to the next bookmarked image in the folder.",
+            "go forward mark favourite",
+            key(KeyCode.CLOSE_BRACKET)),
+    PREVIOUS_BOOKMARK(
+            "Previous Bookmarked Image",
+            "Steps to the previous bookmarked image in the folder.",
+            "go back mark favourite",
+            key(KeyCode.OPEN_BRACKET)),
+    GO_TO_BOOKMARK(
+            "Go to Bookmark…",
+            "Finds a bookmarked image or folder, or one with a note, by its name or its note, and opens it.",
+            "bookmarks notes find search jump favourites favorites",
+            shortcut(KeyCode.B)),
     SORT_BY_NAME("Sort by Name", "Orders the folder by file name, as a person counts.", "order", none()),
     SORT_BY_DATE(
             "Sort by Date", "Orders the folder by when each file was last changed.", "order modified time", none()),
@@ -243,6 +278,8 @@ enum Command {
                     MOVE_TO_TRASH,
                     COPY,
                     SHOW_IN_FOLDER -> imageShowing ? null : "No image is showing.";
+            case BOOKMARK, BOOKMARK_FOLDER, NOTE, FOLDER_NOTE, NEXT_BOOKMARK, PREVIOUS_BOOKMARK ->
+                size == 0 ? "No folder is open." : null;
             case SLIDESHOW -> size < 2 ? "A slideshow needs a folder with more than one image." : null;
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER, GO_TO_IMAGE ->
                 size == 0 ? "No folder is open." : null;
@@ -277,6 +314,8 @@ enum Command {
                     UNDO_TRASH,
                     COPY,
                     SHOW_IN_FOLDER -> "Image";
+            case BOOKMARK, BOOKMARK_FOLDER, NOTE, FOLDER_NOTE, NEXT_BOOKMARK, PREVIOUS_BOOKMARK, GO_TO_BOOKMARK ->
+                "Bookmarks";
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER -> "Order";
             case INFO, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES, THUMBNAIL_CAPTIONS -> "Panels";
             case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, OPEN_RECENT, CLOSE, PALETTE -> "Mirada";
@@ -303,6 +342,7 @@ enum Command {
                 case Z -> shift ? null : UNDO_TRASH;
                 case W, Q -> CLOSE;
                 case P -> shift ? null : GO_TO_IMAGE;
+                case B -> shift ? null : GO_TO_BOOKMARK;
                 case R -> shift ? ROTATE_COUNTERCLOCKWISE : ROTATE_CLOCKWISE;
                 case L -> mac && !shift ? ROTATE_COUNTERCLOCKWISE : null;
                 case I -> mac && !shift ? INFO : null;
@@ -339,6 +379,10 @@ enum Command {
             case F5 -> SLIDESHOW;
             case Z -> KEEP_ZOOM;
             case E -> EDIT;
+            case B -> shift ? BOOKMARK_FOLDER : BOOKMARK;
+            case N -> shift ? FOLDER_NOTE : NOTE;
+            case CLOSE_BRACKET -> NEXT_BOOKMARK;
+            case OPEN_BRACKET -> PREVIOUS_BOOKMARK;
             case DELETE -> MOVE_TO_TRASH;
             case F12 -> ABOUT;
             case ESCAPE -> ESCAPE;

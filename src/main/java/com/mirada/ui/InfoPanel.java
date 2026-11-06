@@ -2,6 +2,7 @@ package com.mirada.ui;
 
 import java.nio.file.Path;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
@@ -21,7 +22,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * The image's properties, as GNOME Image Viewer's sidebar shows them: cards of label-over-value
- * rows. The folder (with a button that opens it), then the image (size, format, file size), then the
+ * rows. The user's own bookmarks and notes on the image and its folder first, when there are any; the folder (with a button that opens it), then the image (size, format, file size), then the
  * file's dates, then the camera card when the file says what took it, and every metadata tag, folded.
  *
  * <p>Built the first time it is shown, so start-up never pays for it.
@@ -31,10 +32,29 @@ final class InfoPanel {
     private final ScrollPane node;
     private final VBox cards = new VBox(14);
     private final Consumer<Path> openFolder;
+    private final Consumer<Command> run;
     private @Nullable ImageDetails shown;
+    private Marks shownMarks = Marks.NONE;
 
-    InfoPanel(Consumer<Path> openFolder) {
+    /**
+     * What the user has kept on the image and its folder ({@link com.mirada.settings.Bookmarks}):
+     * whether each is bookmarked, and its note, {@code ""} for none.
+     */
+    record Marks(boolean image, String note, boolean folder, String folderNote) {
+        static final Marks NONE = new Marks(false, "", false, "");
+
+        boolean any() {
+            return image || folder || !note.isEmpty() || !folderNote.isEmpty();
+        }
+    }
+
+    /**
+     * @param openFolder opens a folder in the file manager
+     * @param run runs a command, for the notes' edit buttons
+     */
+    InfoPanel(Consumer<Path> openFolder, Consumer<Command> run) {
         this.openFolder = openFolder;
+        this.run = run;
         cards.getStyleClass().add("info-cards");
         node = new ScrollPane(cards);
         node.getStyleClass().add("info-panel");
@@ -49,9 +69,10 @@ final class InfoPanel {
         return node;
     }
 
-    void show(@Nullable ImageDetails details) {
-        if (details != null && details.equals(shown)) return;
+    void show(@Nullable ImageDetails details, Marks marks) {
+        if (details != null && details.equals(shown) && marks.equals(shownMarks)) return;
         shown = details;
+        shownMarks = marks;
         cards.getChildren().clear();
         if (details == null) {
             Label none = new Label("No image");
@@ -72,6 +93,7 @@ final class InfoPanel {
             if (folder != null) openFolder.accept(folder);
         });
 
+        if (marks.any()) cards.getChildren().add(marksCard(marks));
         cards.getChildren()
                 .add(card(row("Folder", details.folderName(), open), row("Position", details.position(), null)));
         cards.getChildren()
@@ -91,6 +113,36 @@ final class InfoPanel {
                             .toArray(HBox[]::new)));
         }
         if (!details.exif().all().isEmpty()) cards.getChildren().add(allMetadata(details.exif()));
+    }
+
+    /**
+     * The bookmarks and notes: which of the image and its folder are bookmarked, then each note,
+     * with a button that edits it.
+     */
+    private VBox marksCard(Marks marks) {
+        List<HBox> rows = new ArrayList<>();
+        @Nullable
+        String bookmarked = marks.image() && marks.folder()
+                ? "This image and its folder"
+                : marks.image() ? "This image" : marks.folder() ? "Its folder" : null;
+        if (bookmarked != null) rows.add(row("Bookmarked", bookmarked, null));
+        if (!marks.note().isEmpty()) rows.add(row("Note", marks.note(), editButton(Command.NOTE)));
+        if (!marks.folderNote().isEmpty())
+            rows.add(row("Folder Note", marks.folderNote(), editButton(Command.FOLDER_NOTE)));
+        VBox card = card(rows.toArray(HBox[]::new));
+        card.getStyleClass().add("marks-card");
+        return card;
+    }
+
+    private Button editButton(Command command) {
+        Button edit = new Button();
+        edit.setGraphic(Icons.of(Icons.RENAME));
+        edit.setTooltip(new Tooltip("Edit the " + (command == Command.NOTE ? "Note" : "Folder Note") + " ("
+                + command.chord().getDisplayText() + ")"));
+        edit.getStyleClass().addAll("flat", "info-action");
+        edit.setFocusTraversable(false);
+        edit.setOnAction(e -> run.accept(command));
+        return edit;
     }
 
     /**

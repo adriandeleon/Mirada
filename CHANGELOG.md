@@ -5,6 +5,17 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## 0.4.0 — unreleased
 
+### Added
+
+- **Bookmarks and notes on images and folders**, as Editora keeps them on files. `B` bookmarks the
+  image and Shift+`B` its folder; `N` writes a note of your own on the image and Shift+`N` on the
+  folder, kept by Mirada (`bookmarks.properties`, beside the settings), never in the file.
+  `]` and `[` step to the next and previous bookmarked image in the folder, and **Go to
+  Bookmark…** (Ctrl+B) finds any bookmark or note, in any folder, by its name or its note's words.
+  A bookmarked image wears a bookmark in its corner and in the thumbnail strip, its note is a
+  click away over the image, and the properties sidebar shows both, the folder's too. A rename in
+  Mirada keeps them.
+
 ### Changed
 
 - **The header shows the folder before the file name**, as "folder / photo.jpg" on one line. It

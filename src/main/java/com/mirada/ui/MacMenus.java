@@ -68,10 +68,18 @@ final class MacMenus {
                                     Command.SORT_BY_DATE,
                                     Command.SORT_BY_SIZE,
                                     Command.REVERSE_ORDER))),
+            new Heading(
+                    "Bookmarks",
+                    List.of(
+                            List.of(Command.BOOKMARK, Command.BOOKMARK_FOLDER),
+                            List.of(Command.NOTE, Command.FOLDER_NOTE),
+                            List.of(Command.NEXT_BOOKMARK, Command.PREVIOUS_BOOKMARK, Command.GO_TO_BOOKMARK))),
             new Heading("Help", List.of(List.of(Command.PALETTE, Command.SHORTCUTS))));
 
     /** The commands that are a setting or a panel, shown with a tick when on. */
     static final Set<Command> TICKED = Set.of(
+            Command.BOOKMARK,
+            Command.BOOKMARK_FOLDER,
             Command.KEEP_ZOOM,
             Command.INFO,
             Command.THUMBNAILS,
