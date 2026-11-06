@@ -5,6 +5,11 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ## 0.4.0 — unreleased
 
+### Changed
+
+- **The header shows the folder before the file name**, as "folder / photo.jpg" on one line. It
+  stood on a second line under the name, which the header was too short to show.
+
 ## 0.3.0 — 2026-11-05
 
 ### Added
