@@ -27,6 +27,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Cursor;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
@@ -37,6 +38,7 @@ import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
@@ -46,7 +48,10 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -92,6 +97,11 @@ public final class ViewerWindow {
     private final ImageViewport viewport = new ImageViewport();
     private final Label placeholder =
             new Label("Open an image with " + Command.OPEN.chord().getDisplayText() + ", or drop one here");
+    /** The placeholder, with Open Image and Open Folder under it while no folder is open. */
+    private final VBox emptyState = new VBox(placeholder);
+    /** Those two buttons, built the first time the window has no folder to show. */
+    private @Nullable HBox openButtons;
+
     private final BorderPane root;
     private final TitleBar titleBar;
     /** Built on the first pointer movement over the image: hidden until then anyway. */
@@ -177,6 +187,11 @@ public final class ViewerWindow {
 
         placeholder.getStyleClass().add("placeholder");
         placeholder.setWrapText(true);
+        emptyState.getStyleClass().add("empty-state");
+        emptyState.setAlignment(Pos.CENTER);
+        emptyState.visibleProperty().bind(placeholder.visibleProperty());
+        // Clicks beside the label and the buttons reach the canvas, for its context menu.
+        emptyState.setPickOnBounds(false);
         toast.getStyleClass().add("toast");
         toast.setVisible(false);
         toast.setMouseTransparent(true);
@@ -200,7 +215,7 @@ public final class ViewerWindow {
             slideshow.stop();
             rememberPlace();
         });
-        canvas = new StackPane(viewport, placeholder, toast);
+        canvas = new StackPane(viewport, emptyState, toast);
         canvas.getStyleClass().add("canvas");
         canvas.addEventFilter(MouseEvent.MOUSE_MOVED, e -> {
             if (controls == null) onScreenControls().wake();
@@ -411,6 +426,8 @@ public final class ViewerWindow {
 
     public void show() {
         stage.show();
+        // After App.start has opened what it was given: a window with nothing to show offers to open.
+        Platform.runLater(this::offerToOpen);
         // A first start, or a place no longer on a screen: where the system put it is the place.
         if (normalPlace == null && !stage.isMaximized()) {
             normalPlace = new Rectangle2D(stage.getX(), stage.getY(), stage.getWidth(), stage.getHeight());
@@ -557,6 +574,7 @@ public final class ViewerWindow {
         viewport.clear();
         placeholder.setText(message);
         placeholder.setVisible(true);
+        offerToOpen();
         if (folder.isEmpty()) {
             titleBar.setTitle(AppInfo.NAME);
             titleBar.setFolder(null);
@@ -621,6 +639,7 @@ public final class ViewerWindow {
                 }
             }
             case OPEN -> chooseFile();
+            case OPEN_FOLDER -> chooseFolder();
             case CLOSE -> stage.close();
             case PALETTE -> palette.show(Command.inPalette(), this::unavailable);
             case GO_TO_IMAGE -> goToImage();
@@ -1030,6 +1049,48 @@ public final class ViewerWindow {
         refreshInfo();
     }
 
+    /**
+     * Shows Open Image and Open Folder under the placeholder while no folder is open (at start, or
+     * when one turned out to have no images), and hides them once one is: within a folder the
+     * arrows go on to the next image. Built on first need, never on a start with an image.
+     */
+    private void offerToOpen() {
+        HBox buttons = openButtons;
+        if (!folder.isEmpty()) {
+            if (buttons != null) buttons.setVisible(false);
+            return;
+        }
+        if (buttons == null) {
+            buttons = new HBox(openButton(Command.OPEN), openButton(Command.OPEN_FOLDER));
+            buttons.getStyleClass().add("open-buttons");
+            buttons.setAlignment(Pos.CENTER);
+            buttons.managedProperty().bind(buttons.visibleProperty());
+            openButtons = buttons;
+            emptyState.getChildren().add(buttons);
+        }
+        buttons.setVisible(true);
+    }
+
+    private Button openButton(Command command) {
+        Button button = new Button(command.label(), Icons.menu(command));
+        button.getStyleClass().add("open-button");
+        KeyCombination chord = command.chord();
+        if (chord != KeyCombination.NO_MATCH)
+            button.setTooltip(new Tooltip(command.label() + " (" + chord.getDisplayText() + ")"));
+        button.setOnAction(e -> run(command));
+        return button;
+    }
+
+    private void chooseFolder() {
+        DirectoryChooser chooser = new DirectoryChooser();
+        chooser.setTitle("Open Folder");
+        Path current = folder.current();
+        Path parent = current == null ? null : current.toAbsolutePath().getParent();
+        if (parent != null) chooser.setInitialDirectory(parent.toFile());
+        File chosen = chooser.showDialog(stage);
+        if (chosen != null) open(chosen.toPath());
+    }
+
     private void chooseFile() {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Open Image");
@@ -1066,6 +1127,7 @@ public final class ViewerWindow {
                 item(Command.PALETTE),
                 new SeparatorMenuItem(),
                 item(Command.OPEN),
+                item(Command.OPEN_FOLDER),
                 new SeparatorMenuItem(),
                 item(Command.FIT),
                 item(Command.ACTUAL_SIZE),

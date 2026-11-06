@@ -50,6 +50,11 @@ class CommandTest {
     void windowCommandsNeedTheShortcut() {
         assertEquals(Command.OPEN, key(KeyCode.O, false, true));
         assertEquals(Command.CLOSE, key(KeyCode.W, false, true));
+        assertEquals(Command.OPEN_FOLDER, key(KeyCode.F, true, true));
+        assertEquals(Command.OPEN_FOLDER, mac(KeyCode.F, true, true, false));
+        // Ctrl+F alone is nothing; bare F is full screen, as is Ctrl-Cmd-F on a Mac.
+        assertNull(key(KeyCode.F, false, true));
+        assertEquals(Command.FULL_SCREEN, mac(KeyCode.F, true, true, true));
         assertNull(key(KeyCode.O, false, false));
         assertNull(key(KeyCode.W, false, false));
         // The shortcut does not turn a navigation key into something else.
@@ -221,6 +226,7 @@ class CommandTest {
         assertEquals("No image is showing.", Command.ROTATE_CLOCKWISE.unavailable(0, 1, false));
         assertNull(Command.FIT.unavailable(0, 1, true));
         assertNull(Command.OPEN.unavailable(0, 0, false));
+        assertNull(Command.OPEN_FOLDER.unavailable(0, 0, false));
     }
 
     @Test
