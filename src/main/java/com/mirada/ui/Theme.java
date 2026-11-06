@@ -25,6 +25,12 @@ import org.jspecify.annotations.Nullable;
  * Accent}), followed as it changes: a stylesheet of its own, a data URL, kept on every window's
  * scene. Popups copy their owner's stylesheets as they open. Linux keeps Cupertino's blue: what
  * JavaFX reads there is the GTK theme's selection colour, not a choice the user made.
+ *
+ * <p>Every window's scene is also told the scheme chosen ({@code Scene.Preferences.colorScheme}):
+ * JavaFX draws an extended window's minimize, maximize and close buttons from it, and a decorated
+ * window's frame, falling back to the platform's scheme, which is not the theme: a dark theme
+ * chosen in the settings over a light system left the light buttons' dark grey glyphs on a dark
+ * header bar.
  */
 public final class Theme {
 
@@ -34,6 +40,8 @@ public final class Theme {
     private static boolean following;
     /** The accent stylesheet on every window now, or null for Cupertino's own. */
     private static @Nullable String accentSheet;
+    /** The scheme every window's scene is told, for the window buttons JavaFX draws. */
+    private static ColorScheme scheme = ColorScheme.LIGHT;
 
     private Theme() {}
 
@@ -46,12 +54,13 @@ public final class Theme {
             Platform.getPreferences().colorSchemeProperty().addListener((obs, was, now) -> refresh());
             if (FOLLOWS_ACCENT) {
                 Platform.getPreferences().accentColorProperty().addListener((obs, was, now) -> refresh());
-                Window.getWindows().addListener((ListChangeListener<Window>) change -> {
-                    while (change.next()) {
-                        for (Window window : change.getAddedSubList()) restyle(window, null);
-                    }
-                });
             }
+            // A window joins the list as it is shown, before its first frame is drawn.
+            Window.getWindows().addListener((ListChangeListener<Window>) change -> {
+                while (change.next()) {
+                    for (Window window : change.getAddedSubList()) restyle(window, null);
+                }
+            });
         }
         refresh();
     }
@@ -73,21 +82,25 @@ public final class Theme {
         boolean dark = dark(choice, Platform.getPreferences().getColorScheme());
         atlantafx.base.theme.Theme theme = dark ? new CupertinoDark() : new CupertinoLight();
         Application.setUserAgentStylesheet(theme.getUserAgentStylesheet());
-        if (FOLLOWS_ACCENT) accent(Platform.getPreferences().getAccentColor(), dark);
-    }
-
-    private static void accent(@Nullable Color system, boolean dark) {
-        String next = system == null ? null : dataUrl(Accent.css(system, dark));
+        scheme = dark ? ColorScheme.DARK : ColorScheme.LIGHT;
         String old = accentSheet;
-        if (Objects.equals(next, old)) return;
-        accentSheet = next;
-        for (Window window : Window.getWindows()) restyle(window, old);
+        if (FOLLOWS_ACCENT) accentSheet = accent(Platform.getPreferences().getAccentColor(), dark);
+        for (Window window : Window.getWindows()) restyle(window, Objects.equals(old, accentSheet) ? null : old);
     }
 
-    /** Swaps {@code old} for the current accent stylesheet on {@code window}'s scene. */
+    private static @Nullable String accent(@Nullable Color system, boolean dark) {
+        return system == null ? null : dataUrl(Accent.css(system, dark));
+    }
+
+    /**
+     * Gives {@code window}'s scene the chosen scheme and swaps {@code old} for the current accent
+     * stylesheet. Popups are left alone: they copy their owner's stylesheets and have no window
+     * buttons.
+     */
     private static void restyle(Window window, @Nullable String old) {
         Scene scene = window.getScene();
         if (scene == null || window instanceof PopupWindow) return;
+        scene.getPreferences().setColorScheme(scheme);
         if (old != null) scene.getStylesheets().remove(old);
         String sheet = accentSheet;
         if (sheet != null && !scene.getStylesheets().contains(sheet))

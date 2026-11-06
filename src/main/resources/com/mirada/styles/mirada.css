@@ -39,6 +39,17 @@
     -fx-min-height: 46;
 }
 
+/*
+ * JavaFX's own window buttons (Linux, extended windows), unfocused in the dark style: its grey
+ * (#777) all but vanishes on the dark header. A scene's stylesheet reaches them; this rule outranks
+ * the unfocused one by a style class and is outranked by the focused one (":active", white).
+ */
+.-FX-INTERNAL-iconify-button.dark > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-maximize-button.dark > .-FX-INTERNAL-glyph,
+.-FX-INTERNAL-close-button.dark > .-FX-INTERNAL-glyph {
+    -fx-background-color: #a8a8a8;
+}
+
 /* "folder / name.jpg", on one line. */
 .header-heading {
     -fx-spacing: 6;

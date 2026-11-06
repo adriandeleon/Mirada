@@ -294,6 +294,13 @@ a prefetched neighbour is 2–8 ms for every format.
   soon as it decodes flashes it sideways for a frame; showing it before it decodes flashes an empty
   canvas. `ImageCache.Entry.ready` completes when both are in, and `ViewerWindow.display` drops a
   result for any image other than the one most recently asked for (`wanted`).
+- **The window buttons on Linux are JavaFX's, and follow the scene's colour scheme, not the
+  stylesheet.** An extended window's minimize, maximize and close are drawn by JavaFX
+  (`HeaderButtonOverlay`), light or dark by `Scene.Preferences.colorScheme`, which falls back to
+  the system's: `Theme` sets it on every window from the theme chosen, or a dark theme over a light
+  system draws the light buttons, dark grey on the dark header. An unfocused window draws them
+  `#777` in either style; `mirada.css` lightens the dark one, as a scene's stylesheet reaches the
+  overlay. To tell the styles apart in a screenshot: focused, dark draws white glyphs, light `#333`.
 - **Escape is ours, not the stage's.** JavaFX's full-screen exit key would leave full screen and
   then let the same press reach the key filter, which would close the window.
   `setFullScreenExitKeyCombination(NO_MATCH)` hands it to `Command.ESCAPE`: leave full screen if in

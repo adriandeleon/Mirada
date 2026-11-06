@@ -37,6 +37,12 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 - **A saved TIFF keeps the EXIF and the colour profile**, as JPEG and PNG already did: the camera,
   the date, the exposure, the location, and the colours of a wide-gamut photo.
 
+### Fixed
+
+- **The minimize, maximize and close buttons are legible in the dark theme on Linux.** JavaFX drew
+  them by the system's light or dark setting, not Mirada's theme, so a dark theme over a light
+  setting left them dark grey on the dark header bar; they now follow the theme.
+
 ## 0.3.0 — 2026-11-05
 
 ### Added

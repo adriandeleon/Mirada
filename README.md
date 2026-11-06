@@ -17,7 +17,15 @@ folder as the document: open one photo and the rest of the folder is already the
 you'd number it, one arrow key away. The image fills the window; the properties sidebar says
 which file, where it sits in the folder, how large it is, and what took it.
 
+Mirada's first window was modelled on [GNOME Image Viewer](https://apps.gnome.org/Loupe/) (Loupe):
+the header bar, the controls that float over the image and fade, and the properties sidebar all
+started from its design.
+
 <br clear="left">
+
+![Mirada showing a landscape photo, with the properties sidebar open on the right and the thumbnail strip along the bottom](docs/screenshot.jpg)
+
+<sub>Photos: [Jebulon](https://commons.wikimedia.org/wiki/User:Jebulon), CC0, on Wikimedia Commons.</sub>
 
 **Status:** early; [0.1.0](https://github.com/adriandeleon/Mirada/releases/tag/v0.1.0) is the first release. JPEG, PNG, GIF, BMP, WebP, TIFF, PSD, HEIC, AVIF and JPEG XL,
 turned upright, animated where the file is. The native decoders (libjpeg-turbo, libwebp, libheif,
