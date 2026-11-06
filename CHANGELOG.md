@@ -21,6 +21,9 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ### Fixed
 
+- **Windows: Mirada starts on a PC without the Visual C++ runtime.** 0.2.x needed it installed
+  and otherwise failed at once ("vcruntime140.dll was not found", or exit code 0xC0000135); the
+  three DLLs now come with Mirada.
 - **The thumbnail strip no longer disappears when it is moved from the side back to the bottom.**
 - **Copy works on a greyscale PNG**: it did nothing, as the clipboard takes only colour pixels; it
   now goes as colour.

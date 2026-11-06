@@ -249,6 +249,14 @@ a prefetched neighbour is 2–8 ms for every format.
   `packaging/linux/prerm` naming a desktop-menu token broke 0.1.0's and 0.2.0's removal script, and
   with it every upgrade and removal (packaging/linux/NOTES.md). `check-linux-packages.sh` parses
   every maintainer script.
+- **The Windows image carries the Visual C++ runtime.** The native executable, AWT's DLLs, libheif
+  and libjxl import `vcruntime140.dll`, `vcruntime140_1.dll` and `msvcp140.dll`, which Windows does
+  not include. GitHub's runners have them installed, so every smoke test passed while 0.2.0's MSI
+  failed to start on a clean Windows (winget's validation: 0xC0000135, STATUS_DLL_NOT_FOUND).
+  `native-app-image.sh` copies them from Visual Studio's redistributable folder, then
+  `scripts/check-windows-dlls.py` reads every PE file's imports and fails on a DLL that is neither
+  in the image nor in its list of Windows' own. A new system DLL goes in that list; anything else
+  goes in the image.
 - **jpackage puts the whole launcher in the MSI as its Add/Remove Programs icon**, uncompressed in
   the Icon table. Its own launcher is a 100 KB stub; ours is the 78 MB native image, which made the
   MSI 110 MB around 36 MB of compressed files. Its `main.wxs` takes that file from the `JpIcon`
