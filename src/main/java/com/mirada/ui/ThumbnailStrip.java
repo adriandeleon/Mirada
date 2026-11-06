@@ -1,16 +1,22 @@
 package com.mirada.ui;
 
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.function.IntConsumer;
+import java.util.function.Predicate;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -34,7 +40,8 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>A list view, so only the cells on screen exist and only they ask for a thumbnail; scrolling a
  * folder of thousands asks for the few dozen in view, and the names asks for none. The image on
- * screen is the selected cell, kept in view as the arrow keys step. A click shows that image.
+ * screen is the selected cell, kept in view as the arrow keys step. A click shows that image. A
+ * bookmarked image wears a bookmark in its corner, or after its name ({@link #setMarked}).
  */
 final class ThumbnailStrip {
 
@@ -63,6 +70,10 @@ final class ThumbnailStrip {
     private boolean names;
     private boolean captions;
     private boolean laidOut;
+    /** Whether an image is bookmarked; asked as each cell shows one, and again by {@link #refreshMarks}. */
+    private Predicate<Path> marked = file -> false;
+    /** The cells alive, to show a mark that changed without making them again; weak, as the list drops them. */
+    private final Set<Cell> cells = Collections.newSetFromMap(new WeakHashMap<>());
 
     /** Starts dragging a file out, from a node, with a picture under the pointer. */
     @FunctionalInterface
@@ -153,6 +164,17 @@ final class ThumbnailStrip {
         list.setMaxHeight(height == Region.USE_COMPUTED_SIZE ? Double.MAX_VALUE : height);
     }
 
+    /** Says which images are bookmarked, for the cells' badges. */
+    void setMarked(Predicate<Path> marked) {
+        this.marked = marked;
+        refreshMarks();
+    }
+
+    /** Shows each cell's bookmark again, after one was set or taken off. */
+    void refreshMarks() {
+        for (Cell cell : cells) cell.showMark();
+    }
+
     /** Shows {@code images}, the one at {@code index} selected and in view. */
     void show(List<Path> images, int index) {
         if (!items.equals(images)) items.setAll(images);
@@ -173,6 +195,10 @@ final class ThumbnailStrip {
         private final Label name = new Label();
         private final Label caption = new Label();
         private final VBox captioned = new VBox(2);
+        /** On the picture's corner, and after the name in the list of names. */
+        private final Node badge = Icons.of(Icons.BOOKMARK);
+
+        private final Node nameBadge = Icons.of(Icons.BOOKMARK);
         /** The file whose thumbnail this cell asked for, until it shows another. */
         private @Nullable Path asked;
 
@@ -184,6 +210,14 @@ final class ThumbnailStrip {
             picture.setFitHeight(PICTURE);
             frame.getStyleClass().add("thumbnail");
             frame.setAlignment(Pos.CENTER);
+            badge.getStyleClass().add("thumbnail-mark");
+            badge.setMouseTransparent(true);
+            badge.setVisible(false);
+            StackPane.setAlignment(badge, Pos.TOP_RIGHT);
+            StackPane.setMargin(badge, new Insets(4));
+            frame.getChildren().add(badge);
+            nameBadge.getStyleClass().add("thumbnail-mark");
+            name.setContentDisplay(ContentDisplay.RIGHT);
             frame.setPrefSize(CELL - 8, CELL - 8);
             // Square in a captioned cell too, which is wider than the picture.
             frame.setMaxSize(CELL - 8, CELL - 8);
@@ -205,6 +239,15 @@ final class ThumbnailStrip {
                 drag.drag(this, file, picture.getImage());
                 e.consume();
             });
+            cells.add(this);
+        }
+
+        /** The bookmark on the picture's corner, or after the name, while the image has one. */
+        void showMark() {
+            Path file = getItem();
+            boolean on = !isEmpty() && file != null && marked.test(file);
+            badge.setVisible(on);
+            name.setGraphic(on ? nameBadge : null);
         }
 
         @Override
@@ -217,6 +260,7 @@ final class ThumbnailStrip {
                 thumbnails.release(previous);
                 asked = null;
             }
+            showMark();
             if (empty || file == null) {
                 setGraphic(null);
                 return;
