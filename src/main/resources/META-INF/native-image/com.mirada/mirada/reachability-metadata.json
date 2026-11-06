@@ -138,7 +138,18 @@
     {
       "type": "com.sun.glass.ui.Clipboard",
       "jniAccessible": true,
+      "fields": [
+        {
+          "name": "name"
+        }
+      ],
       "methods": [
+        {
+          "name": "actionPerformed",
+          "parameterTypes": [
+            "int"
+          ]
+        },
         {
           "name": "contentChanged",
           "parameterTypes": []
@@ -744,6 +755,24 @@
         {
           "name": "<init>",
           "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.glass.ui.win.WinSystemClipboard",
+      "jniAccessible": true,
+      "fields": [
+        {
+          "name": "ptr"
+        }
+      ],
+      "methods": [
+        {
+          "name": "fosSerialize",
+          "parameterTypes": [
+            "java.lang.String",
+            "long"
+          ]
         }
       ]
     },
@@ -1470,6 +1499,19 @@
     },
     {
       "type": "com.sun.prism.shader.Mask_TextureSuper_Loader",
+      "methods": [
+        {
+          "name": "loadShader",
+          "parameterTypes": [
+            "com.sun.prism.ps.ShaderFactory",
+            "java.lang.String",
+            "java.io.InputStream"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.prism.shader.Solid_ImagePattern_Loader",
       "methods": [
         {
           "name": "loadShader",
@@ -2480,6 +2522,9 @@
       ]
     },
     {
+      "type": "sun.net.www.protocol.data.Handler"
+    },
+    {
       "type": "sun.net.www.protocol.jar.Handler",
       "methods": [
         {
@@ -2533,6 +2578,9 @@
   ],
   "resources": [
     {
+      "glob": "META-INF/services/java.net.spi.URLStreamHandlerProvider"
+    },
+    {
       "glob": "META-INF/services/java.time.zone.ZoneRulesProvider"
     },
     {
@@ -2575,6 +2623,9 @@
       "glob": "com/sun/glass/ui/win/WindowDecoration.css"
     },
     {
+      "glob": "com/sun/glass/ui/win/themes*.properties"
+    },
+    {
       "glob": "com/sun/glass/utils/NativeLibLoader.class"
     },
     {
@@ -2600,6 +2651,9 @@
     },
     {
       "glob": "com/sun/prism/d3d/hlsl/FillPgram_Color.obj"
+    },
+    {
+      "glob": "com/sun/prism/d3d/hlsl/FillPgram_ImagePattern.obj"
     },
     {
       "glob": "com/sun/prism/d3d/hlsl/FillRoundRect_Color.obj"
@@ -2711,47 +2765,10 @@
     },
     {
       "bundle": "sun.util.logging.resources.logging"
-    },
-    {
-      "glob": "com/sun/glass/ui/win/themes*.properties"
     }
   ],
   "foreign": {
-    "upcalls": [
-      {
-        "returnType": "void",
-        "parameterTypes": [
-          "void*",
-          "void*",
-          "void*"
-        ]
-      }
-    ],
     "downcalls": [
-      {
-        "returnType": "void*",
-        "parameterTypes": [
-          "void*",
-          "void*",
-          "jlong"
-        ]
-      },
-      {
-        "returnType": "jint",
-        "parameterTypes": [
-          "void*",
-          "void*",
-          "void*"
-        ]
-      },
-      {
-        "returnType": "void*",
-        "parameterTypes": [
-          "void*",
-          "jint",
-          "void*"
-        ]
-      },
       {
         "returnType": "jint",
         "parameterTypes": [
@@ -2761,6 +2778,30 @@
           "void*",
           "jint",
           "jint"
+        ]
+      },
+      {
+        "returnType": "void*",
+        "parameterTypes": [
+          "void*",
+          "jint",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "void*",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "jlong"
         ]
       },
       {
@@ -2786,14 +2827,14 @@
         "returnType": "jint",
         "parameterTypes": [
           "void*",
-          "jint"
+          "struct(jint,jint)"
         ]
       },
       {
         "returnType": "jint",
         "parameterTypes": [
           "void*",
-          "struct(jint,jint)"
+          "jint"
         ]
       },
       {
@@ -2933,6 +2974,28 @@
       {
         "returnType": "struct(jint,jint,void*)",
         "parameterTypes": [
+          "void*"
+        ]
+      }
+    ],
+    "upcalls": [
+      {
+        "returnType": "void",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "void*"
+        ]
+      }
+    ],
+    "directUpcalls": [
+      {
+        "class": "com.mirada.os.MacOpenFiles$Observer",
+        "method": "received",
+        "returnType": "void",
+        "parameterTypes": [
+          "void*",
+          "void*",
           "void*"
         ]
       }
