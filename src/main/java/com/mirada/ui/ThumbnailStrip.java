@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.function.IntConsumer;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -17,6 +18,7 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.ContentDisplay;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -24,6 +26,7 @@ import javafx.scene.control.OverrunStyle;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -41,7 +44,8 @@ import org.jspecify.annotations.Nullable;
  * <p>A list view, so only the cells on screen exist and only they ask for a thumbnail; scrolling a
  * folder of thousands asks for the few dozen in view, and the names asks for none. The image on
  * screen is the selected cell, kept in view as the arrow keys step. A click shows that image. A
- * bookmarked image wears a bookmark in its corner, or after its name ({@link #setMarked}).
+ * bookmarked image wears a bookmark in its corner, or after its name ({@link #setMarked}). A
+ * right-click opens the strip's own menu ({@link #setMenu}), where it can be closed or laid out.
  */
 final class ThumbnailStrip {
 
@@ -92,6 +96,17 @@ final class ThumbnailStrip {
         list.setFocusTraversable(false);
         list.setCellFactory(view -> new Cell(pick, drag));
         setLayout(false, false, false);
+    }
+
+    /**
+     * What a right-click on the strip opens: closing it, and where it stands and what it shows. Made
+     * when asked for, so it ticks what is on now.
+     */
+    void setMenu(Supplier<ContextMenu> menu) {
+        list.setOnContextMenuRequested(e -> {
+            menu.get().show(list, e.getScreenX(), e.getScreenY());
+            e.consume();
+        });
     }
 
     ListView<Path> node() {
@@ -230,6 +245,11 @@ final class ThumbnailStrip {
             caption.setTextOverrun(OverrunStyle.CENTER_ELLIPSIS);
             caption.setAlignment(Pos.CENTER);
             captioned.setAlignment(Pos.TOP_CENTER);
+            // The selected cell is the image on screen: a right-click opens the menu, it never
+            // moves the selection to another.
+            addEventFilter(MouseEvent.MOUSE_PRESSED, e -> {
+                if (e.getButton() != MouseButton.PRIMARY) e.consume();
+            });
             setOnMouseClicked(e -> {
                 if (e.getButton() == MouseButton.PRIMARY && !isEmpty()) pick.accept(getIndex());
             });

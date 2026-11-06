@@ -252,7 +252,7 @@ public final class ViewerWindow {
 
         root = new BorderPane(canvas);
         root.getStyleClass().add("mirada");
-        titleBar = new TitleBar(stage, this::run, infoShowing);
+        titleBar = new TitleBar(stage, this::run, infoShowing, thumbnailsShowing);
         root.setTop(titleBar.node());
         infoShowing.addListener((o, was, now) -> {
             root.setRight(now ? infoPanel().node() : null);
@@ -355,6 +355,7 @@ public final class ViewerWindow {
         if (built == null) {
             built = new OnScreenControls(canvas, this::run);
             built.setIdle(settings.controlsHideSeconds());
+            built.setVertical(Command.vertical());
             controls = built;
             updateControls();
         }
@@ -375,6 +376,7 @@ public final class ViewerWindow {
         if (made == null) {
             made = new ThumbnailStrip(index -> go(folder.jump(index)), viewport.thumbnailDragger());
             made.setMarked(file -> bookmarks.loaded() && bookmarks.isBookmarked(file));
+            made.setMenu(this::stripMenu);
             strip = made;
         }
         return made;
@@ -385,6 +387,7 @@ public final class ViewerWindow {
      * pictures or names, or takes it away when it is closed. Building it waits for its first opening.
      */
     private void placeStrip() {
+        stepAlong(thumbnailsShowing.get() && settings.thumbnailsAtSide());
         ThumbnailStrip built = strip;
         if (!thumbnailsShowing.get()) {
             if (built != null) {
@@ -398,6 +401,33 @@ public final class ViewerWindow {
         shown.setLayout(side, settings.thumbnailNames(), settings.thumbnailCaptions());
         ThumbnailStrip.place(root, shown.node(), side);
         refreshStrip();
+    }
+
+    /**
+     * Steps the folder along the strip: Up and Down, with up and down arrows over the image, while
+     * it stands down the side; Left and Right otherwise ({@link Command#vertical()}).
+     */
+    private void stepAlong(boolean vertical) {
+        if (vertical == Command.vertical()) return;
+        Command.setVertical(vertical);
+        OnScreenControls built = controls;
+        if (built != null) built.setVertical(vertical);
+        ShortcutsWindow shortcuts = shortcutsWindow;
+        if (shortcuts != null) shortcuts.refresh();
+    }
+
+    /** The strip's own menu: closing it, and where it stands and what it shows. */
+    private ContextMenu stripMenu() {
+        MenuItem hide = new MenuItem("Hide Thumbnails", Icons.of(Icons.CLOSE));
+        hide.setOnAction(e -> run(Command.THUMBNAILS));
+        ContextMenu menu = new ContextMenu(
+                hide,
+                new SeparatorMenuItem(),
+                item(Command.THUMBNAILS_AT_SIDE),
+                item(Command.THUMBNAIL_CAPTIONS),
+                item(Command.THUMBNAIL_NAMES));
+        menu.setAutoHide(true);
+        return menu;
     }
 
     /** The strip, when it is open, on the folder's current image. */
@@ -647,7 +677,13 @@ public final class ViewerWindow {
         boolean paletteKey = PaletteChords.opens(e);
         Command command = paletteKey
                 ? Command.PALETTE
-                : Command.forKey(e.getCode(), e.isShiftDown(), e.isShortcutDown(), e.isControlDown(), Command.MAC);
+                : Command.forKey(
+                        e.getCode(),
+                        e.isShiftDown(),
+                        e.isShortcutDown(),
+                        e.isControlDown(),
+                        Command.MAC,
+                        Command.vertical());
         // While the palette is up, keys are its own (typing "r" must not rotate the image); only its
         // chord reaches here, to close it again — unless the palette moves by that key (C-p).
         if (palette.isShowing()) {

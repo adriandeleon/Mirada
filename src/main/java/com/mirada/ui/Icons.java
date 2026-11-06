@@ -24,6 +24,10 @@ final class Icons {
     static final String MENU = "M4 6.5 H20 M4 12 H20 M4 17.5 H20";
     static final String PREVIOUS = "M15 18 L9 12 L15 6";
     static final String NEXT = "M9 18 L15 12 L9 6";
+    /** Previous and next with the thumbnails down the side, where the folder runs top to bottom. */
+    static final String UP = "M18 15 L12 9 L6 15";
+
+    static final String DOWN = "M6 9 L12 15 L18 9";
     static final String CHEVRON_DOWN = "M7 10 L12 15 L17 10";
     static final String ZOOM_IN =
             "M10.5 3.5 A7 7 0 1 1 10.49 3.5 Z M20.5 20.5 L15.5 15.5 M10.5 7.5 V13.5 M7.5 10.5 H13.5";
@@ -67,8 +71,8 @@ final class Icons {
     /** The icon a menu shows beside {@code command}, or null for none (the order's choices, a tick's). */
     static @Nullable String forCommand(Command command) {
         return switch (command) {
-            case NEXT -> NEXT;
-            case PREVIOUS -> PREVIOUS;
+            case NEXT -> Command.vertical() ? DOWN : NEXT;
+            case PREVIOUS -> Command.vertical() ? UP : PREVIOUS;
             case FIRST -> FIRST;
             case LAST -> LAST;
             case GO_TO_IMAGE -> SEARCH;

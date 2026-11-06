@@ -74,19 +74,42 @@ class CommandTest {
     /** The chord a command shows, in the palette and the context menu, must be one that runs it. */
     @Test
     void everyShownChordRunsItsCommand() {
-        for (boolean mac : new boolean[] {false, true}) {
-            for (Command command : Command.values()) {
-                if (command == Command.PALETTE) continue; // PaletteChords' keys, tested there
-                if (!(command.chord(mac) instanceof KeyCodeCombination chord)) continue; // + and -, by character
-                boolean shift = chord.getShift() == KeyCombination.ModifierValue.DOWN;
-                boolean shortcut = chord.getShortcut() == KeyCombination.ModifierValue.DOWN;
-                boolean control = mac ? chord.getControl() == KeyCombination.ModifierValue.DOWN : shortcut;
-                assertEquals(
-                        command,
-                        Command.forKey(chord.getCode(), shift, shortcut, control, mac),
-                        command.name() + (mac ? " on macOS" : ""));
+        for (boolean vertical : new boolean[] {false, true}) {
+            for (boolean mac : new boolean[] {false, true}) {
+                for (Command command : Command.values()) {
+                    if (command == Command.PALETTE) continue; // PaletteChords' keys, tested there
+                    if (!(command.chord(mac, vertical) instanceof KeyCodeCombination chord)) continue; // + and -
+                    boolean shift = chord.getShift() == KeyCombination.ModifierValue.DOWN;
+                    boolean shortcut = chord.getShortcut() == KeyCombination.ModifierValue.DOWN;
+                    boolean control = mac ? chord.getControl() == KeyCombination.ModifierValue.DOWN : shortcut;
+                    assertEquals(
+                            command,
+                            Command.forKey(chord.getCode(), shift, shortcut, control, mac, vertical),
+                            command.name() + (mac ? " on macOS" : "") + (vertical ? ", strip at the side" : ""));
+                }
             }
         }
+    }
+
+    @Test
+    void withTheStripDownTheSideUpAndDownStepAndTheArrowsAcrossPan() {
+        assertEquals(Command.NEXT, side(KeyCode.DOWN, false));
+        assertEquals(Command.PREVIOUS, side(KeyCode.UP, false));
+        assertEquals(Command.PAN_DOWN, side(KeyCode.DOWN, true));
+        assertEquals(Command.PAN_UP, side(KeyCode.UP, true));
+        assertEquals(Command.PAN_LEFT, side(KeyCode.LEFT, false));
+        assertEquals(Command.PAN_RIGHT, side(KeyCode.RIGHT, false));
+        assertEquals(Command.PAN_RIGHT, side(KeyCode.RIGHT, true));
+        // The keys that step whichever way the strip stands still do.
+        assertEquals(Command.NEXT, side(KeyCode.PAGE_DOWN, false));
+        assertEquals(Command.PREVIOUS, side(KeyCode.BACK_SPACE, false));
+        assertEquals(Command.NEXT, side(KeyCode.SPACE, false));
+        assertEquals(new KeyCodeCombination(KeyCode.DOWN), Command.NEXT.chord(false, true));
+        assertEquals(new KeyCodeCombination(KeyCode.UP), Command.PREVIOUS.chord(true, true));
+        // Along the bottom, as before.
+        assertEquals(Command.NEXT, key(KeyCode.RIGHT, false, false));
+        assertEquals(Command.PAN_DOWN, key(KeyCode.DOWN, false, false));
+        assertEquals(new KeyCodeCombination(KeyCode.RIGHT), Command.NEXT.chord(false, false));
     }
 
     @Test
@@ -254,6 +277,11 @@ class CommandTest {
         // A file that would not decode can still be bookmarked, to come back to.
         assertNull(Command.NOTE.unavailable(0, 1, false));
         assertEquals("Bookmarks", Command.GO_TO_BOOKMARK.group());
+    }
+
+    /** A press on Linux or Windows with the thumbnails down the side. */
+    private static @Nullable Command side(KeyCode code, boolean shift) {
+        return Command.forKey(code, shift, false, false, false, true);
     }
 
     /** A press on macOS: {@code shortcut} is Cmd, {@code control} the Ctrl key. */
