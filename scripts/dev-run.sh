@@ -54,12 +54,20 @@ esac
 
 jvm=()
 app=()
+steps=0
 for arg in "$@"; do
+    # After -- (scripts/headless-run.sh's steps) everything is the program's.
+    if [ "$steps" = 1 ]; then app+=("$arg"); continue; fi
     case "$arg" in
+        --) steps=1; app+=("$arg") ;;
         -*) jvm+=("$arg") ;;
         *) app+=("$arg") ;;
     esac
 done
+
+# scripts/headless-run.sh starts its driver from the test classes, patched into the module.
+patch=()
+if [ -n "${MIRADA_PATCH:-}" ]; then patch=(--patch-module "com.mirada=$MIRADA_PATCH"); fi
 
 # Glass's Mac package exists only on macOS (os.MacAppMenu); elsewhere exporting it would warn.
 mac_exports=()
@@ -71,7 +79,8 @@ exec java \
     --enable-native-access=javafx.graphics,com.mirada \
     --add-exports=javafx.graphics/com.sun.glass.ui=com.mirada \
     ${mac_exports[@]+"${mac_exports[@]}"} \
+    ${patch[@]+"${patch[@]}"} \
     "-Dprism.order=$PRISM" \
     -Dmirada.codecs=target/codecs \
     ${jvm[@]+"${jvm[@]}"} \
-    -m com.mirada/com.mirada.App ${app[@]+"${app[@]}"}
+    -m "${MIRADA_MAIN:-com.mirada/com.mirada.App}" ${app[@]+"${app[@]}"}
