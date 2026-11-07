@@ -492,5 +492,5 @@ Termina and Torrenta. `mvn compile` fails on any null that can reach a type not 
 
 Signing:
 Developer ID and notarization on macOS (wired, waiting for the secrets), a code-signing certificate
-on Windows. A Homebrew cask (Homebrew takes only notarized apps); winget-pkgs has not been sent Mirada yet. A TIFF's own EXIF when an edit of it is saved; a profile for a HEIF with nclx colours or a JPEG XL; a Brotli-compressed JPEG XL Exif box. Trash on Windows and macOS is untested. HEIC grids are tested on an iPhone-style file, not a real iPhone photo. The app itself has not been run on Windows
+on Windows. A Homebrew cask (Homebrew takes only notarized apps); winget-pkgs has 0.3.0 under review (microsoft/winget-pkgs#471599), not yet merged. A TIFF's own EXIF when an edit of it is saved; a profile for a HEIF with nclx colours or a JPEG XL; a Brotli-compressed JPEG XL Exif box. Trash on Windows and macOS is untested. HEIC grids are tested on an iPhone-style file, not a real iPhone photo. The app itself has not been run on Windows
 or macOS by hand; CI only tests there, and the macOS Finder double-click is tested only through `open -a` on CI; on an Intel Mac (the JVM image) a launch from Finder still opens an empty window.
