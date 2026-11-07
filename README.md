@@ -55,8 +55,8 @@ checks every download.
 
 Open a photo or a folder from the command line, with Ctrl+O, or by dropping it on the window.
 Drag to pan a zoomed image; the wheel zooms about the pointer. Move the pointer over the image for
-the previous/next and zoom controls; the header's buttons go full screen, rotate, open the
-properties sidebar and the main menu.
+the full-screen, previous/next and zoom controls; the header's buttons rotate, open the properties
+sidebar and the main menu.
 
 | Key | Does |
 |---|---|

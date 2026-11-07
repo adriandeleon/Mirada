@@ -267,6 +267,7 @@ public final class ViewerWindow {
         Scene scene = new Scene(overlay, 1100, 760);
         scene.getStylesheets().add(stylesheet());
         scene.addEventFilter(KeyEvent.KEY_PRESSED, this::onKey);
+        Popups.closeOnPressOutside(stage, scene);
         scene.setOnDragOver(this::onDragOver);
         scene.setOnDragDropped(this::onDragDropped);
         viewport.setOnSwipe(step -> run(step > 0 ? Command.NEXT : Command.PREVIOUS));
@@ -284,6 +285,8 @@ public final class ViewerWindow {
         stage.setFullScreenExitHint("");
         stage.fullScreenProperty().addListener((obs, was, now) -> {
             titleBar.fullScreen(root, now);
+            OnScreenControls built = controls;
+            if (built != null) built.setFullScreen(now);
             root.pseudoClassStateChanged(FULL_SCREEN, now);
             showPointer();
         });
@@ -356,6 +359,7 @@ public final class ViewerWindow {
             built = new OnScreenControls(canvas, this::run);
             built.setIdle(settings.controlsHideSeconds());
             built.setVertical(Command.vertical());
+            built.setFullScreen(stage.isFullScreen());
             controls = built;
             updateControls();
         }
@@ -427,7 +431,7 @@ public final class ViewerWindow {
                 item(Command.THUMBNAILS_AT_SIDE),
                 item(Command.THUMBNAIL_CAPTIONS),
                 item(Command.THUMBNAIL_NAMES));
-        menu.setAutoHide(true);
+        Popups.closedByWindow(menu);
         return menu;
     }
 
@@ -1370,7 +1374,7 @@ public final class ViewerWindow {
                 item(Command.THUMBNAIL_NAMES),
                 item(Command.FULL_SCREEN),
                 item(Command.SLIDESHOW));
-        menu.setAutoHide(true);
+        Popups.closedByWindow(menu);
         return menu;
     }
 

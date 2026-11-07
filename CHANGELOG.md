@@ -33,6 +33,11 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ### Changed
 
+- **Full screen is a floating button over the image's top left**, with the previous/next and zoom
+  controls, in place of the header's button; in full screen it leaves it, so the mouse has a way
+  back with the header gone. A Mac has it too. An image's bookmark and note badge stands beside it.
+- **macOS: the header's ☰ menu is back**, beside the menu bar rather than instead of it, so the
+  window's own commands are a click away there as on Linux and Windows.
 - **The header shows the folder before the file name**, as "folder / photo.jpg" on one line. It
   stood on a second line under the name, which the header was too short to show.
 - **A saved edit keeps the photo's XMP**: its title, description, keywords, rating and rights, as
@@ -43,6 +48,9 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ### Fixed
 
+- **A click anywhere outside a menu closes it.** On Linux a click on the image could leave the
+  right-click menu open, and each further right-click opened another beside it. Any press in the
+  window now closes its open menus, the right-click menus and the header's and zoom menus alike.
 - **The minimize, maximize and close buttons are legible in the dark theme on Linux.** JavaFX drew
   them by the system's light or dark setting, not Mirada's theme, so a dark theme over a light
   setting left them dark grey on the dark header bar; they now follow the theme.

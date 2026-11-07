@@ -20,7 +20,9 @@ import javafx.util.Duration;
 
 /**
  * The floating controls over the image, GNOME Image Viewer's: previous and next in a pill at the
- * bottom left, zoom and its menu in a pill at the bottom right.
+ * bottom left, zoom and its menu in a pill at the bottom right, and full screen in one of its own at
+ * the top left, where it stays within reach in full screen, the header gone. On a Mac too: its
+ * green window button goes with the title bar in full screen.
  *
  * <p>They show when the pointer moves over the image and fade out after {@link #IDLE} without
  * movement, so a still image is just the image; never while the pointer is on one of them. The
@@ -33,10 +35,12 @@ final class OnScreenControls {
 
     private final HBox navigation;
     private final HBox zooming;
+    private final HBox screen;
     private final Button previous = button(Icons.PREVIOUS, "Previous Image (←)");
     private final Button next = button(Icons.NEXT, "Next Image (→)");
     private final Button zoom = button(Icons.ZOOM_IN, "Actual Size (1)");
     private final MenuButton zoomMenu = new MenuButton();
+    private final Button fullScreen = button(Icons.FULL_SCREEN, "Full Screen (F)");
     private final PauseTransition idle = new PauseTransition(IDLE);
     private boolean fitted = true;
     private boolean hasImage;
@@ -63,14 +67,20 @@ final class OnScreenControls {
 
         navigation = pill(previous, next);
         zooming = pill(zoom, zoomMenu);
+        fullScreen.setOnAction(e -> run.accept(Command.FULL_SCREEN));
+        screen = pill(fullScreen);
         StackPane.setAlignment(navigation, Pos.BOTTOM_LEFT);
         StackPane.setAlignment(zooming, Pos.BOTTOM_RIGHT);
+        StackPane.setAlignment(screen, Pos.TOP_LEFT);
         StackPane.setMargin(navigation, new Insets(0, 0, 18, 18));
         StackPane.setMargin(zooming, new Insets(0, 18, 18, 0));
-        canvas.getChildren().addAll(navigation, zooming);
+        StackPane.setMargin(screen, new Insets(18, 0, 0, 18));
+        canvas.getChildren().addAll(navigation, zooming, screen);
 
         idle.setOnFinished(e -> {
-            if (!navigation.isHover() && !zooming.isHover() && !zoomMenu.isShowing()) fade(false);
+            if (!navigation.isHover() && !zooming.isHover() && !screen.isHover() && !zoomMenu.isShowing()) {
+                fade(false);
+            }
         });
         canvas.addEventFilter(MouseEvent.MOUSE_MOVED, e -> wake());
         canvas.addEventFilter(MouseEvent.MOUSE_DRAGGED, e -> wake());
@@ -82,6 +92,15 @@ final class OnScreenControls {
         });
         setVisible(navigation, false);
         setVisible(zooming, false);
+        setVisible(screen, false);
+    }
+
+    /** The full-screen button's way: into full screen, or out of it. */
+    void setFullScreen(boolean full) {
+        fullScreen.setGraphic(Icons.of(full ? Icons.LEAVE_FULL_SCREEN : Icons.FULL_SCREEN));
+        String tip = full ? "Leave Full Screen (F)" : "Full Screen (F)";
+        fullScreen.getTooltip().setText(tip);
+        fullScreen.setAccessibleText(spoken(tip));
     }
 
     /**
@@ -132,7 +151,7 @@ final class OnScreenControls {
     }
 
     private void fade(boolean in) {
-        for (Region pill : new Region[] {navigation, zooming}) {
+        for (Region pill : new Region[] {navigation, zooming, screen}) {
             if (in == pill.isVisible() && pill.getOpacity() == (in ? 1 : 0)) continue;
             FadeTransition transition = new FadeTransition(Duration.millis(in ? 120 : 250), pill);
             transition.setToValue(in ? 1 : 0);

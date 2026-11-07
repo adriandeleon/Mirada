@@ -28,6 +28,9 @@ In this order, when they pull against each other:
   AppImage on Linux, dmg on macOS, msi on Windows);
   `scripts/check-linux-packages.sh target/installers branding/mirada.png` checks the Linux ones.
 - Run without Maven (any JVM option, no build time counted): `scripts/dev-run.sh [-D…] photo.jpg`
+- Look at the UI without a window on the desktop (keys, clicks, screenshots):
+  `scripts/headless-run.sh photo.jpg -- 'key C-S-p' 'type rot' 'shot /tmp/palette.png'`; the steps
+  are listed in `src/test/java/com/mirada/ui/HeadlessDriver.java`
 - Start-up, median of warm runs: `scripts/measure-startup.sh -n 7 target/dist/Mirada/bin/Mirada photo.jpg`
   (or `MIRADA_NO_BUILD=1 … scripts/dev-run.sh photo.jpg`). Stepping: `MIRADA_PERF=1 MIRADA_PERF_TOUR=1`
   on any launcher prints each step's time (`MIRADA_PERF_TOUR_PAUSE=0` for the no-prefetch worst case).
@@ -389,8 +392,9 @@ a prefetched neighbour is 2–8 ms for every format.
   native image.
 - **The macOS menu bar is JavaFX's system `MenuBar`, the application menu is glass's.** `MacMenus`
   builds File, Image, View, Go and Help from `Command` after the first paint, unmanaged in the scene
-  (it draws nothing there). Only chords with Cmd are key equivalents: a bare one could be taken by
-  the menu while the palette's field has focus. Items grey only while their menu is open
+  (it draws nothing there); the header's ☰ menu stays as well, as on the other platforms. Only
+  chords with Cmd are key equivalents: a bare one could be taken by the menu while the palette's
+  field has focus. Items grey only while their menu is open
   (`onShowing`, by `Command.unavailable`) and are enabled again on close, so a key equivalent never
   meets a stale state. JavaFX gives no way into the application menu (Hide, Quit), so `MacAppMenu`
   gets it from `com.sun.glass.ui.mac.MacApplication.getAppleMenu`, by reflection, since that
@@ -460,9 +464,16 @@ a prefetched neighbour is 2–8 ms for every format.
   to pan; a wheel zooms. Windows and Linux touchpads report no fingers and so still zoom; Windows
   sends a pinch as Ctrl+wheel. Untested on a real Mac trackpad. A command that cannot run (`Command.unavailable`)
   is greyed with its reason in the palette and disabled in the context menu.
-- **Screenshots on this Wayland desktop go through XWayland.** JavaFX has no Wayland backend, so
-  the window is an X window: `xwininfo -root -tree | grep com.mirada.App` finds it and
-  `import -window <id>` captures it. Key presses can be sent with XTest.
+- **Agents look at the UI headless, never on the desktop.** Someone works at this machine, and a
+  Mirada window popping up takes their focus. `scripts/headless-run.sh` runs the app on JavaFX's
+  Headless platform with software rendering, a throwaway settings folder and the headless clipboard,
+  and `HeadlessDriver` (a test class, patched into the module) sends keys and clicks through
+  `javafx.scene.robot.Robot` and saves screenshots. Its screen is a fixed 1000×1000 and throws on a
+  window drawn past an edge, so the driver puts the window at 1000×760 in the corner and moves every
+  popup inside as it shows (a menu opens where it fits, not where the desktop would put it). A shot
+  is each window's scene snapshot, composed: the robot's capture reads one buffer every window draws
+  into, so the main window's next frame paints over an open menu. There are no window buttons, no
+  GTK and no XWayland, so check those on the real desktop only when the user asks for it.
 
 ## Conventions
 

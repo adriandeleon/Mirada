@@ -12,7 +12,8 @@ import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 
 /**
- * The image's own marks over its top-left corner, in a floating control's pill: a bookmark while it
+ * The image's own marks near its top-left corner, in a floating control's pill, right of where the
+ * full-screen button floats ({@link OnScreenControls}) so the two never cover each other: a bookmark while it
  * is bookmarked, a note while it has one, its words in the tooltip. Unlike the floating controls it
  * stays, as it says something about the image rather than offering to do something to it; clicked,
  * the bookmark comes off and the note opens to edit. Built the first time an image has a mark, so a
@@ -51,7 +52,8 @@ final class MarksBadge {
         pill.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         pill.setPickOnBounds(false);
         StackPane.setAlignment(pill, Pos.TOP_LEFT);
-        StackPane.setMargin(pill, new Insets(18, 0, 0, 18));
+        // 18 from the edge, past the full-screen pill (a 34-pixel button in 6 of padding), 8 apart.
+        StackPane.setMargin(pill, new Insets(18, 0, 0, 18 + 46 + 8));
         canvas.getChildren().add(pill);
     }
 
