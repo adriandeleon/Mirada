@@ -431,7 +431,7 @@ public final class ViewerWindow {
                 item(Command.THUMBNAILS_AT_SIDE),
                 item(Command.THUMBNAIL_CAPTIONS),
                 item(Command.THUMBNAIL_NAMES));
-        menu.setAutoHide(true);
+        Popups.closedByWindow(menu);
         return menu;
     }
 
@@ -1374,7 +1374,7 @@ public final class ViewerWindow {
                 item(Command.THUMBNAIL_NAMES),
                 item(Command.FULL_SCREEN),
                 item(Command.SLIDESHOW));
-        menu.setAutoHide(true);
+        Popups.closedByWindow(menu);
         return menu;
     }
 

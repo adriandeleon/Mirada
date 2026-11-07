@@ -48,6 +48,9 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ### Fixed
 
+- **A click anywhere outside a menu closes it.** On Linux a click on the image could leave the
+  right-click menu open, and each further right-click opened another beside it. Any press in the
+  window now closes its open menus, the right-click menus and the header's and zoom menus alike.
 - **The minimize, maximize and close buttons are legible in the dark theme on Linux.** JavaFX drew
   them by the system's light or dark setting, not Mirada's theme, so a dark theme over a light
   setting left them dark grey on the dark header bar; they now follow the theme.
