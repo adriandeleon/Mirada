@@ -472,8 +472,12 @@ a prefetched neighbour is 2–8 ms for every format.
   window drawn past an edge, so the driver puts the window at 1000×760 in the corner and moves every
   popup inside as it shows (a menu opens where it fits, not where the desktop would put it). A shot
   is each window's scene snapshot, composed: the robot's capture reads one buffer every window draws
-  into, so the main window's next frame paints over an open menu. There are no window buttons, no
-  GTK and no XWayland, so check those on the real desktop only when the user asks for it.
+  into, so the main window's next frame paints over an open menu. What Mirada would start outside
+  itself cannot reach the desktop: xdg-open, gdbus and dbus-send are stubs that list their calls at
+  the end (Show in Folder shows as a `gdbus … ShowItems`), and the display and session bus are unset.
+  Delete, Rename and saving an edit do change files, so drive a copy of a folder for those; file
+  dialogs are unsupported there and fail the run. There are no window buttons, no GTK and no
+  XWayland, so check those on the real desktop only when the user asks for it.
 
 ## Conventions
 
