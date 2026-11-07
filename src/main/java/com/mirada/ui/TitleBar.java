@@ -33,9 +33,9 @@ import javafx.stage.StageStyle;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The window's top row, GNOME Image Viewer's: full screen on the left, the file name in the middle,
- * rotate, info and the main menu on the right, and the window buttons after them. macOS and Windows
- * get their own conventions ({@link Layout}).
+ * The window's top row, GNOME Image Viewer's: the file name in the middle, rotate, info and the main
+ * menu on the right, and the window buttons after them. macOS and Windows get their own conventions
+ * ({@link Layout}). Full screen is a floating control over the image ({@link OnScreenControls}).
  *
  * <p>Where the platform supports JavaFX 27's extended windows this is a {@link HeaderBar}: the stage
  * gives up its title bar and keeps its window buttons, drawn over the right of this row. Termina's
@@ -47,18 +47,14 @@ import org.jspecify.annotations.Nullable;
 final class TitleBar {
 
     /**
-     * What the row holds on a platform. A Mac has no full-screen button, as its green window button
-     * is one and sits beside it, and no menu, as the menu bar holds its items ({@link MacMenus});
-     * its title stays centred, as AppKit centres one. Windows puts the title on the left, after the
-     * button, as its own title bars do. Linux is GNOME's.
+     * Where the row puts the title on a platform. Windows puts it on the left, as its own title bars
+     * do; a Mac centres it, as AppKit does, and so does GNOME. Every platform has the main menu, a
+     * Mac's beside its menu bar ({@link MacMenus}), which holds the same commands.
      */
-    record Layout(boolean fullScreenButton, boolean menuButton, boolean titleLeft) {
+    record Layout(boolean titleLeft) {
 
         static Layout of(String osName) {
-            String os = osName.toLowerCase(Locale.ROOT);
-            if (os.startsWith("mac")) return new Layout(false, false, false);
-            if (os.startsWith("windows")) return new Layout(true, true, true);
-            return new Layout(true, true, false);
+            return new Layout(osName.toLowerCase(Locale.ROOT).startsWith("windows"));
         }
     }
 
@@ -136,7 +132,6 @@ final class TitleBar {
     private final Heading heading = new Heading(folder, slash, title);
     private @Nullable Tooltip folderTip;
     private @Nullable Path folderShown;
-    private final Button fullScreen = button(Icons.FULL_SCREEN);
     private final Button rotate = button(Icons.ROTATE);
     private final Consumer<Command> run;
     private final BooleanProperty infoShowing;
@@ -169,7 +164,6 @@ final class TitleBar {
         heading.getStyleClass().add("header-heading");
         heading.setAlignment(LAYOUT.titleLeft() ? Pos.CENTER_LEFT : Pos.CENTER);
         heading.setMinWidth(0);
-        fullScreen.setOnAction(e -> run.accept(Command.FULL_SCREEN));
         // A shift-click turns the other way. An ActionEvent carries no modifiers, so the press that
         // leads to it records them.
         boolean[] shift = {false};
@@ -183,18 +177,15 @@ final class TitleBar {
         info.selectedProperty().bindBidirectional(infoShowing);
         menu.setGraphic(Icons.of(Icons.MENU));
         menu.getStyleClass().addAll("header-button", "flat", "no-arrow");
-        for (Node node : new Node[] {fullScreen, rotate, info, menu}) node.setFocusTraversable(false);
+        for (Node node : new Node[] {rotate, info, menu}) node.setFocusTraversable(false);
         // Icons only: these are what a screen reader says for them (VoiceOver, Narrator, Orca).
-        fullScreen.setAccessibleText(Command.FULL_SCREEN.label());
         rotate.setAccessibleText(Command.ROTATE_CLOCKWISE.label());
         info.setAccessibleText(Command.INFO.label());
         menu.setAccessibleText("Main Menu");
 
-        HBox right = new HBox(4, rotate, info);
-        if (LAYOUT.menuButton()) right.getChildren().add(menu);
+        HBox right = new HBox(4, rotate, info, menu);
         right.setAlignment(Pos.CENTER_RIGHT);
         HBox left = new HBox(4);
-        if (LAYOUT.fullScreenButton()) left.getChildren().add(fullScreen);
         if (LAYOUT.titleLeft()) left.getChildren().add(heading);
         left.setAlignment(Pos.CENTER_LEFT);
         @Nullable Heading centre = LAYOUT.titleLeft() ? null : heading;
@@ -223,13 +214,11 @@ final class TitleBar {
      * before then, and building them first measurably delayed that image (ViewerWindow.afterFirstPaint).
      */
     void finish() {
-        fullScreen.setTooltip(new Tooltip("Full Screen (F)"));
         Tooltip tip = new Tooltip(folderShown == null ? "" : folderShown.toString());
         folderTip = tip;
         folder.setTooltip(tip);
         rotate.setTooltip(new Tooltip("Rotate Right (R); Shift-click rotates left"));
         info.setTooltip(new Tooltip("Image Properties (I)"));
-        if (!LAYOUT.menuButton()) return;
         menu.setTooltip(new Tooltip("Main Menu"));
         menu.getItems()
                 .addAll(
@@ -291,8 +280,6 @@ final class TitleBar {
      */
     void fullScreen(BorderPane root, boolean full) {
         root.setTop(full ? null : row);
-        fullScreen.setGraphic(Icons.of(full ? Icons.LEAVE_FULL_SCREEN : Icons.FULL_SCREEN));
-        fullScreen.setAccessibleText(full ? "Leave Full Screen" : Command.FULL_SCREEN.label());
         if (extended) HeaderBar.setSystemButtonHeight(stage, full ? 0 : HeaderBar.USE_DEFAULT_SIZE);
     }
 

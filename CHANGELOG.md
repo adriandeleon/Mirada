@@ -33,6 +33,11 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ### Changed
 
+- **Full screen is a floating button over the image's top left**, with the previous/next and zoom
+  controls, in place of the header's button; in full screen it leaves it, so the mouse has a way
+  back with the header gone. A Mac has it too. An image's bookmark and note badge stands beside it.
+- **macOS: the header's ☰ menu is back**, beside the menu bar rather than instead of it, so the
+  window's own commands are a click away there as on Linux and Windows.
 - **The header shows the folder before the file name**, as "folder / photo.jpg" on one line. It
   stood on a second line under the name, which the header was too short to show.
 - **A saved edit keeps the photo's XMP**: its title, description, keywords, rating and rights, as
