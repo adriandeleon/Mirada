@@ -392,8 +392,9 @@ a prefetched neighbour is 2–8 ms for every format.
   native image.
 - **The macOS menu bar is JavaFX's system `MenuBar`, the application menu is glass's.** `MacMenus`
   builds File, Image, View, Go and Help from `Command` after the first paint, unmanaged in the scene
-  (it draws nothing there). Only chords with Cmd are key equivalents: a bare one could be taken by
-  the menu while the palette's field has focus. Items grey only while their menu is open
+  (it draws nothing there); the header's ☰ menu stays as well, as on the other platforms. Only
+  chords with Cmd are key equivalents: a bare one could be taken by the menu while the palette's
+  field has focus. Items grey only while their menu is open
   (`onShowing`, by `Command.unavailable`) and are enabled again on close, so a key equivalent never
   meets a stale state. JavaFX gives no way into the application menu (Hide, Quit), so `MacAppMenu`
   gets it from `com.sun.glass.ui.mac.MacApplication.getAppleMenu`, by reflection, since that
