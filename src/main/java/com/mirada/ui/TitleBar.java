@@ -227,6 +227,7 @@ final class TitleBar {
                         item(Command.OPEN_RECENT, run),
                         new SeparatorMenuItem(),
                         item(Command.PALETTE, run),
+                        item(Command.DOCUMENTATION, run),
                         new SeparatorMenuItem(),
                         panel(Command.THUMBNAILS, thumbnailsShowing),
                         panel(Command.INFO, infoShowing),

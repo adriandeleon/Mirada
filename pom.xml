@@ -45,7 +45,7 @@
         <javafx.plugin.version>0.0.8</javafx.plugin.version>
         <junit.version>5.14.4</junit.version>
         <junit.platform.version>1.14.4</junit.platform.version>
-        <!-- Null checking (AGENTS.md, "Null annotations"): NullAway, an Error Prone plugin,
+        <!-- Null checking (docs/conventions.md, "Null annotations"): NullAway, an Error Prone plugin,
              checks every @NullMarked package of the main compile and fails the build on a null it
              cannot prove safe. JSpecify supplies the annotations. Error Prone reaches into javac,
              hence .mvn/jvm.config. Editora's setup. -->

@@ -41,6 +41,16 @@ class MacMenusTest {
         }
     }
 
+    /** Help opens with the palette, then the documentation (DOCS-06, DOCS-07, Pauta 4.0.1). */
+    @Test
+    void helpPutsTheDocumentationRightAfterThePalette() {
+        MacMenus.Heading help = MacMenus.HEADINGS.getLast();
+        assertEquals("Help", help.title());
+        assertEquals(
+                List.of(Command.PALETTE, Command.DOCUMENTATION),
+                help.groups().getFirst().subList(0, 2));
+    }
+
     @Test
     void bareKeysAreNotKeyEquivalents() {
         assertNull(MacMenus.accelerator(Command.NEXT));

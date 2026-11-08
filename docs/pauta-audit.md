@@ -2,6 +2,8 @@
 
 Mirada at `8397bad`, audited against [Pauta 4.0.1](https://pauta-project.dev/4.0.1/) on 2026-11-08.
 Scope: every rule (351). Rules from https://pauta-project.dev/4.0.1/rules.json.
+Updated by hand after the documentation split: REPO-01, REPO-07, REPO-08, DOCS-06, DOCS-07, DOCS-13,
+DOCS-14 and DOCS-19 now pass; DOCS-05's evidence changed (the app half is done, the website's is not).
 
 Regenerated rather than edited: each rule was judged by its check (code, test or by hand) as the
 edition's [audit procedure](https://pauta-project.dev/4.0.1/coding-agents/) says. A rule met only in
@@ -10,9 +12,9 @@ never because Mirada lacks a part another rule requires.
 
 |        | Pass | Fail | Manual | N.a. |
 |--------|-----:|-----:|-------:|-----:|
-| MUST   | 64 | 75 | 3 | 20 |
-| SHOULD | 35 | 70 | 15 | 60 |
-| MAY    | 0 | 3 | 0 | 6 |
+| MUST   | 69 | 70 | 3 | 20 |
+| SHOULD | 37 | 68 | 15 | 60 |
+| MAY    | 1 | 2 | 0 | 6 |
 
 A failed MUST blocks a release.
 
@@ -22,16 +24,11 @@ A failed MUST blocks a release.
 |----|-------|--------|----------|
 | [PLAT-01](https://pauta-project.dev/4.0.1/platform/#plat-01) | MUST | fail | `pom.xml:202`: release 25, but the enforcer's range is [25,26), a ceiling (the formatter broke on 27) |
 | [PLAT-06](https://pauta-project.dev/4.0.1/platform/#plat-06) | MUST | fail | `src/main/resources/com/mirada/styles/mirada.css:50`: fixed hexes in component rules (:50, :161, :490, :531, :535) |
-| [PLAT-11](https://pauta-project.dev/4.0.1/platform/#plat-11) | MUST | fail | `pom.xml:295`: Headless glass and JUnit 5, no Monocle; but no TestFX (src/test/java/com/mirada/image/FxToolkit.java:22 starts the toolkit by hand) |
+| [PLAT-11](https://pauta-project.dev/4.0.1/platform/#plat-11) | MUST | fail | `pom.xml:295`: Headless glass and JUnit 5, no Monocle; but no TestFX (src/test/java/com/mirada/image/FxToolkit.java:22 starts the toolkit by hand; why: docs/decisions/0005-no-testfx-yet.md) |
 | [PLAT-12](https://pauta-project.dev/4.0.1/platform/#plat-12) | MUST | fail | `pom.xml`: no jacoco-maven-plugin, no jacoco-check |
-| [REPO-01](https://pauta-project.dev/4.0.1/repository/#repo-01) | MUST | fail | `README.md:62`: has logo, badges, pitch, hero, install, build, licence; no highlights, command line or config folder section, no website link; a key table instead |
 | [REPO-04](https://pauta-project.dev/4.0.1/repository/#repo-04) | MUST | fail | NOTICE:1 name, copyright, "licensed under the MIT License", every component; but no NoticeCoverageTest or BuildHygieneTest |
-| [REPO-07](https://pauta-project.dev/4.0.1/repository/#repo-07) | MUST | fail | docs/ lacks architecture, conventions, testing, gotchas, release, building-and-packaging, decisions/ |
 | [DOCS-01](https://pauta-project.dev/4.0.1/documentation/#docs-01) | MUST | fail | mirada-website/src/content/docs has getting started, features, keyboard, settings, FAQ, but no screenshots in the pages |
-| [DOCS-05](https://pauta-project.dev/4.0.1/documentation/#docs-05) | MUST | fail | `.github/workflows/release.yml:327`: release notes from CHANGELOG, but no releaseNotesUrl reachable from the app |
-| [DOCS-06](https://pauta-project.dev/4.0.1/documentation/#docs-06) | MUST | fail | `src/main/java/com/mirada/ui/MacMenus.java:78`: no Help → Documentation command |
-| [DOCS-14](https://pauta-project.dev/4.0.1/documentation/#docs-14) | MUST | fail | `AGENTS.md`: carries the catalogs (529 lines); no CONTRIBUTING.md, no docs/reference/ |
-| [DOCS-19](https://pauta-project.dev/4.0.1/documentation/#docs-19) | MUST | fail | `README.md:62`: a 28-row key table, no link to the website's docs |
+| [DOCS-05](https://pauta-project.dev/4.0.1/documentation/#docs-05) | MUST | fail | `src/main/java/com/mirada/ui/AboutWindow.java:79`: About opens `AppInfo.releaseNotesUrl()` (the GitHub release, the changelog for a snapshot; Mirada has no Welcome page); but mirada-website does not generate its What's new from CHANGELOG.md (its scripts/ has GenCommands only) |
 | [QUAL-12](https://pauta-project.dev/4.0.1/quality/#qual-12) | MUST | fail | no message catalogs, so no parity test (descriptions are checked: CommandTest:189) |
 | [PERF-01](https://pauta-project.dev/4.0.1/performance/#perf-01) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:568`: folder listing, sorting stats, settings and bookmark writes, rename and existence checks run on the FX thread |
 | [PERF-03](https://pauta-project.dev/4.0.1/performance/#perf-03) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:463`: images guarded by path (wanted), but sidebar reads for the same file have no generation guard |
@@ -103,13 +100,10 @@ A failed MUST blocks a release.
 | [PLAT-07](https://pauta-project.dev/4.0.1/platform/#plat-07) | SHOULD | fail | no Inter, no Font.loadFont, no ui-font.css |
 | [PLAT-13](https://pauta-project.dev/4.0.1/platform/#plat-13) | SHOULD | fail | no java.util.logging; System.err in 8 places (src/main/java/com/mirada/ui/ViewerWindow.java:619) |
 | [PLAT-14](https://pauta-project.dev/4.0.1/platform/#plat-14) | SHOULD | fail | `src/main/java/com/mirada/settings/Settings.java:456`: .properties, no schema version |
-| [REPO-08](https://pauta-project.dev/4.0.1/repository/#repo-08) | MAY | fail | no TODO.md (AGENTS.md "Not done") |
 | [DOCS-03](https://pauta-project.dev/4.0.1/documentation/#docs-03) | SHOULD | fail | `mirada-website/astro.config.mjs:27`: docs not versioned; no docs URL in the app |
 | [DOCS-04](https://pauta-project.dev/4.0.1/documentation/#docs-04) | SHOULD | fail | `mirada-website/scripts/GenCommands.java`: generates commands and version, but What's new is hand-written and no check:docs |
-| [DOCS-07](https://pauta-project.dev/4.0.1/documentation/#docs-07) | SHOULD | fail | `src/main/java/com/mirada/ui/MacMenus.java:78`: Help: Command Palette, Keyboard Shortcuts; no Documentation |
 | [DOCS-10](https://pauta-project.dev/4.0.1/documentation/#docs-10) | MAY | fail | no per-command docs |
 | [DOCS-11](https://pauta-project.dev/4.0.1/documentation/#docs-11) | MAY | fail | no Help-for-page links in Settings |
-| [DOCS-13](https://pauta-project.dev/4.0.1/documentation/#docs-13) | SHOULD | fail | no docs/decisions/ |
 | [DOCS-15](https://pauta-project.dev/4.0.1/documentation/#docs-15) | SHOULD | fail | no stacked Javadoc today, but no test guards it |
 | [QUAL-03](https://pauta-project.dev/4.0.1/quality/#qual-03) | SHOULD | fail | no JaCoCo floors |
 | [QUAL-08](https://pauta-project.dev/4.0.1/quality/#qual-08) | SHOULD | fail | tests use @TempDir, but nothing checks the home folder stays untouched |
@@ -165,7 +159,7 @@ A failed MUST blocks a release.
 | [MLOG-06](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-06) | SHOULD | fail | no Message Log |
 | [MLOG-07](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-07) | SHOULD | fail | no Message Log |
 | [SYNC-01](https://pauta-project.dev/4.0.1/templates/settings-sync/#sync-01) | SHOULD | fail | no Settings Sync |
-| [REL-06](https://pauta-project.dev/4.0.1/release/#rel-06) | SHOULD | fail | `pom.xml:9`: main carries -SNAPSHOT, but no post-release bump job (AGENTS.md Releasing step 5 is by hand) |
+| [REL-06](https://pauta-project.dev/4.0.1/release/#rel-06) | SHOULD | fail | `pom.xml:9`: main carries -SNAPSHOT, but no post-release bump job (docs/release.md step 5 is by hand) |
 | [REL-07](https://pauta-project.dev/4.0.1/release/#rel-07) | SHOULD | fail | `.github/workflows/release.yml:255`: per-leg checks only; no expected-asset list checked before publishing |
 | [REL-09](https://pauta-project.dev/4.0.1/release/#rel-09) | SHOULD | fail | `scripts/build-appimage.sh:84`: metainfo generated only inside the AppImage; no packaging/linux/io.github.adriandeleon.Mirada.metainfo.xml |
 | [REL-12](https://pauta-project.dev/4.0.1/release/#rel-12) | SHOULD | fail | `.github/workflows/release.yml:15`: no Homebrew cask (needs notarization) |
@@ -180,8 +174,8 @@ A failed MUST blocks a release.
 |----|-------|--------|----------|
 | [DOCS-08](https://pauta-project.dev/4.0.1/documentation/#docs-08) | SHOULD | manual | `src/main/java/com/mirada/ui/ShortcutsWindow.java`: lists every key by group, no search field |
 | [QUAL-10](https://pauta-project.dev/4.0.1/quality/#qual-10) | SHOULD | manual | guard tests exist (NullMarkedPackagesTest, CommandTest.everyShownChordRunsItsCommand); seen failing is not recorded |
-| [PERF-18](https://pauta-project.dev/4.0.1/performance/#perf-18) | SHOULD | manual | costs recorded in commits and AGENTS.md "Start-up, measured" |
-| [PERF-22](https://pauta-project.dev/4.0.1/performance/#perf-22) | SHOULD | manual | `AGENTS.md`: records before/after numbers |
+| [PERF-18](https://pauta-project.dev/4.0.1/performance/#perf-18) | SHOULD | manual | costs recorded in commits and docs/building-and-packaging.md "Start-up, measured" |
+| [PERF-22](https://pauta-project.dev/4.0.1/performance/#perf-22) | SHOULD | manual | `docs/building-and-packaging.md`, `docs/reference/startup-jlink.md`: record before/after numbers |
 | [KBD-15](https://pauta-project.dev/4.0.1/keyboard/#kbd-15) | SHOULD | manual | `src/main/java/com/mirada/ui/OnScreenControls.java:198`: chrome out of the Tab order; Tab through Settings, Bookmarks and dialogs by hand |
 | [KBD-20](https://pauta-project.dev/4.0.1/keyboard/#kbd-20) | SHOULD | manual | no translations to try; labels wrap |
 | [WIN-06](https://pauta-project.dev/4.0.1/window-shell/#win-06) | SHOULD | manual | `src/main/java/com/mirada/ui/ViewerWindow.java:1312`: empty window offers Open Image and Open Folder only |
@@ -208,18 +202,26 @@ A failed MUST blocks a release.
 | [PLAT-08](https://pauta-project.dev/4.0.1/platform/#plat-08) | MUST | pass | mvnw, mvnw.cmd, .mvn/wrapper/maven-wrapper.properties committed |
 | [PLAT-09](https://pauta-project.dev/4.0.1/platform/#plat-09) | MUST | pass | `pom.xml:261`: -Xep:NullAway:ERROR; @NullMarked everywhere (NullMarkedPackagesTest) |
 | [PLAT-10](https://pauta-project.dev/4.0.1/platform/#plat-10) | MUST | pass | `pom.xml:217`: palantirJavaFormat; spotless check bound to verify |
+| [REPO-01](https://pauta-project.dev/4.0.1/repository/#repo-01) | MUST | pass | `README.md:1`: 156 lines: logo, badges, pitch, hero, highlights, install, command line, config folder, build, licence; the rest links into mirada-project.dev/docs |
 | [REPO-02](https://pauta-project.dev/4.0.1/repository/#repo-02) | MUST | pass | `CHANGELOG.md:3`: Keep a Changelog 1.1 and SemVer, "## [Unreleased]" with Added/Changed/Fixed, bold-led entries |
 | [REPO-03](https://pauta-project.dev/4.0.1/repository/#repo-03) | MUST | pass | LICENSE:3 MIT License, Copyright (c) 2026 Adrián Arturo De León Saldivar |
-| [REPO-05](https://pauta-project.dev/4.0.1/repository/#repo-05) | MUST | pass | `AGENTS.md:64`: commands, one worktree per task, the change checklist; CLAUDE.md points to it |
+| [REPO-05](https://pauta-project.dev/4.0.1/repository/#repo-05) | MUST | pass | `AGENTS.md:55`: commands, one worktree per task, the change checklist; CLAUDE.md points to it |
 | [REPO-06](https://pauta-project.dev/4.0.1/repository/#repo-06) | MUST | pass | `CONTRIBUTING.md:13`: build, test and format commands and the pull-request steps |
+| [REPO-07](https://pauta-project.dev/4.0.1/repository/#repo-07) | MUST | pass | `docs/README.md:14`: architecture.md, conventions.md, testing.md, gotchas.md, release.md, building-and-packaging.md and decisions/ all exist |
+| [REPO-08](https://pauta-project.dev/4.0.1/repository/#repo-08) | MAY | pass | `TODO.md:1`: the open list, moved from AGENTS.md's "Not done" |
 | [REPO-09](https://pauta-project.dev/4.0.1/repository/#repo-09) | MUST | pass | `.github/ISSUE_TEMPLATE/bug_report.yml`: fields id: environment and id: report |
 | [REPO-10](https://pauta-project.dev/4.0.1/repository/#repo-10) | MUST | pass | branding/mirada-icon.svg with png, icns, ico; pom.xml:67 jpackage.icon |
 | [DOCS-02](https://pauta-project.dev/4.0.1/documentation/#docs-02) | MUST | pass | `mirada-website/src/content/docs/*.md`: each with category and order; no copy here |
+| [DOCS-06](https://pauta-project.dev/4.0.1/documentation/#docs-06) | MUST | pass | `src/main/java/com/mirada/ui/Command.java:193`: `DOCUMENTATION` opens mirada-project.dev/docs (ViewerWindow:766), in the palette, right after Command Palette in the Mac Help menu (MacMenus:78) and the header's menu (TitleBar:230), and as a link in the empty window (ViewerWindow:1347); MacMenusTest, CommandTest |
+| [DOCS-07](https://pauta-project.dev/4.0.1/documentation/#docs-07) | SHOULD | pass | `src/main/java/com/mirada/ui/MacMenus.java:78`: Help: Command Palette, Documentation, Keyboard Shortcuts; About is in the application menu; Mirada has no updates, Message Log, Debug Log or Report a Problem rows |
 | [DOCS-09](https://pauta-project.dev/4.0.1/documentation/#docs-09) | MUST | pass | `src/main/java/com/mirada/ui/Command.java:212`: every command has a description, shown in the palette; CommandTest:189 non-blank |
 | [DOCS-12](https://pauta-project.dev/4.0.1/documentation/#docs-12) | MUST | pass | `docs/README.md:1`: for contributors, user docs on the website, the code wins, every guide listed |
-| [DOCS-16](https://pauta-project.dev/4.0.1/documentation/#docs-16) | MUST | pass | `AGENTS.md:68`: docs change in the same pull request (CHANGELOG, docs/, website); CONTRIBUTING.md:31 |
-| [DOCS-17](https://pauta-project.dev/4.0.1/documentation/#docs-17) | MUST | pass | `AGENTS.md:66`: the code wins, and the docs are fixed in the same change (also docs/README.md) |
+| [DOCS-13](https://pauta-project.dev/4.0.1/documentation/#docs-13) | SHOULD | pass | `docs/decisions/README.md:1`: five records (native image, libjpeg-turbo, codecs from source, .properties, no TestFX), each with context, decision and consequences |
+| [DOCS-14](https://pauta-project.dev/4.0.1/documentation/#docs-14) | MUST | pass | `AGENTS.md:83`: 100 lines, commands, worktrees and the checklist, with a documentation map into docs/; CONTRIBUTING.md:25 links into docs/; history in docs/reference/ |
+| [DOCS-16](https://pauta-project.dev/4.0.1/documentation/#docs-16) | MUST | pass | `AGENTS.md:63`: docs change in the same pull request (CHANGELOG, docs/, website); CONTRIBUTING.md:33; docs/conventions.md:23 |
+| [DOCS-17](https://pauta-project.dev/4.0.1/documentation/#docs-17) | MUST | pass | `AGENTS.md:61`: the code wins, and the docs are fixed in the same change (also docs/README.md) |
 | [DOCS-18](https://pauta-project.dev/4.0.1/documentation/#docs-18) | SHOULD | pass | `src/test/java/com/mirada/ui/HeadlessDriver.java:116`: renders the real window to PNG (1×, not 2×) |
+| [DOCS-19](https://pauta-project.dev/4.0.1/documentation/#docs-19) | MUST | pass | `README.md:32`: links into mirada-project.dev/docs (getting started, keyboard, Settings, FAQ, a page per area); no key table or feature catalog |
 | [QUAL-01](https://pauta-project.dev/4.0.1/quality/#qual-01) | MUST | pass | `pom.xml:261`: NullAway an error; NullMarkedPackagesTest |
 | [QUAL-02](https://pauta-project.dev/4.0.1/quality/#qual-02) | SHOULD | pass | no @SuppressWarnings("NullAway") in src/main |
 | [QUAL-04](https://pauta-project.dev/4.0.1/quality/#qual-04) | SHOULD | n/a | no coverage floors quoted anywhere yet (applies with PLAT-12) |

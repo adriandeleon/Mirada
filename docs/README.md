@@ -11,10 +11,18 @@ change.
 
 | Document | What it covers |
 |---|---|
-| [pauta-audit.md](pauta-audit.md) | Where Mirada stands against each rule of its Pauta edition, with evidence; regenerated, not edited |
-| [native-image.md](native-image.md) | The GraalVM native image that ships: why, how it is built, what it measured |
+| [architecture.md](architecture.md) | The packages, the six decoders, where the native libraries are found |
+| [conventions.md](conventions.md) | The priorities, rules as tested static methods, docs in the same PR, null annotations |
+| [testing.md](testing.md) | Running the tests, what is tested where, the format matrix, the UI headless, CI |
+| [gotchas.md](gotchas.md) | Things that will bite you, by part of the app |
+| [release.md](release.md) | Tagging a release, what the Release workflow does, signing |
+| [building-and-packaging.md](building-and-packaging.md) | The codec bundle, the native image that ships, the installers, start-up numbers |
+| [decisions/](decisions/README.md) | Decision records: the native image, libjpeg-turbo, codecs from source, `.properties`, no TestFX yet |
+| [reference/](reference/README.md) | History: older measurements and the native image experiment |
+| [native-image.md](native-image.md) | The GraalVM native image experiment: why, how it was built, what it measured |
 | [competitive-landscape.md](competitive-landscape.md) | Other image viewers, and what Mirada takes from each |
+| [pauta-audit.md](pauta-audit.md) | Where Mirada stands against each rule of its Pauta edition, with evidence; regenerated, not edited |
 
-[AGENTS.md](../AGENTS.md) holds the commands, the architecture and the gotchas until they move here
-(Pauta's REPO-07 asks for `architecture.md`, `conventions.md`, `testing.md`, `gotchas.md`,
-`release.md`, `building-and-packaging.md` and `decisions/`).
+The commands and the change checklist are in [AGENTS.md](../AGENTS.md); the short version for a
+person is [CONTRIBUTING.md](../CONTRIBUTING.md); what is known to be missing is in
+[TODO.md](../TODO.md).

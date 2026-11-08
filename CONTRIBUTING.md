@@ -22,8 +22,10 @@ repository root.
 
 - Put a rule in a pure class and test it there; tag a test that starts JavaFX `@Tag("fx")`.
 - Every package is `@NullMarked`; NullAway fails the build on a possible null. Never suppress it.
-- [AGENTS.md](AGENTS.md) has the commands for packaging, the codec bundle and start-up timing, and
-  [docs/](docs/README.md) how the app is built.
+- [AGENTS.md](AGENTS.md) has the commands for packaging, the codec bundle and start-up timing.
+  [docs/](docs/README.md) explains the rest: [architecture](docs/architecture.md),
+  [conventions](docs/conventions.md), [testing](docs/testing.md), [gotchas](docs/gotchas.md),
+  [building and packaging](docs/building-and-packaging.md) and [releasing](docs/release.md).
 
 ## Pull requests
 

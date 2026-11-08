@@ -60,6 +60,8 @@ final class Icons {
     static final String CAPTION = "M4 4 H20 V15 H4 Z M7 19.5 H17";
     static final String CLOCK = "M12 3 A9 9 0 1 1 11.99 3 Z M12 7 V12 L15.5 14";
     static final String LIST = "M8 6 H20 M8 12 H20 M8 18 H20 M4 6 H4.1 M4 12 H4.1 M4 18 H4.1";
+    static final String BOOK =
+            "M12 6.5 Q8 4 3.5 5 V18.5 Q8 17.5 12 20 Q16 17.5 20.5 18.5 V5 Q16 4 12 6.5 Z M12 6.5 V20";
 
     static final String BOOKMARK = "M6.5 3.5 H17.5 V20.5 L12 16 L6.5 20.5 Z";
     static final String NOTE = "M5 4 H19 V14 L14 20 H5 Z M14 20 V14 H19 M8.5 8.5 H15.5 M8.5 12 H12.5";
@@ -108,6 +110,7 @@ final class Icons {
             case OPEN_RECENT -> CLOCK;
             case CLOSE -> CLOSE;
             case PALETTE -> PROMPT;
+            case DOCUMENTATION -> BOOK;
             default -> null;
         };
     }

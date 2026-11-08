@@ -1,0 +1,258 @@
+# Things that will bite you
+
+What the code does not say by itself, by part of the app. Packaging's are in
+[building-and-packaging.md](building-and-packaging.md#things-that-will-bite-you-when-packaging), and
+looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-ui-headless).
+
+## Decoding and the first image
+
+- **The first image decodes before JavaFX is up** (`HeadStart`, started from `App.main`). JavaFX's
+  own decoder cannot (it asks for the screens' scale), so that head start needs a decoder of ours:
+  every format but PNG, GIF and BMP. `ImageCache.load` claims it for that one file; the first claim
+  closes the door, so a head start that loses the race gives up instead of holding its pixels.
+  `WritableImage` still needs the toolkit: `ArgbPixels` is the toolkit-free form, wrapped later.
+- **libjpeg-turbo must not change how a photo looks.** It ignores an embedded ICC profile exactly
+  as JavaFX does; the JDK's ImageIO reader converts it, which is why ImageIO is not the JPEG path.
+  What TurboJPEG will not decode to 8-bit RGB (CMYK, YCCK, 12-bit) is an `IOException`, and
+  `ImageCache` hands the file to JavaFX: the matrix's CMYK JPEG is the test.
+- **Animations decode after the still is up.** `ImageCache.animation` decodes every frame of a WebP,
+  AVIF/HEIC sequence or JPEG XL on the low-priority thread once the first frame shows, so stepping
+  costs no more for an animated file; `ViewerWindow` then swaps frames with `replace`. The frames
+  are whole pictures (libwebp and libjxl compose partial ones) and limited to `Animation.MAX_PIXELS`
+  in all; a larger animation stays a still. HEIF sequences need libheif 1.20, colour output for JPEG
+  XL libjxl 0.9: both are optional bindings, so an older system library still decodes stills.
+- **libheif and libjxl turn the image upright themselves; the EXIF orientation must then be
+  skipped.** HEIF readers are required to apply the container's `irot`/`imir`, and iPhones write an
+  EXIF orientation too; applying both turns the photo twice. `Decoder.turnsUpright` says which
+  decoders do it, and `ImageCache` hands those an `Exif.upright()`. The matrix's `heic-grid.heic`
+  is laid out as an iPhone's (`scripts/write-heic-grid.py`: cropped tiles, irot and EXIF 6, the
+  profile on the tiles), and `NativeDecodersTest` checks it is turned once; no real iPhone photo yet.
+- **The FFM bindings are hand-written against the C headers.** `heif_error` is returned by value (a
+  struct; the handle takes a `SegmentAllocator` first), `JxlPixelFormat` has 4 bytes of padding
+  before its `size_t`, and `JxlBasicInfo`'s offsets (`xsize` 4, `ysize` 8, `alpha_bits` 60) are
+  libjxl's ABI from 0.7 to 0.12. A version that moves them breaks decoding, not the build:
+  `NativeDecodersTest` is what notices. CI sets `MIRADA_REQUIRE_CODECS=1` on Linux and macOS so
+  those tests fail rather than skip when a library stops loading.
+- **Native access is enabled for `com.mirada`** in the javafx plugin's options (and for the
+  classpath in surefire's `argLine`); without it the JDK warns on every launch. A jlink launcher
+  will need the same flag.
+- **Windows finds a DLL's dependencies beside the program, not beside the DLL.** `jxl.dll` loaded
+  by full path cannot find `brotlidec.dll` next to it, so `NativeLibraries.preloadOnWindows` loads
+  every DLL in the bundle first, retrying until nothing more loads. Linux and macOS libraries carry
+  `$ORIGIN` / `@loader_path` rpaths instead, which `check-codecs.sh` asserts on Linux.
+- **libjxl writes to stderr on a bad file** (`decode.cc: invalid signature`). Noise, not a failure.
+- **The TwelveMonkeys readers are found by service lookup**, so nothing names their classes.
+  `module-info` requires them anyway, or a jlink image would drop them silently, and
+  `ImageFormatsTest.everyImageIoExtensionHasAReader` fails if one leaves the pom.
+
+## Showing an image
+
+- **JavaFX ignores EXIF orientation.** Phones store pixels as the sensor read them and tag how the
+  phone was held; untreated, portrait photos lie on their side. `Orientation` is "mirror first, then
+  turn clockwise", which is the order JavaFX applies a node's `scaleX` and `rotate`, and
+  `ExifTest.mirrorThenTurnPutsTheCornerWhereTheTagSays` checks all eight against the tag's
+  definition. Change one without the other and the mirrored orientations (2, 4, 5, 7) go wrong
+  while the common ones still look right.
+- **The window waits for both the pixels and the EXIF before it swaps images.** Showing the image as
+  soon as it decodes flashes it sideways for a frame; showing it before it decodes flashes an empty
+  canvas. `ImageCache.Entry.ready` completes when both are in, and `ViewerWindow.display` drops a
+  result for any image other than the one most recently asked for (`wanted`).
+- **A preview stands in at the full image's size.** `ImageViewport` lays out by `imageWidth` and
+  `imageHeight`, not the `Image`'s own, so a 1280-pixel preview fills exactly what the full image
+  will, and `replace` swaps the pixels without touching zoom or turns.
+- **The viewport turns an `ImageView`, it never copies pixels.** The view is laid out unturned at the
+  zoomed size and rotated about its centre, so `layoutChildren` places that centre on the centre of
+  where the turned image should stand. Sizes the user sees (properties, fit) are the turned ones:
+  `contentWidth`/`contentHeight`.
+- **The cache holds full resolution, so it is small.** A decoded image is four bytes a pixel: a
+  48-megapixel photo is about 190 MB. Three entries (the current image and one either side).
+  Downsampled previews for the fitted view would let it hold more; not done.
+- **A strip thumbnail of a JPEG is usually the camera's own** (`Thumbnails.embedded`): IFD1's
+  JPEG, taken when it is at least 160 pixels and within 2 % of the photo's shape (`Thumbnails.fits`),
+  else the photo at an eighth. metadata-extractor's "adjusted" thumbnail offset counts from the APP1
+  segment, not the file, so `Thumbnails.exifTiff` walks the segments to find the TIFF block. On this
+  machine's photo folders that took 56–100 % of them and made each 1–5 ms instead of 13–52. The
+  queue is newest first and a cell scrolled past releases its request (`Thumbnails.release`).
+
+## Editing and saving
+
+- **The editor works on a preview and saves from the full image.** `Editor` shrinks the image to
+  1600 pixels, makes it upright by the file's orientation (`Edit.upright`, the same "mirror, then
+  turn" as `Orientation`), and every turn and flip re-arranges that preview at once. The crop is kept
+  as fractions (`Crop`), so the same edit applies to the full image when saving, off the FX thread.
+  It takes the window's centre, below the header, so the window's own controls stay usable; while
+  it is open, `ViewerWindow.run` refuses what would change the image under it.
+- **Saving never overwrites by default.** The save dialog suggests "name (edited).ext" in a format
+  Mirada can write (HEIC, AVIF, JPEG XL and WebP become JPEG or PNG); the file is written beside its
+  target and moved over it.
+- **A saved edit keeps the EXIF, patched in place, never rebuilt.** `ExifBlock` reads the raw TIFF
+  block (JPEG's APP1, PNG's eXIf, WebP's EXIF chunk, the HEIF Exif item through iinf and iloc, JPEG
+  XL's Exif box) and changes only fixed-size values: orientation to 1, the image sizes to the
+  edit's (a SHORT entry widened to LONG in place), and IFD0's link to the thumbnail cut. Nothing
+  moves, so maker notes, whose offsets other tools break, survive. `Encoder` puts it into JPEG
+  (after JFIF) and PNG (after IHDR), but not a block over JPEG's 64 KB; BMP gets none.
+- **A saved TIFF is written by `Encoder.writeTiff`, not ImageIO, around the EXIF block.** The
+  block is a TIFF structure whose offsets count from its own header, so the file *starts* with it,
+  in its byte order: every offset, maker notes' too, stays true unread. Uncompressed strips and a
+  new IFD0 follow, and the header points there; that IFD0 takes the block's IFD0 tags except those
+  saying how pixels are stored (`STORAGE_TAGS`), and the profile and XMP as tags 34675 and 700.
+- **A saved edit keeps the XMP, as text with a few values changed** (`Xmp`): the orientation to 1
+  and the sizes to the edit's wherever it repeats EXIF's (`tiff:`, `exif:`, whatever prefixes the
+  packet binds them to), and the xmp: thumbnail, Camera Raw's crop and the extended-XMP note go. A
+  packet whose orientation it cannot find to set (another form, a default namespace) is dropped, as
+  it would turn the upright picture again. JPEG's extended XMP (past 64 KB) is not carried.
+- **A saved edit keeps the ICC profile only while it still describes the pixels.** `IccProfile`
+  reads it (JPEG's APP2 segments, PNG's iCCP, WebP's ICCP, the HEIF primary item's colr through
+  ipma) and `Encoder` writes it into JPEG, PNG and TIFF beside the EXIF. Mirada shows pixels as
+  they are stored, profile unapplied, so carrying it is right for every decoder that leaves them so;
+  `Decoder.keepsColours` names the two that do not: libjxl (asked for sRGB) and ImageIO, whose
+  TwelveMonkeys WebP reader converts to sRGB. `ImageCache.keepsColours` counts a WebP as ImageIO's
+  when libwebp is missing. Only an RGB profile is carried, as the edit is RGB: a CMYK JPEG's profile
+  is dropped. A HEIF that gives its colours as nclx codes has no profile to carry; one is not made
+  up for it. `NativeDecodersTest` checks each decoder against P3-tagged fixtures.
+- **Undo is a history of whole steps** (`History`): each records the edit and the shape. A drag
+  records once, when the mouse is released; a run of arrow presses records once, as a "run" that
+  joins steps until something else happens. Setting the shape from code (open, reset, undo) goes
+  through `Editor.quiet`, or its listener would record a step of its own.
+
+## The window
+
+- **Only what the first frame shows is built before it.** The header bar is; the floating controls
+  are built on the first pointer movement over the image, the properties sidebar and the thumbnail
+  strip the first time they open, About and Settings the first time they are asked for, and the
+  header's tooltips, its menu's items and the window icon run from `ViewerWindow.afterFirstPaint`,
+  on the pulse after the first image is shown (or half a second after start without one). Building
+  them first measured +40 ms; deferred, +20 ms over the old window. Put new chrome behind the same
+  door. `HeaderBar` itself is not the cost: switched off, the start-up was the same.
+- **Settings changes are frequent now; theme changes are not.** The window's place is saved as it
+  closes (and from `App.stop`, as Cmd-Q may not hide it first), the recent folders on every folder
+  opened (after the first paint: writing the settings is not start-up's), and every change runs every
+  settings listener. `Theme.apply` returns at once unless the theme itself changed, as restyling
+  every window costs tens of milliseconds.
+- **Copy puts the picture as it stands on screen and the file.** `ViewerWindow.copy` turns the
+  full image upright by the file's orientation and the user's turns (`Edit.upright`, then
+  `Raster.turned`, off the FX thread) and puts it on the clipboard with the file, so an app that
+  takes images pastes the picture and a folder the file. JavaFX's clipboard refuses grey pixels (a
+  grey PNG loads so): `putOnClipboard` converts those to ARGB. The metadata recording's tours copy
+  every image they show (`-Dmirada.tourCopies`), as nothing else there reaches the clipboard.
+- **The window buttons on Linux are JavaFX's, and follow the scene's colour scheme, not the
+  stylesheet.** An extended window's minimize, maximize and close are drawn by JavaFX
+  (`HeaderButtonOverlay`), light or dark by `Scene.Preferences.colorScheme`, which falls back to
+  the system's: `Theme` sets it on every window from the theme chosen, or a dark theme over a light
+  system draws the light buttons, dark grey on the dark header. An unfocused window draws them
+  `#777` in either style; `mirada.css` lightens the dark one, as a scene's stylesheet reaches the
+  overlay. To tell the styles apart in a screenshot: focused, dark draws white glyphs, light `#333`.
+- **A window covered by others runs at about one frame a second here.** GNOME throttles a covered
+  XWayland window's frame callbacks, so every JavaFX animation and even mouse delivery slows to that
+  rate: the floating controls seemed to fade seconds late in a test until timestamps showed wake and
+  idle on time and only the pulses slow. Judge timing on an uncovered window, or by timestamps.
+
+## Keys, commands and the palette
+
+- **Every command has one name and one chord, in `Command`.** The key filter (`forKey`), the
+  palette and the context menu all read from it; `CommandTest.everyShownChordRunsItsCommand` checks
+  the chord a command shows is one that runs it, on both platforms (the palette's excepted: above). macOS shows its own for two
+  (`chord(boolean mac)`): ⌘⌫ to trash, as a Mac's Delete key is Backspace, which steps back; Return
+  to rename, as F2 is a brightness key. `forKey` takes the Ctrl key apart from the shortcut for ⌃⌘F.
+  Stepping follows the strip: while it stands down the side (`Command.vertical`, set by
+  `ViewerWindow.stepAlong`) Up and Down step and Left and Right pan, and `chord()`, the floating
+  arrows and the shortcuts window follow; the test checks both axes.
+- **A menu's keys are shown, never registered** (`MenuChord`). JavaFX puts a `MenuButton`'s and
+  a context menu's accelerators into the scene, where a bare one fires under the palette's text
+  field and any other runs a second time. `MenuChord` is a `KeyCombination` that names the
+  command's chord and never matches, so `Command.forKey` stays the only way in. Styled as Editora's
+  `.menu-item-chord`: 11px in its `-state-key` periwinkle, defined on `.root` in `mirada.css`.
+- **Escape is ours, not the stage's.** JavaFX's full-screen exit key would leave full screen and
+  then let the same press reach the key filter, which would close the window.
+  `setFullScreenExitKeyCombination(NO_MATCH)` hands it to `Command.ESCAPE`: leave full screen if in
+  it, otherwise close — on Linux only (`Command.escapeCloses`); macOS and Windows keep the window.
+- **A scroll is a wheel's or a trackpad's** (`Scrolling`): macOS reports the fingers
+  (`ScrollEvent.getTouchCount`), and those scrolls pan, or swipe once a gesture when there is nothing
+  to pan; a wheel zooms. Windows and Linux touchpads report no fingers and so still zoom; Windows
+  sends a pinch as Ctrl+wheel. Untested on a real Mac trackpad. A command that cannot run (`Command.unavailable`)
+  is greyed with its reason in the palette and disabled in the context menu.
+- **The command palette is a port of Termina's, which is Editora's, and the pure parts are verbatim.**
+  `FuzzyMatch`, `PaletteKeys`, `TextInputKeys`, `KeyChord` and `MatchText` are Termina's files with
+  the package renamed and `PaletteKeys`' localised legend replaced by plain English. A ranking or
+  navigation change belongs in all three projects, or the palettes stop agreeing. One fix went the
+  other way and is not in Termina yet: `TextInputKeys.actionFor` checks for a null chord, because a
+  bare Ctrl or Shift press has none and `Map.ofEntries` throws on a null key.
+- **The palette also finds images** (`Command.GO_TO_IMAGE`, `CommandPalette.showImages`): its rows
+  are `Row`s, a command or an image of the folder, and file names rank by the same `FuzzyMatch`,
+  ties in the folder's order (`orderedImages`). Ctrl+P opens it but does not close it: inside the
+  palette Ctrl+P is the Emacs key for the row above, so only the palette's own keys close it from
+  the keyboard; Escape closes either.
+- **While the palette is up, the scene's key filter stands aside.** Filters run from the scene down,
+  so `ViewerWindow.onKey` sees every key before the palette's card does; it returns early while the
+  palette shows (or typing "r" would rotate the image) and handles only the palette's own keys, to
+  close it, and not even those when the open palette moves or edits by them
+  (`PaletteChords.keptByPalette`: a user who binds C-p keeps C-p as the row above in there). Escape
+  is the palette's then, not the window's.
+- **The palette's keys are the user's** (`PaletteChords`, `palette.keys` in the settings, as
+  `KeyChord` tokens: `C-S-p M-x f1` by default, `Cmd-S-p` on a Mac). `onKey` asks them before
+  `Command.forKey`, which never answers `PALETTE`, so a chosen key wins over its built-in command.
+  The first is the one shown (`Command.PALETTE.chord()`), the Mac menu's is the first with Cmd, and
+  a setting with no readable key is the default. Parsed on the first key press, not at start-up.
+
+## Bookmarks and notes
+
+- **Bookmarks and notes are Mirada's, never the file's** (`Bookmarks`, Editora's bookmarks and
+  personal notes moved to pictures). One mark per path, image or folder: bookmarked, a note, or
+  both; with neither it is dropped. Paths are kept absolute and normalised, as `FolderImages` lists
+  them, so `indexOf` finds a mark in the open folder. The file is read after the first paint
+  (`ViewerWindow.showMarks` does nothing before, so the first image never waits for it), and every
+  change reads it again before writing, so a second window's marks survive. A rename in Mirada
+  carries the mark (`Bookmarks.moved`); a file moved or renamed elsewhere loses it, and a mark
+  whose file is gone is kept (an unplugged drive) but left out of Go to Bookmark. The badge over
+  the image (`MarksBadge`) is built the first time a shown image has a mark. The Bookmarks and
+  Notes window (`BookmarksWindow`, Editora's two tool windows in one) lists them by folder, the
+  rules in `BookmarkList` (latest folder first, images by name, every word in name, folder or
+  note); it is built when first asked for and reads the file again each time it is brought up. Its
+  keys stay in the filter field, as the palette's do: the list is not focus-traversable.
+
+## Platforms
+
+- **`java.awt.headless` is decided in `App.main`, as the first statement**, before `HeadStart` can
+  touch ImageIO: headless everywhere but macOS, where Move to Trash is AWT's `Desktop`
+  (`Trash.headless`); AWT itself loads only when a file is first trashed. ImageIO and `BufferedImage` are `java.desktop` and need no display; tests are
+  headless on every platform through surefire's `java.awt.headless`.
+- **Move to Trash is three implementations.** Linux follows the freedesktop.org spec itself (info
+  file first, created exclusively to reserve the name, then an atomic move) and leaves a file on
+  another drive to `gio trash`; Windows calls `SHFileOperationW` through FFM with undo; macOS uses
+  AWT's `Desktop`, AWT being headful there. Only Linux's is tested here (`TrashTest`, against a
+  temporary trash). Only Linux's can be undone (`Trash.restore`, `Command.UNDO_TRASH`): Mirada
+  wrote the info file, so it knows where the file went; it never overwrites a file that came since.
+  A file sent to `gio trash` (another drive) cannot be, nor the Recycle Bin's or the Mac's, whose
+  Trash needs Full Disk Access to read.
+- **macOS does not pass a double-clicked file as an argument.** Linux (`Exec=… %f`) and Windows do.
+  macOS sends an "open documents" Apple Event, which AppKit gives the application's delegate,
+  JavaFX's `GlassApplication`. Since JavaFX 25 (JDK-8354631) that delegate answers
+  `application:openURLs:`, which AppKit prefers to `application:openFiles:`, and only posts an
+  `AWTEmbeddedEvent` notification with each URL, for an AWT embedded in JavaFX: glass's own
+  open-files event (`Application.EventHandler.handleOpenFilesAction`) never fires, and AWT's
+  `Desktop` handlers start too late for the event that launched the app. So 0.1.0 opened nothing from
+  Finder (jpackage's launcher had hidden it before the native image replaced it), and so did a glass
+  handler. `MacOpenFiles` observes the notification itself: an Objective-C class made at run time
+  through FFM, its method an upcall, registered from `App.main` before `launch`; files that arrive
+  before the window are held until `App.start` asks. A file named on the command line also arrives
+  as an event and is dropped once (`besides`). The upcall, its lookup and the `objc_msgSend` shapes
+  are in the native metadata by hand: the tracing agent never sees a Finder event. Proved on CI's
+  Macs, not by hand: the smoke test given `Mirada.app` opens a fixture through `open -a`, then
+  again in the running app. If JavaFX starts calling `openFiles:` again, check this is not doubled.
+  **The JVM image (Intel) misses the launching file**: jpackage's launcher (`JLI_Launch`) starts
+  Java on a second thread while the main thread waits without AppKit, and the event comes and goes
+  in between. Files sent to a running Mirada arrive; the smoke test warns there and fails the
+  native image.
+- **The macOS menu bar is JavaFX's system `MenuBar`, the application menu is glass's.** `MacMenus`
+  builds File, Image, View, Go and Help from `Command` after the first paint, unmanaged in the scene
+  (it draws nothing there); the header's ☰ menu stays as well, as on the other platforms. Only
+  chords with Cmd are key equivalents: a bare one could be taken by the menu while the palette's
+  field has focus. Items grey only while their menu is open
+  (`onShowing`, by `Command.unavailable`) and are enabled again on close, so a key equivalent never
+  meets a stale state. JavaFX gives no way into the application menu (Hide, Quit), so `MacAppMenu`
+  gets it from `com.sun.glass.ui.mac.MacApplication.getAppleMenu`, by reflection, since that
+  package exists only in macOS's JavaFX: macOS's launchers pass `--add-exports
+  javafx.graphics/com.sun.glass.ui.mac=com.mirada` (the pom's `glass.mac.option`, a harmless `-D`
+  elsewhere, as the export would warn; `dev-run.sh` and `aot-train.sh` add it on Darwin, and the
+  AOT cache needs training and launch to agree), and the native image has the method in its
+  reflection metadata, added by hand. Untested on a Mac.

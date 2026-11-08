@@ -27,6 +27,11 @@
     -fx-padding: 8 16 8 16;
 }
 
+/* Help → Documentation, under the open buttons. */
+.mirada .empty-docs {
+    -fx-padding: 12 0 0 0;
+}
+
 /*
  * The header bar, GNOME Image Viewer's: flat icon buttons around the file name. HeaderBar ships with
  * no style class; TitleBar adds header-bar. The window buttons are drawn by the platform (or by

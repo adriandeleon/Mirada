@@ -30,6 +30,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -762,6 +763,7 @@ public final class ViewerWindow {
             case SETTINGS -> settingsWindow().show(stage);
             case ABOUT -> aboutWindow().show(stage);
             case SHORTCUTS -> shortcutsWindow().show(stage);
+            case DOCUMENTATION -> openLink.accept(AppInfo.DOCS_URL);
             case PAN_LEFT -> viewport.pan(-PAN_STEP, 0);
             case PAN_RIGHT -> viewport.pan(PAN_STEP, 0);
             case PAN_UP -> viewport.pan(0, -PAN_STEP);
@@ -809,6 +811,7 @@ public final class ViewerWindow {
                     THUMBNAILS,
                     SETTINGS,
                     SHORTCUTS,
+                    DOCUMENTATION,
                     ABOUT,
                     CLOSE,
                     BOOKMARK,
@@ -1323,7 +1326,8 @@ public final class ViewerWindow {
     }
 
     /**
-     * Shows Open Image and Open Folder under the placeholder while no folder is open (at start, or
+     * Shows Open Image and Open Folder, and a link to the documentation, under the placeholder while
+     * no folder is open (at start, or
      * when one turned out to have no images), and hides them once one is: within a folder the
      * arrows go on to the next image. Built on first need, never on a start with an image.
      */
@@ -1339,7 +1343,13 @@ public final class ViewerWindow {
             buttons.setAlignment(Pos.CENTER);
             buttons.managedProperty().bind(buttons.visibleProperty());
             openButtons = buttons;
-            emptyState.getChildren().add(buttons);
+            // Help → Documentation, offered where a first-time user starts (DOCS-06).
+            Hyperlink docs = new Hyperlink(Command.DOCUMENTATION.label());
+            docs.getStyleClass().add("empty-docs");
+            docs.setOnAction(e -> run(Command.DOCUMENTATION));
+            docs.visibleProperty().bind(buttons.visibleProperty());
+            docs.managedProperty().bind(buttons.visibleProperty());
+            emptyState.getChildren().addAll(buttons, docs);
         }
         buttons.setVisible(true);
     }

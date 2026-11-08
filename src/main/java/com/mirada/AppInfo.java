@@ -27,6 +27,8 @@ public final class AppInfo {
     public static final String COPYRIGHT = "Copyright © 2026 Adrián Arturo De León Saldivar";
     public static final String LICENSE = "MIT License";
     public static final String HOMEPAGE = "https://github.com/adriandeleon/Mirada";
+    /** The user guide, on the website (DOCS-02, DOCS-06). */
+    public static final String DOCS_URL = "https://mirada-project.dev/docs/";
 
     private AppInfo() {}
 
@@ -51,6 +53,21 @@ public final class AppInfo {
     /** True for a development build; releases drop the suffix. */
     public static boolean isSnapshot() {
         return VERSION.endsWith("-SNAPSHOT");
+    }
+
+    /**
+     * This build's release notes (DOCS-05): the GitHub release of {@link #VERSION}, whose notes are
+     * its {@code CHANGELOG.md} section, or the changelog itself for a snapshot, which has no release.
+     */
+    public static String releaseNotesUrl() {
+        return releaseNotesUrl(VERSION);
+    }
+
+    static String releaseNotesUrl(String version) {
+        if (version.endsWith("-SNAPSHOT") || version.equals("0.0.0")) {
+            return HOMEPAGE + "/blob/main/CHANGELOG.md";
+        }
+        return HOMEPAGE + "/releases/tag/v" + version;
     }
 
     /**

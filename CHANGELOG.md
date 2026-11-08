@@ -10,6 +10,10 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Added
 
+- **Help → Documentation opens the user guide** at
+  [mirada-project.dev/docs](https://mirada-project.dev/docs/) in your browser: in the palette, in the
+  header's menu and the Mac's Help menu right after Command Palette, and as a link in an empty
+  window. **About links this version's release notes** (the changelog, for a development build).
 - **`mirada --help` and `mirada --version`** print and exit without opening a window; `--version`
   names the build, the commit and the Pauta edition. `--config-dir <folder>` keeps settings and
   bookmarks in another folder, and `--dev` in `~/.mirada-dev`, apart from your own.
