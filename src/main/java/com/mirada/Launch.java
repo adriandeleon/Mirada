@@ -22,6 +22,8 @@ public record Launch(Action action, @Nullable Path configDir, List<String> files
         START,
         HELP,
         VERSION,
+        /** Write the problem report and open the issue, without the window (CLI-05). */
+        REPORT,
         MISTAKE
     }
 
@@ -33,6 +35,9 @@ public record Launch(Action action, @Nullable Path configDir, List<String> files
             Options:
               --config-dir <dir>  keep settings and bookmarks in <dir>
               --dev               keep them in ~/.mirada-dev, apart from your own
+              --report            write a redacted problem report beside the settings, open
+                                  a prefilled GitHub issue with it, and exit; for when
+                                  Mirada will not start
               --version           print the version, build, commit and Pauta edition, and exit
               --help              print this, and exit
               --                  what follows is a file, even if it starts with --
@@ -45,6 +50,7 @@ public record Launch(Action action, @Nullable Path configDir, List<String> files
         List<String> files = new ArrayList<>();
         @Nullable Path configDir = null;
         boolean onlyFiles = false;
+        boolean report = false;
         for (int i = 0; i < args.size(); i++) {
             String arg = args.get(i);
             if (onlyFiles || !arg.startsWith("--")) {
@@ -59,6 +65,8 @@ public record Launch(Action action, @Nullable Path configDir, List<String> files
                 case "--version" -> {
                     return new Launch(Action.VERSION, null, List.of(), "");
                 }
+                // Not at once: a --config-dir after it still names the folder it reports on.
+                case "--report" -> report = true;
                 case "--dev" -> configDir = Path.of(home, ".mirada-dev");
                 case "--config-dir" -> {
                     if (i + 1 >= args.size() || args.get(i + 1).isBlank())
@@ -74,7 +82,7 @@ public record Launch(Action action, @Nullable Path configDir, List<String> files
                 }
             }
         }
-        return new Launch(Action.START, configDir, List.copyOf(files), "");
+        return new Launch(report ? Action.REPORT : Action.START, configDir, List.copyOf(files), "");
     }
 
     private static Launch mistake(String error) {

@@ -144,18 +144,18 @@ final class ThumbnailStrip {
     }
 
     /**
-     * Stands {@code strip} down {@code root}'s left side or along its bottom, out of the other place
-     * first. Setting a place adds the node to the pane's children, and one it still holds in the
-     * other place is a duplicate: going from the side back to the bottom threw, then emptying the
-     * side took the strip away altogether.
+     * Stands {@code strip} down {@code root}'s left side, or along its bottom above the status bar
+     * ({@code bottom}, the first of its children), out of the other place first. Setting a place adds
+     * the node to the pane's children, and one it still holds in the other place is a duplicate: going
+     * from the side back to the bottom threw, then emptying the side took the strip away altogether.
      */
-    static void place(BorderPane root, Node strip, boolean side) {
+    static void place(BorderPane root, VBox bottom, Node strip, boolean side) {
         if (root.getLeft() == strip) root.setLeft(null);
-        if (root.getBottom() == strip) root.setBottom(null);
+        bottom.getChildren().remove(strip);
         if (side) {
             root.setLeft(strip);
         } else {
-            root.setBottom(strip);
+            bottom.getChildren().addFirst(strip);
         }
     }
 

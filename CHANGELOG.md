@@ -10,6 +10,25 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Added
 
+- **A status bar along the bottom of the window** says what the last command did, errors in red
+  and warnings in amber, with a count of errors not yet seen. Click it for the **Message Log**:
+  everything said this session, newest first, with the time, to filter, copy or clear (Escape
+  closes it). What used to fade over the image now waits there; over a full-screen image or a
+  slideshow it still shows over the image. Status Bar, in the menus, the palette and Settings, turns
+  it off.
+- **Help › Debug Log** shows what Mirada has logged this session, errors with their details, in a
+  window of its own beside the viewer, with Refresh, Copy, Clear, Export… and Report a Problem…. It
+  is also written to `mirada-session.log` beside the settings, and the session before is kept as
+  `mirada-session.prev.log`, so a crash can still be read after it.
+- **Help › Report a Problem…** writes a report (version, runtime, codecs, OS, settings and the end
+  of the Debug Log) with home folders, user and host names, e-mail addresses and tokens taken out,
+  for you to read and edit, then copies it and opens a GitHub issue with it filled in. Nothing is
+  sent by itself. **`mirada --report`** does the same from the command line, for when Mirada will
+  not start.
+- **Mirada says when a newer release is out.** Once a day, a few seconds after start, it asks
+  GitHub for the latest release; a newer one shows in the status bar and in About, whose link opens
+  its page. **Help › Check for Updates** asks now. Nothing is ever downloaded or installed, and
+  Settings › Updates turns the check off. About says "not checked" until a check has answered.
 - **`mirada --help` and `mirada --version`** print and exit without opening a window; `--version`
   names the build, the commit and the Pauta edition. `--config-dir <folder>` keeps settings and
   bookmarks in another folder, and `--dev` in `~/.mirada-dev`, apart from your own.

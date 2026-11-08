@@ -6,10 +6,15 @@ import java.util.List;
 import javafx.application.Application;
 import javafx.stage.Stage;
 
+import com.mirada.diagnostics.DebugLog;
+import com.mirada.diagnostics.MessageLog;
 import com.mirada.image.HeadStart;
 import com.mirada.os.MacOpenFiles;
 import com.mirada.os.Trash;
 import com.mirada.perf.Startup;
+import com.mirada.report.Browser;
+import com.mirada.report.Redactor;
+import com.mirada.report.ReportCommand;
 import com.mirada.settings.Settings;
 import com.mirada.ui.Theme;
 import com.mirada.ui.ViewerWindow;
@@ -34,8 +39,10 @@ public final class App extends Application {
     private static volatile @Nullable ViewerWindow shown;
 
     public static void main(String[] args) {
-        // Before anything that can throw on another thread, the toolkit's included (DIAG-04).
-        Thread.setDefaultUncaughtExceptionHandler(App::uncaught);
+        // Before anything that can throw on another thread, the toolkit's included: every uncaught
+        // exception and log record goes to the Debug Log, and the first to the window (DIAG-04).
+        DebugLog.install();
+        DebugLog.onUncaught(App::uncaught);
         // Before any AWT class can load. ImageIO and BufferedImage are java.desktop and need no
         // display, so AWT is headless — except on macOS, where Move to Trash is AWT's Desktop (Trash).
         System.setProperty("java.awt.headless", String.valueOf(Trash.headless(System.getProperty("os.name"))));
@@ -51,6 +58,14 @@ public final class App extends Application {
             case VERSION -> {
                 System.out.println(AppInfo.versionText());
                 return;
+            }
+            case REPORT -> {
+                // No window: for when Mirada will not start (CLI-05).
+                System.exit(ReportCommand.run(
+                        Settings.defaultFile(launch.configDir()),
+                        System.out,
+                        Browser::open,
+                        Redactor.forThisMachine()));
             }
             case MISTAKE -> {
                 System.err.println("mirada: " + launch.error());
@@ -71,16 +86,16 @@ public final class App extends Application {
     }
 
     /**
-     * An exception no code caught, on any thread: written to standard error with its stack, and said
-     * over the window in a line, never a stack-trace dialog (DIAG-04).
+     * An exception no code caught, on any thread, once the Debug Log has it with its stack: said in
+     * the status bar in red, never a stack-trace dialog (DIAG-04). Before the window there is no one
+     * to tell; the Debug Log and its session file still have it.
      */
     private static void uncaught(Thread thread, Throwable error) {
-        System.err.println("Uncaught on " + thread.getName() + ":");
-        error.printStackTrace();
         ViewerWindow window = shown;
         if (window != null) {
             String what = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
-            window.sayLater("Something went wrong: " + what);
+            window.sayLater(
+                    "Something went wrong: " + what + ". The Debug Log has the details.", MessageLog.Severity.ERROR);
         }
     }
 
@@ -99,6 +114,14 @@ public final class App extends Application {
         Startup.mark("fx-start");
         Settings settings = new Settings(Settings.defaultFile(configDir));
         settings.load();
+        // The Debug Log's session file beside the settings, off the FX thread: rotating last
+        // session's is a copy, and nothing it holds is needed before the first image (DIAG-02).
+        Path folder = settings.file().toAbsolutePath().getParent();
+        if (folder != null) {
+            Thread attach = new Thread(() -> DebugLog.attachFile(folder), "debug-log-file");
+            attach.setDaemon(true);
+            attach.start();
+        }
         Theme.apply(settings.theme());
         settings.addListener(() -> Theme.apply(settings.theme()));
         ViewerWindow window = new ViewerWindow(stage, settings, getHostServices()::showDocument);

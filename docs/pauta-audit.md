@@ -2,6 +2,8 @@
 
 Mirada at `8397bad`, audited against [Pauta 4.0.1](https://pauta-project.dev/4.0.1/) on 2026-11-08.
 Scope: every rule (351). Rules from https://pauta-project.dev/4.0.1/rules.json.
+The diagnostics rows (WIN-01, WIN-07, MLOG-01–07, DIAG-01–06, CLI-05, ABOUT-02, ABOUT-04, PLAT-13)
+were judged again after the status bar, Message Log, Debug Log, update check and Report a Problem.
 
 Regenerated rather than edited: each rule was judged by its check (code, test or by hand) as the
 edition's [audit procedure](https://pauta-project.dev/4.0.1/coding-agents/) says. A rule met only in
@@ -10,8 +12,8 @@ never because Mirada lacks a part another rule requires.
 
 |        | Pass | Fail | Manual | N.a. |
 |--------|-----:|-----:|-------:|-----:|
-| MUST   | 64 | 75 | 3 | 20 |
-| SHOULD | 35 | 70 | 15 | 60 |
+| MUST   | 74 | 64 | 4 | 20 |
+| SHOULD | 42 | 64 | 15 | 59 |
 | MAY    | 0 | 3 | 0 | 6 |
 
 A failed MUST blocks a release.
@@ -47,8 +49,6 @@ A failed MUST blocks a release.
 | [KBD-09](https://pauta-project.dev/4.0.1/keyboard/#kbd-09) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:397`: bindings hard-coded; no Emacs or CUA keymap JSON |
 | [KBD-11](https://pauta-project.dev/4.0.1/keyboard/#kbd-11) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:684`: user keys only for the palette |
 | [KBD-17](https://pauta-project.dev/4.0.1/keyboard/#kbd-17) | MUST | fail | `src/main/java/com/mirada/ui/InfoPanel.java:86`: icon-only buttons built in four places, no single helper; InfoPanel's lack accessible text |
-| [WIN-01](https://pauta-project.dev/4.0.1/window-shell/#win-01) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:815`: no status bar or echo area; feedback is a fading toast |
-| [WIN-07](https://pauta-project.dev/4.0.1/window-shell/#win-07) | MUST | fail | `src/main/java/com/mirada/ui/AboutWindow.java`: version, build, commit, Pauta edition, runtime, license, links; no update-check result |
 | [ICON-01](https://pauta-project.dev/4.0.1/icons-and-color/#icon-01) | MUST | fail | `src/main/java/com/mirada/ui/Theme.java:59`: window listener exists, but no ui-font.css and no Inter |
 | [ICON-02](https://pauta-project.dev/4.0.1/icons-and-color/#icon-02) | MUST | fail | no fonts/inter, no Font.loadFont |
 | [ICON-08](https://pauta-project.dev/4.0.1/icons-and-color/#icon-08) | MUST | fail | `src/main/resources/com/mirada/styles/mirada.css:50`: hexes outside .root (:50, :161, :490, :531, :535) and literal white/black/rgba |
@@ -74,19 +74,10 @@ A failed MUST blocks a release.
 | [SET-09](https://pauta-project.dev/4.0.1/settings/#set-09) | MUST | fail | `src/main/java/com/mirada/settings/Settings.java`: no SCHEMA_VERSION or migration in settings or bookmarks |
 | [SET-10](https://pauta-project.dev/4.0.1/settings/#set-10) | MUST | fail | no version, so no too-new backup <name>.v<n>.bak |
 | [SET-12](https://pauta-project.dev/4.0.1/settings/#set-12) | MUST | fail | no Export or Import of the config folder |
-| [DIAG-01](https://pauta-project.dev/4.0.1/diagnostics/#diag-01) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:815`: messages are a two-second toast; no Message Log |
-| [DIAG-02](https://pauta-project.dev/4.0.1/diagnostics/#diag-02) | MUST | fail | no java.util.logging capture, no mirada-session.log |
-| [DIAG-03](https://pauta-project.dev/4.0.1/diagnostics/#diag-03) | MUST | fail | no Debug Log window |
-| [DIAG-04](https://pauta-project.dev/4.0.1/diagnostics/#diag-04) | MUST | fail | `src/main/java/com/mirada/App.java:38`: handler installed first in main, no dialog, said over the window; but there is no Debug Log to route to (DIAG-02) |
-| [DIAG-05](https://pauta-project.dev/4.0.1/diagnostics/#diag-05) | MUST | fail | no update check, About line, Check for Updates command or setting |
-| [DIAG-06](https://pauta-project.dev/4.0.1/diagnostics/#diag-06) | MUST | fail | no Report a Problem or redactor |
-| [CLI-05](https://pauta-project.dev/4.0.1/command-line/#cli-05) | MUST | fail | no --report |
 | [CLI-07](https://pauta-project.dev/4.0.1/command-line/#cli-07) | MUST | fail | `src/main/java/com/mirada/App.java:68`: macOS Apple Events reach the running app, but no single instance per config folder |
 | [INTL-01](https://pauta-project.dev/4.0.1/i18n/#intl-01) | MUST | fail | no messages*.properties; every string is an English literal |
 | [INTL-08](https://pauta-project.dev/4.0.1/i18n/#intl-08) | MUST | fail | no catalogs, no parity test |
 | [PAL-02](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-02) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:337`: inPalette() leaves out Escape, Command Palette and the four Pan commands |
-| [ABOUT-02](https://pauta-project.dev/4.0.1/templates/about/#about-02) | MUST | fail | `src/main/java/com/mirada/ui/AboutWindow.java:81`: version, build, commit, Pauta edition, runtime, license, links, same text as --version; no update-check result |
-| [MLOG-01](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-01) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:815`: messages are a two-second toast with no log (WIN-01 requires the status bar MLOG presumes) |
 | [REL-03](https://pauta-project.dev/4.0.1/release/#rel-03) | MUST | fail | `.github/workflows/release.yml:284`: the release job builds nothing and attaches every file with SHA256SUMS, but through gh, not JReleaser (no jreleaser.yml, no checksums_sha256.txt) |
 | [REL-15](https://pauta-project.dev/4.0.1/release/#rel-15) | MUST | fail | `scripts/notarize-mac.sh:30`: signs, notarizes, staples and checks with spctl, but the notarized app is never launched, the family's secret names and team aren't used, and notarization is skipped silently on a tag without secrets |
 | [REL-16](https://pauta-project.dev/4.0.1/release/#rel-16) | MUST | fail | `scripts/sign-linux.sh:16`: rpmsign and .asc beside every file, but no separate sign-linux job, no debsigs signature on the .deb, no committed packaging/linux/signing-key.asc |
@@ -101,8 +92,8 @@ A failed MUST blocks a release.
 | ID | Level | Result | Evidence |
 |----|-------|--------|----------|
 | [PLAT-07](https://pauta-project.dev/4.0.1/platform/#plat-07) | SHOULD | fail | no Inter, no Font.loadFont, no ui-font.css |
-| [PLAT-13](https://pauta-project.dev/4.0.1/platform/#plat-13) | SHOULD | fail | no java.util.logging; System.err in 8 places (src/main/java/com/mirada/ui/ViewerWindow.java:619) |
 | [PLAT-14](https://pauta-project.dev/4.0.1/platform/#plat-14) | SHOULD | fail | `src/main/java/com/mirada/settings/Settings.java:456`: .properties, no schema version |
+| [MLOG-05](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-05) | SHOULD | fail | `src/test/java/com/mirada/diagnostics/MessageLogTest.java:101`: Mirada has no message keys; severity is given where said or read from the first words (`MessageLog.severityOf`), not from a `status.*` key |
 | [REPO-08](https://pauta-project.dev/4.0.1/repository/#repo-08) | MAY | fail | no TODO.md (AGENTS.md "Not done") |
 | [DOCS-03](https://pauta-project.dev/4.0.1/documentation/#docs-03) | SHOULD | fail | `mirada-website/astro.config.mjs:27`: docs not versioned; no docs URL in the app |
 | [DOCS-04](https://pauta-project.dev/4.0.1/documentation/#docs-04) | SHOULD | fail | `mirada-website/scripts/GenCommands.java`: generates commands and version, but What's new is hand-written and no check:docs |
@@ -158,12 +149,6 @@ A failed MUST blocks a release.
 | [QOPEN-12](https://pauta-project.dev/4.0.1/templates/quick-open/#qopen-12) | SHOULD | fail | `src/main/java/com/mirada/ui/BookmarksWindow.java:221`: the Bookmarks list maps keys by hand, not through PaletteKeys |
 | [CONF-05](https://pauta-project.dev/4.0.1/templates/confirm-dialog/#conf-05) | SHOULD | fail | `src/main/java/com/mirada/ui/Editor.java`: no Save / Discard / Cancel question |
 | [CONF-12](https://pauta-project.dev/4.0.1/templates/confirm-dialog/#conf-12) | SHOULD | fail | `src/test/java/com/mirada/ui/ConfirmTest.java`: the words come from pure builders, tested; no capture hook for UI tests |
-| [MLOG-02](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-02) | SHOULD | fail | no Message Log |
-| [MLOG-03](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-03) | SHOULD | fail | no Message Log |
-| [MLOG-04](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-04) | SHOULD | fail | no Message Log |
-| [MLOG-05](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-05) | SHOULD | fail | no Message Log |
-| [MLOG-06](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-06) | SHOULD | fail | no Message Log |
-| [MLOG-07](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-07) | SHOULD | fail | no Message Log |
 | [SYNC-01](https://pauta-project.dev/4.0.1/templates/settings-sync/#sync-01) | SHOULD | fail | no Settings Sync |
 | [REL-06](https://pauta-project.dev/4.0.1/release/#rel-06) | SHOULD | fail | `pom.xml:9`: main carries -SNAPSHOT, but no post-release bump job (AGENTS.md Releasing step 5 is by hand) |
 | [REL-07](https://pauta-project.dev/4.0.1/release/#rel-07) | SHOULD | fail | `.github/workflows/release.yml:255`: per-leg checks only; no expected-asset list checked before publishing |
@@ -190,6 +175,7 @@ A failed MUST blocks a release.
 | [MENU-05](https://pauta-project.dev/4.0.1/menus/#menu-05) | MUST | manual | `src/main/java/com/mirada/ui/ThumbnailStrip.java:105`: the strip's menu is the strip's, not the clicked image's; bookmark row actions aren't commands |
 | [MENU-08](https://pauta-project.dev/4.0.1/menus/#menu-08) | MUST | manual | `src/main/java/com/mirada/ui/Popups.java:48`: hide-on-escape on; focus stays |
 | [MENU-10](https://pauta-project.dev/4.0.1/menus/#menu-10) | SHOULD | manual | `src/main/java/com/mirada/ui/BookmarksWindow.java:413`: bookmark rows select first; the strip's menu is strip-wide |
+| [DIAG-03](https://pauta-project.dev/4.0.1/diagnostics/#diag-03) | MUST | manual | `src/main/java/com/mirada/ui/DebugLogWindow.java:29`: an unowned, modeless Stage with Refresh, Copy, Clear, Export…, Report a Problem…; open it from Help and keep working in the main window |
 | [CLI-04](https://pauta-project.dev/4.0.1/command-line/#cli-04) | SHOULD | manual | `src/main/java/com/mirada/App.java:64`: no session is restored, but --no-session is opened as a path |
 | [CLI-06](https://pauta-project.dev/4.0.1/command-line/#cli-06) | SHOULD | manual | `src/main/java/com/mirada/App.java:64`: only the first argument opens |
 | [INTL-04](https://pauta-project.dev/4.0.1/i18n/#intl-04) | SHOULD | manual | English only; Settings rows wrap (src/main/java/com/mirada/ui/SettingsWindow.java:276) |
@@ -208,6 +194,7 @@ A failed MUST blocks a release.
 | [PLAT-08](https://pauta-project.dev/4.0.1/platform/#plat-08) | MUST | pass | mvnw, mvnw.cmd, .mvn/wrapper/maven-wrapper.properties committed |
 | [PLAT-09](https://pauta-project.dev/4.0.1/platform/#plat-09) | MUST | pass | `pom.xml:261`: -Xep:NullAway:ERROR; @NullMarked everywhere (NullMarkedPackagesTest) |
 | [PLAT-10](https://pauta-project.dev/4.0.1/platform/#plat-10) | MUST | pass | `pom.xml:217`: palantirJavaFormat; spotless check bound to verify |
+| [PLAT-13](https://pauta-project.dev/4.0.1/platform/#plat-13) | SHOULD | pass | `src/main/java/com/mirada/diagnostics/DebugLog.java:114`: a handler on the root JUL logger; the code logs through java.util.logging only (System.out is the CLI and the perf trace) |
 | [REPO-02](https://pauta-project.dev/4.0.1/repository/#repo-02) | MUST | pass | `CHANGELOG.md:3`: Keep a Changelog 1.1 and SemVer, "## [Unreleased]" with Added/Changed/Fixed, bold-led entries |
 | [REPO-03](https://pauta-project.dev/4.0.1/repository/#repo-03) | MUST | pass | LICENSE:3 MIT License, Copyright (c) 2026 Adrián Arturo De León Saldivar |
 | [REPO-05](https://pauta-project.dev/4.0.1/repository/#repo-05) | MUST | pass | `AGENTS.md:64`: commands, one worktree per task, the change checklist; CLAUDE.md points to it |
@@ -238,9 +225,11 @@ A failed MUST blocks a release.
 | [KBD-07](https://pauta-project.dev/4.0.1/keyboard/#kbd-07) | MUST | pass | `src/main/java/com/mirada/ui/CommandPalette.java:238`: in-scene overlay, no Popup |
 | [KBD-08](https://pauta-project.dev/4.0.1/keyboard/#kbd-08) | SHOULD | pass | `src/main/java/com/mirada/ui/ViewerWindow.java:1150`: one picker for every list choice |
 | [KBD-14](https://pauta-project.dev/4.0.1/keyboard/#kbd-14) | SHOULD | n/a | no multi-key prefixes |
+| [WIN-01](https://pauta-project.dev/4.0.1/window-shell/#win-01) | MUST | pass | `src/main/java/com/mirada/ui/StatusBar.java:97`: the echo label takes `status-echo-error` or `status-echo-warn` by severity; its click runs `Command.MESSAGE_LOG` (:69); Status Bar toggles it |
 | [WIN-02](https://pauta-project.dev/4.0.1/window-shell/#win-02) | MUST | pass | `src/main/java/com/mirada/ui/Theme.java:48`: light, dark and follow-the-system, live |
 | [WIN-03](https://pauta-project.dev/4.0.1/window-shell/#win-03) | SHOULD | pass | `src/main/java/com/mirada/ui/TitleBar.java:193`: HeaderBar with StageStyle.EXTENDED; system menu bar on macOS (MacMenus.java:141) |
 | [WIN-05](https://pauta-project.dev/4.0.1/window-shell/#win-05) | MUST | pass | `src/main/java/com/mirada/ui/Confirm.java:57`: one helper: question names the thing, button the action, Escape cancels; Move to Trash records an undo (Linux) or goes to the system trash |
+| [WIN-07](https://pauta-project.dev/4.0.1/window-shell/#win-07) | MUST | pass | `src/main/java/com/mirada/ui/AboutWindow.java:155`: version, build, edition from AppInfo (:92) and the update checker's last answer (`UpdateCoordinator.summary`) |
 | [WIN-10](https://pauta-project.dev/4.0.1/window-shell/#win-10) | MAY | n/a | no modes |
 | [ICON-04](https://pauta-project.dev/4.0.1/icons-and-color/#icon-04) | SHOULD | n/a | ships no theme file; AtlantaFX Cupertino unchanged (src/main/java/com/mirada/ui/Theme.java:83) |
 | [ICON-07](https://pauta-project.dev/4.0.1/icons-and-color/#icon-07) | MUST | pass | `src/main/resources/com/mirada/styles/mirada.css:128`: -state-key only in .root, a ladder() of -color-bg-default |
@@ -308,9 +297,15 @@ A failed MUST blocks a release.
 | [SET-19](https://pauta-project.dev/4.0.1/settings/#set-19) | SHOULD | n/a | no Sync (SET-17) |
 | [SET-20](https://pauta-project.dev/4.0.1/settings/#set-20) | SHOULD | n/a | no Sync (SET-17) |
 | [SET-21](https://pauta-project.dev/4.0.1/settings/#set-21) | SHOULD | n/a | no Sync (SET-17) |
+| [DIAG-01](https://pauta-project.dev/4.0.1/diagnostics/#diag-01) | MUST | pass | `src/test/java/com/mirada/diagnostics/MessageLogTest.java:17`: newest first, evicts past 200, clears; HH:mm:ss in `MessageLogView`; opened from the echo area, Esc closes (`DiagnosticsUiTest.java:76`) |
+| [DIAG-02](https://pauta-project.dev/4.0.1/diagnostics/#diag-02) | MUST | pass | `src/test/java/com/mirada/diagnostics/DebugLogTest.java:42`: bounded buffer; session file written with mirada-session.prev.log kept (:102); root handler at `DebugLog.java:114` |
+| [DIAG-04](https://pauta-project.dev/4.0.1/diagnostics/#diag-04) | MUST | pass | `src/main/java/com/mirada/App.java:44`: `DebugLog.install()` is main's first statement; the uncaught handler logs to the Debug Log and says it in red (:97), no dialog |
+| [DIAG-05](https://pauta-project.dev/4.0.1/diagnostics/#diag-05) | MUST | pass | `src/test/java/com/mirada/update/UpdateCoordinatorTest.java:79`: after the delay, once a run, not off or not due; scheduled after the first paint (`ViewerWindow.java:356`); Check for Updates (:872), Settings switch |
+| [DIAG-06](https://pauta-project.dev/4.0.1/diagnostics/#diag-06) | MUST | pass | `src/test/java/com/mirada/report/RedactorTest.java:15`: home, user, e-mail, URL credentials, tokens; `ProblemReportTest.java:44`: short in the link, long by paste; `ReportProblemWindow` |
 | [DIAG-08](https://pauta-project.dev/4.0.1/diagnostics/#diag-08) | SHOULD | n/a | no user documents |
 | [CLI-01](https://pauta-project.dev/4.0.1/command-line/#cli-01) | MUST | pass | `src/main/java/com/mirada/App.java:47`: --help and --version print fixed English (Launch.USAGE, AppInfo.versionText) and return before launch; LaunchTest |
 | [CLI-02](https://pauta-project.dev/4.0.1/command-line/#cli-02) | MUST | pass | `src/main/java/com/mirada/Launch.java:63`: --config-dir and --dev parsed in main, before Settings.defaultFile reads anything; LaunchTest |
+| [CLI-05](https://pauta-project.dev/4.0.1/command-line/#cli-05) | MUST | pass | `src/test/java/com/mirada/report/ReportCommandTest.java:28`: `--report` writes the redacted problem-report.txt and opens the issue, no GUI (`App.java:62`) |
 | [CLI-09](https://pauta-project.dev/4.0.1/command-line/#cli-09) | SHOULD | pass | `src/main/java/com/mirada/App.java:30`: java.awt.headless set as main's first statement |
 | [INTL-03](https://pauta-project.dev/4.0.1/i18n/#intl-03) | SHOULD | n/a | no catalogs |
 | [INTL-05](https://pauta-project.dev/4.0.1/i18n/#intl-05) | SHOULD | n/a | no CJK catalog |
@@ -343,8 +338,9 @@ A failed MUST blocks a release.
 | [WELC-10](https://pauta-project.dev/4.0.1/templates/welcome/#welc-10) | SHOULD | n/a | no Customize section |
 | [WELC-11](https://pauta-project.dev/4.0.1/templates/welcome/#welc-11) | SHOULD | n/a | no Welcome tab |
 | [ABOUT-01](https://pauta-project.dev/4.0.1/templates/about/#about-01) | MUST | pass | `src/main/java/com/mirada/ui/Command.java:173`: ABOUT in the header menu and the macOS application menu |
+| [ABOUT-02](https://pauta-project.dev/4.0.1/templates/about/#about-02) | MUST | pass | `src/main/java/com/mirada/ui/AboutWindow.java:92`: `AppInfo.environment`, the --version text, and the update checker's answer (:155) |
 | [ABOUT-03](https://pauta-project.dev/4.0.1/templates/about/#about-03) | SHOULD | pass | `src/main/java/com/mirada/ui/AboutWindow.java:90`: Copy details in the content, relabelled Copied |
-| [ABOUT-04](https://pauta-project.dev/4.0.1/templates/about/#about-04) | SHOULD | n/a | no update check yet |
+| [ABOUT-04](https://pauta-project.dev/4.0.1/templates/about/#about-04) | SHOULD | pass | `src/main/java/com/mirada/update/UpdateCoordinator.java:178`: "not checked" with no answer or the check off (`UpdateCoordinatorTest.java:160`) |
 | [ABOUT-05](https://pauta-project.dev/4.0.1/templates/about/#about-05) | MUST | pass | `src/main/java/com/mirada/ui/AboutWindow.java:75`: "Built to Pauta 4.0.1" link; "Pauta: 4.0.1" right after the commit (AppInfo.versionText) |
 | [ABOUT-06](https://pauta-project.dev/4.0.1/templates/about/#about-06) | MUST | pass | `src/main/java/com/mirada/AppInfo.java:60`: pautaUrl() is the numbered page, never latest; EditionTest |
 | [ABOUT-08](https://pauta-project.dev/4.0.1/templates/about/#about-08) | MUST | pass | `pom.xml:26`: pauta.version filtered into build-info.properties, read by AppInfo; README and AGENTS.md checked by EditionTest |
@@ -372,6 +368,12 @@ A failed MUST blocks a release.
 | [FIND-13](https://pauta-project.dev/4.0.1/templates/find-bar/#find-13) | SHOULD | n/a | not a list app |
 | [FIND-14](https://pauta-project.dev/4.0.1/templates/find-bar/#find-14) | SHOULD | pass | `src/main/java/com/mirada/ui/BookmarksWindow.java:224`: Escape clears, then closes |
 | [FIND-15](https://pauta-project.dev/4.0.1/templates/find-bar/#find-15) | SHOULD | pass | `src/main/java/com/mirada/ui/ViewerWindow.java:696`: chrome out of the Tab order; window keys stand aside for text fields |
+| [MLOG-01](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-01) | MUST | pass | `src/main/java/com/mirada/ui/ViewerWindow.java:935`: every status-bar message goes to one `MessageLog`; `MessageLogView.java:155` lists it |
+| [MLOG-02](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-02) | SHOULD | pass | `src/main/java/com/mirada/ui/StatusBar.java:69`: the echo label and the unread count (:72) run `Command.MESSAGE_LOG` |
+| [MLOG-03](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-03) | SHOULD | pass | `src/main/java/com/mirada/ui/MessageLogView.java:120`: Escape and C-g close it; the backdrop closes it on a press (:58) |
+| [MLOG-04](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-04) | SHOULD | pass | `src/main/java/com/mirada/ui/MessageLogView.java:107`: shortcut+C on the list runs Copy Messages, the selection or what is listed |
+| [MLOG-06](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-06) | SHOULD | pass | `src/main/java/com/mirada/ui/MessageLogView.java:127`: opening marks the log read; `MessageLog.clear` zeroes the count (`src/main/java/com/mirada/diagnostics/MessageLog.java:99`) |
+| [MLOG-07](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-07) | SHOULD | pass | `src/test/java/com/mirada/diagnostics/MessageLogTest.java:79`: anEvictedErrorStillCounts |
 | [SYNC-02](https://pauta-project.dev/4.0.1/templates/settings-sync/#sync-02) | SHOULD | n/a | no Settings Sync |
 | [REL-01](https://pauta-project.dev/4.0.1/release/#rel-01) | MUST | pass | `.github/workflows/release.yml:42`: five-target matrix, one leg each; pom.xml dist profile; native image inside jpackage's app image on 4 targets, jlink on macos-x64; dmg by hdiutil |
 | [REL-02](https://pauta-project.dev/4.0.1/release/#rel-02) | SHOULD | pass | `.github/workflows/release.yml:239`: renames every file to Mirada-<version>-<target>.<ext> |

@@ -16,6 +16,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
@@ -58,6 +60,8 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import com.mirada.AppInfo;
+import com.mirada.diagnostics.DebugLog;
+import com.mirada.diagnostics.MessageLog;
 import com.mirada.edit.Edit;
 import com.mirada.edit.Raster;
 import com.mirada.folder.FolderImages;
@@ -71,8 +75,11 @@ import com.mirada.os.Reveal;
 import com.mirada.os.Trash;
 import com.mirada.perf.Startup;
 import com.mirada.perf.Tour;
+import com.mirada.report.Redactor;
 import com.mirada.settings.Bookmarks;
 import com.mirada.settings.Settings;
+import com.mirada.update.UpdateCoordinator;
+import com.mirada.update.UpdateService;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -131,7 +138,27 @@ public final class ViewerWindow {
     /** Built the first time it is asked for. */
     private @Nullable BookmarksWindow bookmarksWindow;
 
-    /** A line over the image saying what a toggle or a file operation did; fades on its own. */
+    /** Asked for when something is logged: starting the logging system is no part of start-up. */
+    private static Logger log() {
+        return Logger.getLogger(ViewerWindow.class.getName());
+    }
+
+    /** Everything the status bar has said this session (DIAG-01). */
+    private final MessageLog messages = new MessageLog();
+    /** The update check, once this run (DIAG-05). */
+    private final UpdateCoordinator updates;
+    /** Along the bottom, under the strip when that is there too (WIN-01). */
+    private final StatusBar statusBar;
+    /** The strip, when it runs along the bottom, then the status bar. */
+    private final VBox bottom = new VBox();
+
+    private @Nullable MessageLogView messageLog;
+    private @Nullable DebugLogWindow debugLog;
+
+    /**
+     * What the status bar would say, over the image instead while the bar is away (full screen, a
+     * slideshow, or switched off); fades on its own.
+     */
     private final Label toast = new Label();
 
     private final PauseTransition toastTimer = new PauseTransition(Duration.seconds(2));
@@ -198,6 +225,21 @@ public final class ViewerWindow {
             refreshInfo();
         });
 
+        updates = new UpdateCoordinator(
+                settings,
+                // Made when it is first asked: HttpClient is nothing start-up should load.
+                version -> new UpdateService().check(version),
+                (delay, task) -> {
+                    PauseTransition wait = new PauseTransition(Duration.millis(delay.toMillis()));
+                    wait.setOnFinished(e -> task.run());
+                    wait.play();
+                },
+                task -> Thread.ofVirtual().name("update-check").start(task),
+                Platform::runLater,
+                this::say,
+                System::currentTimeMillis);
+        statusBar = new StatusBar(messages, updates, this::run);
+
         placeholder.getStyleClass().add("placeholder");
         placeholder.setWrapText(true);
         emptyState.getStyleClass().add("empty-state");
@@ -258,7 +300,17 @@ public final class ViewerWindow {
 
         root = new BorderPane(canvas);
         root.getStyleClass().add("mirada");
-        titleBar = new TitleBar(stage, this::run, infoShowing, thumbnailsShowing);
+        bottom.getChildren().add(statusBar.node());
+        root.setBottom(bottom);
+        showStatusBar();
+        settings.addListener(this::showStatusBar);
+        // The menu's tick and the setting, kept in step both ways.
+        BooleanProperty statusBarOn = new SimpleBooleanProperty(this, "statusBarOn", settings.statusBar());
+        statusBarOn.addListener((o, was, now) -> {
+            if (now != settings.statusBar()) settings.setStatusBar(now);
+        });
+        settings.addListener(() -> statusBarOn.set(settings.statusBar()));
+        titleBar = new TitleBar(stage, this::run, infoShowing, thumbnailsShowing, statusBarOn);
         root.setTop(titleBar.node());
         infoShowing.addListener((o, was, now) -> {
             root.setRight(now ? infoPanel().node() : null);
@@ -294,10 +346,14 @@ public final class ViewerWindow {
             OnScreenControls built = controls;
             if (built != null) built.setFullScreen(now);
             root.pseudoClassStateChanged(FULL_SCREEN, now);
+            showStatusBar();
             showPointer();
         });
         updateControls();
         afterFirstPaint(titleBar::finish);
+        afterFirstPaint(statusBar::finish);
+        // A few seconds after the image, never on the way to it; not on a timing or training tour.
+        if (tour == null) afterFirstPaint(updates::scheduleStartupCheck);
         afterFirstPaint(() -> WindowIcon.applyTo(stage));
         // The marks are not start-up's: read once the image is up, then shown on it.
         afterFirstPaint(() -> {
@@ -401,7 +457,7 @@ public final class ViewerWindow {
         ThumbnailStrip built = strip;
         if (!thumbnailsShowing.get()) {
             if (built != null) {
-                if (root.getBottom() == built.node()) root.setBottom(null);
+                bottom.getChildren().remove(built.node());
                 if (root.getLeft() == built.node()) root.setLeft(null);
             }
             return;
@@ -409,7 +465,7 @@ public final class ViewerWindow {
         ThumbnailStrip shown = thumbnailStrip();
         boolean side = settings.thumbnailsAtSide();
         shown.setLayout(side, settings.thumbnailNames(), settings.thumbnailCaptions());
-        ThumbnailStrip.place(root, shown.node(), side);
+        ThumbnailStrip.place(root, bottom, shown.node(), side);
         refreshStrip();
     }
 
@@ -620,10 +676,12 @@ public final class ViewerWindow {
                 .exceptionally(error -> {
                     // ready() completes normally even for a broken file; landing here means something
                     // unforeseen went wrong on the way, and silence would leave the old image up.
-                    System.err.println("[mirada] could not show " + file + ": " + error);
-                    error.printStackTrace();
+                    log().log(Level.WARNING, "Could not show " + file, error);
                     Platform.runLater(() -> {
-                        if (file.equals(wanted)) showMessage("Couldn't open " + fileName(file) + ": " + error);
+                        if (file.equals(wanted)) {
+                            showMessage("Couldn't open " + fileName(file) + ": " + error);
+                            say("Couldn't open " + fileName(file) + ": " + error, MessageLog.Severity.ERROR);
+                        }
                     });
                     return null;
                 });
@@ -633,9 +691,10 @@ public final class ViewerWindow {
         if (!file.equals(wanted)) return;
         Image image = decoded.image();
         if (image == null) {
-            // On stderr too: the window says it to the user, this is for whoever has to find out why.
-            System.err.println("[mirada] could not open " + file + ": " + decoded.error());
+            // In the Debug Log too: the window says it to the user, this is for whoever has to find out why.
+            log().warning("Could not open " + file + ": " + decoded.error());
             showMessage("Couldn't open " + fileName(file) + ": " + decoded.error());
+            say("Couldn't open " + fileName(file) + ": " + decoded.error(), MessageLog.Severity.ERROR);
             if (tour != null) tour.failed(file, decoded.error(), folder.index() == folder.size() - 1);
             return;
         }
@@ -684,6 +743,9 @@ public final class ViewerWindow {
             if (open.onKey(e)) e.consume();
             return;
         }
+        // The Message Log's keys are its own while it is open: Escape closes it, not the window.
+        MessageLogView log = messageLog;
+        if (log != null && log.isShowing()) return;
         // The palette's keys are the user's, and win over a key's built-in command.
         boolean paletteKey = PaletteChords.opens(e);
         Command command = paletteKey
@@ -713,7 +775,7 @@ public final class ViewerWindow {
         // From the header's menu while the editor is open: what would change the image under it waits.
         Editor open = editor;
         if (open != null && open.isShowing() && !duringEdit(command)) {
-            say("Finish editing first: Save or Cancel");
+            say("Finish editing first: Save or Cancel", MessageLog.Severity.WARNING);
             return;
         }
         switch (command) {
@@ -792,6 +854,26 @@ public final class ViewerWindow {
             case PREVIOUS_BOOKMARK -> stepToBookmark(-1);
             case GO_TO_BOOKMARK -> goToBookmark();
             case BOOKMARKS -> bookmarksWindow().show(stage);
+            case STATUS_BAR -> settings.setStatusBar(!settings.statusBar());
+            case MESSAGE_LOG -> messageLog().show(statusBar.isShowing() ? StatusBar.HEIGHT : 0);
+            case COPY_MESSAGES -> copyText(MessageLogView.asText(messageLog().listed()), "Copied the messages");
+            case CLEAR_MESSAGES -> messages.clear();
+            case DEBUG_LOG -> debugLog().show(stage);
+            case COPY_DEBUG_LOG -> copyText(DebugLog.text(), "Copied the Debug Log");
+            case CLEAR_DEBUG_LOG -> {
+                DebugLog.clear();
+                DebugLogWindow window = debugLog;
+                if (window != null) window.refresh();
+            }
+            case EXPORT_DEBUG_LOG -> exportDebugLog();
+            case REPORT_PROBLEM ->
+                new ReportProblemWindow(settings, Redactor.forThisMachine(), openLink, this::say, stylesheet())
+                        .show(stage);
+            case CHECK_FOR_UPDATES -> updates.checkNow(true);
+            case OPEN_RELEASE -> {
+                String page = updates.releasePage();
+                if (page != null) openLink.accept(page);
+            }
         }
     }
 
@@ -815,7 +897,18 @@ public final class ViewerWindow {
                     BOOKMARK_FOLDER,
                     NOTE,
                     FOLDER_NOTE,
-                    BOOKMARKS -> true;
+                    BOOKMARKS,
+                    STATUS_BAR,
+                    MESSAGE_LOG,
+                    COPY_MESSAGES,
+                    CLEAR_MESSAGES,
+                    DEBUG_LOG,
+                    COPY_DEBUG_LOG,
+                    EXPORT_DEBUG_LOG,
+                    CLEAR_DEBUG_LOG,
+                    REPORT_PROBLEM,
+                    CHECK_FOR_UPDATES,
+                    OPEN_RELEASE -> true;
             default -> false;
         };
     }
@@ -824,16 +917,94 @@ public final class ViewerWindow {
     private static final double PAN_STEP = 0.1;
 
     /** {@link #say}, from any thread: how an error no code caught reaches the user (DIAG-04). */
-    public void sayLater(String message) {
-        if (Platform.isFxApplicationThread()) say(message);
-        else Platform.runLater(() -> say(message));
+    public void sayLater(String message, MessageLog.Severity severity) {
+        if (Platform.isFxApplicationThread()) say(message, severity);
+        else Platform.runLater(() -> say(message, severity));
     }
 
-    /** Shows {@code message} over the image for two seconds. */
+    /** {@link #say}, the severity read from the message's first words ({@link MessageLog#severityOf}). */
     private void say(String message) {
+        say(message, MessageLog.severityOf(message));
+    }
+
+    /**
+     * Says {@code message} in the status bar's echo area and keeps it in the Message Log; while the
+     * bar is away (full screen, a slideshow, switched off), over the image for two seconds instead.
+     */
+    private void say(String message, MessageLog.Severity severity) {
+        messages.add(message, severity, java.time.LocalTime.now());
+        if (statusBarShows()) {
+            toast.setVisible(false);
+            return;
+        }
         toast.setText(message);
+        toast.pseudoClassStateChanged(TOAST_ERROR, severity == MessageLog.Severity.ERROR);
+        toast.pseudoClassStateChanged(TOAST_WARNING, severity == MessageLog.Severity.WARNING);
         toast.setVisible(true);
         toastTimer.playFromStart();
+    }
+
+    private static final PseudoClass TOAST_ERROR = PseudoClass.getPseudoClass("error");
+    private static final PseudoClass TOAST_WARNING = PseudoClass.getPseudoClass("warning");
+
+    /** Whether the status bar is on screen: switched on, and not full screen or a slideshow. */
+    private boolean statusBarShows() {
+        return statusBarWanted(settings.statusBar(), stage.isFullScreen(), slideshowRunning);
+    }
+
+    /** Whether the status bar shows: when switched on, but never over a full-screen image or a slideshow. */
+    static boolean statusBarWanted(boolean switchedOn, boolean fullScreen, boolean slideshow) {
+        return switchedOn && !fullScreen && !slideshow;
+    }
+
+    private void showStatusBar() {
+        statusBar.setShowing(statusBarShows());
+    }
+
+    private MessageLogView messageLog() {
+        MessageLogView made = messageLog;
+        if (made == null) {
+            made = new MessageLogView(
+                    (StackPane) Objects.requireNonNull(stage.getScene()).getRoot(), messages, this::run);
+            messageLog = made;
+        }
+        return made;
+    }
+
+    private DebugLogWindow debugLog() {
+        DebugLogWindow made = debugLog;
+        if (made == null) {
+            made = new DebugLogWindow(this::run, stylesheet());
+            debugLog = made;
+        }
+        return made;
+    }
+
+    /** Puts {@code text} on the clipboard and says {@code said}. */
+    private void copyText(String text, String said) {
+        ClipboardContent content = new ClipboardContent();
+        content.putString(text);
+        Clipboard.getSystemClipboard().setContent(content);
+        say(said);
+    }
+
+    /** Saves the Debug Log where the user chooses. */
+    private void exportDebugLog() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Export Debug Log");
+        chooser.setInitialFileName("mirada-debug-log.txt");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Text", "*.txt", "*.log"));
+        DebugLogWindow window = debugLog;
+        File chosen = chooser.showSaveDialog(window != null && window.isShowing() ? window.stage() : stage);
+        if (chosen == null) return;
+        String text = DebugLog.text() + System.lineSeparator();
+        try {
+            Files.writeString(chosen.toPath(), text, java.nio.charset.StandardCharsets.UTF_8);
+            say("Saved the Debug Log to " + chosen.getName());
+        } catch (IOException e) {
+            log().log(Level.WARNING, "Could not export the Debug Log", e);
+            say("Couldn't save the Debug Log: " + e.getMessage(), MessageLog.Severity.ERROR);
+        }
     }
 
     /**
@@ -1284,7 +1455,7 @@ public final class ViewerWindow {
     private AboutWindow aboutWindow() {
         AboutWindow made = about;
         if (made == null) {
-            made = new AboutWindow(settings.file(), openLink, stylesheet());
+            made = new AboutWindow(settings.file(), openLink, updates, stylesheet());
             about = made;
         }
         return made;
@@ -1300,6 +1471,14 @@ public final class ViewerWindow {
             return "No bookmarked image after this one.";
         if (folderReason == null && command == Command.PREVIOUS_BOOKMARK && bookmarkFrom(-1) < 0)
             return "No bookmarked image before this one.";
+        if (command == Command.OPEN_RELEASE && updates.releasePage() == null)
+            return updates.state() == UpdateCoordinator.State.NOT_CHECKED
+                    ? "No newer release is known: Check for Updates first."
+                    : "No newer release is out.";
+        if (command == Command.CHECK_FOR_UPDATES && updates.state() == UpdateCoordinator.State.CHECKING)
+            return "Already checking.";
+        if (command == Command.COPY_DEBUG_LOG && DebugLog.text().isEmpty()) return "Nothing is logged yet.";
+        if (command == Command.COPY_MESSAGES && messages.entries().isEmpty()) return "Nothing has been said yet.";
         if (command == Command.UNDO_TRASH && trashed.isEmpty()) {
             String trash = Command.trash(Command.WINDOWS);
             return Trash.restores()
@@ -1491,6 +1670,7 @@ public final class ViewerWindow {
                 yield shown != null && bookmarks.isBookmarked(shown);
             }
             case INFO -> infoShowing.get();
+            case STATUS_BAR -> settings.statusBar();
             case THUMBNAILS -> thumbnailsShowing.get();
             case THUMBNAILS_AT_SIDE -> settings.thumbnailsAtSide();
             case THUMBNAIL_NAMES -> settings.thumbnailNames();

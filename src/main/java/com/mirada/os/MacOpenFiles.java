@@ -19,6 +19,8 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javafx.application.Platform;
 
@@ -48,6 +50,11 @@ import static java.lang.foreign.ValueLayout.JAVA_LONG;
  */
 public final class MacOpenFiles {
 
+    /** Asked for when something is logged: starting the logging system is no part of start-up. */
+    private static Logger log() {
+        return Logger.getLogger(MacOpenFiles.class.getName());
+    }
+
     private MacOpenFiles() {}
 
     /** Files that arrived and have not been handed on. Guarded by the class. */
@@ -68,7 +75,7 @@ public final class MacOpenFiles {
             Observer.register();
             return "files";
         } catch (Throwable e) {
-            System.err.println("[mirada] no open-file handler: " + e);
+            log().log(Level.WARNING, "No open-file handler", e);
             return "none (" + e + ")";
         }
     }
@@ -254,7 +261,7 @@ public final class MacOpenFiles {
                 MemorySegment url = (MemorySegment) msgSendWith.invokeExact(info, objectForKey, urlKey);
                 fileOf(text(msgSend, url)).ifPresent(MacOpenFiles::arrived);
             } catch (Throwable e) {
-                System.err.println("[mirada] an opened file was lost: " + e);
+                log().log(Level.WARNING, "An opened file was lost", e);
             }
         }
 

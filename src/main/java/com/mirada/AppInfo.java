@@ -2,8 +2,13 @@ package com.mirada;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
+
+import com.mirada.image.NativeLibraries;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Identity: the one place a version number is read from.
@@ -27,6 +32,12 @@ public final class AppInfo {
     public static final String COPYRIGHT = "Copyright © 2026 Adrián Arturo De León Saldivar";
     public static final String LICENSE = "MIT License";
     public static final String HOMEPAGE = "https://github.com/adriandeleon/Mirada";
+    /** Where Report a Problem opens its prefilled issue ({@code .github/ISSUE_TEMPLATE/bug_report.yml}). */
+    public static final String NEW_ISSUE_URL = HOMEPAGE + "/issues/new";
+    /** The releases, for an update notice that has no page of its own. */
+    public static final String RELEASES_URL = HOMEPAGE + "/releases";
+    /** What the update check asks: the newest release that is neither a draft nor a pre-release. */
+    public static final String LATEST_RELEASE_API = "https://api.github.com/repos/adriandeleon/Mirada/releases/latest";
 
     private AppInfo() {}
 
@@ -81,6 +92,44 @@ public final class AppInfo {
                 + "OS: " + System.getProperty("os.name") + " " + System.getProperty("os.version") + " ("
                 + System.getProperty("os.arch") + ")\n"
                 + "Settings: " + tildeHome(settingsFile.toString());
+    }
+
+    /**
+     * This runtime's line: Java, JavaFX once its toolkit has said its version (not for {@code
+     * --report}, which never starts it), and the codec bundle.
+     */
+    public static String runtime() {
+        return runtime(
+                System.getProperty("java.runtime.version"),
+                System.getProperty("javafx.runtime.version"),
+                codecVersions());
+    }
+
+    /** {@code Java 25.0.1 · JavaFX 27 · Codecs: libheif v1.23.7, ...}, leaving out what is unknown. */
+    static String runtime(@Nullable String java, @Nullable String javafx, @Nullable String codecs) {
+        StringBuilder out = new StringBuilder();
+        if (java != null) out.append("Java ").append(java);
+        if (javafx != null)
+            out.append(out.isEmpty() ? "" : " · ").append("JavaFX ").append(javafx);
+        out.append(out.isEmpty() ? "" : "\n")
+                .append("Codecs: ")
+                .append(codecs == null || codecs.isBlank() ? "the system's, or none" : codecs);
+        return out.toString();
+    }
+
+    /** The bundle's VERSIONS.txt, joined on one line; null without a bundle. */
+    private static @Nullable String codecVersions() {
+        Path versions = NativeLibraries.versionsFile();
+        if (versions == null) return null;
+        try {
+            return String.join(", ", Files.readAllLines(versions, StandardCharsets.UTF_8))
+                    .replace(" (asm: true)", "")
+                    .replace(" (asm: false)", " (no asm)")
+                    .replace(" (simd: ON)", "")
+                    .replace(" (simd: OFF)", " (no SIMD)");
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
     }
 
     /** Replaces the user's home folder with {@code ~}. */

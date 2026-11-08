@@ -61,6 +61,13 @@ final class Icons {
     static final String CLOCK = "M12 3 A9 9 0 1 1 11.99 3 Z M12 7 V12 L15.5 14";
     static final String LIST = "M8 6 H20 M8 12 H20 M8 18 H20 M4 6 H4.1 M4 12 H4.1 M4 18 H4.1";
 
+    static final String STATUS_BAR = "M3 5 H21 V19 H3 Z M3 15.5 H21 M6 17.5 H11";
+    static final String MESSAGES = "M4 5 H20 V16 H10 L6 20 V16 H4 Z M8 9 H16 M8 12 H13";
+    static final String LOG = "M6 3 H18 V21 H6 Z M9 8 H15 M9 12 H15 M9 16 H13";
+    static final String DOWNLOAD = "M12 4 V15 M7 10 L12 15 L17 10 M5 20 H19";
+    static final String WARNING = "M12 3.5 L21.5 20 H2.5 Z M12 9.5 V14 M12 17 V17.1";
+    static final String UPDATE = "M12 3 A9 9 0 1 1 11.99 3 Z M12 16.5 V8 M8.5 11.5 L12 8 L15.5 11.5";
+
     static final String BOOKMARK = "M6.5 3.5 H17.5 V20.5 L12 16 L6.5 20.5 Z";
     static final String NOTE = "M5 4 H19 V14 L14 20 H5 Z M14 20 V14 H19 M8.5 8.5 H15.5 M8.5 12 H12.5";
     static final String NEXT_BOOKMARK = "M4 3.5 H12 V17.5 L8 14 L4 17.5 Z M15 18 L20 12 L15 6";
@@ -108,6 +115,14 @@ final class Icons {
             case OPEN_RECENT -> CLOCK;
             case CLOSE -> CLOSE;
             case PALETTE -> PROMPT;
+            case STATUS_BAR -> STATUS_BAR;
+            case MESSAGE_LOG -> MESSAGES;
+            case DEBUG_LOG -> LOG;
+            case COPY_MESSAGES, COPY_DEBUG_LOG -> COPY;
+            case CLEAR_MESSAGES, CLEAR_DEBUG_LOG -> TRASH;
+            case EXPORT_DEBUG_LOG, OPEN_RELEASE -> DOWNLOAD;
+            case REPORT_PROBLEM -> WARNING;
+            case CHECK_FOR_UPDATES -> UPDATE;
             default -> null;
         };
     }

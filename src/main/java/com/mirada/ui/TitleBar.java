@@ -16,6 +16,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
@@ -138,6 +139,7 @@ final class TitleBar {
     private final BooleanProperty thumbnailsShowing;
     private final ToggleButton info = new ToggleButton();
     private final MenuButton menu = new MenuButton();
+    private final BooleanProperty statusBarOn;
     private final Region row;
     private final boolean extended;
 
@@ -145,12 +147,19 @@ final class TitleBar {
      * @param run runs a command, the same as its key would
      * @param infoShowing the sidebar's state, which the info button shows and toggles
      * @param thumbnailsShowing the strip's state, which the menu ticks and toggles
+     * @param statusBarOn whether the status bar is switched on, which the menu ticks and toggles
      */
-    TitleBar(Stage stage, Consumer<Command> run, BooleanProperty infoShowing, BooleanProperty thumbnailsShowing) {
+    TitleBar(
+            Stage stage,
+            Consumer<Command> run,
+            BooleanProperty infoShowing,
+            BooleanProperty thumbnailsShowing,
+            BooleanProperty statusBarOn) {
         this.stage = stage;
         this.run = run;
         this.infoShowing = infoShowing;
         this.thumbnailsShowing = thumbnailsShowing;
+        this.statusBarOn = statusBarOn;
         this.extended = Platform.isSupported(ConditionalFeature.EXTENDED_WINDOW);
 
         title.getStyleClass().add("header-title");
@@ -230,6 +239,7 @@ final class TitleBar {
                         new SeparatorMenuItem(),
                         panel(Command.THUMBNAILS, thumbnailsShowing),
                         panel(Command.INFO, infoShowing),
+                        panel(Command.STATUS_BAR, statusBarOn),
                         item(Command.BOOKMARKS, run),
                         new SeparatorMenuItem(),
                         item(Command.EDIT, run),
@@ -239,6 +249,7 @@ final class TitleBar {
                         new SeparatorMenuItem(),
                         item(Command.SETTINGS, run),
                         item(Command.SHORTCUTS, run),
+                        help(run),
                         item(Command.ABOUT, run),
                         new SeparatorMenuItem(),
                         item(Command.CLOSE, run));
@@ -297,6 +308,19 @@ final class TitleBar {
         item.selectedProperty().bindBidirectional(showing);
         item.setUserData(command);
         return MenuChord.on(item, command);
+    }
+
+    /** Help: the logs, reporting a problem and the update check (DIAG-03, DIAG-05, DIAG-06). */
+    private static Menu help(Consumer<Command> run) {
+        Menu help = new Menu("Help");
+        help.getItems()
+                .addAll(
+                        item(Command.MESSAGE_LOG, run),
+                        item(Command.DEBUG_LOG, run),
+                        new SeparatorMenuItem(),
+                        item(Command.REPORT_PROBLEM, run),
+                        item(Command.CHECK_FOR_UPDATES, run));
+        return help;
     }
 
     private static MenuItem item(Command command, Consumer<Command> run) {

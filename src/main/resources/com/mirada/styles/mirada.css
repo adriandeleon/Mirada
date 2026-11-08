@@ -471,6 +471,138 @@
     -fx-font-size: 1.0em;
 }
 
+.toast:error {
+    -fx-text-fill: -color-danger-3;
+}
+
+.toast:warning {
+    -fx-text-fill: -color-warning-3;
+}
+
+/* The status bar (WIN-01): the echo area on the left, errors red and warnings amber, then the count
+   of unread errors; a newer release's notice on the right. */
+.status-bar {
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: -color-border-muted transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 0 10 0 10;
+}
+
+.status-bar .status-echo {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+}
+
+.status-echo-error,
+.status-bar .status-echo.status-echo-error {
+    -fx-text-fill: -color-danger-fg;
+}
+
+.status-echo-warn,
+.status-bar .status-echo.status-echo-warn {
+    -fx-text-fill: -color-warning-fg;
+}
+
+.status-bar .status-unread {
+    -fx-background-color: -color-danger-emphasis;
+    -fx-text-fill: -color-fg-emphasis;
+    -fx-background-radius: 999;
+    -fx-padding: 0 6 0 6;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.status-bar .status-update {
+    -fx-font-size: 12px;
+    -fx-padding: 0;
+    -fx-border-width: 0;
+}
+
+/* The Message Log (MLOG-01): a card like the palette's, just above the status bar. The backdrop
+   only catches a press outside; the image stays as it is. */
+.message-log-backdrop {
+    -fx-background-color: transparent;
+}
+
+.message-log {
+    -fx-background-color: -color-bg-overlay;
+    -fx-background-radius: 12;
+    -fx-border-color: -color-border-default;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-padding: 10 12 10 12;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 32, 0.12, 0, 10);
+}
+
+.message-log .message-log-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-default;
+}
+
+.message-log .list-view {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+}
+
+.message-log .list-cell {
+    -fx-padding: 2 4 2 4;
+    -fx-background-color: transparent;
+    -fx-background-radius: 5;
+    -fx-font-size: 12.5px;
+}
+
+.message-log .list-cell:filled:selected {
+    -fx-background-color: -color-accent-subtle;
+}
+
+.message-log .list-cell .label {
+    -fx-text-fill: -color-fg-default;
+}
+
+.message-log .list-cell .message-log-time {
+    -fx-font-family: monospace;
+    -fx-font-size: 11px;
+    -fx-text-fill: -color-fg-muted;
+}
+
+.message-log .list-cell .label.status-echo-error {
+    -fx-text-fill: -color-danger-fg;
+}
+
+.message-log .list-cell .label.status-echo-warn {
+    -fx-text-fill: -color-warning-fg;
+}
+
+.message-log .message-log-hint {
+    -fx-font-size: 11px;
+    -fx-text-fill: -color-fg-muted;
+}
+
+/* The Debug Log: the log as written, in a fixed-width face. */
+.debug-log .debug-log-text {
+    -fx-font-family: monospace;
+    -fx-font-size: 12px;
+}
+
+.debug-log .debug-log-file {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 11px;
+}
+
+.report-problem .report-text {
+    -fx-font-family: monospace;
+    -fx-font-size: 12px;
+}
+
+.about .about-update {
+    -fx-text-fill: -color-fg-muted;
+}
+
 /* The editor: the window's own surfaces for its bars, a dark canvas for the picture, and the crop
    box drawn in white over a dimmed outside, as GNOME Image Viewer draws it. */
 .editor {
