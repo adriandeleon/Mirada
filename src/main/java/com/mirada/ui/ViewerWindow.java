@@ -632,6 +632,8 @@ public final class ViewerWindow {
         cache.close();
         ThumbnailStrip built = strip;
         if (built != null) built.close();
+        BookmarksWindow marks = bookmarksWindow;
+        if (marks != null) marks.close();
     }
 
     /** Saves where the window is, for the next start: once, as it closes or the app quits. */
@@ -1025,7 +1027,7 @@ public final class ViewerWindow {
         chooser.setInitialFileName("mirada-debug-log.txt");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Text", "*.txt", "*.log"));
         DebugLogWindow window = debugLog;
-        File chosen = chooser.showSaveDialog(window != null && window.isShowing() ? window.stage() : stage);
+        File chosen = FileDialogs.save(chooser, window != null && window.isShowing() ? window.stage() : stage);
         if (chosen == null) return;
         String text = DebugLog.text() + System.lineSeparator();
         try {
@@ -1580,7 +1582,7 @@ public final class ViewerWindow {
         Path current = folder.current();
         Path parent = current == null ? null : current.toAbsolutePath().getParent();
         if (parent != null) chooser.setInitialDirectory(parent.toFile());
-        File chosen = chooser.showDialog(stage);
+        File chosen = FileDialogs.folder(chooser, stage);
         if (chosen != null) open(chosen.toPath());
     }
 
@@ -1595,7 +1597,7 @@ public final class ViewerWindow {
         Path current = folder.current();
         Path parent = current == null ? null : current.getParent();
         if (parent != null) chooser.setInitialDirectory(parent.toFile());
-        File chosen = chooser.showOpenDialog(stage);
+        File chosen = FileDialogs.open(chooser, stage);
         if (chosen != null) open(chosen.toPath());
     }
 

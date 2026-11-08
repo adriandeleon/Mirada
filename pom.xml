@@ -175,6 +175,17 @@
                 <filtering>false</filtering>
                 <excludes><exclude>com/mirada/build-info.properties</exclude></excludes>
             </resource>
+            <!-- The licence and the notices travel inside the jar and the module (REPO-04), as
+                 well as beside the app in every image (scripts/add-notices.sh). -->
+            <resource>
+                <directory>${project.basedir}</directory>
+                <targetPath>META-INF/mirada</targetPath>
+                <filtering>false</filtering>
+                <includes>
+                    <include>LICENSE</include>
+                    <include>NOTICE</include>
+                </includes>
+            </resource>
         </resources>
         <plugins>
             <!-- The commit a build came from, for About and the version text (ABOUT-02):

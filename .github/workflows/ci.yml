@@ -93,6 +93,31 @@ jobs:
           path: target/surefire-reports/
           retention-days: 7
 
+      # Verify's coverage gate (PLAT-12) reads target/jacoco.exec; the report is written after the
+      # tests, so it is there to keep and to sum up even when the floors failed the build.
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: jacoco-${{ matrix.os }}
+          path: target/site/jacoco/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Summarise coverage
+        if: always()
+        run: |
+          csv=target/site/jacoco/jacoco.csv
+          if [ ! -f "$csv" ]; then
+            echo "### Coverage (${{ matrix.os }}): no report (the tests did not run)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          awk -F, 'NR > 1 { lm += $8; lc += $9; mm += $12; mc += $13; bm += $6; bc += $7 }
+            END {
+              print "### Coverage (" os ")"
+              printf "Lines %.1f%% · methods %.1f%% · branches %.1f%%\n", 100 * lc / (lc + lm), 100 * mc / (mc + mm), 100 * bc / (bc + bm)
+            }' os="${{ matrix.os }}" "$csv" >> "$GITHUB_STEP_SUMMARY"
+
   # What ships: the native image (GraalVM + StaticFX, docs/native-image.md) in jpackage's app image
   # wherever GraalVM builds one, and the jlink image with its AOT cache on Intel macOS, which
   # GraalVM 25.4 no longer targets. A native image is only as complete as its reachability

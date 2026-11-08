@@ -14,6 +14,10 @@ import javax.imageio.ImageIO;
 
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.DialogPane;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -147,6 +151,63 @@ final class WindowFixture implements AutoCloseable {
         return call(() -> Window.getWindows().stream()
                 .filter(w -> w != main && w.isShowing())
                 .toList());
+    }
+
+    /**
+     * Answers the next dialog to show (a confirmation, Rename, a note) as the user would: {@code how}
+     * acts on its pane, on the FX thread, while the code that showed it waits in showAndWait. Started
+     * before the command that shows it, as that command does not return until it is answered.
+     */
+    static Thread answerNextDialog(Consumer<DialogPane> how) {
+        Thread answerer = new Thread(
+                () -> {
+                    try {
+                        long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(20);
+                        while (System.nanoTime() < deadline) {
+                            DialogPane pane = call(WindowFixture::showingDialog);
+                            if (pane != null) {
+                                fx(() -> how.accept(pane));
+                                return;
+                            }
+                            Thread.sleep(20);
+                        }
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
+                },
+                "dialog-answerer");
+        answerer.setDaemon(true);
+        answerer.start();
+        return answerer;
+    }
+
+    private static @Nullable DialogPane showingDialog() {
+        for (Window window : Window.getWindows()) {
+            if (window.isShowing()
+                    && window.getScene() != null
+                    && window.getScene().getRoot() instanceof DialogPane pane) {
+                return pane;
+            }
+        }
+        return null;
+    }
+
+    /** Presses the dialog's button whose text is {@code text}. */
+    static void press(DialogPane pane, String text) {
+        for (ButtonType type : pane.getButtonTypes()) {
+            if (type.getText().equals(text)) {
+                ((Button) Objects.requireNonNull(pane.lookupButton(type))).fire();
+                return;
+            }
+        }
+        throw new AssertionError("no button " + text + " in " + pane.getButtonTypes());
+    }
+
+    /** Types {@code text} into the dialog's text field or area, in place of what was there. */
+    static void type(DialogPane pane, String text) {
+        Node field = pane.lookup(".text-input");
+        if (!(field instanceof TextInputControl input)) throw new AssertionError("no text field in the dialog");
+        input.setText(text);
     }
 
     @Override

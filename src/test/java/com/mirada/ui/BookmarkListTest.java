@@ -68,6 +68,14 @@ class BookmarkListTest {
     }
 
     @Test
+    void aFolderMarkedWithNoImageMarkedInItIsARowOfItsOwn(@TempDir Path dir) {
+        // Shift+B on a folder and nothing else: the list once threw sorting an empty, fixed list.
+        List<Bookmarks.Mark> marks = List.of(folder(dir, true, ""), folder(dir.resolve("Other"), false, "a note"));
+        assertEquals(List.of(dir, dir.resolve("Other")), paths(BookmarkList.rows(marks, "", BookmarkList.Show.ALL)));
+        assertEquals(List.of(dir), paths(BookmarkList.rows(marks, "", BookmarkList.Show.BOOKMARKS)));
+    }
+
+    @Test
     void everyWordIsFoundInTheNameTheFolderOrTheNote(@TempDir Path dir) {
         Bookmarks.Mark mark = image(dir.resolve("Holiday/IMG_0412.jpg"), true, "The lake at DAWN");
         assertTrue(BookmarkList.matches(mark, BookmarkList.words("")));

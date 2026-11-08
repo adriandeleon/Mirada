@@ -364,7 +364,7 @@ final class Editor {
                         new FileChooser.ExtensionFilter("PNG", "*.png"),
                         new FileChooser.ExtensionFilter("TIFF", "*.tif", "*.tiff"),
                         new FileChooser.ExtensionFilter("BMP", "*.bmp"));
-        File chosen = chooser.showSaveDialog(owner());
+        File chosen = FileDialogs.save(chooser, owner());
         if (chosen == null) return;
         Path target = withExtension(chosen.toPath(), extension);
         // The dialog asked about the name typed, not the one an added extension made (CONF-01).

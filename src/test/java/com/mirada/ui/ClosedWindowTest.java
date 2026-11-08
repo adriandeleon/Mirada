@@ -82,6 +82,9 @@ class ClosedWindowTest {
             fixture.run(Command.SETTINGS);
             fixture.run(Command.ABOUT);
             fixture.run(Command.SHORTCUTS);
+            // A bookmark, so the Bookmarks window's list asks for a thumbnail on threads of its own.
+            fixture.waitForFirstPaint();
+            if (round == 0) fixture.run(Command.BOOKMARK);
             fixture.run(Command.BOOKMARKS);
             fixture.run(Command.DEBUG_LOG);
             fixture.run(Command.MESSAGE_LOG);
