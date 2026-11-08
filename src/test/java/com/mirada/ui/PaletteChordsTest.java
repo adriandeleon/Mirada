@@ -72,14 +72,10 @@ class PaletteChordsTest {
     }
 
     @Test
-    void theShortcutsWindowNamesTheOtherKeys() {
-        String also = ShortcutsWindow.also(false, List.of(CTRL_SHIFT_P, ALT_X, F1));
-        assertTrue(
-                also.contains(ALT_X.getDisplayText() + " and " + F1.getDisplayText() + " for the command palette"),
-                also);
-        assertFalse(ShortcutsWindow.also(false, List.of(CTRL_SHIFT_P)).contains("palette"));
-        assertEquals("A, B and C", ShortcutsWindow.inWords(List.of("A", "B", "C")));
-        assertEquals("A", ShortcutsWindow.inWords(List.of("A")));
+    void theShortcutsWindowListsEveryPaletteKey() {
+        assertEquals(
+                CTRL_SHIFT_P.getDisplayText() + ", " + ALT_X.getDisplayText() + ", " + F1.getDisplayText(),
+                ShortcutsWindow.keys(List.of(CTRL_SHIFT_P, ALT_X, F1)));
     }
 
     @Test

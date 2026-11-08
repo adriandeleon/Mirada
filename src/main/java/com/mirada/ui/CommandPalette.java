@@ -96,6 +96,8 @@ final class CommandPalette {
 
     private Choices choices = new Choices(Command.GO_TO_IMAGE, "", "", "go", List.of(), -1, index -> "", index -> "");
     private boolean findingImages;
+    /** The command whose chord the chip shows, for {@link #refreshKeys}. */
+    private Command openedBy = Command.PALETTE;
 
     CommandPalette(StackPane host, Consumer<Command> run) {
         this.host = host;
@@ -229,6 +231,7 @@ final class CommandPalette {
 
     private void open(boolean findingImages, Command openedBy, String prompt, String nothing, String verb) {
         this.findingImages = findingImages;
+        this.openedBy = openedBy;
         prefixChip.setText(openedBy.chord().getDisplayText());
         input.setPromptText(prompt);
         hint.setText(PaletteKeys.legend(PaletteKeys.hint(verb, "↵")));
@@ -237,6 +240,18 @@ final class CommandPalette {
         filter("");
         host.getChildren().addAll(backdrop, card);
         input.requestFocus();
+    }
+
+    /**
+     * Shows the keys in force again, while it is up: after the keymap or the user's keys changed in
+     * the settings (PAL-09). The chip and each row's chord are read again; the legend is the
+     * palette's own keys, which no keymap changes. Closed, there is nothing to do: every open reads
+     * them.
+     */
+    void refreshKeys() {
+        if (!isShowing()) return;
+        prefixChip.setText(openedBy.chord().getDisplayText());
+        list.refresh();
     }
 
     void hide() {

@@ -15,37 +15,22 @@ import org.jspecify.annotations.Nullable;
  * KeyChord} tokens ({@code palette.keys=C-S-p M-x f1}) or from the settings window. By default
  * Shift+Ctrl+P (Shift+Cmd+P on a Mac), Emacs's M-x (Alt+X; Option+X on a Mac) and F1.
  *
- * <p>The key filter asks {@link #opens} before {@link Command#forKey}, so a chord chosen here wins
- * over the key's built-in command. The first chord is the one shown beside the palette, in the
- * header's menu, the shortcuts window and the Mac's Help menu ({@link Command#chord()}).
+ * <p>They are the user's layer over the keymap's {@code palette.show} ({@link Keybindings#use}),
+ * put on before any other, so no other command's key takes them. The key filter asks {@link
+ * #opens} before anything else, in every window and while the editor is open. The first chord is
+ * the one shown beside the palette, in the header's menu, the shortcuts window and the Mac's Help
+ * menu ({@link Command#chord()}).
  *
  * <p>FX thread only, like the settings it follows.
  */
 final class PaletteChords {
 
-    /** The setting as last given; read into {@link #current} when first needed, not at start-up. */
-    private static String keys = Settings.defaultPaletteKeys(Command.MAC);
-
-    private static @Nullable List<KeyCombination> current;
-
     private PaletteChords() {}
 
-    /** The chords in use now, never empty. */
+    /** The chords in use now, never empty: the settings' when one can be read, else the default. */
     static List<KeyCombination> current() {
-        List<KeyCombination> chords = current;
-        if (chords == null) {
-            chords = parse(keys, Command.MAC);
-            current = chords;
-        }
-        return chords;
-    }
-
-    /** Follows the setting: {@code keys} as the settings file holds them. Whether they changed. */
-    static boolean use(String keys) {
-        if (keys.equals(PaletteChords.keys)) return false;
-        PaletteChords.keys = keys;
-        current = null;
-        return true;
+        List<KeyCombination> chords = Keybindings.current().chords(Command.PALETTE);
+        return chords.isEmpty() ? parse(Settings.defaultPaletteKeys(Command.MAC), Command.MAC) : chords;
     }
 
     /**

@@ -16,7 +16,7 @@ In this order, when they pull against each other:
 
 - **Extract the decision, then test it.** Anything with a rule in it — sort order, which key does
   what, zoom stops, where an image may be panned to — is a static method with its own tests (`Zoom`,
-  `Command.forKey`, `NaturalOrder`, `FolderImages.select`, `Exif.summary`).
+  `Keybindings.layered`, `NaturalOrder`, `FolderImages.select`, `Exif.summary`).
 - **Fast first.** Startup and stepping are the product. Prefetch neighbours after the current image
   is up, never before it; no per-pulse work.
 

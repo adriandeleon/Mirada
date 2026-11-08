@@ -21,6 +21,7 @@ import javafx.scene.image.PixelBuffer;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -56,9 +57,11 @@ import org.jspecify.annotations.Nullable;
  * ({@link ExifBlock}), and its colour profile ({@link IccProfile}) when the pixels are still in its
  * colours.
  *
- * <p>Keys: Enter or Ctrl+S saves, Escape cancels, R and Shift+R turn, H and V flip, A steps through
- * the shapes, Backspace resets, Ctrl+Z undoes and Ctrl+Shift+Z or Ctrl+Y redoes, the arrows move the
- * box (Shift: further) and Ctrl+arrows resize it.
+ * <p>Every tool is a command ({@link Command.Context#EDITOR}): its buttons, its keys and the palette
+ * all run it ({@link #run}). The keys are the keymap's, by default Enter or Ctrl+S saves, Escape
+ * cancels, R and Shift+R turn, H and V flip, A steps through the shapes, Backspace resets, Ctrl+Z
+ * undoes and Ctrl+Shift+Z or Ctrl+Y redoes. The arrows, the editor's own keys ({@link #onKey}), move
+ * the box (Shift: further) and Ctrl+arrows resize it.
  */
 final class Editor {
 
@@ -88,8 +91,8 @@ final class Editor {
     private Raster uprightPreview = new Raster(1, 1, new int[] {0});
     private Edit edit = Edit.NONE;
     private final History<Step> history = new History<>(new Step(Edit.NONE, AspectRatio.FREE));
-    private final Button undoButton = tool("Undo", "Ctrl+Z", this::undo);
-    private final Button redoButton = tool("Redo", "Ctrl+Shift+Z", this::redo);
+    private final Button undoButton = tool("Undo", Command.EDITOR_UNDO);
+    private final Button redoButton = tool("Redo", Command.EDITOR_REDO);
     /** True while the editor sets the shape itself, so the shape's listener records no step. */
     private boolean quiet;
 
@@ -108,11 +111,11 @@ final class Editor {
 
         Button cancel = new Button("Cancel");
         cancel.setCancelButton(true);
-        cancel.setOnAction(e -> cancel());
+        cancel.setOnAction(e -> run(Command.EDITOR_CANCEL));
         Button save = new Button("Save…");
         save.getStyleClass().add("accent");
         save.setDefaultButton(true);
-        save.setOnAction(e -> save());
+        save.setOnAction(e -> run(Command.EDITOR_SAVE));
         title.getStyleClass().add("editor-title");
         Region left = new Region();
         Region right = new Region();
@@ -141,20 +144,20 @@ final class Editor {
             shapeChanged();
             record();
         });
-        shape.setTooltip(new Tooltip("The crop's shape (A)"));
+        shape.setTooltip(new Tooltip("The crop's shape" + keyOf(Command.EDITOR_NEXT_SHAPE)));
         HBox bottom = new HBox(
                 8,
                 new Label("Crop"),
                 shape,
                 spacer(),
-                tool("Rotate Left", "Shift+R", () -> turn(-1)),
-                tool("Rotate Right", "R", () -> turn(1)),
-                tool("Flip Horizontally", "H", () -> apply(edit.flippedHorizontally())),
-                tool("Flip Vertically", "V", () -> apply(edit.flippedVertically())),
+                tool("Rotate Left", Command.EDITOR_ROTATE_LEFT),
+                tool("Rotate Right", Command.EDITOR_ROTATE_RIGHT),
+                tool("Flip Horizontally", Command.EDITOR_FLIP_HORIZONTALLY),
+                tool("Flip Vertically", Command.EDITOR_FLIP_VERTICALLY),
                 spacer(),
                 undoButton,
                 redoButton,
-                tool("Reset", "Backspace", this::reset));
+                tool("Reset", Command.EDITOR_RESET));
         bottom.setAlignment(Pos.CENTER);
         bottom.setPadding(new Insets(10, 14, 10, 14));
         bottom.getStyleClass().add("editor-bar");
@@ -214,33 +217,48 @@ final class Editor {
         return node.getScene() == null ? null : node.getScene().getWindow();
     }
 
-    /** The editor's keys, while it shows; true when one was used. */
+    /**
+     * Runs one of the editor's tools, from its button, its key or the palette. Only while it shows;
+     * the others are not the editor's.
+     */
+    void run(Command command) {
+        if (!isShowing()) return;
+        switch (command) {
+            case EDITOR_ROTATE_LEFT -> turn(-1);
+            case EDITOR_ROTATE_RIGHT -> turn(1);
+            case EDITOR_FLIP_HORIZONTALLY -> apply(edit.flippedHorizontally());
+            case EDITOR_FLIP_VERTICALLY -> apply(edit.flippedVertically());
+            case EDITOR_NEXT_SHAPE -> shape.setValue(shape.getValue().next());
+            case EDITOR_RESET -> reset();
+            case EDITOR_UNDO -> undo();
+            case EDITOR_REDO -> redo();
+            case EDITOR_SAVE -> save();
+            case EDITOR_CANCEL -> cancel();
+            default -> {}
+        }
+    }
+
+    /** Why one of the editor's tools cannot run now, or null when it can; the palette greys it. */
+    @Nullable
+    String unavailable(Command command) {
+        return switch (command) {
+            case EDITOR_UNDO -> history.canUndo() ? null : "Nothing to undo.";
+            case EDITOR_REDO -> history.canRedo() ? null : "Nothing to redo.";
+            case EDITOR_SAVE -> saving ? "Already saving." : null;
+            default -> null;
+        };
+    }
+
+    /**
+     * The editor's own keys, while it shows, those no command has: the arrows move the crop box
+     * (Shift: further) and the shortcut with them resizes it. True when one was used.
+     */
     boolean onKey(KeyEvent e) {
         KeyCode code = e.getCode();
         double step = e.isShiftDown() ? 0.1 : 0.01;
         double dx = step * crop.pictureWidth();
         double dy = step * crop.pictureHeight();
         switch (code) {
-            case ESCAPE -> cancel();
-            case ENTER -> save();
-            case S -> {
-                if (!e.isShortcutDown()) return false;
-                save();
-            }
-            case Z -> {
-                if (!e.isShortcutDown()) return false;
-                if (e.isShiftDown()) redo();
-                else undo();
-            }
-            case Y -> {
-                if (!e.isShortcutDown()) return false;
-                redo();
-            }
-            case R -> turn(e.isShiftDown() ? -1 : 1);
-            case H -> apply(edit.flippedHorizontally());
-            case V -> apply(edit.flippedVertically());
-            case A -> shape.setValue(shape.getValue().next());
-            case BACK_SPACE -> reset();
             case LEFT, RIGHT ->
                 nudge(e.isShortcutDown() ? CropBox.Handle.E : CropBox.Handle.MOVE, code == KeyCode.LEFT ? -dx : dx, 0);
             case UP, DOWN ->
@@ -420,12 +438,19 @@ final class Editor {
                 raster.width(), raster.height(), IntBuffer.wrap(raster.pixels()), PixelFormat.getIntArgbPreInstance()));
     }
 
-    private static Button tool(String label, String key, Runnable action) {
+    /** A tool's button, running its command; the tooltip names the key the keymap gives it. */
+    private Button tool(String label, Command command) {
         Button button = new Button(label);
-        button.setTooltip(new Tooltip(label + " (" + key + ")"));
-        button.setOnAction(e -> action.run());
+        button.setTooltip(new Tooltip(label + keyOf(command)));
+        button.setOnAction(e -> run(command));
         button.setFocusTraversable(false);
         return button;
+    }
+
+    /** " (R)": the key shown for {@code command}, or nothing when it has none. */
+    private static String keyOf(Command command) {
+        KeyCombination chord = command.chord();
+        return chord == KeyCombination.NO_MATCH ? "" : " (" + chord.getDisplayText() + ")";
     }
 
     private static Region spacer() {

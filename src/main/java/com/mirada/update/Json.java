@@ -8,16 +8,16 @@ import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Just enough JSON to read GitHub's latest-release answer: objects, arrays, strings, numbers,
- * booleans and null, into {@code Map}, {@code List}, {@code String}, {@code Double}, {@code Boolean}
- * and null. A whole JSON library for four fields would be a dependency to ship, license and keep in
- * the native image's metadata.
+ * Just enough JSON to read GitHub's latest-release answer and the bundled keymaps: objects, arrays,
+ * strings, numbers, booleans and null, into {@code Map}, {@code List}, {@code String}, {@code
+ * Double}, {@code Boolean} and null. A whole JSON library for four fields and a few key lists would
+ * be a dependency to ship, license and keep in the native image's metadata.
  */
-final class Json {
+public final class Json {
 
     /** What could not be read, and where. */
-    static final class Malformed extends Exception {
-        Malformed(String message, int at) {
+    public static final class Malformed extends Exception {
+        public Malformed(String message, int at) {
             super(message + " at " + at);
         }
     }
@@ -33,7 +33,7 @@ final class Json {
     }
 
     /** The value {@code text} holds, which must be all of it. */
-    static @Nullable Object parse(String text) throws Malformed {
+    public static @Nullable Object parse(String text) throws Malformed {
         Json json = new Json(text);
         Object value = json.value(0);
         json.space();

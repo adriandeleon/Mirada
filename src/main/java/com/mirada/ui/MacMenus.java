@@ -12,8 +12,6 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 
 import org.jspecify.annotations.Nullable;
@@ -107,32 +105,20 @@ final class MacMenus {
     private MacMenus() {}
 
     /**
-     * The chord a menu shows beside {@code command}, or null for none: the command's own when it
-     * has Cmd, and Preview's for zooming, turning, the properties and full screen, which Mirada also
-     * answers to on a Mac ({@link Command#forKey}).
+     * The chord a menu shows beside {@code command}, or null for none: the first of its keys with
+     * Cmd, in the keys in force ({@link Keybindings#current}). Preview's for zooming, turning, the
+     * properties and full screen are in the Mac's keymap ({@code cua.mac.json}) among the bare ones.
      */
     static @Nullable KeyCombination accelerator(Command command) {
-        return switch (command) {
-            case ZOOM_IN -> cmd(KeyCode.EQUALS);
-            case ZOOM_OUT -> cmd(KeyCode.MINUS);
-            case FIT -> cmd(KeyCode.DIGIT0);
-            case ACTUAL_SIZE -> cmd(KeyCode.DIGIT1);
-            case ROTATE_CLOCKWISE -> cmd(KeyCode.R);
-            case ROTATE_COUNTERCLOCKWISE -> cmd(KeyCode.L);
-            case INFO -> cmd(KeyCode.I);
-            case FULL_SCREEN ->
-                new KeyCodeCombination(KeyCode.F, KeyCombination.SHORTCUT_DOWN, KeyCombination.CONTROL_DOWN);
-            // The user's: the first of them with Cmd, if any has it.
-            case PALETTE ->
-                PaletteChords.current().stream()
-                        .filter(MacMenus::hasCommand)
-                        .findFirst()
-                        .orElse(null);
-            default -> {
-                KeyCombination chord = command.chord(true);
-                yield chord.getShortcut() == KeyCombination.ModifierValue.DOWN ? chord : null;
-            }
-        };
+        return accelerator(command, Keybindings.current());
+    }
+
+    /** {@link #accelerator(Command)} in {@code keys}. Pure. */
+    static @Nullable KeyCombination accelerator(Command command, Keybindings keys) {
+        return keys.chords(command).stream()
+                .filter(MacMenus::hasCommand)
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -194,9 +180,5 @@ final class MacMenus {
     private static boolean hasCommand(KeyCombination chord) {
         return chord.getShortcut() == KeyCombination.ModifierValue.DOWN
                 || chord.getMeta() == KeyCombination.ModifierValue.DOWN;
-    }
-
-    private static KeyCombination cmd(KeyCode code) {
-        return new KeyCodeCombination(code, KeyCombination.SHORTCUT_DOWN);
     }
 }

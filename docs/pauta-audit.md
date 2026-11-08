@@ -1,6 +1,6 @@
 # Pauta audit
 
-Mirada at `e96f789`, audited against [Pauta 4.0.1](https://pauta-project.dev/4.0.1/) on 2026-11-08.
+Mirada at `e96f789` (keys rows: branch `pauta-keys`), audited against [Pauta 4.0.1](https://pauta-project.dev/4.0.1/) on 2026-11-08.
 Scope: every rule (351). Rules from https://pauta-project.dev/4.0.1/rules.json.
 
 Regenerated rather than edited: each rule was judged by its check (code, test or by hand) as the
@@ -10,8 +10,8 @@ never because Mirada lacks a part another rule requires.
 
 |        | Pass | Fail | Manual | N.a. |
 |--------|-----:|-----:|-------:|-----:|
-| MUST   | 85 | 53 | 4 | 20 |
-| SHOULD | 47 | 59 | 15 | 59 |
+| MUST   | 88 | 50 | 4 | 20 |
+| SHOULD | 49 | 58 | 15 | 58 |
 | MAY    | 1 | 2 | 0 | 6 |
 
 A failed MUST blocks a release.
@@ -37,10 +37,7 @@ A failed MUST blocks a release.
 | [PERF-13](https://pauta-project.dev/4.0.1/performance/#perf-13) | MUST | fail | no test that a closed window releases listeners and threads |
 | [PERF-14](https://pauta-project.dev/4.0.1/performance/#perf-14) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:358`: panels built on first open, but no test |
 | [PERF-15](https://pauta-project.dev/4.0.1/performance/#perf-15) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:296`: deferred work after the first paint, but no test |
-| [KBD-01](https://pauta-project.dev/4.0.1/keyboard/#kbd-01) | MUST | fail | `src/main/java/com/mirada/ui/Command.java`: the Command enum and ViewerWindow.run are the registry, but the editor's tools, the Bookmarks window's row actions and Copy details are not commands |
 | [KBD-03](https://pauta-project.dev/4.0.1/keyboard/#kbd-03) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:20`: titles and descriptions are English literals, no catalog |
-| [KBD-09](https://pauta-project.dev/4.0.1/keyboard/#kbd-09) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:397`: bindings hard-coded; no Emacs or CUA keymap JSON |
-| [KBD-11](https://pauta-project.dev/4.0.1/keyboard/#kbd-11) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:684`: user keys only for the palette |
 | [KBD-17](https://pauta-project.dev/4.0.1/keyboard/#kbd-17) | MUST | fail | `src/main/java/com/mirada/ui/InfoPanel.java:86`: icon-only buttons built in four places, no single helper; InfoPanel's lack accessible text |
 | [ICON-01](https://pauta-project.dev/4.0.1/icons-and-color/#icon-01) | MUST | fail | `src/main/java/com/mirada/ui/Theme.java:59`: window listener exists, but no ui-font.css and no Inter |
 | [ICON-02](https://pauta-project.dev/4.0.1/icons-and-color/#icon-02) | MUST | fail | no fonts/inter, no Font.loadFont |
@@ -70,7 +67,7 @@ A failed MUST blocks a release.
 | [CLI-07](https://pauta-project.dev/4.0.1/command-line/#cli-07) | MUST | fail | `src/main/java/com/mirada/App.java:68`: macOS Apple Events reach the running app, but no single instance per config folder |
 | [INTL-01](https://pauta-project.dev/4.0.1/i18n/#intl-01) | MUST | fail | no messages*.properties; every string is an English literal |
 | [INTL-08](https://pauta-project.dev/4.0.1/i18n/#intl-08) | MUST | fail | no catalogs, no parity test |
-| [PAL-02](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-02) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:337`: inPalette() leaves out Escape, Command Palette and the four Pan commands |
+| [PAL-02](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-02) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:519`: the palette lists every command, Escape, Command Palette and the Pan commands included, greyed with a reason where they cannot run (`CommandTest.thePaletteListsEveryCommandWhereverItOpens`); but titles and descriptions are not yet from `command.<id>` and `command.<id>.desc` (no catalogs: KBD-03) |
 | [REL-19](https://pauta-project.dev/4.0.1/release/#rel-19) | MUST | fail | `.github/workflows/ci.yml:15`: push to main and every pull request; Format (`spotless:check`, :35) and Build & Test (`./mvnw verify`, :55) are separate jobs. Missing: the coverage gate (PLAT-12, REL-27: no JaCoCo), and the two checks are not required on main yet (branch protection, a repository setting the owner turns on) |
 | [REL-27](https://pauta-project.dev/4.0.1/release/#rel-27) | MUST | fail | `.github/workflows/ci.yml:61`: surefire reports uploaded always; no JaCoCo report or coverage summary |
 
@@ -95,11 +92,10 @@ A failed MUST blocks a release.
 | [PERF-17](https://pauta-project.dev/4.0.1/performance/#perf-17) | SHOULD | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:1494`: AOT cache trained; mirada.css shipped as .css, not .bss |
 | [PERF-20](https://pauta-project.dev/4.0.1/performance/#perf-20) | SHOULD | fail | no FX-thread stack sampler |
 | [PERF-21](https://pauta-project.dev/4.0.1/performance/#perf-21) | SHOULD | fail | only FuzzyMatchTest guards a hot path |
-| [KBD-02](https://pauta-project.dev/4.0.1/keyboard/#kbd-02) | SHOULD | fail | `src/main/java/com/mirada/ui/Command.java`: enum constants, no dotted ids |
 | [KBD-04](https://pauta-project.dev/4.0.1/keyboard/#kbd-04) | SHOULD | fail | `src/main/java/com/mirada/ui/CommandPalette.java:249`: the palette greys with a reason; menus disable without one |
 | [KBD-10](https://pauta-project.dev/4.0.1/keyboard/#kbd-10) | SHOULD | fail | no IntelliJ, VS Code or Sublime keymaps |
-| [KBD-12](https://pauta-project.dev/4.0.1/keyboard/#kbd-12) | SHOULD | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:143`: edits only the palette keys |
-| [KBD-13](https://pauta-project.dev/4.0.1/keyboard/#kbd-13) | SHOULD | fail | `src/main/java/com/mirada/ui/Editor.java:90`: chords typed into text ("Ctrl+Z" on a Mac too) |
+| [KBD-12](https://pauta-project.dev/4.0.1/keyboard/#kbd-12) | SHOULD | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:264`: picks the keymap and edits the palette's keys; other keys only as `keys.<id>` in the file, no editor listing every command |
+| [KBD-13](https://pauta-project.dev/4.0.1/keyboard/#kbd-13) | SHOULD | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:217`: chords typed into descriptions ("T toggles it", "F5 starts it"); the editor's and Bookmarks window's tooltips and hints now read the keymap (Editor.keyOf) |
 | [KBD-16](https://pauta-project.dev/4.0.1/keyboard/#kbd-16) | SHOULD | fail | no :focus-visible layer in mirada.css |
 | [KBD-18](https://pauta-project.dev/4.0.1/keyboard/#kbd-18) | SHOULD | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:68`: on/off rows are CheckBoxes, not a switch |
 | [WIN-04](https://pauta-project.dev/4.0.1/window-shell/#win-04) | SHOULD | fail | `src/main/java/com/mirada/ui/NoteDialog.java:32`: each dialog styles itself; no Dialogs.styled |
@@ -210,10 +206,14 @@ A failed MUST blocks a release.
 | [PERF-09](https://pauta-project.dev/4.0.1/performance/#perf-09) | SHOULD | pass | `src/main/java/com/mirada/ui/ImageViewport.java:280`: layout allocates nothing |
 | [PERF-10](https://pauta-project.dev/4.0.1/performance/#perf-10) | SHOULD | pass | no applyCss(); pseudo-classes for state |
 | [PERF-19](https://pauta-project.dev/4.0.1/performance/#perf-19) | SHOULD | pass | `scripts/measure-startup.sh`: median of n launches; Startup.mark phases |
+| [KBD-01](https://pauta-project.dev/4.0.1/keyboard/#kbd-01) | MUST | pass | `src/main/java/com/mirada/ui/Command.java:20`: one enum is the registry (id, title, run through ViewerWindow.run); the editor's tools (Editor.java:224), the Bookmarks window's row actions (BookmarksWindow.java:299) and About's Copy details (`help.copyDetails`) are commands, run by their buttons, keys, menus and the palette |
+| [KBD-02](https://pauta-project.dev/4.0.1/keyboard/#kbd-02) | SHOULD | pass | `src/main/java/com/mirada/ui/Command.java:393`: every id is `<area>.<camelCase>` (`go.next`, `editor.save`, `help.copyDetails`); CommandTest.everyIdIsDottedAndGroupedByArea |
 | [KBD-05](https://pauta-project.dev/4.0.1/keyboard/#kbd-05) | MUST | pass | `src/main/java/com/mirada/settings/Settings.java:198`: C-S-p and M-x both open the palette (Cmd-S-p on macOS) |
 | [KBD-06](https://pauta-project.dev/4.0.1/keyboard/#kbd-06) | SHOULD | pass | `src/main/java/com/mirada/ui/CommandPalette.java:335`: fuzzy over title and keywords; rows show chords |
 | [KBD-07](https://pauta-project.dev/4.0.1/keyboard/#kbd-07) | MUST | pass | `src/main/java/com/mirada/ui/CommandPalette.java:238`: in-scene overlay, no Popup |
 | [KBD-08](https://pauta-project.dev/4.0.1/keyboard/#kbd-08) | SHOULD | pass | `src/main/java/com/mirada/ui/ViewerWindow.java:1150`: one picker for every list choice |
+| [KBD-09](https://pauta-project.dev/4.0.1/keyboard/#kbd-09) | MUST | pass | `src/main/resources/com/mirada/keymaps/`: emacs.json, cua.json and cua.mac.json (Cmd for Ctrl); CommandTest.theEmacsAndCuaKeymapsShipWithAMacCua |
+| [KBD-11](https://pauta-project.dev/4.0.1/keyboard/#kbd-11) | MUST | pass | `src/main/java/com/mirada/ui/Keybindings.java:55`: `layered` applies base keymap (and its strip-at-the-side bindings) → user overrides (`keys.<id>`, `palette.keys`); no plugins; CommandTest.theUsersKeysGoOnTopAndWin |
 | [KBD-14](https://pauta-project.dev/4.0.1/keyboard/#kbd-14) | SHOULD | n/a | no multi-key prefixes |
 | [WIN-01](https://pauta-project.dev/4.0.1/window-shell/#win-01) | MUST | pass | `src/main/java/com/mirada/ui/StatusBar.java:97`: the echo label takes `status-echo-error` or `status-echo-warn` by severity; its click runs `Command.MESSAGE_LOG` (:69); Status Bar toggles it |
 | [WIN-02](https://pauta-project.dev/4.0.1/window-shell/#win-02) | MUST | pass | `src/main/java/com/mirada/ui/Theme.java:48`: light, dark and follow-the-system, live |
@@ -307,7 +307,7 @@ A failed MUST blocks a release.
 | [PAL-03](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-03) | MUST | pass | `src/main/java/com/mirada/ui/CommandPalette.java:238`: card and scrim in the root StackPane; no Popup |
 | [PAL-04](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-04) | SHOULD | pass | `src/main/java/com/mirada/ui/CommandPalette.java:236`: opens empty, listing every command; from chord, header menu, context menu, Mac Help menu |
 | [PAL-06](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-06) | SHOULD | pass | `src/main/java/com/mirada/ui/CommandPalette.java:273`: hides, then runs; disabled rows do nothing |
-| [PAL-09](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-09) | SHOULD | n/a | no keymaps to switch; chips re-read on every open (CommandPalette.java:232) |
+| [PAL-09](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-09) | SHOULD | pass | `src/main/java/com/mirada/ui/CommandPalette.java:251`: a keymap or key change in the settings calls `refreshKeys` on both palettes (ViewerWindow.followKeys), which re-reads the opener chip and every row's chord; the legend is the palette's own keys |
 | [QOPEN-01](https://pauta-project.dev/4.0.1/templates/quick-open/#qopen-01) | SHOULD | pass | `src/main/java/com/mirada/ui/ViewerWindow.java:1150`: Go to Image, Open Recent, Go to Bookmark all CommandPalette.Choices |
 | [QOPEN-03](https://pauta-project.dev/4.0.1/templates/quick-open/#qopen-03) | SHOULD | pass | `src/main/java/com/mirada/ui/CommandPalette.java:220`: items read at call time and snapshotted |
 | [QOPEN-04](https://pauta-project.dev/4.0.1/templates/quick-open/#qopen-04) | SHOULD | pass | `src/main/java/com/mirada/ui/CommandPalette.java:307`: supplier order kept; current pre-selected (:294) |
