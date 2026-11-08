@@ -153,6 +153,8 @@ public final class HeadlessDriver {
     }
 
     private static void moveOnScreen(Window window) {
+        // A stage placed before it shows has no size yet: wait for WINDOW_SHOWN.
+        if (Double.isNaN(window.getWidth()) || Double.isNaN(window.getHeight())) return;
         Rectangle2D screen = Screen.getPrimary().getBounds();
         double x = Math.max(screen.getMinX(), Math.min(window.getX(), screen.getMaxX() - window.getWidth()));
         double y = Math.max(screen.getMinY(), Math.min(window.getY(), screen.getMaxY() - window.getHeight()));

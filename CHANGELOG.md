@@ -28,6 +28,13 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   A bookmarked image wears a bookmark in its corner and in the thumbnail strip, its note is a
   click away over the image, and the properties sidebar shows both, the folder's too. A rename in
   Mirada keeps them.
+- **Bookmarks and Notes** (Ctrl+Shift+B, ⇧⌘B on a Mac; also in the header's menu, the right-click
+  menu and the palette): a window listing every bookmark and note, as Editora's Bookmarks and
+  Personal Notes tool windows do, grouped by folder, each image with its thumbnail and its note.
+  Type to filter by name, folder or note; show all, only bookmarks or only notes (Ctrl+1–3).
+  Return or a double-click opens the image in the viewer, F2 edits the note, Ctrl+B takes the
+  bookmark off or puts it on, and Ctrl+Delete removes the mark (asking first when it has a note).
+  A mark whose file has gone is listed dimmed, so it can be removed.
 - **An AppImage for Linux** (x64 and arm64): one file that runs on any distribution with GTK 3,
   without installing anything or needing root.
 

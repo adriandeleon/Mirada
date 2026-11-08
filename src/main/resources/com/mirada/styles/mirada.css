@@ -543,3 +543,58 @@
     -fx-text-fill: -color-fg-muted;
     -fx-font-size: 0.9em;
 }
+
+/* Bookmarks and Notes: the sidebar's colours, a folder heading each group, its images indented. */
+.bookmarks-window {
+    -fx-background-color: -color-bg-default;
+}
+
+.bookmarks-list,
+.bookmarks-list > .virtual-flow > .clipped-container > .sheet > .list-cell {
+    -fx-background-color: -color-bg-default;
+}
+
+.bookmarks-list {
+    -fx-border-color: -color-border-muted;
+    -fx-border-width: 1 0 1 0;
+}
+
+.bookmarks-list > .virtual-flow > .clipped-container > .sheet > .list-cell {
+    -fx-padding: 4 12 4 12;
+}
+
+.bookmarks-list > .virtual-flow > .clipped-container > .sheet > .list-cell:selected {
+    -fx-background-color: -color-accent-subtle;
+}
+
+.bookmarks-cell:folder .bookmarks-name {
+    -fx-font-weight: bold;
+}
+
+.bookmarks-name {
+    -fx-text-fill: -color-fg-default;
+}
+
+.bookmarks-where,
+.bookmarks-hint {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 0.9em;
+}
+
+.bookmarks-note {
+    -fx-text-fill: -color-fg-muted;
+}
+
+.bookmarks-picture {
+    -fx-background-color: -color-bg-subtle;
+    -fx-background-radius: 6;
+}
+
+.bookmarks-cell:missing .bookmarks-name,
+.bookmarks-cell:missing .bookmarks-note {
+    -fx-text-fill: -color-fg-subtle;
+}
+
+.bookmarks-cell:missing .bookmarks-name {
+    -fx-strikethrough: true;
+}

@@ -211,6 +211,14 @@ public final class Bookmarks {
         changed();
     }
 
+    /** Takes the whole mark off {@code path}, its bookmark and its note. Returns whether it had one. */
+    public boolean remove(Path path) {
+        load();
+        if (marks.remove(key(path)) == null) return false;
+        changed();
+        return true;
+    }
+
     /**
      * Carries the mark on {@code from} to {@code to}, after a rename: in its place in the order, as
      * the same image. Nothing is written when there is none.

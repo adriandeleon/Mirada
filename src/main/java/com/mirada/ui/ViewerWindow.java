@@ -128,6 +128,8 @@ public final class ViewerWindow {
     private @Nullable MenuBar macMenus;
 
     private @Nullable ShortcutsWindow shortcutsWindow;
+    /** Built the first time it is asked for. */
+    private @Nullable BookmarksWindow bookmarksWindow;
 
     /** A line over the image saying what a toggle or a file operation did; fades on its own. */
     private final Label toast = new Label();
@@ -783,6 +785,7 @@ public final class ViewerWindow {
             case NEXT_BOOKMARK -> stepToBookmark(1);
             case PREVIOUS_BOOKMARK -> stepToBookmark(-1);
             case GO_TO_BOOKMARK -> goToBookmark();
+            case BOOKMARKS -> bookmarksWindow().show(stage);
         }
     }
 
@@ -799,7 +802,8 @@ public final class ViewerWindow {
                     BOOKMARK,
                     BOOKMARK_FOLDER,
                     NOTE,
-                    FOLDER_NOTE -> true;
+                    FOLDER_NOTE,
+                    BOOKMARKS -> true;
             default -> false;
         };
     }
@@ -1179,7 +1183,11 @@ public final class ViewerWindow {
     /** Opens the file manager on the image's folder with the image selected ({@link Reveal}). */
     private void showInFolder() {
         Path file = folder.current();
-        if (file == null) return;
+        if (file != null) reveal(file);
+    }
+
+    /** Shows {@code file} selected in the file manager, off the FX thread. */
+    private void reveal(Path file) {
         Thread.ofVirtual().name("reveal").start(() -> {
             try {
                 Reveal.show(file);
@@ -1210,6 +1218,31 @@ public final class ViewerWindow {
                 Platform.runLater(() -> say("Couldn't put back " + fileName(file) + ": " + e.getMessage()));
             }
         });
+    }
+
+    private BookmarksWindow bookmarksWindow() {
+        BookmarksWindow made = bookmarksWindow;
+        if (made == null) {
+            made = new BookmarksWindow(bookmarks, this::openFromBookmarks, this::reveal, stylesheet());
+            bookmarksWindow = made;
+        }
+        return made;
+    }
+
+    /**
+     * Opens a mark chosen in the Bookmarks and Notes window, as Go to Bookmark does, and brings the
+     * viewer forward to show it; the list stays open behind.
+     */
+    private void openFromBookmarks(Path path, boolean isFolder) {
+        Editor open = editor;
+        if (open != null && open.isShowing()) {
+            say("Finish editing first: Save or Cancel");
+            stage.toFront();
+            return;
+        }
+        openMark(new Bookmarks.Mark(path, isFolder, true, ""));
+        stage.toFront();
+        stage.requestFocus();
     }
 
     private ShortcutsWindow shortcutsWindow() {
@@ -1362,6 +1395,7 @@ public final class ViewerWindow {
                 item(Command.BOOKMARK),
                 item(Command.NOTE),
                 item(Command.GO_TO_BOOKMARK),
+                item(Command.BOOKMARKS),
                 new SeparatorMenuItem(),
                 item(Command.RENAME),
                 item(Command.MOVE_TO_TRASH),

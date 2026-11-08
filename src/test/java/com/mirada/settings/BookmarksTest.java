@@ -166,4 +166,19 @@ class BookmarksTest {
     private static List<Path> paths(List<Bookmarks.Mark> marks) {
         return marks.stream().map(Bookmarks.Mark::path).toList();
     }
+
+    @Test
+    void removeTakesTheBookmarkAndTheNoteTogether(@TempDir Path dir) {
+        Path file = dir.resolve("bookmarks.properties");
+        Bookmarks bookmarks = new Bookmarks(file);
+        Path photo = dir.resolve("a.jpg");
+        bookmarks.toggle(photo, false);
+        bookmarks.setNote(photo, false, "keep?");
+        int[] changes = {0};
+        bookmarks.addListener(() -> changes[0]++);
+        assertTrue(bookmarks.remove(photo));
+        assertNull(new Bookmarks(file).get(photo));
+        assertFalse(bookmarks.remove(photo));
+        assertEquals(1, changes[0]);
+    }
 }
