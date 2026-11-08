@@ -1,6 +1,11 @@
 package com.mirada.ui;
 
 import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.Control;
+import javafx.scene.control.Labeled;
+import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.SVGPath;
 
@@ -10,6 +15,12 @@ import org.jspecify.annotations.Nullable;
  * The window's symbolic icons, drawn here as stroked paths on a 24-unit grid: two-pixel strokes,
  * round caps, no fill, in the style of GNOME's symbolic icons. Their colour is CSS's ({@code
  * .icon} in mirada.css: {@code -fx-stroke}), so they follow the theme.
+ *
+ * <p>One action, one glyph, wherever it is reached (Pauta ICON-20): a menu row and a button that run
+ * a command both take {@link #forCommand}'s, and a command with no fitting glyph gets one of its own
+ * here rather than another's (MENU-14). Every icon-only button is named by {@link #name}, which sets
+ * its tooltip and what a screen reader says together, the tooltip built from the command's title
+ * and its chord now, never typed (ICON-21, KBD-17, TBAR-01, TBAR-03).
  *
  * <p>Hand-drawn rather than copied from an icon set, so nothing here carries a licence of its own.
  * Path data is never wrapped across source lines: Termina's notes record that a whitespace-aware
@@ -35,10 +46,9 @@ final class Icons {
     static final String CHEVRON_DOWN = "M7 10 L12 15 L17 10";
     static final String ZOOM_IN =
             "M10.5 3.5 A7 7 0 1 1 10.49 3.5 Z M20.5 20.5 L15.5 15.5 M10.5 7.5 V13.5 M7.5 10.5 H13.5";
-    static final String ZOOM_FIT = "M10.5 3.5 A7 7 0 1 1 10.49 3.5 Z M20.5 20.5 L15.5 15.5 M7.5 10.5 H13.5";
     static final String FOLDER_OPEN = "M3 18 V6 H9 L11 8 H18 V10.5 M3 18 L6 10.5 H21.5 L18.5 18 Z";
     static final String ROTATE_LEFT = "M4 4 V9 H9 M4 9 A8.5 8.5 0 1 1 3.5 14";
-    static final String ZOOM_OUT = ZOOM_FIT;
+    static final String ZOOM_OUT = "M10.5 3.5 A7 7 0 1 1 10.49 3.5 Z M20.5 20.5 L15.5 15.5 M7.5 10.5 H13.5";
     static final String FIT = "M4 9 V4 H9 M15 4 H20 V9 M20 15 V20 H15 M9 20 H4 V15";
     static final String ACTUAL_SIZE = "M5 8 L7.5 6 V18 M15 8 L17.5 6 V18 M11.5 10 V10.1 M11.5 14 V14.1";
     static final String FIRST = "M17 18 L11 12 L17 6 M7 6 V18";
@@ -78,8 +88,22 @@ final class Icons {
     static final String NOTE = "M5 4 H19 V14 L14 20 H5 Z M14 20 V14 H19 M8.5 8.5 H15.5 M8.5 12 H12.5";
     static final String NEXT_BOOKMARK = "M4 3.5 H12 V17.5 L8 14 L4 17.5 Z M15 18 L20 12 L15 6";
     static final String PREVIOUS_BOOKMARK = "M12 3.5 H20 V17.5 L16 14 L12 17.5 Z M9 18 L4 12 L9 6";
+    /** Every bookmark and note: a bookmark beside the lines of a list. */
+    static final String BOOKMARKS = "M4 3.5 H10.5 V14 L7.25 11.5 L4 14 Z M14 6 H20 M14 10.5 H20 M4 18.5 H20";
+    /** A mark taken off: the bookmark with a stroke through it, not the trash a file goes to. */
+    static final String REMOVE_MARK = "M6.5 3.5 H17.5 V20.5 L12 16 L6.5 20.5 Z M9.5 10 H14.5";
+    /** About Mirada: an eye, the app's name ("a look"). */
+    static final String ABOUT = "M2.5 12 Q12 3.5 21.5 12 Q12 20.5 2.5 12 Z M12 9.25 A2.75 2.75 0 1 1 11.99 9.25 Z";
+
+    /** Whether the window fills the screen: full screen's glyph is then the way out. */
+    private static boolean fullScreen;
 
     private Icons() {}
+
+    /** Full screen's glyph from now on: the way in, or out while {@code value}. */
+    static void setFullScreen(boolean value) {
+        fullScreen = value;
+    }
 
     /** The icon a menu shows beside {@code command}, or null for none (the order's choices, a tick's). */
     static @Nullable String forCommand(Command command) {
@@ -97,7 +121,7 @@ final class Icons {
             case KEEP_ZOOM -> LOCK;
             case ROTATE_CLOCKWISE -> ROTATE;
             case ROTATE_COUNTERCLOCKWISE -> ROTATE_LEFT;
-            case FULL_SCREEN -> FULL_SCREEN;
+            case FULL_SCREEN -> fullScreen ? LEAVE_FULL_SCREEN : FULL_SCREEN;
             case EDIT -> CROP;
             case RENAME -> RENAME;
             case MOVE_TO_TRASH -> TRASH;
@@ -105,11 +129,12 @@ final class Icons {
             case COPY -> COPY;
             case SHOW_IN_FOLDER -> FOLDER;
             case BOOKMARK, BOOKMARK_FOLDER, GO_TO_BOOKMARK -> BOOKMARK;
-            case BOOKMARKS -> NOTE;
+            case BOOKMARKS -> BOOKMARKS;
             case NOTE, FOLDER_NOTE -> NOTE;
             case NEXT_BOOKMARK -> NEXT_BOOKMARK;
             case PREVIOUS_BOOKMARK -> PREVIOUS_BOOKMARK;
-            case INFO, ABOUT -> INFO;
+            case INFO -> INFO;
+            case ABOUT -> ABOUT;
             case THUMBNAILS -> STRIP;
             case THUMBNAILS_AT_SIDE -> SIDEBAR;
             case THUMBNAIL_NAMES -> LIST;
@@ -138,6 +163,65 @@ final class Icons {
     static @Nullable Node menu(Command command) {
         String path = forCommand(command);
         return path == null ? null : of(path);
+    }
+
+    /**
+     * An icon-only button that runs {@code command}: its glyph, its name ({@link #name}), flat, in
+     * the given style class, and out of the Tab order, as the keyboard has the command already
+     * (TBAR-02).
+     */
+    static Button button(Command command, String styleClass, Runnable action) {
+        String path = forCommand(command);
+        Button button = new Button();
+        button.setGraphic(of(path == null ? MENU : path));
+        button.getStyleClass().addAll(styleClass, "flat");
+        button.setFocusTraversable(false);
+        button.setOnAction(e -> action.run());
+        return name(button, command);
+    }
+
+    /**
+     * Gives an icon-only button {@code command}'s glyph again, and its name: after the strip's axis
+     * turned the arrows, or full screen changed its way.
+     */
+    static <T extends Control> T relabel(T control, Command command) {
+        String path = forCommand(command);
+        if (path != null && control instanceof Labeled labeled) labeled.setGraphic(of(path));
+        return name(control, command);
+    }
+
+    /** {@link #name} by {@code command}'s title and chord now. */
+    static <T extends Control> T name(T control, Command command) {
+        return name(control, title(command), command.chord());
+    }
+
+    /**
+     * Names an icon-only control: {@code title} is what a screen reader says, and with {@code
+     * chord}, if any, its tooltip, "Rotate Right (R)". Called again, it renames it in place.
+     */
+    static <T extends Control> T name(T control, String title, KeyCombination chord) {
+        String tip = tooltip(title, chord);
+        Tooltip tooltip = control.getTooltip();
+        if (tooltip == null) control.setTooltip(new Tooltip(tip));
+        else tooltip.setText(tip);
+        control.setAccessibleText(title);
+        return control;
+    }
+
+    /** "Title (chord)", or the title alone when there is no chord: what a tooltip says (TBAR-03). */
+    static String tooltip(String title, KeyCombination chord) {
+        return chord == KeyCombination.NO_MATCH ? title : title + " (" + chord.getDisplayText() + ")";
+    }
+
+    /** {@code command}'s tooltip, by its title and chord now. */
+    static String tooltip(Command command) {
+        return tooltip(title(command), command.chord());
+    }
+
+    /** A command's title now, without the "…" a menu row gives one that asks something first. */
+    static String title(Command command) {
+        String label = command == Command.FULL_SCREEN && fullScreen ? "Leave Full Screen" : command.label();
+        return label.endsWith("…") ? label.substring(0, label.length() - 1) : label;
     }
 
     /** A 16-pixel icon from one of the paths above, centred in a box of its own size. */

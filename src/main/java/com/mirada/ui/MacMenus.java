@@ -22,11 +22,12 @@ import org.jspecify.annotations.Nullable;
  * item by name, as the palette does. About and Settings go in the application menu instead
  * ({@code os.MacAppMenu}).
  *
- * <p>Only chords with Cmd are shown, as Preview shows them. A bare key is never a menu's key
- * equivalent: the menu could take it while the palette's field has focus, and an "r" typed there
- * would rotate the image. Items are greyed only while their menu is open, by the same rule as the
- * palette's; the rest of the time they stay enabled, so a key equivalent is never swallowed by a
- * stale state, and the command decides for itself, as it does from the keyboard.
+ * <p>No item has a key equivalent (Pauta MENU-02): the native menu would take its key before the
+ * window's key filter, the one way into a command ({@link Keybindings#commandFor}), and a bare one while the
+ * palette's field has focus, so an "r" typed there would rotate the image. The chord is written into
+ * the item's title instead (MENU-15), "Rotate Right   R", as the native menu draws text only, and
+ * so no icons. Items are greyed only while their menu is open, by the same rule as the palette's,
+ * and their titles are written again then, so a changed key or the strip's axis shows at once.
  */
 final class MacMenus {
 
@@ -104,21 +105,10 @@ final class MacMenus {
 
     private MacMenus() {}
 
-    /**
-     * The chord a menu shows beside {@code command}, or null for none: the first of its keys with
-     * Cmd, in the keys in force ({@link Keybindings#current}). Preview's for zooming, turning, the
-     * properties and full screen are in the Mac's keymap ({@code cua.mac.json}) among the bare ones.
-     */
-    static @Nullable KeyCombination accelerator(Command command) {
-        return accelerator(command, Keybindings.current());
-    }
-
-    /** {@link #accelerator(Command)} in {@code keys}. Pure. */
-    static @Nullable KeyCombination accelerator(Command command, Keybindings keys) {
-        return keys.chords(command).stream()
-                .filter(MacMenus::hasCommand)
-                .findFirst()
-                .orElse(null);
+    /** What the menu calls {@code command}: {@code label}, then its chord now, if it has one. */
+    static String title(String label, Command command) {
+        KeyCombination chord = command.chord();
+        return chord == KeyCombination.NO_MATCH ? label : label + "   " + chord.getDisplayText();
     }
 
     /**
@@ -143,11 +133,9 @@ final class MacMenus {
             for (List<Command> group : heading.groups()) {
                 if (!menu.getItems().isEmpty()) menu.getItems().add(new SeparatorMenuItem());
                 for (Command command : group) {
-                    MenuItem item = TICKED.contains(command)
-                            ? new CheckMenuItem(command.label())
-                            : new MenuItem(command.label());
+                    String title = title(command.label(), command);
+                    MenuItem item = TICKED.contains(command) ? new CheckMenuItem(title) : new MenuItem(title);
                     item.setUserData(command);
-                    item.setAccelerator(accelerator(command));
                     item.setOnAction(e -> run.accept(command));
                     items.add(item);
                     menu.getItems().add(item);
@@ -156,7 +144,7 @@ final class MacMenus {
             menu.setOnShowing(e -> {
                 for (MenuItem item : items) {
                     Command command = (Command) item.getUserData();
-                    item.setText(label.apply(command));
+                    item.setText(title(label.apply(command), command));
                     item.setDisable(unavailable.apply(command) != null);
                     if (item instanceof CheckMenuItem check) check.setSelected(ticked.test(command));
                 }
@@ -165,20 +153,5 @@ final class MacMenus {
             bar.getMenus().add(menu);
         }
         return bar;
-    }
-
-    /** Sets every item's key equivalent again, after the palette's keys changed. */
-    static void refreshAccelerators(MenuBar bar) {
-        for (Menu menu : bar.getMenus()) {
-            for (MenuItem item : menu.getItems()) {
-                if (item.getUserData() instanceof Command command) item.setAccelerator(accelerator(command));
-            }
-        }
-    }
-
-    /** Cmd held: as the shortcut, or as Meta, which is what a {@code Cmd-} token reads as. */
-    private static boolean hasCommand(KeyCombination chord) {
-        return chord.getShortcut() == KeyCombination.ModifierValue.DOWN
-                || chord.getMeta() == KeyCombination.ModifierValue.DOWN;
     }
 }

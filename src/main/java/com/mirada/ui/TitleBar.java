@@ -22,6 +22,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -60,6 +61,9 @@ final class TitleBar {
     }
 
     private static final Layout LAYOUT = Layout.of(System.getProperty("os.name", ""));
+
+    /** The ☰ button's name: it runs no command, it opens the menu of them. */
+    static final String MAIN_MENU = "Main Menu";
 
     /**
      * "folder / name" on one line. Short of room, the file name keeps its width and the folder gives
@@ -133,7 +137,7 @@ final class TitleBar {
     private final Heading heading = new Heading(folder, slash, title);
     private @Nullable Tooltip folderTip;
     private @Nullable Path folderShown;
-    private final Button rotate = button(Icons.ROTATE);
+    private final Button rotate;
     private final Consumer<Command> run;
     private final BooleanProperty infoShowing;
     private final BooleanProperty thumbnailsShowing;
@@ -176,21 +180,20 @@ final class TitleBar {
         // A shift-click turns the other way. An ActionEvent carries no modifiers, so the press that
         // leads to it records them.
         boolean[] shift = {false};
-        rotate.addEventFilter(MouseEvent.MOUSE_PRESSED, e -> shift[0] = e.isShiftDown());
-        rotate.setOnAction(e -> {
+        rotate = Icons.button(Command.ROTATE_CLOCKWISE, "header-button", () -> {
             run.accept(shift[0] ? Command.ROTATE_COUNTERCLOCKWISE : Command.ROTATE_CLOCKWISE);
             shift[0] = false;
         });
-        info.setGraphic(Icons.of(Icons.INFO));
+        rotate.addEventFilter(MouseEvent.MOUSE_PRESSED, e -> shift[0] = e.isShiftDown());
+        info.setGraphic(Icons.menu(Command.INFO));
         info.getStyleClass().addAll("header-button", "flat");
         info.selectedProperty().bindBidirectional(infoShowing);
         menu.setGraphic(Icons.of(Icons.MENU));
         menu.getStyleClass().addAll("header-button", "flat", "no-arrow");
-        for (Node node : new Node[] {rotate, info, menu}) node.setFocusTraversable(false);
-        // Icons only: these are what a screen reader says for them (VoiceOver, Narrator, Orca).
-        rotate.setAccessibleText(Command.ROTATE_CLOCKWISE.label());
-        info.setAccessibleText(Command.INFO.label());
-        menu.setAccessibleText("Main Menu");
+        for (Node node : new Node[] {info, menu}) node.setFocusTraversable(false);
+        // Icons only: their names are what a screen reader says (VoiceOver, Narrator, Orca).
+        Icons.name(info, Command.INFO);
+        Icons.name(menu, MAIN_MENU, KeyCombination.NO_MATCH);
 
         HBox right = new HBox(4, rotate, info, menu);
         right.setAlignment(Pos.CENTER_RIGHT);
@@ -219,16 +222,14 @@ final class TitleBar {
     }
 
     /**
-     * The tooltips and the menu's items, added after the first image is on screen: neither is seen
-     * before then, and building them first measurably delayed that image (ViewerWindow.afterFirstPaint).
+     * The folder's tooltip and the menu's items, added after the first image is on screen: neither is
+     * seen before then, and building them first measurably delayed that image
+     * (ViewerWindow.afterFirstPaint). The buttons are named as they are built ({@link Icons#button}).
      */
     void finish() {
         Tooltip tip = new Tooltip(folderShown == null ? "" : folderShown.toString());
         folderTip = tip;
         folder.setTooltip(tip);
-        rotate.setTooltip(new Tooltip("Rotate Right (R); Shift-click rotates left"));
-        info.setTooltip(new Tooltip("Image Properties (I)"));
-        menu.setTooltip(new Tooltip("Main Menu"));
         menu.getItems()
                 .addAll(
                         item(Command.OPEN, run),
@@ -253,9 +254,25 @@ final class TitleBar {
                         help(run),
                         item(Command.ABOUT, run),
                         new SeparatorMenuItem(),
+                        item(Command.PREVIOUS, run),
+                        item(Command.NEXT, run),
+                        new SeparatorMenuItem(),
                         item(Command.CLOSE, run));
-        // The palette's keys may have changed since.
-        menu.setOnShowing(e -> MenuChord.refresh(menu.getItems()));
+        // The palette's keys, and the stepping keys with the strip's axis, may have changed since;
+        // so may Previous and Next's arrows.
+        menu.setOnShowing(e -> {
+            MenuChord.refresh(menu.getItems());
+            for (MenuItem item : menu.getItems()) {
+                if (item.getUserData() instanceof Command command && Icons.forCommand(command) != null)
+                    item.setGraphic(Icons.menu(command));
+            }
+        });
+    }
+
+    /** The buttons' names again, from the commands' chords now: the user's keys changed (TBAR-03). */
+    void relabel() {
+        Icons.relabel(rotate, Command.ROTATE_CLOCKWISE);
+        Icons.name(info, Command.INFO);
     }
 
     Region node() {
@@ -294,13 +311,6 @@ final class TitleBar {
     void fullScreen(BorderPane root, boolean full) {
         root.setTop(full ? null : row);
         if (extended) HeaderBar.setSystemButtonHeight(stage, full ? 0 : HeaderBar.USE_DEFAULT_SIZE);
-    }
-
-    private static Button button(String icon) {
-        Button button = new Button();
-        button.setGraphic(Icons.of(icon));
-        button.getStyleClass().addAll("header-button", "flat");
-        return button;
     }
 
     /** A panel the menu ticks while it is open, and opens or closes as the key does. */

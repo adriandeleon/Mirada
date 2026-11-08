@@ -117,13 +117,39 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
 
 ## The window
 
+- **Inter is the interface's face, on every platform** (`Fonts`, Pauta ICON-01, ICON-02). Its four
+  faces are under `com/mirada/fonts/inter/` with their `OFL.txt`; `App.start` starts registering
+  them on a thread of their own (`Fonts.load`) and waits for them just before the window is shown
+  (`Fonts.ready`), which then puts `ui-font.css` on every window's scene as it appears: dialogs,
+  menus and tooltips are scenes of their own and share no stylesheet. JavaFX does not fall through
+  a font-family list, so without the sheet everything is drawn in the "System" face. The wait
+  measured 0 ms on the Headless platform (the faces are in before the window is built), and launch
+  to the first image was faster with Inter, about 500 ms against 720, than with "System". Menus pin
+  Inter 14px and their keys 11px in absolute pixels (MENU-16): a popup's CSS parent is the node it
+  was shown from, and `em` would follow that node's size. The native image needs the `.ttf` files and
+  the sheet in its resource metadata, added by hand.
+- **Every colour `mirada.css` uses is named once, in the `.root` block at its top** (PLAT-06,
+  ICON-08): the rules below use the names, and `StyleContrastTest` fails a fixed colour anywhere
+  else. A colour that differs between the themes is a `ladder()` of `-color-bg-default`, as
+  `-state-key` is. Cupertino's tinted text and emphasis fills are overridden there, moved the least
+  they need to read (ICON-10, ICON-11): tinted text 4.5:1 on both grounds and on its own subtle
+  fill, white 4.5:1 on an emphasis fill, and the accent's fill, which is the focus ring too, 3:1 on
+  every ground (ICON-12; Cupertino Light's #007aff was 4.0:1 under white). `Accent` applies the same
+  rules to the system's accent on macOS and Windows, and gives the stylesheet's values back for
+  Cupertino's blue. The test reads Cupertino's palette from AtlantaFX's jar and the overrides from
+  `mirada.css`, ladders resolved, and does the WCAG arithmetic. The keyboard's focus ring is one
+  `:focus-visible` layer at the end of `mirada.css`, in `-focus-ring`; keep it last.
+
 - **Only what the first frame shows is built before it.** The header bar is; the floating controls
   are built on the first pointer movement over the image, the properties sidebar and the thumbnail
   strip the first time they open, About and Settings the first time they are asked for, and the
-  header's tooltips, its menu's items and the window icon run from `ViewerWindow.afterFirstPaint`,
-  on the pulse after the first image is shown (or half a second after start without one). Building
-  them first measured +40 ms; deferred, +20 ms over the old window. Put new chrome behind the same
-  door. `HeaderBar` itself is not the cost: switched off, the start-up was the same.
+  folder's tooltip, the header's menu's items and the window icon run from
+  `ViewerWindow.afterFirstPaint`, on the pulse after the first image is shown (or half a second
+  after start without one). Building them first measured +40 ms; deferred, +20 ms over the old
+  window. Put new chrome behind the same door. `HeaderBar` itself is not the cost: switched off, the
+  start-up was the same. The header's three buttons are named, tooltips included, as they are built
+  (`Icons.button`, which names a button with its glyph): on the Headless platform that was within
+  the runs' noise.
 - **Settings changes are frequent now; theme changes are not.** The window's place is saved as it
   closes (and from `App.stop`, as Cmd-Q may not hide it first), the recent folders on every folder
   opened (after the first paint: writing the settings is not start-up's), and every change runs every
@@ -174,7 +200,26 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   a context menu's accelerators into the scene, where a bare one fires under the palette's text
   field and any other runs a second time. `MenuChord` is a `KeyCombination` that names the
   command's chord and never matches, so the key filter (`Keybindings.commandFor`) stays the only way in. Styled as Editora's
-  `.menu-item-chord`: 11px in its `-state-key` periwinkle, defined on `.root` in `mirada.css`.
+  `.menu-item-chord`: Inter 11px (`ui-font.css`) in its `-state-key` periwinkle, defined on `.root`
+  in `mirada.css`.
+- **A press outside a menu closes it and still lands** (`Popups`, Pauta MENU-07). Mirada's own
+  right-click menus have auto-hide off (XWayland honours GTK's pointer grab only some of the time),
+  so the window's scene closes them on any press, which then goes on: a click on a thumbnail shows
+  that image, a right-click opens its own menu. `Popups.show` closes every other menu first, so one
+  shows at a time (MENU-06). The Menu key and Shift+F10 open the selected thing's menu from the key
+  filter (`Popups.isMenuKey`, MENU-09): the image's, under the strip's current cell or in the middle
+  of the image; in Bookmarks and Notes the selected row's, under it, though the keys stay in the
+  filter. The platform's own keyboard request (GTK and Windows send one, Headless none) is dropped
+  (`Popups.menusByKey`), or a menu would open twice. `MenusFxTest` holds all three.
+- **Every icon-only button is `Icons.button` or named by `Icons.name`** (ICON-21, KBD-17, TBAR-01):
+  the tooltip and what a screen reader says set together, the tooltip built from the command's
+  title and its chord now ("Rotate Right (R)", `Icons.tooltip`, TBAR-03), and rebuilt when the
+  palette's keys or the strip's axis change (`ViewerWindow.relabelButtons`). The button wears its
+  command's glyph from `Icons.forCommand`, the menus' (ICON-20): the zoom button the glyph of Actual
+  Size or Zoom to Fit, whichever it would do; full screen's is the way out while in it, in the menus
+  too (`Icons.setFullScreen`). A command without a fitting glyph gets one of its own (MENU-14):
+  `MenusFxTest` opens the menus and fails on a row with none. Previous and Next are in the header's
+  menu too, so the floating arrows are never the only way (TBAR-08).
 - **Escape is ours, not the stage's.** JavaFX's full-screen exit key would leave full screen and
   then let the same press reach the key filter, which would close the window.
   `setFullScreenExitKeyCombination(NO_MATCH)` hands it to `Command.ESCAPE`: leave full screen if in
@@ -269,11 +314,12 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   native image.
 - **The macOS menu bar is JavaFX's system `MenuBar`, the application menu is glass's.** `MacMenus`
   builds File, Image, View, Go and Help from `Command` after the first paint, unmanaged in the scene
-  (it draws nothing there); the header's ☰ menu stays as well, as on the other platforms. Only
-  chords with Cmd are key equivalents: a bare one could be taken by the menu while the palette's
-  field has focus. Items grey only while their menu is open
-  (`onShowing`, by `Command.unavailable`) and are enabled again on close, so a key equivalent never
-  meets a stale state. JavaFX gives no way into the application menu (Hide, Quit), so `MacAppMenu`
+  (it draws nothing there); the header's ☰ menu stays as well, as on the other platforms. No item
+  has a key equivalent (Pauta MENU-02): the native menu would take the key before `onKey`, and a
+  bare one while the palette's field has focus. Each chord is written into its item's title instead
+  ("Rotate Right   R", `MacMenus.title`, MENU-15), as the native menu draws text only (and so no
+  icons); a Cmd key reaches `Keybindings.commandFor` like any other. Items grey, and their titles are
+  written again, only while their menu is open (`onShowing`, by `Command.unavailable`). JavaFX gives no way into the application menu (Hide, Quit), so `MacAppMenu`
   gets it from `com.sun.glass.ui.mac.MacApplication.getAppleMenu`, by reflection, since that
   package exists only in macOS's JavaFX: macOS's launchers pass `--add-exports
   javafx.graphics/com.sun.glass.ui.mac=com.mirada` (the pom's `glass.mac.option`, a harmless `-D`

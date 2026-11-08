@@ -79,14 +79,9 @@ class PaletteChordsTest {
     }
 
     @Test
-    void theMacMenuShowsTheFirstKeyWithCommand() {
-        assertEquals(
-                PaletteChords.current().stream()
-                        .filter(c -> c.getMeta() == KeyCombination.ModifierValue.DOWN
-                                || c.getShortcut() == KeyCombination.ModifierValue.DOWN)
-                        .findFirst()
-                        .orElse(null),
-                MacMenus.accelerator(Command.PALETTE));
+    void theMacMenuShowsTheFirstKey() {
+        assertTrue(MacMenus.title("Command Palette", Command.PALETTE)
+                .endsWith("   " + PaletteChords.current().getFirst().getDisplayText()));
     }
 
     private static boolean matches(List<KeyCombination> chords, KeyEvent e) {

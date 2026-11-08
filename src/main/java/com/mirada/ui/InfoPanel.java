@@ -1,6 +1,5 @@
 package com.mirada.ui;
 
-import java.nio.file.Path;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +11,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TitledPane;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -22,7 +20,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * The image's properties, as GNOME Image Viewer's sidebar shows them: cards of label-over-value
- * rows. The user's own bookmarks and notes on the image and its folder first, when there are any; the folder (with a button that opens it), then the image (size, format, file size), then the
+ * rows. The user's own bookmarks and notes on the image and its folder first, when there are any; the folder (with a button that shows the image in it), then the image (size, format, file size), then the
  * file's dates, then the camera card when the file says what took it, and every metadata tag, folded.
  *
  * <p>Built the first time it is shown, so start-up never pays for it.
@@ -31,7 +29,6 @@ final class InfoPanel {
 
     private final ScrollPane node;
     private final VBox cards = new VBox(14);
-    private final Consumer<Path> openFolder;
     private final Consumer<Command> run;
     private @Nullable ImageDetails shown;
     private Marks shownMarks = Marks.NONE;
@@ -48,12 +45,8 @@ final class InfoPanel {
         }
     }
 
-    /**
-     * @param openFolder opens a folder in the file manager
-     * @param run runs a command, for the notes' edit buttons
-     */
-    InfoPanel(Consumer<Path> openFolder, Consumer<Command> run) {
-        this.openFolder = openFolder;
+    /** @param run runs a command: the folder's button and the notes' edit buttons are commands */
+    InfoPanel(Consumer<Command> run) {
         this.run = run;
         cards.getStyleClass().add("info-cards");
         node = new ScrollPane(cards);
@@ -83,15 +76,8 @@ final class InfoPanel {
         Locale locale = Locale.getDefault();
         ZoneId zone = ZoneId.systemDefault();
 
-        Button open = new Button();
-        open.setGraphic(Icons.of(Icons.FOLDER_OPEN));
-        open.setTooltip(new Tooltip("Open the Folder"));
-        open.getStyleClass().addAll("flat", "info-action");
-        open.setFocusTraversable(false);
-        open.setOnAction(e -> {
-            Path folder = details.file().getParent();
-            if (folder != null) openFolder.accept(folder);
-        });
+        // The folder in the file manager, with this image selected: Show in Folder, as the menus have it.
+        Button open = Icons.button(Command.SHOW_IN_FOLDER, "info-action", () -> run.accept(Command.SHOW_IN_FOLDER));
 
         if (marks.any()) cards.getChildren().add(marksCard(marks));
         cards.getChildren()
@@ -135,14 +121,7 @@ final class InfoPanel {
     }
 
     private Button editButton(Command command) {
-        Button edit = new Button();
-        edit.setGraphic(Icons.of(Icons.RENAME));
-        edit.setTooltip(new Tooltip("Edit the " + (command == Command.NOTE ? "Note" : "Folder Note") + " ("
-                + command.chord().getDisplayText() + ")"));
-        edit.getStyleClass().addAll("flat", "info-action");
-        edit.setFocusTraversable(false);
-        edit.setOnAction(e -> run.accept(command));
-        return edit;
+        return Icons.button(command, "info-action", () -> run.accept(command));
     }
 
     /**

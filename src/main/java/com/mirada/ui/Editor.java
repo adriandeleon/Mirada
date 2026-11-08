@@ -21,7 +21,6 @@ import javafx.scene.image.PixelBuffer;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -144,7 +143,7 @@ final class Editor {
             shapeChanged();
             record();
         });
-        shape.setTooltip(new Tooltip("The crop's shape" + keyOf(Command.EDITOR_NEXT_SHAPE)));
+        shape.setTooltip(new Tooltip(Icons.tooltip("The crop's shape", Command.EDITOR_NEXT_SHAPE.chord())));
         HBox bottom = new HBox(
                 8,
                 new Label("Crop"),
@@ -441,16 +440,10 @@ final class Editor {
     /** A tool's button, running its command; the tooltip names the key the keymap gives it. */
     private Button tool(String label, Command command) {
         Button button = new Button(label);
-        button.setTooltip(new Tooltip(label + keyOf(command)));
+        button.setTooltip(new Tooltip(Icons.tooltip(label, command.chord())));
         button.setOnAction(e -> run(command));
         button.setFocusTraversable(false);
         return button;
-    }
-
-    /** " (R)": the key shown for {@code command}, or nothing when it has none. */
-    private static String keyOf(Command command) {
-        KeyCombination chord = command.chord();
-        return chord == KeyCombination.NO_MATCH ? "" : " (" + chord.getDisplayText() + ")";
     }
 
     private static Region spacer() {

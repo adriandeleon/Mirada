@@ -20,6 +20,10 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
   a palette of its own, for Open, Edit Note, Bookmark, Show in Folder, Remove and the three lists.
   **Copy Details**, About's button, is a command too. The palette now lists every command, Escape
   and the Pan commands included, greyed with the reason where one cannot run.
+- **The Menu key and Shift+F10 open the right-click menu** of what is selected: the image's, under
+  its thumbnail or in the middle of the image, and in Bookmarks and Notes the selected row's.
+- **Previous Image and Next Image are in the header's menu**, so the floating arrows are not the
+  only way to them with the mouse.
 - **Help → Documentation opens the user guide** at
   [mirada-project.dev/docs](https://mirada-project.dev/docs/) in your browser: in the palette, in the
   header's menu and the Mac's Help menu right after Command Palette, and as a link in an empty
@@ -86,6 +90,16 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
   Image), from the keymap in use, in place of a paragraph of the second ways. A key with Shift no
   longer does what it does without (Shift+F was full screen, Alt+Right the next image), except
   where Shift is part of the key: Shift+Space still steps back.
+- **Mirada draws its interface in Inter** on every platform, bundled with it, instead of the
+  system's default face; every menu is Inter at one size, its keys smaller beside it, whatever it
+  was opened from.
+- **Tooltips name the command and its key, as the key is now**: "Rotate Right (R)", Next Image's
+  the Down key while the thumbnails stand down the side, and the editor's say Cmd on a Mac. The
+  floating zoom button wears the icon of what it will do, as the zoom menu does, and the sidebar's
+  folder button now shows the image in its folder (Show in Folder). Bookmarks and Notes, About,
+  Hide Thumbnails and a bookmark's Remove have icons of their own.
+- **The macOS menu bar shows every command's key** beside its name, the bare ones too, and no
+  longer takes keys itself: every key goes to the window, as in the palette.
 - **Leaving the editor with an edit not yet saved asks first**: Cancel, Escape, Close Window and the
   window's close button offer Discard or Cancel. Saving under a name that only the added extension
   makes into an existing file asks before replacing it.
@@ -111,6 +125,14 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Fixed
 
+- **Coloured text and highlighted rows read better.** Accent, warning, success and error text,
+  and the white text on a highlighted menu row or selection, now reach 4.5:1 against what they
+  stand on in the light and dark themes (the light theme's blue was 4.0:1), and the system accent
+  on macOS and Windows is adjusted by the same rule. Pressing Tab shows one focus ring, in the
+  accent, around the control it reached.
+- **A click that closes a menu is no longer lost.** Clicking elsewhere in the window while a menu
+  is open closes it and also does what the click does: a click on a thumbnail shows that image,
+  and a right-click opens its own menu at once. Only one right-click menu shows at a time.
 - **A settings or bookmarks file that will not read is no longer lost.** One that will not decode is
   kept beside it as `….corrupt.bak`, and Mirada starts from the defaults; one that cannot be read at
   all is left alone, where before the next bookmark could replace every mark in it.
