@@ -77,7 +77,8 @@ final class BookmarkList {
         List<Row> rows = new ArrayList<>();
         for (Path folder : order) {
             rows.add(new FolderRow(folder, folderMarks.get(folder)));
-            List<Bookmarks.Mark> in = images.getOrDefault(folder, List.of());
+            // A folder marked with no image marked in it has none: List.of() would refuse the sort.
+            List<Bookmarks.Mark> in = images.getOrDefault(folder, new ArrayList<>());
             in.sort(BY_NAME);
             for (Bookmarks.Mark mark : in) rows.add(new ImageRow(mark.path(), mark));
         }

@@ -13,7 +13,6 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 
 import com.mirada.diagnostics.MessageLog;
-import com.mirada.image.FxToolkit;
 import com.mirada.settings.Settings;
 import com.mirada.update.UpdateCoordinator;
 import com.mirada.update.UpdateService;
@@ -74,7 +73,7 @@ class DiagnosticsUiTest {
     @Test
     @Tag("fx")
     void theEchoAreaShowsTheNewestAndAClickOpensTheLog() throws Exception {
-        FxToolkit.start();
+        FxTestSupport.start();
         List<Command> ran = new ArrayList<>();
         CompletableFuture<Void> done = new CompletableFuture<>();
         Platform.runLater(() -> {

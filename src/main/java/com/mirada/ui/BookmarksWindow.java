@@ -567,4 +567,15 @@ final class BookmarksWindow {
             setGraphic(row);
         }
     }
+
+    /** Its stage, closed with the viewer's. */
+    Stage stage() {
+        return stage;
+    }
+
+    /** Closes it for good, with the viewer: its thumbnail workers stop. */
+    void close() {
+        stage.close();
+        thumbnails.close();
+    }
 }

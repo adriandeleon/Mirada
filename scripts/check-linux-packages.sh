@@ -57,6 +57,7 @@ check_tree() { # <package-label> <extracted-root> <depends-text> <menu-entry>
         [ -f "$codecs/$lib" ] || fail "$label: codec bundle lacks $lib"
     done
     [ -f "$app/lib/app/NOTICE" ] || fail "$label: no NOTICE"
+    [ -f "$app/lib/app/LICENSE" ] || fail "$label: no LICENSE"
     case "$label" in
         *.deb)
             [ -f "$tree/usr/share/applications/mirada.desktop" ] ||

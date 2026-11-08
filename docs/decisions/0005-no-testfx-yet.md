@@ -1,6 +1,6 @@
 # 0005. No TestFX yet: plain JUnit, JavaFX's Headless platform and our own driver
 
-Accepted, 2026-11-08. Pauta 4.0.1's PLAT-11 asks for TestFX; this record says why Mirada has none yet.
+Accepted, 2026-11-08; superseded the same day by [0006](0006-testfx-and-coverage-gate.md). Pauta 4.0.1's PLAT-11 asks for TestFX; this record says why Mirada had none yet.
 
 ## Context
 

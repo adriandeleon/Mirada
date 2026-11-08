@@ -111,4 +111,9 @@ final class ShortcutsWindow {
         stage.setY(from.getY() + 60);
         stage.show();
     }
+
+    /** Its stage, closed with the viewer's. */
+    Stage stage() {
+        return stage;
+    }
 }

@@ -14,13 +14,18 @@ repository root.
 ./mvnw test                # the tests
 ./mvnw -DexcludedGroups=fx test   # the pure tests only, without starting JavaFX
 ./mvnw spotless:apply      # format (Palantir Java Format); CI fails unformatted code
-./mvnw verify              # what CI runs: NullAway, every test, the format check
+./mvnw verify              # what CI runs: NullAway, every test, the coverage gate, the format check
 ```
 
 `./mvnw javafx:run` uses your real settings folder. For experiments, launch with
 `--config-dir /tmp/scratch` (or `--dev`, which keeps them in `~/.mirada-dev`).
 
-- Put a rule in a pure class and test it there; tag a test that starts JavaFX `@Tag("fx")`.
+- Put a rule in a pure class and test it there; tag a test that starts JavaFX `@Tag("fx")`. A
+  window is tested as a user drives it, through `WindowFixture` ([testing](docs/testing.md)).
+- `verify` fails when coverage falls under its floors: 0.90 of lines and methods and 0.79 of
+  branches overall, and a floor for each large package
+  ([the table](docs/testing.md#the-coverage-gate)). New code comes with its tests; when a package's
+  coverage rises, raise its floor in `pom.xml` and in that table.
 - Every package is `@NullMarked`; NullAway fails the build on a possible null. Never suppress it.
 - [AGENTS.md](AGENTS.md) has the commands for packaging, the codec bundle and start-up timing.
   [docs/](docs/README.md) explains the rest: [architecture](docs/architecture.md),

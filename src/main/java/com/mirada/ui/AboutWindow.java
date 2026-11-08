@@ -163,4 +163,9 @@ final class AboutWindow {
         updateLink.setVisible(available);
         updateLink.setManaged(available);
     }
+
+    /** Its stage, closed with the viewer's. */
+    Stage stage() {
+        return stage;
+    }
 }

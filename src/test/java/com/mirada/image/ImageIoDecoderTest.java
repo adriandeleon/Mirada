@@ -11,6 +11,7 @@ import java.util.concurrent.CompletionException;
 
 import javafx.scene.image.WritableImage;
 
+import com.mirada.ui.FxTestSupport;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -28,8 +29,8 @@ class ImageIoDecoderTest {
     private static final int BLUE = 0xFF0000FF;
 
     @BeforeAll
-    static void toolkit() throws InterruptedException {
-        FxToolkit.start();
+    static void toolkit() throws Exception {
+        FxTestSupport.start();
     }
 
     private static Path fixture(String name) throws URISyntaxException {

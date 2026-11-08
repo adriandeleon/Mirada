@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import javax.imageio.ImageIO;
 
 import com.drew.metadata.Metadata;
@@ -17,7 +20,9 @@ import org.junit.jupiter.api.io.TempDir;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -26,6 +31,24 @@ class ThumbnailsTest {
 
     @TempDir
     Path folder;
+
+    @Test
+    void pastItsCapTheOldestThumbnailIsDroppedAndTheNewestKept() {
+        Thumbnails thumbnails = new Thumbnails();
+        try {
+            // Files that are not there: each is a request, made or failed, and counts the same.
+            List<Path> files = new ArrayList<>();
+            for (int i = 0; i <= Thumbnails.CAPACITY; i++) files.add(folder.resolve("missing-" + i + ".jpg"));
+            CompletableFuture<Thumbnails.Thumbnail> first = thumbnails.get(files.getFirst());
+            CompletableFuture<Thumbnails.Thumbnail> second = thumbnails.get(files.get(1));
+            for (Path file : files.subList(2, files.size())) thumbnails.get(file);
+            assertSame(second, thumbnails.get(files.get(1)), "kept: the cap is not reached until the last");
+            assertSame(thumbnails.get(files.getLast()), thumbnails.get(files.getLast()), "the newest is kept");
+            assertNotSame(first, thumbnails.get(files.getFirst()), "the oldest was dropped and is asked for again");
+        } finally {
+            thumbnails.close();
+        }
+    }
 
     @Test
     void aPhonesThumbnailFitsItsPhoto() {

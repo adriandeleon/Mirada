@@ -13,7 +13,6 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.input.KeyCombination;
 
-import com.mirada.image.FxToolkit;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -62,7 +61,7 @@ class MacMenusTest {
     @Test
     @Tag("fx")
     void theBarHasNoAcceleratorsAndShowsEveryChord() throws Exception {
-        FxToolkit.start();
+        FxTestSupport.start();
         CompletableFuture<MenuBar> built = new CompletableFuture<>();
         Platform.runLater(() -> built.complete(MacMenus.build(c -> {}, c -> null, c -> false, Command::label)));
         MenuBar bar = built.get(10, TimeUnit.SECONDS);

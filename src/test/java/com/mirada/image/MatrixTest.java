@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import javafx.scene.image.Image;
 
 import com.mirada.folder.ImageFormats;
+import com.mirada.ui.FxTestSupport;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -29,8 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MatrixTest {
 
     @BeforeAll
-    static void toolkit() throws InterruptedException {
-        FxToolkit.start();
+    static void toolkit() throws Exception {
+        FxTestSupport.start();
     }
 
     static Path matrix() throws URISyntaxException {

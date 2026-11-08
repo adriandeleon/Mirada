@@ -16,7 +16,6 @@ import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 
 import javafx.application.Platform;
-import javafx.collections.ListChangeListener;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.image.PixelReader;
@@ -26,11 +25,9 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseButton;
 import javafx.scene.robot.Robot;
-import javafx.stage.PopupWindow;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import javafx.stage.WindowEvent;
 
 import com.mirada.App;
 import org.jspecify.annotations.Nullable;
@@ -79,10 +76,7 @@ public final class HeadlessDriver {
         fx(() -> {
             fit(stage(), 1000, 760);
             // Menus and popups too: one opened near the bottom would hang past it.
-            Window.getWindows().forEach(HeadlessDriver::keepOnScreen);
-            Window.getWindows().addListener((ListChangeListener<Window>) change -> {
-                while (change.next()) change.getAddedSubList().forEach(HeadlessDriver::keepOnScreen);
-            });
+            FxTestSupport.keepWindowsOnScreen();
         });
         // The first image is painted on a pulse after the window shows.
         Thread.sleep(500);
@@ -141,26 +135,6 @@ public final class HeadlessDriver {
         stage.setY(screen.getMinY());
         stage.setWidth(Math.min(width, screen.getWidth()));
         stage.setHeight(Math.min(height, screen.getHeight()));
-    }
-
-    /**
-     * Moves a window back inside the screen as it shows, before its first frame is drawn. A popup's
-     * own fix keeps its content inside but not its shadow, and would undo ours, so it is turned off.
-     */
-    private static void keepOnScreen(Window window) {
-        if (window instanceof PopupWindow popup) popup.setAutoFix(false);
-        window.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> moveOnScreen(window));
-        moveOnScreen(window);
-    }
-
-    private static void moveOnScreen(Window window) {
-        // A stage placed before it shows has no size yet: wait for WINDOW_SHOWN.
-        if (Double.isNaN(window.getWidth()) || Double.isNaN(window.getHeight())) return;
-        Rectangle2D screen = Screen.getPrimary().getBounds();
-        double x = Math.max(screen.getMinX(), Math.min(window.getX(), screen.getMaxX() - window.getWidth()));
-        double y = Math.max(screen.getMinY(), Math.min(window.getY(), screen.getMaxY() - window.getHeight()));
-        if (x != window.getX()) window.setX(x);
-        if (y != window.getY()) window.setY(y);
     }
 
     private static void press(Robot robot, String token) {

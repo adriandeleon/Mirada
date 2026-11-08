@@ -35,7 +35,6 @@ import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
-import com.mirada.image.FxToolkit;
 import com.mirada.settings.Bookmarks;
 import com.mirada.settings.Settings;
 import org.junit.jupiter.api.AfterAll;
@@ -64,7 +63,7 @@ class MenusFxTest {
 
     @BeforeAll
     static void open() throws Exception {
-        FxToolkit.start();
+        FxTestSupport.start();
         Fonts.load();
         fx(() -> {
             Fonts.ready();

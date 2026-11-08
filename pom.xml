@@ -45,6 +45,10 @@
         <javafx.plugin.version>0.0.8</javafx.plugin.version>
         <junit.version>5.14.4</junit.version>
         <junit.platform.version>1.14.4</junit.platform.version>
+        <!-- Test scope only: TestFX starts and stops the toolkit and its windows over JavaFX's
+             own Headless glass (docs/testing.md); JaCoCo measures the tests and gates `verify`. -->
+        <testfx.version>4.0.18</testfx.version>
+        <jacoco.version>0.8.16</jacoco.version>
         <!-- Null checking (docs/conventions.md, "Null annotations"): NullAway, an Error Prone plugin,
              checks every @NullMarked package of the main compile and fails the build on a null it
              cannot prove safe. JSpecify supplies the annotations. Error Prone reaches into javac,
@@ -139,6 +143,21 @@
             <version>${junit.platform.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- The FX tests (@Tag("fx")) start the toolkit and show their windows through TestFX's
+             FxToolkit, over JavaFX's built-in Headless glass (surefire's glass.platform): no
+             display, no xvfb, no Monocle (PLAT-11). Never shipped. -->
+        <dependency>
+            <groupId>org.testfx</groupId>
+            <artifactId>testfx-core</artifactId>
+            <version>${testfx.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testfx</groupId>
+            <artifactId>testfx-junit5</artifactId>
+            <version>${testfx.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -155,6 +174,17 @@
                 <directory>src/main/resources</directory>
                 <filtering>false</filtering>
                 <excludes><exclude>com/mirada/build-info.properties</exclude></excludes>
+            </resource>
+            <!-- The licence and the notices travel inside the jar and the module (REPO-04), as
+                 well as beside the app in every image (scripts/add-notices.sh). -->
+            <resource>
+                <directory>${project.basedir}</directory>
+                <targetPath>META-INF/mirada</targetPath>
+                <filtering>false</filtering>
+                <includes>
+                    <include>LICENSE</include>
+                    <include>NOTICE</include>
+                </includes>
             </resource>
         </resources>
         <plugins>
@@ -305,7 +335,20 @@
                     </systemPropertyVariables>
                     <!-- JavaFX loads its native libraries from the classpath here; without this the
                          JDK warns that it will refuse in a future release. -->
-                    <argLine>--enable-native-access=ALL-UNNAMED</argLine>
+                    <!-- Nothing a test does reaches the desktop: Move to Trash goes to a trash
+                         under target/ (Linux's follows XDG_DATA_HOME), and with no display or
+                         session bus nothing it starts (Show in Folder, a link) can open a window. -->
+                    <environmentVariables>
+                        <XDG_DATA_HOME>${project.build.directory}/test-data-home</XDG_DATA_HOME>
+                    </environmentVariables>
+                    <excludedEnvironmentVariables>
+                        <excludedEnvironmentVariable>DISPLAY</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>WAYLAND_DISPLAY</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>DBUS_SESSION_BUS_ADDRESS</excludedEnvironmentVariable>
+                    </excludedEnvironmentVariables>
+                    <!-- @{argLine} keeps JaCoCo's agent, which prepare-agent puts in the argLine
+                         property; a plain argLine would drop coverage. -->
+                    <argLine>@{argLine} --enable-native-access=ALL-UNNAMED</argLine>
                 </configuration>
             </plugin>
 
@@ -352,6 +395,144 @@
                     <jlinkImageName>mirada</jlinkImageName>
                     <jlinkZipName>mirada</jlinkZipName>
                 </configuration>
+            </plugin>
+
+            <!-- Coverage (PLAT-12, QUAL-03): the agent measures the tests, `report` writes
+                 target/site/jacoco after `test`, and `check` gates `verify`. The floors and how they
+                 move are in docs/testing.md, whose table BuildHygieneTest compares with these. -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <configuration>
+                    <!-- Not measured, by the report or the floors: the start-up timer and the
+                         AOT-training tour (com.mirada.perf). They act only in a launch made with
+                         MIRADA_PERF or -Dmirada.aotTrain, read those once as the class loads, and
+                         end the JVM; -Pdist runs the tour every time it trains the AOT cache, and
+                         scripts/measure-startup.sh the timer. -->
+                    <excludes>
+                        <exclude>com/mirada/perf/**</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>jacoco-prepare-agent</id>
+                        <goals><goal>prepare-agent</goal></goals>
+                        <configuration>
+                            <!-- Each run measured afresh, so a local verify gates what it ran. -->
+                            <append>false</append>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>jacoco-report</id>
+                        <phase>test</phase>
+                        <goals><goal>report</goal></goals>
+                    </execution>
+                    <execution>
+                        <id>jacoco-check</id>
+                        <phase>verify</phase>
+                        <goals><goal>check</goal></goals>
+                        <configuration>
+                            <haltOnFailure>true</haltOnFailure>
+                            <!-- Floors are a regression net, not a target: about three points under
+                                 what Linux measured (2026-11-08), as macOS and Windows skip the
+                                 Linux-only trash tests. Raise a floor when its coverage rises.
+                                 docs/testing.md quotes this table; BuildHygieneTest holds the two
+                                 to each other. -->
+                            <rules>
+                                <!-- The whole build, at Pauta's floors (PLAT-12). Linux measured
+                                     lines 0.93, methods 0.93, branches 0.80; macOS and Windows,
+                                     without the trash tests, about half a point less. -->
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.90</minimum>
+                                        </limit>
+                                        <limit>
+                                            <counter>METHOD</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.90</minimum>
+                                        </limit>
+                                        <limit>
+                                            <counter>BRANCH</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.79</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                                <!-- Every package of 300 lines or more. -->
+                                <rule>
+                                    <element>PACKAGE</element>
+                                    <includes>
+                                        <include>com.mirada.edit</include>
+                                    </includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.95</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                                <rule>
+                                    <element>PACKAGE</element>
+                                    <includes>
+                                        <include>com.mirada.ui</include>
+                                    </includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.93</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                                <rule>
+                                    <element>PACKAGE</element>
+                                    <includes>
+                                        <include>com.mirada.settings</include>
+                                    </includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.92</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                                <rule>
+                                    <element>PACKAGE</element>
+                                    <includes>
+                                        <include>com.mirada.image</include>
+                                    </includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.86</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                                <rule>
+                                    <element>PACKAGE</element>
+                                    <includes>
+                                        <include>com.mirada.os</include>
+                                    </includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.35</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

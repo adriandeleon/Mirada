@@ -47,7 +47,7 @@ public final class Thumbnails {
     static final int SIZE = 160;
 
     /** About 100 KB each: a few hundred cost tens of megabytes at most. */
-    private static final int CAPACITY = 400;
+    static final int CAPACITY = 400;
 
     /** How far an embedded thumbnail's shape may stray from the photo's: rounding, not a crop. */
     private static final double SHAPE_TOLERANCE = 0.02;
@@ -99,6 +99,12 @@ public final class Thumbnails {
         }
         workers.execute(job);
         return result;
+    }
+
+    /** Stops the workers, for a strip whose window has closed: nothing queued is made. */
+    public void close() {
+        workers.shutdownNow();
+        cache.clear();
     }
 
     /**
