@@ -1,6 +1,6 @@
 # Pauta audit
 
-Mirada at `e96f789` (keys rows: branch `pauta-keys`), audited against [Pauta 4.0.1](https://pauta-project.dev/4.0.1/) on 2026-11-08.
+Mirada at `10329e6`, audited against [Pauta 4.0.1](https://pauta-project.dev/4.0.1/) on 2026-11-08.
 Scope: every rule (351). Rules from https://pauta-project.dev/4.0.1/rules.json.
 
 Regenerated rather than edited: each rule was judged by its check (code, test or by hand) as the
@@ -10,8 +10,8 @@ never because Mirada lacks a part another rule requires.
 
 |        | Pass | Fail | Manual | N.a. |
 |--------|-----:|-----:|-------:|-----:|
-| MUST   | 88 | 50 | 4 | 20 |
-| SHOULD | 49 | 58 | 15 | 58 |
+| MUST   | 117 | 21 | 4 | 20 |
+| SHOULD | 58 | 50 | 15 | 57 |
 | MAY    | 1 | 2 | 0 | 6 |
 
 A failed MUST blocks a release.
@@ -21,10 +21,6 @@ A failed MUST blocks a release.
 | ID | Level | Result | Evidence |
 |----|-------|--------|----------|
 | [PLAT-01](https://pauta-project.dev/4.0.1/platform/#plat-01) | MUST | fail | `pom.xml:202`: release 25, but the enforcer's range is [25,26), a ceiling (the formatter broke on 27) |
-| [PLAT-06](https://pauta-project.dev/4.0.1/platform/#plat-06) | MUST | fail | `src/main/resources/com/mirada/styles/mirada.css:50`: fixed hexes in component rules (:50, :161, :490, :531, :535) |
-| [PLAT-11](https://pauta-project.dev/4.0.1/platform/#plat-11) | MUST | fail | `pom.xml:295`: Headless glass and JUnit 5, no Monocle; but no TestFX (src/test/java/com/mirada/image/FxToolkit.java:22 starts the toolkit by hand; why: docs/decisions/0005-no-testfx-yet.md) |
-| [PLAT-12](https://pauta-project.dev/4.0.1/platform/#plat-12) | MUST | fail | `pom.xml`: no jacoco-maven-plugin, no jacoco-check |
-| [REPO-04](https://pauta-project.dev/4.0.1/repository/#repo-04) | MUST | fail | NOTICE:1 name, copyright, "licensed under the MIT License", every component; but no NoticeCoverageTest or BuildHygieneTest |
 | [DOCS-01](https://pauta-project.dev/4.0.1/documentation/#docs-01) | MUST | fail | mirada-website/src/content/docs has getting started, features, keyboard, settings, FAQ, but no screenshots in the pages |
 | [DOCS-05](https://pauta-project.dev/4.0.1/documentation/#docs-05) | MUST | fail | `src/main/java/com/mirada/ui/AboutWindow.java:79`: About opens `AppInfo.releaseNotesUrl()` (the GitHub release, the changelog for a snapshot; Mirada has no Welcome page); but mirada-website does not generate its What's new from CHANGELOG.md (its scripts/ has GenCommands only) |
 | [QUAL-12](https://pauta-project.dev/4.0.1/quality/#qual-12) | MUST | fail | no message catalogs, so no parity test (descriptions are checked: CommandTest:189) |
@@ -32,32 +28,8 @@ A failed MUST blocks a release.
 | [PERF-03](https://pauta-project.dev/4.0.1/performance/#perf-03) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:463`: images guarded by path (wanted), but sidebar reads for the same file have no generation guard |
 | [PERF-06](https://pauta-project.dev/4.0.1/performance/#perf-06) | MUST | fail | `src/main/java/com/mirada/ui/BookmarksWindow.java:101`: the filter refreshes, with a stat per mark, on every keystroke, undebounced |
 | [PERF-08](https://pauta-project.dev/4.0.1/performance/#perf-08) | MUST | fail | `src/main/java/com/mirada/ui/ThumbnailStrip.java:194`: items.equals(images) is O(folder) on every step; lists are virtualized |
-| [PERF-11](https://pauta-project.dev/4.0.1/performance/#perf-11) | MUST | fail | `src/test/java/com/mirada/edit/HistoryTest.java`: history and recent folders capped and tested; ImageCache, Thumbnails and the trash undo stack capped without tests |
 | [PERF-12](https://pauta-project.dev/4.0.1/performance/#perf-12) | MUST | fail | `src/main/java/com/mirada/image/Animation.java:22`: one threshold; no size or heap guard before decoding |
-| [PERF-13](https://pauta-project.dev/4.0.1/performance/#perf-13) | MUST | fail | no test that a closed window releases listeners and threads |
-| [PERF-14](https://pauta-project.dev/4.0.1/performance/#perf-14) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:358`: panels built on first open, but no test |
-| [PERF-15](https://pauta-project.dev/4.0.1/performance/#perf-15) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:296`: deferred work after the first paint, but no test |
 | [KBD-03](https://pauta-project.dev/4.0.1/keyboard/#kbd-03) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:20`: titles and descriptions are English literals, no catalog |
-| [KBD-17](https://pauta-project.dev/4.0.1/keyboard/#kbd-17) | MUST | fail | `src/main/java/com/mirada/ui/InfoPanel.java:86`: icon-only buttons built in four places, no single helper; InfoPanel's lack accessible text |
-| [ICON-01](https://pauta-project.dev/4.0.1/icons-and-color/#icon-01) | MUST | fail | `src/main/java/com/mirada/ui/Theme.java:59`: window listener exists, but no ui-font.css and no Inter |
-| [ICON-02](https://pauta-project.dev/4.0.1/icons-and-color/#icon-02) | MUST | fail | no fonts/inter, no Font.loadFont |
-| [ICON-08](https://pauta-project.dev/4.0.1/icons-and-color/#icon-08) | MUST | fail | `src/main/resources/com/mirada/styles/mirada.css:50`: hexes outside .root (:50, :161, :490, :531, :535) and literal white/black/rgba |
-| [ICON-10](https://pauta-project.dev/4.0.1/icons-and-color/#icon-10) | MUST | fail | `src/main/resources/com/mirada/styles/mirada.css:260`: Cupertino Light's accent text #007aff is 3.5–4.0:1 on its subtle fills; Accent.java:31 aims at 3:1 |
-| [ICON-11](https://pauta-project.dev/4.0.1/icons-and-color/#icon-11) | MUST | fail | `src/main/resources/com/mirada/styles/mirada.css:121`: fg-emphasis on accent rows, but white on #007aff is 4.0:1 and nothing checks it |
-| [ICON-12](https://pauta-project.dev/4.0.1/icons-and-color/#icon-12) | MUST | fail | no -focus-ring token, no :focus-visible block |
-| [ICON-20](https://pauta-project.dev/4.0.1/icons-and-color/#icon-20) | MUST | fail | `src/main/java/com/mirada/ui/OnScreenControls.java:41`: zoom button's glyphs differ from the zoom menu's; InfoPanel's note button wears RENAME (InfoPanel.java:139) |
-| [ICON-21](https://pauta-project.dev/4.0.1/icons-and-color/#icon-21) | MUST | fail | `src/main/java/com/mirada/ui/InfoPanel.java:86`: two icon-only buttons with a tooltip and no accessible text; no one helper |
-| [TBAR-01](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-01) | MUST | fail | `src/main/java/com/mirada/ui/InfoPanel.java:88`: setTooltip without setAccessibleText; TitleBar sets them from different strings |
-| [TBAR-03](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-03) | MUST | fail | `src/main/java/com/mirada/ui/TitleBar.java:220`: tooltips typed ("Rotate Right (R)"), also OnScreenControls.java:39, Editor.java:90 |
-| [TBAR-08](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-08) | MUST | fail | `src/main/java/com/mirada/ui/OnScreenControls.java:39`: Previous and Next are in no in-window menu on Linux and Windows |
-| [TABS-14](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-14) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:358`: panels built on first use, but no test that none is built before the first paint |
-| [MENU-14](https://pauta-project.dev/4.0.1/menus/#menu-14) | MUST | fail | `src/main/java/com/mirada/ui/Icons.java:95`: every row has an icon, but borrowed ones (Bookmarks wears Note's, About Info's, Hide Thumbnails Close's) and no FX test |
-| [MENU-15](https://pauta-project.dev/4.0.1/menus/#menu-15) | MUST | fail | `src/main/java/com/mirada/ui/MenuChord.java:37`: in-window chords shown in -state-key, but the Mac bar hides bare chords and they aren't Inter |
-| [MENU-16](https://pauta-project.dev/4.0.1/menus/#menu-16) | MUST | fail | no Inter, nothing pinned on .context-menu |
-| [MENU-02](https://pauta-project.dev/4.0.1/menus/#menu-02) | MUST | fail | `src/main/java/com/mirada/ui/MacMenus.java:152`: the macOS bar registers real Cmd accelerators (in-window menus use MenuChord, which never matches) |
-| [MENU-06](https://pauta-project.dev/4.0.1/menus/#menu-06) | MUST | fail | `src/main/java/com/mirada/ui/Popups.java:34`: an open menu closes before the next, but no test |
-| [MENU-07](https://pauta-project.dev/4.0.1/menus/#menu-07) | MUST | fail | `src/main/java/com/mirada/ui/Popups.java:36`: the outside press is consumed |
-| [MENU-09](https://pauta-project.dev/4.0.1/menus/#menu-09) | MUST | fail | no Menu key or Shift+F10 handling |
 | [SET-02](https://pauta-project.dev/4.0.1/settings/#set-02) | MUST | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:179`: one page of cards; no page sidebar, no search field |
 | [SET-03](https://pauta-project.dev/4.0.1/settings/#set-03) | MUST | fail | no Settings search and no ranking test |
 | [SET-06](https://pauta-project.dev/4.0.1/settings/#set-06) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:120`: no palette command for theme, thumbnails/properties at start, controls delay, slideshow speed, palette keys |
@@ -68,24 +40,18 @@ A failed MUST blocks a release.
 | [INTL-01](https://pauta-project.dev/4.0.1/i18n/#intl-01) | MUST | fail | no messages*.properties; every string is an English literal |
 | [INTL-08](https://pauta-project.dev/4.0.1/i18n/#intl-08) | MUST | fail | no catalogs, no parity test |
 | [PAL-02](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-02) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:519`: the palette lists every command, Escape, Command Palette and the Pan commands included, greyed with a reason where they cannot run (`CommandTest.thePaletteListsEveryCommandWhereverItOpens`); but titles and descriptions are not yet from `command.<id>` and `command.<id>.desc` (no catalogs: KBD-03) |
-| [REL-19](https://pauta-project.dev/4.0.1/release/#rel-19) | MUST | fail | `.github/workflows/ci.yml:15`: push to main and every pull request; Format (`spotless:check`, :35) and Build & Test (`./mvnw verify`, :55) are separate jobs. Missing: the coverage gate (PLAT-12, REL-27: no JaCoCo), and the two checks are not required on main yet (branch protection, a repository setting the owner turns on) |
-| [REL-27](https://pauta-project.dev/4.0.1/release/#rel-27) | MUST | fail | `.github/workflows/ci.yml:61`: surefire reports uploaded always; no JaCoCo report or coverage summary |
+| [REL-19](https://pauta-project.dev/4.0.1/release/#rel-19) | MUST | fail | `.github/workflows/ci.yml:15`: push to main and every pull request; Format (`spotless:check`) and Build & Test (`./mvnw verify`, the JaCoCo gate included) are separate jobs. Missing: the two checks are not required on main yet (branch protection, a repository setting the owner turns on) |
 
 ## Other failures
 
 | ID | Level | Result | Evidence |
 |----|-------|--------|----------|
-| [PLAT-07](https://pauta-project.dev/4.0.1/platform/#plat-07) | SHOULD | fail | no Inter, no Font.loadFont, no ui-font.css |
 | [PLAT-14](https://pauta-project.dev/4.0.1/platform/#plat-14) | SHOULD | fail | `src/main/java/com/mirada/settings/Settings.java:456`: .properties, no schema version |
 | [DOCS-03](https://pauta-project.dev/4.0.1/documentation/#docs-03) | SHOULD | fail | `mirada-website/astro.config.mjs:27`: docs not versioned; no docs URL in the app |
 | [DOCS-04](https://pauta-project.dev/4.0.1/documentation/#docs-04) | SHOULD | fail | `mirada-website/scripts/GenCommands.java`: generates commands and version, but What's new is hand-written and no check:docs |
 | [DOCS-10](https://pauta-project.dev/4.0.1/documentation/#docs-10) | MAY | fail | no per-command docs |
 | [DOCS-11](https://pauta-project.dev/4.0.1/documentation/#docs-11) | MAY | fail | no Help-for-page links in Settings |
 | [DOCS-15](https://pauta-project.dev/4.0.1/documentation/#docs-15) | SHOULD | fail | no stacked Javadoc today, but no test guards it |
-| [QUAL-03](https://pauta-project.dev/4.0.1/quality/#qual-03) | SHOULD | fail | no JaCoCo floors |
-| [QUAL-08](https://pauta-project.dev/4.0.1/quality/#qual-08) | SHOULD | fail | tests use @TempDir, but nothing checks the home folder stays untouched |
-| [QUAL-11](https://pauta-project.dev/4.0.1/quality/#qual-11) | SHOULD | fail | no command sweep |
-| [QUAL-13](https://pauta-project.dev/4.0.1/quality/#qual-13) | SHOULD | fail | `src/test/java/com/mirada/settings/SettingsTest.java:114`: the file round-trips; no FX test of the Settings window's controls |
 | [QUAL-14](https://pauta-project.dev/4.0.1/quality/#qual-14) | SHOULD | fail | `src/test/java/com/mirada/ui/AccentTest.java:36`: contrast for the accent only, not the stylesheet's tokens |
 | [PERF-04](https://pauta-project.dev/4.0.1/performance/#perf-04) | SHOULD | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:92`: details and EXIF virtual-thread executors are unnamed |
 | [PERF-16](https://pauta-project.dev/4.0.1/performance/#perf-16) | SHOULD | fail | `src/main/java/com/mirada/App.java:55`: settings read on the FX thread in start() |
@@ -96,16 +62,13 @@ A failed MUST blocks a release.
 | [KBD-10](https://pauta-project.dev/4.0.1/keyboard/#kbd-10) | SHOULD | fail | no IntelliJ, VS Code or Sublime keymaps |
 | [KBD-12](https://pauta-project.dev/4.0.1/keyboard/#kbd-12) | SHOULD | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:264`: picks the keymap and edits the palette's keys; other keys only as `keys.<id>` in the file, no editor listing every command |
 | [KBD-13](https://pauta-project.dev/4.0.1/keyboard/#kbd-13) | SHOULD | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:217`: chords typed into descriptions ("T toggles it", "F5 starts it"); the editor's and Bookmarks window's tooltips and hints now read the keymap (Editor.keyOf) |
-| [KBD-16](https://pauta-project.dev/4.0.1/keyboard/#kbd-16) | SHOULD | fail | no :focus-visible layer in mirada.css |
+| [KBD-16](https://pauta-project.dev/4.0.1/keyboard/#kbd-16) | SHOULD | fail | `src/main/resources/com/mirada/styles/mirada.css:791`: one `:focus-visible` layer at the end, but no FX test tabs to each control family |
 | [KBD-18](https://pauta-project.dev/4.0.1/keyboard/#kbd-18) | SHOULD | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:68`: on/off rows are CheckBoxes, not a switch |
 | [WIN-04](https://pauta-project.dev/4.0.1/window-shell/#win-04) | SHOULD | fail | `src/main/java/com/mirada/ui/NoteDialog.java:32`: each dialog styles itself; no Dialogs.styled |
 | [WIN-08](https://pauta-project.dev/4.0.1/window-shell/#win-08) | SHOULD | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:529`: window place restored (WindowPlacementTest), the open folder isn't; no --no-session |
 | [WIN-09](https://pauta-project.dev/4.0.1/window-shell/#win-09) | SHOULD | fail | `src/main/java/com/mirada/ui/Command.java:415`: Ctrl/Cmd + - 0 zoom the image; the zoom isn't kept |
 | [ICON-05](https://pauta-project.dev/4.0.1/icons-and-color/#icon-05) | SHOULD | fail | `src/main/java/com/mirada/ui/Theme.java:83`: Cupertino, not Caret & Ink |
-| [ICON-06](https://pauta-project.dev/4.0.1/icons-and-color/#icon-06) | SHOULD | fail | `src/main/resources/com/mirada/styles/mirada.css:128`: -state-key is Editora's ladder (9.1/8.2:1 light), but no test |
 | [ICON-09](https://pauta-project.dev/4.0.1/icons-and-color/#icon-09) | SHOULD | fail | `src/main/resources/com/mirada/styles/mirada.css:116`: fg-subtle only for disabled text, but no test |
-| [ICON-13](https://pauta-project.dev/4.0.1/icons-and-color/#icon-13) | SHOULD | fail | `src/main/resources/com/mirada/styles/mirada.css:129`: periwinkle is a ladder, but no test |
-| [ICON-14](https://pauta-project.dev/4.0.1/icons-and-color/#icon-14) | SHOULD | fail | `src/test/java/com/mirada/ui/AccentTest.java`: does WCAG arithmetic but never reads the stylesheets |
 | [TABS-10](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-10) | SHOULD | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:589`: title "name — Mirada", without the folder |
 | [TABS-15](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-15) | SHOULD | fail | strip layout persists; open panels are a start setting, not the last state |
 | [MENU-03](https://pauta-project.dev/4.0.1/menus/#menu-03) | SHOULD | fail | `src/main/java/com/mirada/ui/TitleBar.java:246`: the header menu refreshes chords on showing but never greys a row |
@@ -168,13 +131,18 @@ A failed MUST blocks a release.
 | [PLAT-03](https://pauta-project.dev/4.0.1/platform/#plat-03) | MUST | pass | `pom.xml:28`: javafx.version 27 |
 | [PLAT-04](https://pauta-project.dev/4.0.1/platform/#plat-04) | MUST | pass | `src/main/java/module-info.java:1`: module com.mirada, no opens |
 | [PLAT-05](https://pauta-project.dev/4.0.1/platform/#plat-05) | MUST | pass | `src/main/java/com/mirada/ui/Theme.java:83`: AtlantaFX 3.0.0 Cupertino Light and Dark |
+| [PLAT-06](https://pauta-project.dev/4.0.1/platform/#plat-06) | MUST | pass | `src/main/resources/com/mirada/styles/mirada.css:9`: every colour named once in the `.root` block, from `-color-*` roles or ladders of them; no rule after it holds a fixed colour (StyleContrastTest.noRuleAfterTheTokenBlockHoldsAFixedColour) |
+| [PLAT-07](https://pauta-project.dev/4.0.1/platform/#plat-07) | SHOULD | pass | `src/main/java/com/mirada/ui/Fonts.java:46`: the four Inter faces and OFL.txt, registered before the first window is styled; `ui-font.css` on every scene |
 | [PLAT-08](https://pauta-project.dev/4.0.1/platform/#plat-08) | MUST | pass | mvnw, mvnw.cmd, .mvn/wrapper/maven-wrapper.properties committed |
 | [PLAT-09](https://pauta-project.dev/4.0.1/platform/#plat-09) | MUST | pass | `pom.xml:261`: -Xep:NullAway:ERROR; @NullMarked everywhere (NullMarkedPackagesTest) |
 | [PLAT-10](https://pauta-project.dev/4.0.1/platform/#plat-10) | MUST | pass | `pom.xml:217`: palantirJavaFormat; spotless check bound to verify |
+| [PLAT-11](https://pauta-project.dev/4.0.1/platform/#plat-11) | MUST | pass | `pom.xml:325`: surefire sets glass.platform Headless; TestFX 4.0.18 (test scope) starts the toolkit (`src/test/java/com/mirada/ui/FxTestSupport.java:40`), every FX test `@Tag("fx")` (`BuildHygieneTest.everyTestThatStartsTheToolkitIsTaggedFx`); no Monocle; no Maven run under xvfb (xvfb stays only for the packaged GTK app's smoke test, ci.yml:217) |
+| [PLAT-12](https://pauta-project.dev/4.0.1/platform/#plat-12) | MUST | pass | `pom.xml` jacoco-check at verify: BUNDLE LINE 0.90, METHOD 0.90, BRANCH 0.79 (Linux measures 0.93, 0.93, 0.80; without the Linux-only trash tests 0.92, 0.92, 0.796), and a LINE floor per large package; com.mirada.perf (timing and AOT-training launches only) not measured |
 | [PLAT-13](https://pauta-project.dev/4.0.1/platform/#plat-13) | SHOULD | pass | `src/main/java/com/mirada/diagnostics/DebugLog.java:114`: a handler on the root JUL logger; the code logs through java.util.logging only (System.out is the CLI and the perf trace) |
 | [REPO-01](https://pauta-project.dev/4.0.1/repository/#repo-01) | MUST | pass | `README.md:1`: 156 lines: logo, badges, pitch, hero, highlights, install, command line, config folder, build, licence; the rest links into mirada-project.dev/docs |
 | [REPO-02](https://pauta-project.dev/4.0.1/repository/#repo-02) | MUST | pass | `CHANGELOG.md:3`: Keep a Changelog 1.1 and SemVer, "## [Unreleased]" with Added/Changed/Fixed, bold-led entries |
 | [REPO-03](https://pauta-project.dev/4.0.1/repository/#repo-03) | MUST | pass | LICENSE:3 MIT License, Copyright (c) 2026 Adrián Arturo De León Saldivar |
+| [REPO-04](https://pauta-project.dev/4.0.1/repository/#repo-04) | MUST | pass | NOTICE:1 name, copyright, "licensed under the MIT License", every component with groupId:artifactId; `src/test/java/com/mirada/NoticeCoverageTest.java:57` (every shipping pom dependency named), `src/test/java/com/mirada/BuildHygieneTest.java` (LICENSE and NOTICE in the jar's META-INF/mirada, add-notices in -Pdist, checked in the Linux packages, --license-file) |
 | [REPO-05](https://pauta-project.dev/4.0.1/repository/#repo-05) | MUST | pass | `AGENTS.md:55`: commands, one worktree per task, the change checklist; CLAUDE.md points to it |
 | [REPO-06](https://pauta-project.dev/4.0.1/repository/#repo-06) | MUST | pass | `CONTRIBUTING.md:13`: build, test and format commands and the pull-request steps |
 | [REPO-07](https://pauta-project.dev/4.0.1/repository/#repo-07) | MUST | pass | `docs/README.md:14`: architecture.md, conventions.md, testing.md, gotchas.md, release.md, building-and-packaging.md and decisions/ all exist |
@@ -186,7 +154,7 @@ A failed MUST blocks a release.
 | [DOCS-07](https://pauta-project.dev/4.0.1/documentation/#docs-07) | SHOULD | pass | `src/main/java/com/mirada/ui/MacMenus.java:78`: Help: Command Palette, Documentation, Keyboard Shortcuts; About is in the application menu; Mirada has no updates, Message Log, Debug Log or Report a Problem rows |
 | [DOCS-09](https://pauta-project.dev/4.0.1/documentation/#docs-09) | MUST | pass | `src/main/java/com/mirada/ui/Command.java:212`: every command has a description, shown in the palette; CommandTest:189 non-blank |
 | [DOCS-12](https://pauta-project.dev/4.0.1/documentation/#docs-12) | MUST | pass | `docs/README.md:1`: for contributors, user docs on the website, the code wins, every guide listed |
-| [DOCS-13](https://pauta-project.dev/4.0.1/documentation/#docs-13) | SHOULD | pass | `docs/decisions/README.md:1`: five records (native image, libjpeg-turbo, codecs from source, .properties, no TestFX), each with context, decision and consequences |
+| [DOCS-13](https://pauta-project.dev/4.0.1/documentation/#docs-13) | SHOULD | pass | `docs/decisions/README.md:1`: six records (native image, libjpeg-turbo, codecs from source, .properties, no TestFX, then TestFX and the coverage gate), each with context, decision and consequences |
 | [DOCS-14](https://pauta-project.dev/4.0.1/documentation/#docs-14) | MUST | pass | `AGENTS.md:84`: 101 lines, commands, worktrees and the checklist, with a documentation map into docs/; CONTRIBUTING.md:25 links into docs/; history in docs/reference/ |
 | [DOCS-16](https://pauta-project.dev/4.0.1/documentation/#docs-16) | MUST | pass | `AGENTS.md:63`: docs change in the same pull request (CHANGELOG, docs/, website); CONTRIBUTING.md:33; docs/conventions.md:23 |
 | [DOCS-17](https://pauta-project.dev/4.0.1/documentation/#docs-17) | MUST | pass | `AGENTS.md:61`: the code wins, and the docs are fixed in the same change (also docs/README.md) |
@@ -194,17 +162,25 @@ A failed MUST blocks a release.
 | [DOCS-19](https://pauta-project.dev/4.0.1/documentation/#docs-19) | MUST | pass | `README.md:32`: links into mirada-project.dev/docs (getting started, keyboard, Settings, FAQ, a page per area); no key table or feature catalog |
 | [QUAL-01](https://pauta-project.dev/4.0.1/quality/#qual-01) | MUST | pass | `pom.xml:261`: NullAway an error; NullMarkedPackagesTest |
 | [QUAL-02](https://pauta-project.dev/4.0.1/quality/#qual-02) | SHOULD | pass | no @SuppressWarnings("NullAway") in src/main |
-| [QUAL-04](https://pauta-project.dev/4.0.1/quality/#qual-04) | SHOULD | n/a | no coverage floors quoted anywhere yet (applies with PLAT-12) |
+| [QUAL-03](https://pauta-project.dev/4.0.1/quality/#qual-03) | SHOULD | pass | `pom.xml` jacoco-check: a PACKAGE LINE floor for each package of 300+ lines (edit 0.95, ui 0.93, settings 0.92, image 0.86, os 0.35), about three under measured |
+| [QUAL-04](https://pauta-project.dev/4.0.1/quality/#qual-04) | SHOULD | pass | `docs/testing.md#the-coverage-gate` quotes the floors; `BuildHygieneTest.theCoverageFloorsQuotedInTheTestingGuideAreTheOnesTheBuildEnforces` compares them with the pom (seen failing with one floor changed in the table) |
 | [QUAL-05](https://pauta-project.dev/4.0.1/quality/#qual-05) | MUST | pass | pure rules with plain tests: Zoom, FolderImages, NaturalOrder, Renaming, BookmarkList, Command.unavailable (CommandTest:229) |
-| [QUAL-06](https://pauta-project.dev/4.0.1/quality/#qual-06) | MUST | pass | `src/test/java/com/mirada/image/ShrinkTest.java:14`: @Tag("fx") on every test that boots the toolkit |
+| [QUAL-06](https://pauta-project.dev/4.0.1/quality/#qual-06) | MUST | pass | `src/test/java/com/mirada/BuildHygieneTest.java`: everyTestThatStartsTheToolkitIsTaggedFx holds @Tag("fx") on every test that boots the toolkit |
 | [QUAL-07](https://pauta-project.dev/4.0.1/quality/#qual-07) | SHOULD | pass | Thread.sleep only in HeadlessDriver, not a test surefire runs |
+| [QUAL-08](https://pauta-project.dev/4.0.1/quality/#qual-08) | SHOULD | pass | `src/test/java/com/mirada/ui/CommandSweepTest.java`: after every command in every state, Mirada's real settings folders and the desktop's trash are as they were; surefire points the trash at target/ and unsets the display and session bus |
 | [QUAL-09](https://pauta-project.dev/4.0.1/quality/#qual-09) | MUST | pass | `scripts/headless-run.sh`: with HeadlessDriver: the real window, robot keys and clicks |
+| [QUAL-11](https://pauta-project.dev/4.0.1/quality/#qual-11) | SHOULD | pass | `src/test/java/com/mirada/ui/CommandSweepTest.java`: every command of the registry run (or found unavailable, with its reason) in an empty window, on an image, turned and zoomed, in the editor and full screen; the context menu greys the same |
+| [QUAL-13](https://pauta-project.dev/4.0.1/quality/#qual-13) | SHOULD | pass | `src/test/java/com/mirada/ui/SettingsWindowTest.java`: everyControlSetInTheWindowSurvivesARestart sets every control, reloads the settings and reads each back in a new window |
 | [QUAL-15](https://pauta-project.dev/4.0.1/quality/#qual-15) | SHOULD | pass | `src/test/java/com/mirada/ReleaseSupplyChainTest.java:259`: fails when a signing, notarization or attestation step moves or goes, or a tag could publish without its secrets |
 | [PERF-02](https://pauta-project.dev/4.0.1/performance/#perf-02) | MUST | pass | `src/main/java/com/mirada/ui/ViewerWindow.java:463`: background results return through Platform.runLater |
 | [PERF-05](https://pauta-project.dev/4.0.1/performance/#perf-05) | MUST | pass | `src/main/java/com/mirada/image/ImageCache.java:126`: every supplyAsync has an executor; no Process subclass |
 | [PERF-07](https://pauta-project.dev/4.0.1/performance/#perf-07) | MUST | n/a | nothing streams to the FX thread |
 | [PERF-09](https://pauta-project.dev/4.0.1/performance/#perf-09) | SHOULD | pass | `src/main/java/com/mirada/ui/ImageViewport.java:280`: layout allocates nothing |
 | [PERF-10](https://pauta-project.dev/4.0.1/performance/#perf-10) | SHOULD | pass | no applyCss(); pseudo-classes for state |
+| [PERF-11](https://pauta-project.dev/4.0.1/performance/#perf-11) | MUST | pass | filled past the cap, oldest dropped: `src/test/java/com/mirada/image/ImageCacheTest.java` (images and previews), `ThumbnailsTest.pastItsCapTheOldestThumbnailIsDroppedAndTheNewestKept`, `ui/TrashUndoTest.pastItsDepthTheOldestTrashedFileCanNoLongerBePutBack`, `DebugLogTest.pastItsCapTheSessionFileStartsOverWithANoteAndTheNewestLines`, `MessageLogTest`, `HistoryTest` |
+| [PERF-13](https://pauta-project.dev/4.0.1/performance/#perf-13) | MUST | pass | `src/test/java/com/mirada/ui/ClosedWindowTest.java:67`: three windows opened, used and closed leave no decoder, preview or thumbnail thread, no non-daemon thread, no timer playing, no tool window, and are collected (fixed: `ViewerWindow.release`) |
+| [PERF-14](https://pauta-project.dev/4.0.1/performance/#perf-14) | MUST | pass | `src/test/java/com/mirada/ui/StartupDeferralTest.java:77`: no panel, tool window, floating controls or badge built before the first paint; those the settings open at start are |
+| [PERF-15](https://pauta-project.dev/4.0.1/performance/#perf-15) | MUST | pass | `src/test/java/com/mirada/ui/StartupDeferralTest.java:77`: the update check, the bookmarks read, Open Recent's write, the window icon and the header's menu and tooltips start only after the first paint |
 | [PERF-19](https://pauta-project.dev/4.0.1/performance/#perf-19) | SHOULD | pass | `scripts/measure-startup.sh`: median of n launches; Startup.mark phases |
 | [KBD-01](https://pauta-project.dev/4.0.1/keyboard/#kbd-01) | MUST | pass | `src/main/java/com/mirada/ui/Command.java:20`: one enum is the registry (id, title, run through ViewerWindow.run); the editor's tools (Editor.java:224), the Bookmarks window's row actions (BookmarksWindow.java:299) and About's Copy details (`help.copyDetails`) are commands, run by their buttons, keys, menus and the palette |
 | [KBD-02](https://pauta-project.dev/4.0.1/keyboard/#kbd-02) | SHOULD | pass | `src/main/java/com/mirada/ui/Command.java:393`: every id is `<area>.<camelCase>` (`go.next`, `editor.save`, `help.copyDetails`); CommandTest.everyIdIsDottedAndGroupedByArea |
@@ -215,25 +191,40 @@ A failed MUST blocks a release.
 | [KBD-09](https://pauta-project.dev/4.0.1/keyboard/#kbd-09) | MUST | pass | `src/main/resources/com/mirada/keymaps/`: emacs.json, cua.json and cua.mac.json (Cmd for Ctrl); CommandTest.theEmacsAndCuaKeymapsShipWithAMacCua |
 | [KBD-11](https://pauta-project.dev/4.0.1/keyboard/#kbd-11) | MUST | pass | `src/main/java/com/mirada/ui/Keybindings.java:55`: `layered` applies base keymap (and its strip-at-the-side bindings) → user overrides (`keys.<id>`, `palette.keys`); no plugins; CommandTest.theUsersKeysGoOnTopAndWin |
 | [KBD-14](https://pauta-project.dev/4.0.1/keyboard/#kbd-14) | SHOULD | n/a | no multi-key prefixes |
+| [KBD-17](https://pauta-project.dev/4.0.1/keyboard/#kbd-17) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:173`: `Icons.button` and `Icons.name` (:202) set tooltip and accessible text together; TitleBar, OnScreenControls, MarksBadge and InfoPanel use them (MenusFxTest.everyIconButtonIsNamedAndWearsItsCommandsGlyph) |
 | [WIN-01](https://pauta-project.dev/4.0.1/window-shell/#win-01) | MUST | pass | `src/main/java/com/mirada/ui/StatusBar.java:97`: the echo label takes `status-echo-error` or `status-echo-warn` by severity; its click runs `Command.MESSAGE_LOG` (:69); Status Bar toggles it |
 | [WIN-02](https://pauta-project.dev/4.0.1/window-shell/#win-02) | MUST | pass | `src/main/java/com/mirada/ui/Theme.java:48`: light, dark and follow-the-system, live |
 | [WIN-03](https://pauta-project.dev/4.0.1/window-shell/#win-03) | SHOULD | pass | `src/main/java/com/mirada/ui/TitleBar.java:193`: HeaderBar with StageStyle.EXTENDED; system menu bar on macOS (MacMenus.java:141) |
 | [WIN-05](https://pauta-project.dev/4.0.1/window-shell/#win-05) | MUST | pass | `src/main/java/com/mirada/ui/Confirm.java:57`: one helper: question names the thing, button the action, Escape cancels; Move to Trash records an undo (Linux) or goes to the system trash |
 | [WIN-07](https://pauta-project.dev/4.0.1/window-shell/#win-07) | MUST | pass | `src/main/java/com/mirada/ui/AboutWindow.java:155`: version, build, edition from AppInfo (:92) and the update checker's last answer (`UpdateCoordinator.summary`) |
 | [WIN-10](https://pauta-project.dev/4.0.1/window-shell/#win-10) | MAY | n/a | no modes |
+| [ICON-01](https://pauta-project.dev/4.0.1/icons-and-color/#icon-01) | MUST | pass | `src/main/java/com/mirada/ui/Fonts.java:94`: a `Window.getWindows()` listener puts `ui-font.css` on every scene and on a scene a window is given later; no font-family in mirada.css (StyleContrastTest.theUiFontIsTheSceneSheetsNotTheAppSheets) |
+| [ICON-02](https://pauta-project.dev/4.0.1/icons-and-color/#icon-02) | MUST | pass | `src/main/resources/com/mirada/fonts/inter/`: the four faces and OFL.txt; `Font.loadFont` from `Fonts.load` (`src/main/java/com/mirada/App.java:117`), awaited before the window is shown (:135) |
 | [ICON-04](https://pauta-project.dev/4.0.1/icons-and-color/#icon-04) | SHOULD | n/a | ships no theme file; AtlantaFX Cupertino unchanged (src/main/java/com/mirada/ui/Theme.java:83) |
-| [ICON-07](https://pauta-project.dev/4.0.1/icons-and-color/#icon-07) | MUST | pass | `src/main/resources/com/mirada/styles/mirada.css:128`: -state-key only in .root, a ladder() of -color-bg-default |
+| [ICON-06](https://pauta-project.dev/4.0.1/icons-and-color/#icon-06) | SHOULD | pass | `src/main/resources/com/mirada/styles/mirada.css:31`: -state-key is Editora's ladder; StyleContrastTest.theKeyboardPeriwinkleReadsInBothThemes resolves it on both themes' grounds |
+| [ICON-07](https://pauta-project.dev/4.0.1/icons-and-color/#icon-07) | MUST | pass | `src/main/resources/com/mirada/styles/mirada.css:31`: -state-key only in the `.root` block, a ladder() of -color-bg-default |
+| [ICON-08](https://pauta-project.dev/4.0.1/icons-and-color/#icon-08) | MUST | pass | `src/main/resources/com/mirada/styles/mirada.css:9`: no hex, rgb(a) or named colour outside the `.root` block; StyleContrastTest fails one |
+| [ICON-10](https://pauta-project.dev/4.0.1/icons-and-color/#icon-10) | MUST | pass | `src/main/resources/com/mirada/styles/mirada.css:18`: the four roles' `-fg` overridden as ladders; StyleContrastTest.tintedTextReachesAaOnItsOwnFillAndOnBothGrounds computes each on its subtle fill and both grounds, light and dark; Accent.java does the same for the system accent (AccentTest) |
+| [ICON-11](https://pauta-project.dev/4.0.1/icons-and-color/#icon-11) | MUST | pass | `src/main/resources/com/mirada/styles/mirada.css:19`: the emphasis fills darkened until `-color-fg-emphasis` reads at 4.5:1; StyleContrastTest.inkOnAnEmphasisFillIsTheThemesOnEmphasisColour, and the rules on emphasis fills use it |
+| [ICON-12](https://pauta-project.dev/4.0.1/icons-and-color/#icon-12) | MUST | pass | `src/main/resources/com/mirada/styles/mirada.css:34`: `-focus-ring: -color-accent-emphasis`, drawn by the `:focus-visible` block at the end (:791); StyleContrastTest.theFocusRingIsAtLeastThreeToOneOnEverySurface |
+| [ICON-13](https://pauta-project.dev/4.0.1/icons-and-color/#icon-13) | SHOULD | pass | `src/main/resources/com/mirada/styles/mirada.css:31`: periwinkle and the role overrides are ladders of the ground; StyleContrastTest resolves each in both themes |
+| [ICON-14](https://pauta-project.dev/4.0.1/icons-and-color/#icon-14) | SHOULD | pass | `src/test/java/com/mirada/ui/StyleContrastTest.java`: reads Cupertino's palette and mirada.css, resolves ladders, WCAG arithmetic, no toolkit |
 | [ICON-15](https://pauta-project.dev/4.0.1/icons-and-color/#icon-15) | MUST | pass | `src/main/java/com/mirada/ui/Theme.java:84`: Application.setUserAgentStylesheet, live |
 | [ICON-16](https://pauta-project.dev/4.0.1/icons-and-color/#icon-16) | MUST | pass | `src/main/java/com/mirada/ui/Theme.java:54`: colorScheme listener re-applies; WindowsTest |
 | [ICON-17](https://pauta-project.dev/4.0.1/icons-and-color/#icon-17) | MUST | pass | `src/main/java/com/mirada/settings/Settings.java:227`: unknown theme falls back to SYSTEM; SettingsTest:138 |
 | [ICON-18](https://pauta-project.dev/4.0.1/icons-and-color/#icon-18) | SHOULD | pass | no semantic colours used as decoration |
 | [ICON-19](https://pauta-project.dev/4.0.1/icons-and-color/#icon-19) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:125`: one glyph family ("icon") |
+| [ICON-20](https://pauta-project.dev/4.0.1/icons-and-color/#icon-20) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:173`: a button takes its command's glyph from `forCommand`, as the menus do; the zoom button Actual Size's or Zoom to Fit's, the note buttons Note's (MenusFxTest.everyIconButtonIsNamedAndWearsItsCommandsGlyph) |
+| [ICON-21](https://pauta-project.dev/4.0.1/icons-and-color/#icon-21) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:173`: every icon-only button built by `Icons.button` or named by `Icons.name` (MenusFxTest) |
 | [ICON-23](https://pauta-project.dev/4.0.1/icons-and-color/#icon-23) | SHOULD | n/a | draws no file-type glyphs (thumbnails) |
-| [ICON-24](https://pauta-project.dev/4.0.1/icons-and-color/#icon-24) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:14`: hand-drawn glyphs, no fonts; NOTICE credits AtlantaFX |
-| [TBAR-02](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-02) | MUST | pass | `src/main/java/com/mirada/ui/TitleBar.java:180`: header, OSD and badge buttons out of the Tab order |
+| [ICON-24](https://pauta-project.dev/4.0.1/icons-and-color/#icon-24) | MUST | pass | `NOTICE`: Inter (OFL-1.1) and AtlantaFX credited; the icons are hand-drawn (src/main/java/com/mirada/ui/Icons.java:25) |
+| [TBAR-01](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-01) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:202`: `Icons.name` sets the tooltip and the accessible text from one title (MenusFxTest) |
+| [TBAR-02](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-02) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:173`: `Icons.button` takes buttons out of the Tab order; the header's toggle and menu too (TitleBar.java:193) |
+| [TBAR-03](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-03) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:212`: "title (chord)" from the command's title and `Command.chord()`, rebuilt on a palette-key or strip-axis change (`ViewerWindow.relabelButtons`, `src/main/java/com/mirada/ui/ViewerWindow.java:790`); the editor's from KeyCombinations (Editor.java:433); IconsTest, MenusFxTest |
 | [TBAR-04](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-04) | SHOULD | pass | no separators; groups by spacing (src/main/java/com/mirada/ui/TitleBar.java:186) |
 | [TBAR-05](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-05) | SHOULD | n/a | no group is ever hidden |
 | [TBAR-07](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-07) | SHOULD | pass | `src/main/java/com/mirada/ui/TitleBar.java:177`: info toggle selected while the sidebar shows |
+| [TBAR-08](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-08) | MUST | pass | `src/main/java/com/mirada/ui/TitleBar.java:256`: Previous and Next in the header's menu, beside the palette and the Mac's Go menu (MenusFxTest.previousAndNextAreInTheHeadersMenu) |
 | [TBAR-09](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-09) | MAY | n/a | header not customizable |
 | [TBAR-10](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-10) | MUST | n/a | the header bar has no right-click menu |
 | [TBAR-12](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-12) | SHOULD | n/a | no tool-window stripes |
@@ -250,6 +241,7 @@ A failed MUST blocks a release.
 | [TABS-11](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-11) | SHOULD | n/a | no tab strip |
 | [TABS-12](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-12) | SHOULD | n/a | no tab bar |
 | [TABS-13](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-13) | MUST | pass | `src/main/java/com/mirada/ui/ViewerWindow.java:742`: INFO, THUMBNAILS, BOOKMARKS are commands; header toggle runs the same |
+| [TABS-14](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-14) | MUST | pass | `src/test/java/com/mirada/ui/StartupDeferralTest.java:77`: no closed panel (sidebar, strip, Bookmarks, Settings, About, the editor) built before the first paint |
 | [TABS-16](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-16) | SHOULD | n/a | no dockable tool windows |
 | [TABS-17](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-17) | SHOULD | n/a | no stripe buttons |
 | [TABS-18](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-18) | SHOULD | n/a | no floating panels |
@@ -257,8 +249,15 @@ A failed MUST blocks a release.
 | [TABS-20](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-20) | SHOULD | n/a | no stripe buttons |
 | [TABS-21](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-21) | SHOULD | n/a | no bottom tool windows |
 | [TABS-22](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-22) | SHOULD | n/a | no stripe buttons |
+| [MENU-14](https://pauta-project.dev/4.0.1/menus/#menu-14) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:132`: own glyphs for Bookmarks and Notes, About, Remove (a mark); Hide Thumbnails wears Thumbnails'; MenusFxTest.everyRowOfEveryMenuHasAGlyph opens the header, zoom, image and bookmark-row menus |
+| [MENU-15](https://pauta-project.dev/4.0.1/menus/#menu-15) | MUST | pass | `src/main/java/com/mirada/ui/MacMenus.java:109`: the Mac bar writes every bound chord into the title; in-window rows show it in `-state-key` at Inter 11px (MenuChord, ui-font.css); MacMenusTest.theBarHasNoAcceleratorsAndShowsEveryChord |
+| [MENU-16](https://pauta-project.dev/4.0.1/menus/#menu-16) | MUST | pass | `src/main/resources/com/mirada/styles/ui-font.css:19`: Inter 14px pinned on `.context-menu` and its rows, keys 11px; MenusFxTest.menusAreInterFourteenWhateverTheyOpenFrom reads it from the header's, the image's and a bookmark row's menus |
 | [MENU-01](https://pauta-project.dev/4.0.1/menus/#menu-01) | MUST | pass | `src/main/java/com/mirada/ui/MacMenus.java:38`: menus are lists of Command; titles, gates from Command |
+| [MENU-02](https://pauta-project.dev/4.0.1/menus/#menu-02) | MUST | pass | `src/main/java/com/mirada/ui/MacMenus.java:109`: no `setAccelerator` on the Mac bar, the chord in the title, no icons; in-window rows show `MenuChord`, which never matches (MacMenusTest) |
 | [MENU-04](https://pauta-project.dev/4.0.1/menus/#menu-04) | SHOULD | n/a | no Simple mode |
+| [MENU-06](https://pauta-project.dev/4.0.1/menus/#menu-06) | MUST | pass | `src/main/java/com/mirada/ui/Popups.java:85`: `Popups.show` closes every open menu before the next; MenusFxTest.oneRightClickMenuAtATimeAndThePressThatClosesItStillLands |
+| [MENU-07](https://pauta-project.dev/4.0.1/menus/#menu-07) | MUST | pass | `src/main/java/com/mirada/ui/Popups.java:52`: a press in the window closes the menus and is not consumed; the menu buttons keep auto-hide; MenusFxTest |
+| [MENU-09](https://pauta-project.dev/4.0.1/menus/#menu-09) | MUST | pass | `src/main/java/com/mirada/ui/Popups.java:93`: the Menu key and Shift+F10 open the image's menu (ViewerWindow.java:777) and the selected bookmark row's, scrolled into view and anchored under it (BookmarksWindow.java:236); MenusFxTest, PopupsTest |
 | [MENU-11](https://pauta-project.dev/4.0.1/menus/#menu-11) | SHOULD | pass | `src/main/java/com/mirada/ui/ViewerWindow.java:1380`: every right-click menu built for its showing |
 | [MENU-13](https://pauta-project.dev/4.0.1/menus/#menu-13) | MAY | n/a | no terminal |
 | [TRAY-01](https://pauta-project.dev/4.0.1/tray-and-background/#tray-01) | MUST | n/a | no tray: no SystemTray, TrayIcon or StatusNotifierItem in src/main |
@@ -384,5 +383,6 @@ A failed MUST blocks a release.
 | [REL-24](https://pauta-project.dev/4.0.1/release/#rel-24) | MUST | pass | `.github/workflows/ci.yml:19`: contents: read at the top of all five workflows; write only in release and codecs publish jobs |
 | [REL-25](https://pauta-project.dev/4.0.1/release/#rel-25) | SHOULD | pass | `.github/workflows/ci.yml:43`: setup-java 25 with cache: maven (GraalVM 25.4 for native legs) |
 | [REL-26](https://pauta-project.dev/4.0.1/release/#rel-26) | MUST | pass | `.github/workflows/ci.yml:27`: timeout-minutes on every job; cancel-in-progress only for pull_request |
+| [REL-27](https://pauta-project.dev/4.0.1/release/#rel-27) | MUST | pass | `.github/workflows/ci.yml:87`: surefire reports and the JaCoCo report uploaded under if: always(); "Summarise coverage" appends lines, methods and branches to $GITHUB_STEP_SUMMARY |
 | [REL-28](https://pauta-project.dev/4.0.1/release/#rel-28) | MUST | pass | `scripts/ci-signing-credentials.sh:35`: a tag without the four macOS secrets fails before the keychain; sign-linux (`.github/workflows/release.yml:318`) and the checksum key (:519) fail a tag without LINUX_GPG_KEY; dry runs and forks sign with throwaway credentials |
 | [REL-29](https://pauta-project.dev/4.0.1/release/#rel-29) | MUST | pass | `.github/workflows/release.yml:170`: scripts/smoke-test.sh opens every fixture in each packaged app, the installed msi, deb and AppImage, and the notarized app from the dmg, before publishing |
