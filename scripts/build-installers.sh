@@ -27,7 +27,7 @@ description="A fast, folder-oriented image viewer"
 common=(--app-image "$image" --name Mirada --app-version "$version" --dest "$dest"
         --vendor "Adrian De Leon"
         --description "$description"
-        --copyright "Copyright 2026 Adrian De Leon"
+        --copyright "Copyright (c) 2026 Adrián Arturo De León Saldivar"
         --about-url "https://github.com/adriandeleon/Mirada")
 [ -n "$icon" ] && [ -f "$icon" ] && common+=(--icon "$icon")
 

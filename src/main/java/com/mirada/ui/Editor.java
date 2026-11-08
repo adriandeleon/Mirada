@@ -3,6 +3,7 @@ package com.mirada.ui;
 import java.io.File;
 import java.io.IOException;
 import java.nio.IntBuffer;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.function.Consumer;
@@ -107,7 +108,7 @@ final class Editor {
 
         Button cancel = new Button("Cancel");
         cancel.setCancelButton(true);
-        cancel.setOnAction(e -> close());
+        cancel.setOnAction(e -> cancel());
         Button save = new Button("Save…");
         save.getStyleClass().add("accent");
         save.setDefaultButton(true);
@@ -194,6 +195,25 @@ final class Editor {
         full = null;
     }
 
+    /** Cancel and Escape: closes, after asking when there is an edit to lose (CONF-01). */
+    private void cancel() {
+        if (mayDiscard()) close();
+    }
+
+    /**
+     * Whether the editor may go without saving: true when it is closed or has nothing to lose, or
+     * when the user answers Discard. The window asks it before closing.
+     */
+    boolean mayDiscard() {
+        Path file = source;
+        if (!isShowing() || edit.isNone() || file == null) return true;
+        return Confirm.ask(Confirm.discardEdit(name(file)), owner());
+    }
+
+    private @Nullable Window owner() {
+        return node.getScene() == null ? null : node.getScene().getWindow();
+    }
+
     /** The editor's keys, while it shows; true when one was used. */
     boolean onKey(KeyEvent e) {
         KeyCode code = e.getCode();
@@ -201,7 +221,7 @@ final class Editor {
         double dx = step * crop.pictureWidth();
         double dy = step * crop.pictureHeight();
         switch (code) {
-            case ESCAPE -> close();
+            case ESCAPE -> cancel();
             case ENTER -> save();
             case S -> {
                 if (!e.isShortcutDown()) return false;
@@ -344,10 +364,13 @@ final class Editor {
                         new FileChooser.ExtensionFilter("PNG", "*.png"),
                         new FileChooser.ExtensionFilter("TIFF", "*.tif", "*.tiff"),
                         new FileChooser.ExtensionFilter("BMP", "*.bmp"));
-        Window owner = node.getScene() == null ? null : node.getScene().getWindow();
-        File chosen = chooser.showSaveDialog(owner);
+        File chosen = chooser.showSaveDialog(owner());
         if (chosen == null) return;
         Path target = withExtension(chosen.toPath(), extension);
+        // The dialog asked about the name typed, not the one an added extension made (CONF-01).
+        if (!target.equals(chosen.toPath())
+                && Files.exists(target)
+                && !Confirm.ask(Confirm.replaceFile(name(target)), owner())) return;
         Edit applied = edit;
         Orientation turnedBy = orientation;
         saving = true;

@@ -4,6 +4,22 @@ A fast, folder-oriented image viewer. JDK 25 + JavaFX 27 + Maven, modular (JPMS,
 `com.mirada`). The image half of the viewers plan; a Reader for PDF and comics may follow and share
 code with it, but nothing is extracted yet.
 
+## Pauta
+
+Mirada is built to [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), edition [4.0.1](https://pauta-project.dev/4.0.1/).
+Its rules: https://pauta-project.dev/4.0.1/llms.txt (every rule in one file:
+https://pauta-project.dev/4.0.1/llms-full.txt). Where Mirada stands against each rule:
+[docs/pauta-audit.md](docs/pauta-audit.md), written by the `pauta-audit` skill
+([`.claude/skills/pauta-audit/`](.claude/skills/pauta-audit/SKILL.md)); `/pauta-audit KBD` audits one
+prefix. Regenerate it, never edit it by hand.
+
+- Before building a feature, read the rules on its page and copy from the code each rule's
+  Reference names (Editora, `../Editora`, and the app template, `../javafx-app-template`).
+- Cite a rule by its ID and edition: "KBD-07 (Pauta 4.0.1)".
+- Read the numbered edition, never `latest/`. Moving to a newer edition is its own change:
+  `pauta.version` in `pom.xml`, this section and the README change together (`EditionTest`). About
+  and the version text read the number from the pom through `AppInfo`.
+
 ## Priorities
 
 In this order, when they pull against each other:
@@ -39,10 +55,35 @@ In this order, when they pull against each other:
   `scripts/build-codecs.sh` (about 10 minutes; `CODECS_NO_ASM=1` without nasm), then run Maven with
   `-Dcodecs.skip` so the download does not overwrite it.
 
+- Command line: `mirada --help`; `--config-dir <dir>` or `--dev` (`~/.mirada-dev`) keep settings
+  and bookmarks apart from your own.
+
 Run Maven from the project root, on JDK 25 (the enforcer refuses others). CI
 (`.github/workflows/ci.yml`) runs `verify` on Linux, macOS and Windows for every push to `main`.
 
-A user-visible change gets a line in `CHANGELOG.md`; a new dependency gets an entry in `NOTICE`.
+## How to work
+
+- **One task, one branch, one worktree.** `git worktree add ../Mirada-<topic> -b <topic>`; never
+  switch branches under another session's feet, never stash someone else's work.
+- **When documentation and code disagree, the code wins**, and the documentation is fixed in the
+  same change.
+- **Docs change in the same pull request**, never as a follow-up: `CHANGELOG.md`, the guides in
+  `docs/` and this file where they are touched, and the website's user docs (`../mirada-website`).
+- **Before you push:** `./mvnw spotless:apply`, then `./mvnw verify`.
+
+## Change checklist
+
+- [ ] Every user action is a `Command` with a name, a description and a group, run through
+      `ViewerWindow.run`; menus, buttons and the palette reach it by the same constant.
+- [ ] A user-visible change has an entry under `## [Unreleased]` in `CHANGELOG.md` (Keep a
+      Changelog), opening with a bold one-line summary for users.
+- [ ] A new dependency has an entry in `NOTICE`, with its licence.
+- [ ] Anything that removes, discards or replaces what the user made asks first through `Confirm`
+      (the button is the action's verb, never OK), or can be undone.
+- [ ] A rule is a static method with a plain test; a test that starts JavaFX is `@Tag("fx")`.
+- [ ] New chrome is built after the first paint (`ViewerWindow.afterFirstPaint`), and start-up is
+      measured again if it could have moved.
+- [ ] A new package has a `package-info.java` with `@NullMarked`.
 
 ## Architecture
 
@@ -115,8 +156,9 @@ others beside the executable, as Linux leaves its `.so` files; they must travel 
 
 ## Releasing
 
-1. Set `<version>` in `pom.xml` without `-SNAPSHOT`, and give its `CHANGELOG.md` heading a date
-   (`## 0.1.0 — 2026-11-02`); the release notes are that section.
+1. Set `<version>` in `pom.xml` without `-SNAPSHOT`, and turn `CHANGELOG.md`'s `## [Unreleased]`
+   into the version with its date (`## [0.4.0] - 2026-11-12`, Keep a Changelog), with a new empty
+   `## [Unreleased]` above it; the release notes are that section.
 2. Commit, then tag and push the tag: `git tag v0.1.0 && git push origin v0.1.0`.
 3. The **Release** workflow refuses a tag that disagrees with the pom or a snapshot, builds, tests and
    packages on all five targets, smoke-tests every app image and the installed deb, checks the Linux

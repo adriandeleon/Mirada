@@ -19,6 +19,11 @@
              filtered into a resource directly. -->
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm 'UTC'</maven.build.timestamp.format>
         <build.timestamp>${maven.build.timestamp}</build.timestamp>
+        <!-- The Pauta edition Mirada is built to (ABOUT-08, pauta-project.dev): the one source for
+             About and the version text, through build-info.properties. The README's badge and
+             "Built to" line and AGENTS.md name the same number (EditionTest checks). Moving to a
+             newer edition is its own change: meet its new MUSTs, then change all of them together. -->
+        <pauta.version>4.0.1</pauta.version>
 
         <javafx.version>27</javafx.version>
         <!-- One more JVM option for every launcher, macOS's export of glass's Mac package
@@ -153,6 +158,34 @@
             </resource>
         </resources>
         <plugins>
+            <!-- The commit a build came from, for About and the version text (ABOUT-02):
+                 build.commit, or "unknown" outside a Git checkout. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>build-commit</id>
+                        <phase>initialize</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <exportAntProperties>true</exportAntProperties>
+                            <target>
+                                <exec executable="git" outputproperty="git.commit" failifexecutionfails="false"
+                                      resultproperty="git.result" errorproperty="git.error">
+                                    <arg value="rev-parse"/>
+                                    <arg value="--short=9"/>
+                                    <arg value="HEAD"/>
+                                </exec>
+                                <condition property="build.commit" value="${git.commit}" else="unknown">
+                                    <equals arg1="${git.result}" arg2="0"/>
+                                </condition>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <!-- The JDK this project is built, tested and run on, as in Termina and Torrenta: the
                  formatter breaks on 27. Pass -Denforcer.skip to try another on purpose. -->
             <plugin>

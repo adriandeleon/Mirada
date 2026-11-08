@@ -74,7 +74,7 @@ cp "$icon" "$appdir/$id.png"
 ln -s "$id.png" "$appdir/.DirIcon"
 
 # The release's date as the changelog gives it; today's for a version not yet released.
-released=$(sed -n "s/^## $version — \([0-9-]*\)\$/\1/p" "$root/CHANGELOG.md" | head -1)
+released=$(sed -n "s/^## \[$version\] - \([0-9-]*\)\$/\1/p" "$root/CHANGELOG.md" | head -1)
 [ -n "$released" ] || released=$(date -u +%F)
 
 # AppStream, which software centres and AppImage catalogues read; the media types are the menu

@@ -14,6 +14,8 @@ import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -32,6 +34,10 @@ import org.jspecify.annotations.Nullable;
  * Built the first time it is opened.
  */
 final class AboutWindow {
+
+    private static final double WIDTH = 480;
+    private static final String COPY_DETAILS = "Copy details";
+    private static final String COPIED = "Copied";
 
     private final Stage stage = new Stage();
 
@@ -61,22 +67,34 @@ final class AboutWindow {
 
         VBox details = new VBox(3);
         details.getStyleClass().add("about-details");
-        if (!AppInfo.BUILD_TIME.isBlank()) details.getChildren().add(new Label("Built " + AppInfo.BUILD_TIME));
         details.getChildren().addAll(new Label(AppInfo.COPYRIGHT), new Label(AppInfo.LICENSE));
 
         Hyperlink homepage = new Hyperlink(AppInfo.HOMEPAGE);
         homepage.setOnAction(e -> openLink.accept(AppInfo.HOMEPAGE));
+        // The edition Mirada meets, its numbered page, never latest/ (ABOUT-05, ABOUT-06).
+        Hyperlink pauta = new Hyperlink(pautaLink(AppInfo.PAUTA_EDITION));
+        pauta.setOnAction(e -> openLink.accept(AppInfo.pautaUrl()));
+        VBox links = new VBox(0, homepage, pauta);
 
-        Label runtime = new Label(runtime(
-                System.getProperty("java.runtime.version"),
-                System.getProperty("javafx.runtime.version"),
-                codecVersions()));
-        runtime.getStyleClass().add("about-path");
-        runtime.setWrapText(true);
-
-        Label settings = new Label("Settings: " + settingsFile);
-        settings.getStyleClass().add("about-path");
-        settings.setWrapText(true);
+        // Version, build, commit and Pauta edition first, then the runtime, the OS and the settings
+        // file: what a bug report needs, and what Copy details copies (ABOUT-02, ABOUT-03).
+        String environment = AppInfo.environment(
+                runtime(
+                        System.getProperty("java.runtime.version"),
+                        System.getProperty("javafx.runtime.version"),
+                        codecVersions()),
+                settingsFile);
+        Label environmentBlock = new Label(environment);
+        environmentBlock.getStyleClass().add("about-path");
+        environmentBlock.setWrapText(true);
+        Button copy = new Button(COPY_DETAILS);
+        copy.setOnAction(e -> {
+            ClipboardContent content = new ClipboardContent();
+            content.putString(environment);
+            Clipboard.getSystemClipboard().setContent(content);
+            copy.setText(COPIED);
+        });
+        stage.setOnHidden(e -> copy.setText(COPY_DETAILS));
 
         Label credits =
                 new Label("Decoding by JavaFX, libjpeg-turbo, libwebp, TwelveMonkeys ImageIO, libheif, libde265,"
@@ -92,11 +110,12 @@ final class AboutWindow {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox footer = new HBox(spacer, close);
 
-        VBox root = new VBox(10, heading, details, homepage, runtime, settings, credits, footer);
+        VBox root = new VBox(10, heading, details, links, environmentBlock, copy, credits, footer);
         root.setPadding(new Insets(20));
         root.getStyleClass().add("about");
         VBox.setMargin(footer, new Insets(8, 0, 0, 0));
-        Scene scene = new Scene(root, 480, 440);
+        root.setPrefWidth(WIDTH);
+        Scene scene = new Scene(root);
         scene.getStylesheets().add(stylesheet);
         scene.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.ESCAPE) stage.hide();
@@ -110,9 +129,14 @@ final class AboutWindow {
             stage.toFront();
             return;
         }
-        stage.setX(from.getX() + Math.max(0, (from.getWidth() - 480) / 2));
+        stage.setX(from.getX() + Math.max(0, (from.getWidth() - WIDTH) / 2));
         stage.setY(from.getY() + 80);
         stage.show();
+    }
+
+    /** {@code Built to Pauta 4.0.1}: the link's text, which names the edition and never "latest". */
+    static String pautaLink(String edition) {
+        return "Built to Pauta " + edition;
     }
 
     /** {@code Java 25.0.1 · JavaFX 27 · Codecs: libheif v1.23.7, ...}, leaving out what is unknown. */

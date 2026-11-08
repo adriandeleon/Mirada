@@ -224,6 +224,10 @@ public final class ViewerWindow {
                 refreshStrip();
             }
         });
+        // The window's own close button: an edit not yet saved asks first (CONF-01).
+        stage.setOnCloseRequest(e -> {
+            if (!mayClose()) e.consume();
+        });
         stage.setOnHidden(e -> {
             slideshow.stop();
             rememberPlace();
@@ -729,13 +733,15 @@ public final class ViewerWindow {
                     stopSlideshow();
                 } else if (stage.isFullScreen()) {
                     stage.setFullScreen(false);
-                } else if (ESCAPE_CLOSES) {
+                } else if (ESCAPE_CLOSES && mayClose()) {
                     stage.close();
                 }
             }
             case OPEN -> chooseFile();
             case OPEN_FOLDER -> chooseFolder();
-            case CLOSE -> stage.close();
+            case CLOSE -> {
+                if (mayClose()) stage.close();
+            }
             case PALETTE -> palette.show(Command.inPalette(), this::unavailable);
             case GO_TO_IMAGE -> goToImage();
             case OPEN_RECENT -> openRecent();
@@ -789,6 +795,12 @@ public final class ViewerWindow {
         }
     }
 
+    /** Whether the window may close: an edit in progress is discarded only when the user says so. */
+    private boolean mayClose() {
+        Editor open = editor;
+        return open == null || open.mayDiscard();
+    }
+
     /** The commands that leave the image alone, so they can run while the editor is open. */
     private static boolean duringEdit(Command command) {
         return switch (command) {
@@ -810,6 +822,12 @@ public final class ViewerWindow {
 
     /** How far one press of a panning key moves the view: a tenth of the window. */
     private static final double PAN_STEP = 0.1;
+
+    /** {@link #say}, from any thread: how an error no code caught reaches the user (DIAG-04). */
+    public void sayLater(String message) {
+        if (Platform.isFxApplicationThread()) say(message);
+        else Platform.runLater(() -> say(message));
+    }
 
     /** Shows {@code message} over the image for two seconds. */
     private void say(String message) {

@@ -13,6 +13,7 @@ import javafx.scene.image.Image;
 
 import com.mirada.folder.ImageFormats;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -24,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * native job opens the same files in the native image, where a gap in the metadata shows only when
  * such a file is opened.
  */
+@Tag("fx")
 class MatrixTest {
 
     @BeforeAll

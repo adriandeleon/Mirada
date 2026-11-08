@@ -1,12 +1,21 @@
 # Changelog
 
-Notable changes, newest first. Versions follow [semantic versioning](https://semver.org); until
-1.0.0 the minor number moves for anything user-visible.
+All notable changes to Mirada are documented in this file, newest first.
 
-## 0.4.0 — unreleased
+The format is based on [Keep a Changelog 1.1](https://keepachangelog.com/en/1.1.0/), and this project
+adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html); until 1.0.0 the minor number
+moves for anything user-visible. Each entry opens with a bold one-line summary written for users.
+
+## [Unreleased]
 
 ### Added
 
+- **`mirada --help` and `mirada --version`** print and exit without opening a window; `--version`
+  names the build, the commit and the Pauta edition. `--config-dir <folder>` keeps settings and
+  bookmarks in another folder, and `--dev` in `~/.mirada-dev`, apart from your own.
+- **About names the commit and the [Pauta](https://pauta-project.dev/4.0.1/) edition Mirada is
+  built to (4.0.1), with Copy details**, which copies the version, runtime, codecs and OS for a bug
+  report.
 - **The menus show each command's key**, right-aligned beside it in Editora's small periwinkle: the
   header's menu, the right-click menus over the image and the thumbnail strip, and the zoom menu.
   The palette's is whichever key Settings gives it. They only name the keys: pressing one runs it as
@@ -40,6 +49,11 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ### Changed
 
+- **Leaving the editor with an edit not yet saved asks first**: Cancel, Escape, Close Window and the
+  window's close button offer Discard or Cancel. Saving under a name that only the added extension
+  makes into an existing file asks before replacing it.
+- **Removing a note asks with a Remove button**, and says the note cannot be brought back.
+
 - **Full screen is a floating button over the image's top left**, with the previous/next and zoom
   controls, in place of the header's button; in full screen it leaves it, so the mouse has a way
   back with the header gone. A Mac has it too. An image's bookmark and note badge stands beside it.
@@ -55,6 +69,11 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ### Fixed
 
+- **A settings or bookmarks file that will not read is no longer lost.** One that will not decode is
+  kept beside it as `….corrupt.bak`, and Mirada starts from the defaults; one that cannot be read at
+  all is left alone, where before the next bookmark could replace every mark in it.
+- **An error no code caught is said over the window** and written to standard error, instead of
+  passing unseen.
 - **A click anywhere outside a menu closes it.** On Linux a click on the image could leave the
   right-click menu open, and each further right-click opened another beside it. Any press in the
   window now closes its open menus, the right-click menus and the header's and zoom menus alike.
@@ -62,7 +81,7 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   them by the system's light or dark setting, not Mirada's theme, so a dark theme over a light
   setting left them dark grey on the dark header bar; they now follow the theme.
 
-## 0.3.0 — 2026-11-05
+## [0.3.0] - 2026-11-05
 
 ### Added
 
@@ -87,7 +106,7 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 - **Copy works on a greyscale PNG**: it did nothing, as the clipboard takes only colour pixels; it
   now goes as colour.
 
-## 0.2.2 — 2026-11-05
+## [0.2.2] - 2026-11-05
 
 ### Fixed
 
@@ -95,7 +114,7 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   built on Ubuntu 26.04 and needed its glibc 2.43 ("version `GLIBC_2.43' not found"). The arm64
   packages were not affected.
 
-## 0.2.1 — 2026-11-05
+## [0.2.1] - 2026-11-05
 
 ### Fixed
 
@@ -104,7 +123,7 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   removal script did not parse. Installing this version over either works (dpkg warns about the old
   script once).
 
-## 0.2.0 — 2026-11-05
+## [0.2.0] - 2026-11-05
 
 ### Added
 
@@ -171,7 +190,7 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 - **macOS and Windows: Escape no longer closes the window**; it stops the slideshow and leaves full
   screen. Linux keeps GNOME's habit.
 
-## 0.1.0 — 2026-11-01
+## [0.1.0] - 2026-11-01
 
 The first version: open a photo, look, arrow through its folder, close.
 

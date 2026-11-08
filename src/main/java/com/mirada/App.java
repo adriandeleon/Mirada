@@ -24,19 +24,64 @@ public final class App extends Application {
     /** What {@link MacOpenFiles#listen} did, for the perf trace. */
     private static String openFiles = "none (not started)";
 
+    /** The config folder the command line named, or null for the usual one (Settings.defaultFile). */
+    private static @Nullable Path configDir;
+
+    /** What the command line asked to open; JavaFX's own parameters would take a "--a=b" file. */
+    private static List<String> files = List.of();
+
+    /** Where an error no code caught is told: the window, once there is one. */
+    private static volatile @Nullable ViewerWindow shown;
+
     public static void main(String[] args) {
-        // First, before any AWT class can load. ImageIO and BufferedImage are java.desktop and need no
+        // Before anything that can throw on another thread, the toolkit's included (DIAG-04).
+        Thread.setDefaultUncaughtExceptionHandler(App::uncaught);
+        // Before any AWT class can load. ImageIO and BufferedImage are java.desktop and need no
         // display, so AWT is headless — except on macOS, where Move to Trash is AWT's Desktop (Trash).
         System.setProperty("java.awt.headless", String.valueOf(Trash.headless(System.getProperty("os.name"))));
         Startup.mark("main");
+        // --help and --version print and exit before anything starts (CLI-01); --config-dir and --dev
+        // are settled before anything reads the config folder (CLI-02).
+        Launch launch = Launch.parse(List.of(args), System.getProperty("user.home", "."));
+        switch (launch.action()) {
+            case HELP -> {
+                System.out.print(Launch.USAGE);
+                return;
+            }
+            case VERSION -> {
+                System.out.println(AppInfo.versionText());
+                return;
+            }
+            case MISTAKE -> {
+                System.err.println("mirada: " + launch.error());
+                System.err.print(Launch.USAGE);
+                System.exit(2);
+            }
+            case START -> configDir = launch.configDir();
+        }
+        files = launch.files();
         // The first image decodes while the toolkit starts, which is most of what comes before the
         // window (HeadStart). After the headless property: ImageIO is AWT.
-        HeadStart.begin(List.of(args));
+        HeadStart.begin(files);
         // Before the toolkit: on macOS the file Finder launched Mirada for arrives while it starts,
         // and only what is listening by then hears it (MacOpenFiles). Elsewhere it returns at once.
         openFiles = MacOpenFiles.listen();
         Startup.mark("open-files-listening");
-        launch(args);
+        launch();
+    }
+
+    /**
+     * An exception no code caught, on any thread: written to standard error with its stack, and said
+     * over the window in a line, never a stack-trace dialog (DIAG-04).
+     */
+    private static void uncaught(Thread thread, Throwable error) {
+        System.err.println("Uncaught on " + thread.getName() + ":");
+        error.printStackTrace();
+        ViewerWindow window = shown;
+        if (window != null) {
+            String what = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
+            window.sayLater("Something went wrong: " + what);
+        }
     }
 
     /** The window, for {@link #stop}; null until it is made. */
@@ -52,15 +97,16 @@ public final class App extends Application {
     @Override
     public void start(Stage stage) {
         Startup.mark("fx-start");
-        Settings settings = new Settings(Settings.defaultFile());
+        Settings settings = new Settings(Settings.defaultFile(configDir));
         settings.load();
         Theme.apply(settings.theme());
         settings.addListener(() -> Theme.apply(settings.theme()));
         ViewerWindow window = new ViewerWindow(stage, settings, getHostServices()::showDocument);
         this.window = window;
+        shown = window;
         window.show();
         Startup.mark("window-shown");
-        List<String> args = getParameters().getUnnamed();
+        List<String> args = files;
         if (!args.isEmpty()) window.open(Path.of(args.getFirst()));
         // After the first image is asked for, so a launch with an argument starts decoding first. A
         // macOS launch by double-click has no argument; its file has waited for this.

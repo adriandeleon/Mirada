@@ -1,7 +1,6 @@
 package com.mirada.settings;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -83,11 +82,13 @@ public final class Settings {
     }
 
     /**
-     * The settings file in the platform's folder ({@link #folder}), or under {@code
-     * MIRADA_CONFIG_DIR} when it is set. A file left in {@code ~/.mirada} by 0.1.0 on macOS or
-     * Windows is moved there the first time ({@link #movedFrom}).
+     * The settings file in the folder the command line names ({@code --config-dir}, {@code --dev}),
+     * else under {@code MIRADA_CONFIG_DIR}, else in the platform's folder ({@link #folder}): flag,
+     * then variable, then default (SET-07, Pauta 4.0.1). A file left in {@code ~/.mirada} by 0.1.0 on
+     * macOS or Windows is moved to the default the first time ({@link #movedFrom}).
      */
-    public static Path defaultFile() {
+    public static Path defaultFile(@Nullable Path configDir) {
+        if (configDir != null) return configDir.resolve(FILE_NAME);
         String override = System.getenv("MIRADA_CONFIG_DIR");
         String home = System.getProperty("user.home", ".");
         Path file = folder(override, home, System.getProperty("os.name", ""), System.getenv("APPDATA"))
@@ -146,16 +147,18 @@ public final class Settings {
         return file;
     }
 
-    /** Reads the file; a missing or unreadable one leaves the defaults. */
+    /** False after a read that failed on a file that is there: it is not written over this run. */
+    private boolean writable = true;
+
+    /**
+     * Reads the file; a missing or unreadable one leaves the defaults. One that will not decode is
+     * kept as {@code settings.properties.corrupt.bak} ({@link ConfigFile}); one that cannot be read
+     * is not written over this run.
+     */
     public void load() {
-        Properties properties = new Properties();
-        if (Files.isRegularFile(file)) {
-            try (Reader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-                properties.load(in);
-            } catch (IOException | IllegalArgumentException e) {
-                // A file that will not parse is the defaults, not a failed start.
-            }
-        }
+        ConfigFile.Result read = ConfigFile.read(file);
+        writable = read.writable();
+        Properties properties = read.properties();
         theme = themeOf(properties.getProperty(THEME));
         startWithThumbnails = Boolean.parseBoolean(
                 properties.getProperty(START_WITH_THUMBNAILS, "false").trim());
@@ -425,6 +428,7 @@ public final class Settings {
      * rather than half of the new one. A failure is swallowed: the setting still applies to this run.
      */
     void save() {
+        if (!writable) return;
         Properties properties = new Properties();
         properties.setProperty(THEME, theme.name().toLowerCase(Locale.ROOT));
         properties.setProperty(START_WITH_THUMBNAILS, Boolean.toString(startWithThumbnails));

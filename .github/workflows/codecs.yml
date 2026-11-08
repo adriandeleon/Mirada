@@ -20,6 +20,7 @@ jobs:
   build:
     name: Build (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     # Linux builds in Ubuntu 22.04, the oldest system Mirada supports, so the libraries' glibc and
     # libstdc++ requirements are ones Ubuntu 22.04 and Debian 12 meet. Built on a newer system they
     # would load only on that system and newer.
@@ -52,7 +53,7 @@ jobs:
           DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
             build-essential cmake ninja-build meson nasm pkg-config git ca-certificates python3 binutils
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Build tools (macOS)
         if: runner.os == 'macOS'
@@ -68,7 +69,7 @@ jobs:
       # cl.exe, link.exe and dumpbin on the path, for the Ninja generator and the dependency check.
       - name: MSVC environment (Windows)
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
 
       # Git Bash ships coreutils' `link` (hard links) as /usr/bin/link.exe, ahead of MSVC's linker on
       # the path; meson finds it and refuses to go on. Nothing in the build needs the coreutils one.
@@ -86,7 +87,7 @@ jobs:
           cd "$RUNNER_TEMP/codecs"
           cmake -E tar cf "$RUNNER_TEMP/mirada-codecs-${{ matrix.target }}.zip" --format=zip .
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: mirada-codecs-${{ matrix.target }}
           path: ${{ runner.temp }}/mirada-codecs-${{ matrix.target }}.zip
@@ -96,10 +97,11 @@ jobs:
     name: Publish ${{ inputs.tag }}
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: dist
           merge-multiple: true

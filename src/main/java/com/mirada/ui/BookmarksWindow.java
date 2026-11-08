@@ -15,8 +15,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -316,17 +314,9 @@ final class BookmarksWindow {
     private void remove(BookmarkList.@Nullable Row row) {
         Bookmarks.Mark mark = markOf(row);
         if (row == null || mark == null) return;
-        if (mark.hasNote()) {
-            Alert confirm = new Alert(
-                    Alert.AlertType.CONFIRMATION,
-                    "The note on " + BookmarkList.name(mark.path()) + " goes with it.",
-                    ButtonType.OK,
-                    ButtonType.CANCEL);
-            confirm.initOwner(stage);
-            confirm.setTitle("Remove");
-            confirm.setHeaderText("Remove the " + (mark.bookmarked() ? "bookmark and note" : "note") + "?");
-            confirm.getDialogPane().getStylesheets().add(stylesheet);
-            if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+        if (mark.hasNote()
+                && !Confirm.ask(Confirm.removeMark(BookmarkList.name(mark.path()), mark.bookmarked()), stage)) {
+            return;
         }
         bookmarks.remove(mark.path());
         filter.requestFocus();

@@ -33,8 +33,9 @@ jobs:
   manifests:
     name: Manifests
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Download the release's msi
         shell: bash
@@ -99,7 +100,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "winget uninstall exited with $LASTEXITCODE" }
           if (Test-Path (Join-Path $env:LOCALAPPDATA 'Mirada\Mirada.exe')) { throw 'still installed' }
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: winget-manifests-${{ env.VERSION }}
           path: winget/manifests

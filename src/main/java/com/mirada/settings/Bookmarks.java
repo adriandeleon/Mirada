@@ -1,7 +1,6 @@
 package com.mirada.settings;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -90,6 +89,9 @@ public final class Bookmarks {
         return file;
     }
 
+    /** False after a read that failed on a file that is there: it is not written over. */
+    private boolean writable = true;
+
     /** The path as marks are kept by: absolute, without {@code .} or {@code ..}. */
     public static Path key(Path path) {
         return path.toAbsolutePath().normalize();
@@ -105,19 +107,17 @@ public final class Bookmarks {
         return loaded;
     }
 
-    /** Reads the file again, dropping what was read before. */
+    /**
+     * Reads the file again, dropping what was read before. A file that will not decode is kept as
+     * {@code bookmarks.properties.corrupt.bak} and is no marks; one that cannot be read is no marks
+     * and is not written over, or the next bookmark would replace every mark it holds (SET-11).
+     */
     public void load() {
         loaded = true;
         marks.clear();
-        Properties properties = new Properties();
-        if (Files.isRegularFile(file)) {
-            try (Reader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-                properties.load(in);
-            } catch (IOException | IllegalArgumentException e) {
-                return; // A file that will not parse is no marks, not a failed start.
-            }
-        }
-        for (Mark mark : marksOf(properties)) {
+        ConfigFile.Result read = ConfigFile.read(file);
+        writable = read.writable();
+        for (Mark mark : marksOf(read.properties())) {
             marks.remove(mark.path()); // a hand-made copy: the later one, in its place
             marks.put(mark.path(), mark);
         }
@@ -289,6 +289,7 @@ public final class Bookmarks {
      * swallowed: the marks still hold for this run.
      */
     private void save() {
+        if (!writable) return;
         Properties properties = propertiesOf(List.copyOf(marks.values()));
         try {
             Path folder = file.toAbsolutePath().getParent();

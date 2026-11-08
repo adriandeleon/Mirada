@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 
@@ -101,13 +102,13 @@ public final class HeadlessDriver {
         String rest = word.length > 1 ? word[1] : "";
         switch (word[0]) {
             case "wait" -> Thread.sleep(Long.parseLong(rest));
-            case "key" -> fx(() -> press(robot, rest));
-            case "type" -> fx(() -> type(robot, rest));
-            case "move" -> fx(() -> move(robot, rest));
-            case "click" -> fx(() -> click(robot, rest, MouseButton.PRIMARY, 1));
-            case "dclick" -> fx(() -> click(robot, rest, MouseButton.PRIMARY, 2));
-            case "rclick" -> fx(() -> click(robot, rest, MouseButton.SECONDARY, 1));
-            case "wheel" -> fx(() -> robot.mouseWheel(Integer.parseInt(rest)));
+            case "key" -> input(() -> press(robot, rest));
+            case "type" -> input(() -> type(robot, rest));
+            case "move" -> input(() -> move(robot, rest));
+            case "click" -> input(() -> click(robot, rest, MouseButton.PRIMARY, 1));
+            case "dclick" -> input(() -> click(robot, rest, MouseButton.PRIMARY, 2));
+            case "rclick" -> input(() -> click(robot, rest, MouseButton.SECONDARY, 1));
+            case "wheel" -> input(() -> robot.mouseWheel(Integer.parseInt(rest)));
             case "size" ->
                 fx(() -> {
                     String[] wh = rest.split("\\s+");
@@ -268,6 +269,28 @@ public final class HeadlessDriver {
     private static Stage stage() {
         for (Window w : Window.getWindows()) if (w instanceof Stage s && s.isShowing()) return s;
         throw new IllegalStateException("no window");
+    }
+
+    /**
+     * Sends input on the FX thread. A press that opens a modal dialog does not return until the
+     * dialog closes ({@code showAndWait} runs a nested event loop), so after a moment the next steps
+     * go on inside that loop, where they reach the dialog.
+     */
+    private static void input(Runnable action) throws Exception {
+        CompletableFuture<@Nullable Void> done = new CompletableFuture<>();
+        Platform.runLater(() -> {
+            try {
+                action.run();
+                done.complete(null);
+            } catch (Throwable t) {
+                done.completeExceptionally(t);
+            }
+        });
+        try {
+            done.get(2, TimeUnit.SECONDS);
+        } catch (TimeoutException modal) {
+            System.out.println("[drive] (still held: a modal dialog is up)");
+        }
     }
 
     private static void fx(Runnable action) throws Exception {
