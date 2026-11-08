@@ -2,6 +2,8 @@
 
 Mirada at `8397bad`, audited against [Pauta 4.0.1](https://pauta-project.dev/4.0.1/) on 2026-11-08.
 Scope: every rule (351). Rules from https://pauta-project.dev/4.0.1/rules.json.
+Release rules (REL-03, -06, -07, -15, -16, -18, -19, -21, -28, QUAL-15) re-checked on 2026-11-08 after
+the release workflow's rework.
 
 Regenerated rather than edited: each rule was judged by its check (code, test or by hand) as the
 edition's [audit procedure](https://pauta-project.dev/4.0.1/coding-agents/) says. A rule met only in
@@ -10,8 +12,8 @@ never because Mirada lacks a part another rule requires.
 
 |        | Pass | Fail | Manual | N.a. |
 |--------|-----:|-----:|-------:|-----:|
-| MUST   | 64 | 75 | 3 | 20 |
-| SHOULD | 35 | 70 | 15 | 60 |
+| MUST   | 70 | 69 | 3 | 20 |
+| SHOULD | 38 | 67 | 15 | 60 |
 | MAY    | 0 | 3 | 0 | 6 |
 
 A failed MUST blocks a release.
@@ -87,14 +89,8 @@ A failed MUST blocks a release.
 | [PAL-02](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-02) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:337`: inPalette() leaves out Escape, Command Palette and the four Pan commands |
 | [ABOUT-02](https://pauta-project.dev/4.0.1/templates/about/#about-02) | MUST | fail | `src/main/java/com/mirada/ui/AboutWindow.java:81`: version, build, commit, Pauta edition, runtime, license, links, same text as --version; no update-check result |
 | [MLOG-01](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-01) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:815`: messages are a two-second toast with no log (WIN-01 requires the status bar MLOG presumes) |
-| [REL-03](https://pauta-project.dev/4.0.1/release/#rel-03) | MUST | fail | `.github/workflows/release.yml:284`: the release job builds nothing and attaches every file with SHA256SUMS, but through gh, not JReleaser (no jreleaser.yml, no checksums_sha256.txt) |
-| [REL-15](https://pauta-project.dev/4.0.1/release/#rel-15) | MUST | fail | `scripts/notarize-mac.sh:30`: signs, notarizes, staples and checks with spctl, but the notarized app is never launched, the family's secret names and team aren't used, and notarization is skipped silently on a tag without secrets |
-| [REL-16](https://pauta-project.dev/4.0.1/release/#rel-16) | MUST | fail | `scripts/sign-linux.sh:16`: rpmsign and .asc beside every file, but no separate sign-linux job, no debsigs signature on the .deb, no committed packaging/linux/signing-key.asc |
-| [REL-18](https://pauta-project.dev/4.0.1/release/#rel-18) | MUST | fail | `.github/workflows/release.yml:322`: attest-build-provenance on every installer, but no test that keeps the attested set equal to the published one |
-| [REL-19](https://pauta-project.dev/4.0.1/release/#rel-19) | MUST | fail | `.github/workflows/ci.yml:7`: PRs only into main, no separate Format job, no coverage gate, neither check required on main |
-| [REL-21](https://pauta-project.dev/4.0.1/release/#rel-21) | MUST | fail | `.github/workflows/release.yml:18`: tag + dispatch dry run, matrix, signing, attestations; missing the release-asset check, JReleaser --dry-run and the snapshot bump |
+| [REL-19](https://pauta-project.dev/4.0.1/release/#rel-19) | MUST | fail | `.github/workflows/ci.yml:15`: push to main and every pull request; Format (`spotless:check`, :35) and Build & Test (`./mvnw verify`, :55) are separate jobs. Missing: the coverage gate (PLAT-12, REL-27: no JaCoCo), and the two checks are not required on main yet (branch protection, a repository setting the owner turns on) |
 | [REL-27](https://pauta-project.dev/4.0.1/release/#rel-27) | MUST | fail | `.github/workflows/ci.yml:61`: surefire reports uploaded always; no JaCoCo report or coverage summary |
-| [REL-28](https://pauta-project.dev/4.0.1/release/#rel-28) | MUST | fail | `scripts/ci-signing-credentials.sh:44`: signing skips cleanly without secrets, but a tag push without them builds unsigned instead of failing |
 
 ## Other failures
 
@@ -116,7 +112,6 @@ A failed MUST blocks a release.
 | [QUAL-11](https://pauta-project.dev/4.0.1/quality/#qual-11) | SHOULD | fail | no command sweep |
 | [QUAL-13](https://pauta-project.dev/4.0.1/quality/#qual-13) | SHOULD | fail | `src/test/java/com/mirada/settings/SettingsTest.java:114`: the file round-trips; no FX test of the Settings window's controls |
 | [QUAL-14](https://pauta-project.dev/4.0.1/quality/#qual-14) | SHOULD | fail | `src/test/java/com/mirada/ui/AccentTest.java:36`: contrast for the accent only, not the stylesheet's tokens |
-| [QUAL-15](https://pauta-project.dev/4.0.1/quality/#qual-15) | SHOULD | fail | no test reads release.yml |
 | [PERF-04](https://pauta-project.dev/4.0.1/performance/#perf-04) | SHOULD | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:92`: details and EXIF virtual-thread executors are unnamed |
 | [PERF-16](https://pauta-project.dev/4.0.1/performance/#perf-16) | SHOULD | fail | `src/main/java/com/mirada/App.java:55`: settings read on the FX thread in start() |
 | [PERF-17](https://pauta-project.dev/4.0.1/performance/#perf-17) | SHOULD | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:1494`: AOT cache trained; mirada.css shipped as .css, not .bss |
@@ -165,8 +160,6 @@ A failed MUST blocks a release.
 | [MLOG-06](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-06) | SHOULD | fail | no Message Log |
 | [MLOG-07](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-07) | SHOULD | fail | no Message Log |
 | [SYNC-01](https://pauta-project.dev/4.0.1/templates/settings-sync/#sync-01) | SHOULD | fail | no Settings Sync |
-| [REL-06](https://pauta-project.dev/4.0.1/release/#rel-06) | SHOULD | fail | `pom.xml:9`: main carries -SNAPSHOT, but no post-release bump job (AGENTS.md Releasing step 5 is by hand) |
-| [REL-07](https://pauta-project.dev/4.0.1/release/#rel-07) | SHOULD | fail | `.github/workflows/release.yml:255`: per-leg checks only; no expected-asset list checked before publishing |
 | [REL-09](https://pauta-project.dev/4.0.1/release/#rel-09) | SHOULD | fail | `scripts/build-appimage.sh:84`: metainfo generated only inside the AppImage; no packaging/linux/io.github.adriandeleon.Mirada.metainfo.xml |
 | [REL-12](https://pauta-project.dev/4.0.1/release/#rel-12) | SHOULD | fail | `.github/workflows/release.yml:15`: no Homebrew cask (needs notarization) |
 | [REL-13](https://pauta-project.dev/4.0.1/release/#rel-13) | SHOULD | fail | `.github/workflows/winget.yml`: writes and tests the manifests, but the winget-pkgs PR is opened by hand, not by JReleaser |
@@ -227,6 +220,7 @@ A failed MUST blocks a release.
 | [QUAL-06](https://pauta-project.dev/4.0.1/quality/#qual-06) | MUST | pass | `src/test/java/com/mirada/image/ShrinkTest.java:14`: @Tag("fx") on every test that boots the toolkit |
 | [QUAL-07](https://pauta-project.dev/4.0.1/quality/#qual-07) | SHOULD | pass | Thread.sleep only in HeadlessDriver, not a test surefire runs |
 | [QUAL-09](https://pauta-project.dev/4.0.1/quality/#qual-09) | MUST | pass | `scripts/headless-run.sh`: with HeadlessDriver: the real window, robot keys and clicks |
+| [QUAL-15](https://pauta-project.dev/4.0.1/quality/#qual-15) | SHOULD | pass | `src/test/java/com/mirada/ReleaseSupplyChainTest.java:259`: fails when a signing, notarization or attestation step moves or goes, or a tag could publish without its secrets |
 | [PERF-02](https://pauta-project.dev/4.0.1/performance/#perf-02) | MUST | pass | `src/main/java/com/mirada/ui/ViewerWindow.java:463`: background results return through Platform.runLater |
 | [PERF-05](https://pauta-project.dev/4.0.1/performance/#perf-05) | MUST | pass | `src/main/java/com/mirada/image/ImageCache.java:126`: every supplyAsync has an executor; no Process subclass |
 | [PERF-07](https://pauta-project.dev/4.0.1/performance/#perf-07) | MUST | n/a | nothing streams to the FX thread |
@@ -373,16 +367,24 @@ A failed MUST blocks a release.
 | [FIND-14](https://pauta-project.dev/4.0.1/templates/find-bar/#find-14) | SHOULD | pass | `src/main/java/com/mirada/ui/BookmarksWindow.java:224`: Escape clears, then closes |
 | [FIND-15](https://pauta-project.dev/4.0.1/templates/find-bar/#find-15) | SHOULD | pass | `src/main/java/com/mirada/ui/ViewerWindow.java:696`: chrome out of the Tab order; window keys stand aside for text fields |
 | [SYNC-02](https://pauta-project.dev/4.0.1/templates/settings-sync/#sync-02) | SHOULD | n/a | no Settings Sync |
-| [REL-01](https://pauta-project.dev/4.0.1/release/#rel-01) | MUST | pass | `.github/workflows/release.yml:42`: five-target matrix, one leg each; pom.xml dist profile; native image inside jpackage's app image on 4 targets, jlink on macos-x64; dmg by hdiutil |
-| [REL-02](https://pauta-project.dev/4.0.1/release/#rel-02) | SHOULD | pass | `.github/workflows/release.yml:239`: renames every file to Mirada-<version>-<target>.<ext> |
-| [REL-04](https://pauta-project.dev/4.0.1/release/#rel-04) | SHOULD | pass | `.github/workflows/release.yml:327`: the version's CHANGELOG.md section, refused if empty |
-| [REL-05](https://pauta-project.dev/4.0.1/release/#rel-05) | MUST | pass | `.github/workflows/release.yml:73`: fails when tag != pom version, refuses a snapshot |
+| [REL-01](https://pauta-project.dev/4.0.1/release/#rel-01) | MUST | pass | `.github/workflows/release.yml:79`: five-target matrix, one leg each; pom.xml dist profile; native image inside jpackage's app image on 4 targets, jlink on macos-x64; dmg by hdiutil |
+| [REL-03](https://pauta-project.dev/4.0.1/release/#rel-03) | MUST | pass | `jreleaser.yml:76`: JReleaser only creates the release (files.globs, checksums_sha256.txt and its signature); `.github/workflows/release.yml:546` runs it in the publish job after the build, sign-linux and asset-check jobs |
+| [REL-06](https://pauta-project.dev/4.0.1/release/#rel-06) | SHOULD | pass | `.github/workflows/release.yml:593`: the bump job opens a pull request moving main to the next patch -SNAPSHOT, with CI dispatched on its branch; `pom.xml:9` is 0.4.0-SNAPSHOT |
+| [REL-07](https://pauta-project.dev/4.0.1/release/#rel-07) | SHOULD | pass | `.github/workflows/release.yml:418`: check-assets fails before publishing on any expected file missing, or any unexpected one |
+| [REL-15](https://pauta-project.dev/4.0.1/release/#rel-15) | MUST | pass | `.github/workflows/release.yml:149`: imports MACOS_CERT_P12 and MACOS_CERT_PASSWORD (`scripts/ci-signing-credentials.sh`), hardened runtime and entitlements (`scripts/sign-mac.sh`); `scripts/notarize-mac.sh:60` notarizes with APPLE_API_KEY_P8, APPLE_API_KEY_ID and APPLE_API_ISSUER, staples, runs spctl and launches the notarized app from the dmg (:87). The secrets are not set on the repository yet |
+| [REL-16](https://pauta-project.dev/4.0.1/release/#rel-16) | MUST | pass | `.github/workflows/release.yml:318`: a sign-linux job reads LINUX_GPG_KEY and LINUX_GPG_PASSPHRASE, runs `scripts/sign-linux-packages.sh` (rpmsign, debsigs `_gpgorigin`, .asc beside every file) and `scripts/check-linux-signatures.sh` against the committed `packaging/linux/signing-key.asc`, which is attached as mirada-signing-key.asc |
+| [REL-18](https://pauta-project.dev/4.0.1/release/#rel-18) | MUST | pass | `.github/workflows/release.yml:504`: attest-build-provenance on every file before JReleaser; `src/test/java/com/mirada/ReleaseSupplyChainTest.java:380` keeps the subject-path equal to jreleaser.yml's files.globs |
+| [REL-21](https://pauta-project.dev/4.0.1/release/#rel-21) | MUST | pass | `.github/workflows/release.yml:26`: version tags and workflow_dispatch; preflight, five-target matrix, sign-linux, check-assets, attestations, JReleaser (`full-release --dry-run` on a dispatch, :546), winget, then the bump (:593) |
+| [REL-28](https://pauta-project.dev/4.0.1/release/#rel-28) | MUST | pass | `scripts/ci-signing-credentials.sh:35`: a tag without the four macOS secrets fails before the keychain; sign-linux (`.github/workflows/release.yml:318`) and the checksum key (:519) fail a tag without LINUX_GPG_KEY; dry runs and forks sign with throwaway credentials |
+| [REL-02](https://pauta-project.dev/4.0.1/release/#rel-02) | SHOULD | pass | `.github/workflows/release.yml:280`: renames every file to Mirada-<version>-<target>.<ext>; check-assets (:418) expects those names |
+| [REL-04](https://pauta-project.dev/4.0.1/release/#rel-04) | SHOULD | pass | `scripts/release-notes.sh`: the version's CHANGELOG.md section under .github/release-notes-header.md, refused on a tag if empty; JReleaser's changelog.external (`jreleaser.yml:53`) |
+| [REL-05](https://pauta-project.dev/4.0.1/release/#rel-05) | MUST | pass | `.github/workflows/release.yml:68`: preflight fails when tag != pom version, refuses a snapshot |
 | [REL-08](https://pauta-project.dev/4.0.1/release/#rel-08) | SHOULD | pass | packaging/linux/Mirada.desktop:13 StartupWMClass=com.mirada.App |
 | [REL-10](https://pauta-project.dev/4.0.1/release/#rel-10) | SHOULD | pass | `pom.xml`: aot-train runs scripts/aot-train.sh with -XX:AOTCacheOutput (the native image replaces it on four targets) |
-| [REL-11](https://pauta-project.dev/4.0.1/release/#rel-11) | MUST | pass | `scripts/build-installers.sh:6`: dmg, msi, deb, rpm, tar.gz and AppImage, with SHA256SUMS |
+| [REL-11](https://pauta-project.dev/4.0.1/release/#rel-11) | MUST | pass | `jreleaser.yml:76`: dmg, msi, deb, rpm, AppImage and tar.gz with their .asc, and checksums_sha256.txt (`scripts/build-installers.sh:6` makes them) |
 | [REL-22](https://pauta-project.dev/4.0.1/release/#rel-22) | MUST | pass | `.github/workflows/ci.yml:42`: every external action pinned to a 40-character SHA with its version |
 | [REL-23](https://pauta-project.dev/4.0.1/release/#rel-23) | MUST | pass | `.github/dependabot.yml:4`: github-actions and maven, weekly |
 | [REL-24](https://pauta-project.dev/4.0.1/release/#rel-24) | MUST | pass | `.github/workflows/ci.yml:19`: contents: read at the top of all five workflows; write only in release and codecs publish jobs |
 | [REL-25](https://pauta-project.dev/4.0.1/release/#rel-25) | SHOULD | pass | `.github/workflows/ci.yml:43`: setup-java 25 with cache: maven (GraalVM 25.4 for native legs) |
 | [REL-26](https://pauta-project.dev/4.0.1/release/#rel-26) | MUST | pass | `.github/workflows/ci.yml:27`: timeout-minutes on every job; cancel-in-progress only for pull_request |
-| [REL-29](https://pauta-project.dev/4.0.1/release/#rel-29) | MUST | pass | `.github/workflows/release.yml:132`: scripts/smoke-test.sh opens every fixture in each packaged app before publishing |
+| [REL-29](https://pauta-project.dev/4.0.1/release/#rel-29) | MUST | pass | `.github/workflows/release.yml:170`: scripts/smoke-test.sh opens every fixture in each packaged app, the installed msi, deb and AppImage, and the notarized app from the dmg, before publishing |

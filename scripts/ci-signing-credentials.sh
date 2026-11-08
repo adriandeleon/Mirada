@@ -1,79 +1,94 @@
 #!/usr/bin/env bash
-# The release workflow's signing credentials, set up for this runner and exported to later steps
-# through GITHUB_ENV:
+# The macOS signing identity for a release leg, in a temporary keychain, exported to later steps
+# through GITHUB_ENV (MIRADA_MAC_IDENTITY, MIRADA_MAC_KEYCHAIN) and GITHUB_OUTPUT (notarize=true|false).
+# The release workflow's "Import signing certificate (macOS)" step; Linux is signed in its own job
+# (sign-linux, scripts/sign-linux-packages.sh), so there is nothing to do here on Linux or Windows.
 #
-#   macOS   MIRADA_MAC_IDENTITY, the code-signing identity in a temporary keychain
-#   Linux   MIRADA_GPG_KEY, the fingerprint of the key in the runner's keyring
+# From the repository's secrets, the family's names (Pauta REL-15):
+#   MACOS_CERT_P12        the Developer ID Application certificate and key, a .p12, base64
+#   MACOS_CERT_PASSWORD   its password
+#   APPLE_API_KEY_P8      an App Store Connect API key, the .p8, base64 (notarytool, notarize-mac.sh)
+#   APPLE_API_KEY_ID      its 10-character key ID
+# (APPLE_API_ISSUER, the issuer UUID, only for a team key; notarize-mac.sh reads it.)
 #
-# From the repository's secrets when they are set (MACOS_CERTIFICATE, a base64 .p12, with
-# MACOS_CERTIFICATE_PASSWORD and MACOS_SIGNING_IDENTITY; LINUX_GPG_PRIVATE_KEY (or LINUX_GPG_KEY),
-# armored, with LINUX_GPG_PASSPHRASE if it has one). Without them, on a run started by hand: throwaway
-# credentials made here, so a dry run exercises every signing step and its checks; nothing signed
-# with them is published. A tag without the secrets builds unsigned, as before.
+# A tag push without all four fails here, before anything builds: a release is immutable, and an
+# unsigned or unnotarized dmg is what this exists to stop (REL-28). Any other run (a dry run by
+# hand, a fork) signs with a throwaway self-signed identity made on this runner, so every signing
+# step and its checks still run; it cannot be notarized, and nothing signed with it is published.
+#
+# Usage: ci-signing-credentials.sh
 set -euo pipefail
 env_file="${GITHUB_ENV:?run inside GitHub Actions}"
-dry_run=false
-[ "${GITHUB_EVENT_NAME:-}" = workflow_dispatch ] && dry_run=true
+out_file="${GITHUB_OUTPUT:?run inside GitHub Actions}"
+tag=false
+[ "${GITHUB_EVENT_NAME:-}" = push ] && [ "${GITHUB_REF_TYPE:-}" = tag ] && tag=true
 
-case "$(uname -s)" in
-Darwin)
-    keychain="$RUNNER_TEMP/signing.keychain-db"
-    password="$(openssl rand -hex 16)"
-    p12="$RUNNER_TEMP/signing.p12"
-    if [ -n "${MACOS_CERTIFICATE:-}" ]; then
-        printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > "$p12"
-        p12_password="${MACOS_CERTIFICATE_PASSWORD:-}"
-        identity="${MACOS_SIGNING_IDENTITY:?MACOS_SIGNING_IDENTITY must name the Developer ID}"
-        kind="Developer ID"
-    elif $dry_run; then
-        # A self-signed code-signing certificate, trusted on this runner only.
-        identity="Mirada Test Signing"
-        p12_password="test"
-        # The system's openssl (LibreSSL), whose .p12 the keychain imports on every macOS.
-        /usr/bin/openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=$identity" \
-            -keyout "$RUNNER_TEMP/test.key" -out "$RUNNER_TEMP/test.pem" \
-            -addext "keyUsage=critical,digitalSignature" -addext "extendedKeyUsage=critical,codeSigning" 2> /dev/null
-        /usr/bin/openssl pkcs12 -export -inkey "$RUNNER_TEMP/test.key" -in "$RUNNER_TEMP/test.pem" \
-            -out "$p12" -passout "pass:$p12_password" -name "$identity"
-        sudo security add-trusted-cert -d -r trustRoot -p codeSign \
-            -k /Library/Keychains/System.keychain "$RUNNER_TEMP/test.pem"
-        kind="throwaway (dry run)"
-    else
-        echo "[signing] no Developer ID secrets: the macOS build stays ad hoc"
-        exit 0
-    fi
-    security create-keychain -p "$password" "$keychain"
-    security set-keychain-settings -lut 3600 "$keychain"
-    security unlock-keychain -p "$password" "$keychain"
-    security import "$p12" -k "$keychain" -P "$p12_password" -T /usr/bin/codesign
-    security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain" > /dev/null
-    # Searched before the login keychain, so codesign finds the identity by name.
-    security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+if [ "$(uname -s)" != Darwin ]; then
+    echo "[signing] nothing to import here: only macOS signs on the build legs"
+    exit 0
+fi
+
+missing=()
+for secret in MACOS_CERT_P12 MACOS_CERT_PASSWORD APPLE_API_KEY_P8 APPLE_API_KEY_ID; do
+    [ -n "${!secret:-}" ] || missing+=("$secret")
+done
+if $tag && [ "${#missing[@]}" -gt 0 ]; then
+    echo "::error title=macOS signing secrets missing::${missing[*]} not set; refusing to release a dmg that is not signed and notarized"
+    exit 1
+fi
+
+keychain="$RUNNER_TEMP/mirada-signing.keychain-db"
+password="$(openssl rand -hex 16)"
+p12="$RUNNER_TEMP/mirada-signing.p12"
+if [ -n "${MACOS_CERT_P12:-}" ] && [ -n "${MACOS_CERT_PASSWORD:-}" ]; then
+    printf '%s' "$MACOS_CERT_P12" | base64 --decode > "$p12"
+    p12_password="$MACOS_CERT_PASSWORD"
+    kind="Developer ID"
+else
+    # A self-signed code-signing certificate, trusted on this runner only.
+    identity="Mirada Test Signing"
+    p12_password="test"
+    # The system's openssl (LibreSSL), whose .p12 the keychain imports on every macOS.
+    /usr/bin/openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=$identity" \
+        -keyout "$RUNNER_TEMP/test.key" -out "$RUNNER_TEMP/test.pem" \
+        -addext "keyUsage=critical,digitalSignature" -addext "extendedKeyUsage=critical,codeSigning" 2> /dev/null
+    /usr/bin/openssl pkcs12 -export -inkey "$RUNNER_TEMP/test.key" -in "$RUNNER_TEMP/test.pem" \
+        -out "$p12" -passout "pass:$p12_password" -name "$identity"
+    sudo security add-trusted-cert -d -r trustRoot -p codeSign \
+        -k /Library/Keychains/System.keychain "$RUNNER_TEMP/test.pem"
+    rm -f "$RUNNER_TEMP/test.key"
+    kind="throwaway (no secrets: ${missing[*]} unset)"
+    echo "::warning title=macOS signed with a throwaway identity::no Developer ID secrets, so this run's dmg is signed by a certificate made for it and not notarized"
+fi
+
+security create-keychain -p "$password" "$keychain"
+security set-keychain-settings -lut 3600 "$keychain" # no auto-lock mid-build
+security unlock-keychain -p "$password" "$keychain"
+echo "MIRADA_MAC_KEYCHAIN=$keychain" >> "$env_file"
+if ! security import "$p12" -k "$keychain" -P "$p12_password" -T /usr/bin/codesign; then
     rm -f "$p12"
-    security find-identity -v -p codesigning "$keychain"
-    echo "MIRADA_MAC_IDENTITY=$identity" >> "$env_file"
-    echo "[signing] macOS: $kind identity \"$identity\""
-    ;;
-Linux)
-    if [ -n "${LINUX_GPG_PRIVATE_KEY:-}" ]; then
-        printf '%s\n' "$LINUX_GPG_PRIVATE_KEY" | gpg --batch --import
-        kind="release key"
-    elif $dry_run; then
-        gpg --batch --passphrase '' --quick-generate-key "Mirada test signing <test@invalid>" rsa3072 sign 1d
-        kind="throwaway key (dry run)"
-    else
-        echo "[signing] no GPG secret: the Linux packages stay unsigned"
-        exit 0
+    echo "::error title=Certificate import failed::MACOS_CERT_PASSWORD does not open MACOS_CERT_P12 (set the secret at the gh prompt: a piped echo adds a newline), or the .p12 was exported without openssl's -legacy"
+    exit 1
+fi
+rm -f "$p12"
+# Lets codesign use the key without the GUI prompt a runner can never answer, and puts the keychain
+# on the search list before the login keychain, so codesign finds the identity by name.
+security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$keychain" > /dev/null
+security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+
+if [ "$kind" = "Developer ID" ]; then
+    identity="$(security find-identity -v -p codesigning "$keychain" |
+        awk -F'"' '/Developer ID Application/ { print $2; exit }')"
+    if [ -z "$identity" ]; then
+        security find-identity -v -p codesigning "$keychain"
+        echo "::error title=No Developer ID identity::MACOS_CERT_P12 holds no valid Developer ID Application identity"
+        exit 1
     fi
-    mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
-    echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
-    if [ -n "${LINUX_GPG_PASSPHRASE:-}" ]; then
-        printf '%s' "$LINUX_GPG_PASSPHRASE" > ~/.gnupg/passphrase && chmod 600 ~/.gnupg/passphrase
-        echo "passphrase-file $HOME/.gnupg/passphrase" >> ~/.gnupg/gpg.conf
-    fi
-    key=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')
-    [ -n "$key" ] || { echo "::error::[signing] the GPG secret holds no private key" >&2; exit 1; }
-    echo "MIRADA_GPG_KEY=$key" >> "$env_file"
-    echo "[signing] Linux: $kind $key"
-    ;;
-esac
+fi
+security find-identity -v -p codesigning "$keychain"
+
+notarize=false
+[ -n "${APPLE_API_KEY_P8:-}" ] && [ -n "${APPLE_API_KEY_ID:-}" ] && [ "$kind" = "Developer ID" ] && notarize=true
+echo "MIRADA_MAC_IDENTITY=$identity" >> "$env_file"
+echo "notarize=$notarize" >> "$out_file"
+echo "[signing] macOS: $kind identity \"$identity\"; notarize: $notarize"

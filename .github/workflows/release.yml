@@ -1,37 +1,88 @@
-# Builds the installers on every platform and publishes them as a GitHub release.
+# Builds, signs and publishes a release (Pauta REL-21). AGENTS.md, "Releasing", has the steps and
+# the secrets.
 #
-# Triggered by a v* tag. The pom's version is the single source of truth: the tag has to agree with
-# it, and a snapshot is refused — artifacts labelled with a version they were not built from are
-# worse than none. Run by hand (workflow_dispatch) it is a dry run: everything is built and checked
-# and uploaded as workflow artifacts, and no release is made.
+#   push a tag vX.Y.Z   the release: the tag must equal the pom version, then the five-target matrix
+#                       (each leg tests, packages, smoke-tests and, on macOS, signs, notarizes and
+#                       launches the dmg), sign-linux, the release-asset check, build provenance,
+#                       JReleaser creating the release, the winget manifests, and a pull request that
+#                       reopens main at the next -SNAPSHOT.
+#   workflow_dispatch   a dry run: the same jobs up to JReleaser with --dry-run, which renders the
+#                       release and publishes nothing; no winget, no bump. Without the secrets it
+#                       signs with throwaway credentials made on the runner (a self-signed macOS
+#                       identity, a GPG key), so every signing step and its checks still run.
 #
-# Signing (scripts/ci-signing-credentials.sh): with the repository's secrets, macOS builds are signed
-# with the Developer ID and notarized, and the Linux packages and the checksums with the release GPG
-# key. A run by hand without them signs with throwaway credentials made on the runner, so a dry run
-# checks every signing step; a tag without them builds unsigned. Windows is not signed yet.
+# A tag without the signing secrets fails (REL-28): the Developer ID and notarization key in the
+# build legs (scripts/ci-signing-credentials.sh), the release key in sign-linux and publish. A
+# release is immutable once published, and an unsigned one is what this exists to stop. Windows is
+# not signed yet (REL-17, an open decision).
 #
-# Once published, the winget workflow writes the manifests from the released MSI, installs from them
-# and uploads them, ready for a pull request to microsoft/winget-pkgs. Not here yet: the AppImage
-# and the Homebrew cask (which Homebrew takes only once the app is notarized).
+# ReleaseSupplyChainTest reads this file: it fails when a signing, notarization or attestation step
+# moves or goes, and keeps the attested files the ones JReleaser attaches.
 name: Release
 
+# Version-shaped tags only: everything below takes the tag for a version.
 on:
   push:
-    tags: ['v*']
+    tags: ['v[0-9]+.[0-9]+.[0-9]+*']
   workflow_dispatch:
 
-# Read-only by default: the build jobs run Maven and execute what it resolves, so none of them holds
-# a token that can write. Only the publish job asks for more.
+# Read-only by default: the build legs run Maven and execute what it resolves, so none of them holds
+# a token that can write. Only publish (the release, attestations) and bump (the pull request) ask
+# for more, in their own blocks.
 permissions:
   contents: read
 
 jobs:
-  build:
-    name: ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 75
+  # The pom is the single source of truth (REL-05). A tag that disagrees with it, or a snapshot,
+  # fails here in seconds, before five legs start. A dry run from a -SNAPSHOT pom names its files
+  # with the plain version: JReleaser refuses a snapshot for an immutable release even with
+  # --dry-run. The app inside keeps its -SNAPSHOT.
+  preflight:
+    name: Preflight (tag vs pom version)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     outputs:
       version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Resolve and check the version
+        id: version
+        run: |
+          set -euo pipefail
+          pom=$(./mvnw -B -q --no-transfer-progress help:evaluate -Dexpression=project.version -DforceStdout)
+          public="${pom%-SNAPSHOT}"
+          echo "version=$public" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            tag="${GITHUB_REF_NAME#v}"
+            if [ "$tag" != "$pom" ]; then
+              echo "::error::tag $GITHUB_REF_NAME does not match the pom version $pom. Set <version> to $tag and re-tag."
+              exit 1
+            fi
+            case "$pom" in *-SNAPSHOT)
+              echo "::error::refusing to release a snapshot ($pom); drop -SNAPSHOT from pom.xml"; exit 1 ;;
+            esac
+            [[ "$pom" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] ||
+              { echo "::error::$pom is not a version (X.Y.Z or X.Y.Z-suffix)"; exit 1; }
+          fi
+          echo "Releasing $public (${GITHUB_REF_TYPE}: ${GITHUB_REF_NAME})" >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: ${{ matrix.target }}
+    needs: preflight
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
     strategy:
       fail-fast: false
       matrix:
@@ -52,6 +103,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
       # 25.4, not the 25.0 LTS: 25.0 has no AWT on macOS (docs/native-image.md).
       - name: Set up Oracle GraalVM 25.4
@@ -70,26 +123,6 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-
-      - name: Resolve version
-        id: version
-        run: |
-          set -euo pipefail
-          pom=$(./mvnw -B -q --no-transfer-progress help:evaluate -Dexpression=project.version -DforceStdout)
-          public="${pom%-SNAPSHOT}"
-          echo "version=$public" >> "$GITHUB_OUTPUT"
-          if [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
-            tag="${GITHUB_REF_NAME#v}"
-            if [ "$tag" != "$public" ]; then
-              echo "::error::tag v$tag does not match the pom version $pom"
-              exit 1
-            fi
-            if [ "$pom" != "$public" ]; then
-              echo "::error::refusing to release a snapshot ($pom); drop -SNAPSHOT from pom.xml"
-              exit 1
-            fi
-          fi
-          echo "Building $public for ${{ matrix.target }}"
 
       # jpackage shells out to each platform's packaging tools, which a fresh runner may lack.
       - name: Installer prerequisites
@@ -110,13 +143,17 @@ jobs:
               ;;
           esac
 
-      - name: Signing credentials
+      # The Developer ID goes into a throwaway keychain before -Pdist, whose last image step
+      # (fix-mac-bundle.sh, sign-mac.sh) signs the bundle with it. A tag without all four secrets
+      # fails here; any other run signs with a self-signed identity and skips notarizing.
+      - name: Import signing certificate (macOS)
+        id: macsign
+        if: runner.os == 'macOS'
         env:
-          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
-          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
-          LINUX_GPG_PRIVATE_KEY: ${{ secrets.LINUX_GPG_PRIVATE_KEY || secrets.LINUX_GPG_KEY }}
-          LINUX_GPG_PASSPHRASE: ${{ secrets.LINUX_GPG_PASSPHRASE }}
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
         run: bash scripts/ci-signing-credentials.sh
 
       # With the tests: a tag is not gated on CI having passed, and two of these runners
@@ -193,26 +230,29 @@ jobs:
         if: runner.os == 'Windows'
         run: bash scripts/smoke-test.sh "$(cygpath -u "$MIRADA_INSTALLED")" src/test/resources/com/mirada/image
 
+      # Signed by the identity, with the hardened runtime notarization requires.
       - name: Check the macOS signature
         if: runner.os == 'macOS'
         run: |
           set -euo pipefail
           codesign --verify --deep --strict --verbose=2 target/dist/Mirada.app
           codesign --display --verbose=2 target/dist/Mirada.app 2>&1 | grep -E 'Authority|Signature|flags'
-          if [ -n "${MIRADA_MAC_IDENTITY:-}" ]; then
-            # Signed by the identity, with the hardened runtime notarization requires.
-            codesign --display --verbose=2 target/dist/Mirada.app 2>&1 | grep -q "Authority=$MIRADA_MAC_IDENTITY"
-            codesign --display --verbose=2 target/dist/Mirada.app 2>&1 | grep -q 'runtime'
-          fi
+          codesign --display --verbose=2 target/dist/Mirada.app 2>&1 | grep -qxF "Authority=$MIRADA_MAC_IDENTITY"
+          codesign --display --verbose=2 target/dist/Mirada.app 2>&1 | grep -q 'runtime'
 
-      # Notarized when the Apple account is in the secrets; signed only, on a dry run.
-      - name: Sign and notarize the dmg
+      # The dmg signed, notarized (when the import step had the API key, always on a tag), stapled,
+      # checked with spctl as Gatekeeper will, and then the notarized app launched from it, under the
+      # hardened runtime (REL-15). A dry run without the secrets signs, checks and launches, and
+      # notarizes nothing: Apple refuses a self-signed identity.
+      - name: Notarize the dmg (macOS)
         if: runner.os == 'macOS'
+        timeout-minutes: 40
         env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
-        run: bash scripts/notarize-mac.sh target/installers/*.dmg
+          MIRADA_NOTARIZE: ${{ steps.macsign.outputs.notarize }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: bash scripts/notarize-mac.sh target/installers/*.dmg src/test/resources/com/mirada/image
 
       - name: Check the Linux packages
         if: runner.os == 'Linux'
@@ -235,45 +275,26 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: '1'
         run: bash scripts/smoke-test.sh "$(ls target/installers/*.AppImage)" src/test/resources/com/mirada/image
 
-      # One naming scheme across five targets, so the release page is legible: jpackage names its
-      # output after the bundle version (1.x on macOS for a 0.x release) and no target.
+      # One naming scheme across five targets, Mirada-<version>-<target>.<ext> (REL-02): jpackage
+      # names its output after the bundle version (1.x on macOS for a 0.x release) and no target.
       - name: Name the installers
         run: |
           set -euo pipefail
-          version="${{ steps.version.outputs.version }}"
           cd target/installers
           shopt -s nullglob
           produced=0
           for file in *; do
             case "$file" in
-              *.asc) continue ;;
               *.tar.gz) ext=tar.gz ;;
               *)        ext="${file##*.}" ;;
             esac
-            mv -v "$file" "Mirada-$version-${{ matrix.target }}.$ext"
+            mv -v "$file" "Mirada-$VERSION-${{ matrix.target }}.$ext"
             produced=$((produced + 1))
           done
           [ "$produced" -gt 0 ] || { echo "::error::no installer was produced for ${{ matrix.target }}"; exit 1; }
           ls -la
 
-      # After naming, so each signature is named for its file. rpm -K checks the rpm's own
-      # signature against the key, in a database of its own.
-      - name: Sign the Linux packages
-        if: runner.os == 'Linux' && env.MIRADA_GPG_KEY != ''
-        run: |
-          set -euo pipefail
-          bash scripts/sign-linux.sh target/installers "$MIRADA_GPG_KEY"
-          db="$(mktemp -d)"
-          gpg --armor --export "$MIRADA_GPG_KEY" > "$RUNNER_TEMP/public.asc"
-          rpm --dbpath "$db" --initdb
-          rpm --dbpath "$db" --import "$RUNNER_TEMP/public.asc"
-          rpm --dbpath "$db" -Kv target/installers/*.rpm
-          checked="$(rpm --dbpath "$db" -K target/installers/*.rpm)"
-          echo "$checked"
-          echo "$checked" | grep -q 'signatures OK'
-          ! echo "$checked" | grep -q 'NOT OK'
-          for asc in target/installers/*.asc; do gpg --batch --verify "$asc" "${asc%.asc}"; done
-
+      # The Linux files unsigned: sign-linux replaces them with the signed ones.
       - name: Upload
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -282,75 +303,359 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
-  release:
-    name: Publish
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+      # The runner is thrown away, but the keychain holds the private key: removed as soon as the
+      # leg is done, whether it passed or not.
+      - name: Remove the signing keychain (macOS)
+        if: always() && runner.os == 'macOS' && env.MIRADA_MAC_KEYCHAIN != ''
+        run: security delete-keychain "$MIRADA_MAC_KEYCHAIN" || true
+
+  # The Linux downloads signed with the family's release key, off the build runners, which run
+  # whatever Maven resolves (REL-16): rpmsign in the rpm, a debsigs origin signature in the deb, an
+  # .asc beside every file. A release must be signed by the committed key
+  # (packaging/linux/signing-key.asc) and no other; what was signed is checked against that public
+  # key alone before it replaces the build's unsigned files. A tag without the key fails; a dry run
+  # without it signs with a throwaway key.
+  sign-linux:
+    name: Sign Linux packages
     needs: build
-    # Only a tag publishes; a manual run stops after the builds.
-    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      # rpm carries rpmsign; debsig-verify checks the deb the way a user's policy would.
+      - name: Signing tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rpm debsig-verify
+
+      # One directory per artifact: linux/Mirada-linux-x64, linux/Mirada-linux-arm64.
+      - name: Download the Linux builds
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: Mirada-linux-*
+          path: linux
+
+      - name: Sign
+        env:
+          LINUX_GPG_KEY: ${{ secrets.LINUX_GPG_KEY }}
+          LINUX_GPG_PASSPHRASE: ${{ secrets.LINUX_GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -n "$LINUX_GPG_KEY" ]; then
+            export MIRADA_GPG_KEY="$LINUX_GPG_KEY" MIRADA_GPG_PASSPHRASE="$LINUX_GPG_PASSPHRASE"
+            export MIRADA_GPG_EXPECTED_KEY=packaging/linux/signing-key.asc
+          elif [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF_TYPE" = tag ]; then
+            echo "::error title=Linux signing key missing::LINUX_GPG_KEY is not set; refusing to release unsigned Linux packages"
+            exit 1
+          else
+            echo "::warning title=Throwaway signing key::no LINUX_GPG_KEY, so this dry run signs with a key made for it"
+            export GNUPGHOME="$RUNNER_TEMP/throwaway-gnupg"
+            mkdir -m 700 "$GNUPGHOME"
+            gpg --batch --pinentry-mode loopback --passphrase '' --quick-gen-key 'Mirada dry run <dry-run@mirada.invalid>' rsa3072 sign 1d
+            MIRADA_GPG_KEY="$(gpg --batch --armor --export-secret-keys)"
+            export MIRADA_GPG_KEY
+            unset GNUPGHOME
+          fi
+          mkdir -p key
+          bash scripts/sign-linux-packages.sh key/mirada-signing-key.asc linux/*/
+          bash scripts/check-linux-signatures.sh key/mirada-signing-key.asc linux/*/
+          ls -la linux/*/
+          fpr=$(gpg --with-colons --import-options show-only --import key/mirada-signing-key.asc | awk -F: '$1 == "fpr" { print $10; exit }')
+          echo "- Linux: signed with \`$fpr\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload signed (linux-x64)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: Mirada-linux-x64
+          path: linux/Mirada-linux-x64/*
+          overwrite: true
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload signed (linux-arm64)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: Mirada-linux-arm64
+          path: linux/Mirada-linux-arm64/*
+          overwrite: true
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload the public key
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: Mirada-signing-key
+          path: key/mirada-signing-key.asc
+          retention-days: 14
+          if-no-files-found: error
+
+  # GitHub releases are immutable: a file missing at publish time can never be added (REL-07). So
+  # every expected download is checked here, on a dry run too, before anything is published. A new
+  # format or target changes this list, jreleaser.yml's globs and the attestation's subject-path
+  # (ReleaseSupplyChainTest keeps the last two equal).
+  check-assets:
+    name: Release-asset check
+    needs: [preflight, sign-linux]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Download every build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: Mirada-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Check the expected files
+        run: |
+          set -euo pipefail
+          expected=()
+          for target in linux-x64 linux-arm64; do
+            for ext in deb rpm tar.gz AppImage; do
+              expected+=("Mirada-$VERSION-$target.$ext" "Mirada-$VERSION-$target.$ext.asc")
+            done
+          done
+          expected+=("Mirada-$VERSION-macos-arm64.dmg" "Mirada-$VERSION-macos-x64.dmg")
+          expected+=("Mirada-$VERSION-windows-x64.msi")
+          expected+=(mirada-signing-key.asc)
+          declare -A wanted
+          missing=0
+          for file in "${expected[@]}"; do
+            wanted[$file]=1
+            if [ -s "artifacts/$file" ]; then
+              echo "ok       $file"
+            else
+              echo "::error::missing release asset: $file"
+              missing=$((missing + 1))
+            fi
+          done
+          unexpected=0
+          for file in artifacts/*; do
+            name="$(basename "$file")"
+            [ -n "${wanted[$name]:-}" ] || { echo "::error::unexpected file, not in the expected list: $name"; unexpected=$((unexpected + 1)); }
+          done
+          [ "$missing" = 0 ] || { echo "::error::$missing expected file(s) missing; nothing was published"; exit 1; }
+          [ "$unexpected" = 0 ] || { echo "::error::add the new file(s) to this list, or stop producing them"; exit 1; }
+          echo "- All ${#expected[@]} release assets present" >> "$GITHUB_STEP_SUMMARY"
+
+      # The notes are this version's section of CHANGELOG.md (REL-04); a tag without one fails here,
+      # before anything is published. A dry run falls back to Unreleased.
+      - name: Check the release notes
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            bash scripts/release-notes.sh "$VERSION" out/release-notes.md
+          else
+            bash scripts/release-notes.sh "$VERSION" out/release-notes.md --allow-missing
+          fi
+          cat out/release-notes.md >> "$GITHUB_STEP_SUMMARY"
+
+  # On a tag, publishes. On a dry run, attests (the statements name the branch, not a tag, so
+  # `--source-ref refs/tags/…` keeps them from verifying as a release) and runs JReleaser with
+  # --dry-run, which publishes nothing (REL-21).
+  publish:
+    name: Publish
+    needs: [preflight, check-assets]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # The only job that publishes: the release, and the provenance attestations (OIDC + attestations).
     permissions:
       contents: write
       id-token: write
       attestations: write
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
     steps:
+      # JReleaser reads the history and talks to the API with its own token; nothing here pushes.
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download every build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: Mirada-*
           path: artifacts
           merge-multiple: true
 
-      - name: Checksums
-        run: cd artifacts && sha256sum Mirada-* | tee SHA256SUMS
-
-      # The checksums signed with the release key, and the public key beside them, when the key is in
-      # the secrets: verifying SHA256SUMS.asc and then the checksums covers every file.
-      - name: Sign the checksums
-        env:
-          LINUX_GPG_PRIVATE_KEY: ${{ secrets.LINUX_GPG_PRIVATE_KEY || secrets.LINUX_GPG_KEY }}
-          LINUX_GPG_PASSPHRASE: ${{ secrets.LINUX_GPG_PASSPHRASE }}
+      - name: Release notes
         run: |
-          set -euo pipefail
-          if [ -z "$LINUX_GPG_PRIVATE_KEY" ]; then echo "no release key: checksums unsigned"; exit 0; fi
-          GITHUB_EVENT_NAME=push bash scripts/ci-signing-credentials.sh
-          key=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')
-          cd artifacts
-          gpg --batch --local-user "$key" --armor --detach-sign --output SHA256SUMS.asc SHA256SUMS
-          gpg --armor --export "$key" > mirada-signing-key.asc
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            bash scripts/release-notes.sh "$VERSION" out/release-notes.md
+          else
+            bash scripts/release-notes.sh "$VERSION" out/release-notes.md --allow-missing
+          fi
 
-      # A signed statement, kept by GitHub, that each file was built by this workflow from this
-      # commit: `gh attestation verify <file> --repo adriandeleon/Mirada` checks a download.
+      # A signed statement, kept by GitHub, that each download was built by this workflow from this
+      # commit (REL-18):
+      #   gh attestation verify <file> --repo adriandeleon/Mirada --source-ref refs/tags/vX.Y.Z
+      # The patterns are exactly jreleaser.yml's files.globs; ReleaseSupplyChainTest keeps the two
+      # lists equal. Before JReleaser, so a release never publishes a download without one.
       - name: Attest build provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: 'artifacts/Mirada-*'
+          subject-path: |
+            artifacts/Mirada-*.dmg
+            artifacts/Mirada-*.msi
+            artifacts/Mirada-*.deb
+            artifacts/Mirada-*.rpm
+            artifacts/Mirada-*.AppImage
+            artifacts/Mirada-*.tar.gz
+            artifacts/*.asc
 
-      # The notes are this version's section of CHANGELOG.md, so the release says what the changelog
-      # says. A version with no section is refused rather than released with empty notes.
-      - name: Publish release
+      # JReleaser signs checksums_sha256.txt with the release key through gpg (jreleaser.yml,
+      # signing.pgp, COMMAND mode): imported here into a keyring of the job's own, and checked to be
+      # the committed key. A tag without it fails; a dry run without it signs with a throwaway key.
+      - name: Release key for the checksums
         env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ needs.build.outputs.version }}
+          LINUX_GPG_KEY: ${{ secrets.LINUX_GPG_KEY }}
+          LINUX_GPG_PASSPHRASE: ${{ secrets.LINUX_GPG_PASSPHRASE }}
         run: |
           set -euo pipefail
-          awk -v v="$VERSION" '
-            index($0, "## [" v "]") == 1 { inside = 1; next }
-            inside && /^## / { exit }
-            inside { print }' CHANGELOG.md > notes.md
-          if ! grep -q '[^[:space:]]' notes.md; then
-            echo "::error::CHANGELOG.md has no section for $VERSION"
+          export GNUPGHOME="$RUNNER_TEMP/release-gnupg"
+          mkdir -m 700 "$GNUPGHOME"
+          printf '%s\n' batch no-tty "pinentry-mode loopback" > "$GNUPGHOME/gpg.conf"
+          if [ -n "$LINUX_GPG_KEY" ]; then
+            printf '%s\n' "$LINUX_GPG_KEY" | gpg --quiet --import
+            fpr=$(gpg --with-colons --list-secret-keys | awk -F: '$1 == "fpr" { print $10; exit }')
+            want=$(gpg --with-colons --import-options show-only --import packaging/linux/signing-key.asc |
+              awk -F: '$1 == "fpr" { print $10; exit }')
+            [ "$fpr" = "$want" ] || { echo "::error::LINUX_GPG_KEY is $fpr, but packaging/linux/signing-key.asc is $want"; exit 1; }
+          elif [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF_TYPE" = tag ]; then
+            echo "::error title=Release key missing::LINUX_GPG_KEY is not set; refusing to publish unsigned checksums"
             exit 1
+          else
+            echo "::warning title=Throwaway signing key::no LINUX_GPG_KEY, so this dry run signs the checksums with a key made for it"
+            gpg --passphrase '' --quick-gen-key 'Mirada dry run <dry-run@mirada.invalid>' rsa3072 sign 1d
+            fpr=$(gpg --with-colons --list-secret-keys | awk -F: '$1 == "fpr" { print $10; exit }')
           fi
-          gh release create "v$VERSION" artifacts/* \
-            --repo "${{ github.repository }}" \
-            --title "Mirada $VERSION" \
-            --notes-file notes.md \
-            --verify-tag
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          echo "JRELEASER_GPG_KEYNAME=$fpr" >> "$GITHUB_ENV"
 
+      # The action and the JReleaser it downloads are both pinned; bump them deliberately.
+      - name: JReleaser
+        uses: jreleaser/release-action@90ac653bb9c79d11179e65d81499f3f34527dcd5 # 2.5.0
+        with:
+          version: 1.26.0
+          arguments: ${{ github.event_name == 'workflow_dispatch' && 'full-release --dry-run' || 'full-release' }}
+        env:
+          JRELEASER_PROJECT_VERSION: ${{ env.VERSION }}
+          JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # The release key's passphrase; empty for the dry run's throwaway key, which has none.
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.LINUX_GPG_PASSPHRASE }}
+
+      - name: Upload the JReleaser output
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: jreleaser-output
+          path: |
+            out/jreleaser/trace.log
+            out/jreleaser/output.properties
+            out/jreleaser/checksums/checksums_sha256.txt
+            out/jreleaser/signatures/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Remove the release key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/release-gnupg"
+
+  # The winget manifests, written from the published MSI, validated, installed from and uploaded,
+  # ready for a pull request to microsoft/winget-pkgs (AGENTS.md, "Releasing"). A tag only: a dry
+  # run has no published MSI.
   winget:
     name: winget
-    needs: [build, release]
+    needs: [preflight, publish]
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     uses: ./.github/workflows/winget.yml
     with:
-      version: ${{ needs.build.outputs.version }}
+      version: ${{ needs.preflight.outputs.version }}
+
+  # Reopens main at the next patch -SNAPSHOT, through a pull request (REL-06): main's required
+  # checks refuse a direct push. Skipped for pre-releases (a tag with a suffix), which do not move
+  # the line, and on a dry run.
+  #
+  # A pull request opened with GITHUB_TOKEN starts no workflows, so CI is dispatched on the branch:
+  # its runs report the same check names on the same commit. Opening the pull request needs
+  # Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests";
+  # without it the branch is still pushed and the summary links to it.
+  bump:
+    name: Reopen main for development
+    needs: [preflight, publish]
+    if: github.event_name == 'push' && github.ref_type == 'tag' && !contains(github.ref_name, '-')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    env:
+      RELEASED: ${{ needs.preflight.outputs.version }}
+    steps:
+      # The one checkout that keeps its credentials: this job pushes a branch.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: main
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Open the pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          current=$(./mvnw -B -q --no-transfer-progress help:evaluate -Dexpression=project.version -DforceStdout)
+          # Only when main still sits on the released version; anything else means a person got
+          # there first.
+          if [ "$current" != "$RELEASED" ]; then
+            echo "main is at $current, not $RELEASED: nothing to bump."
+            exit 0
+          fi
+          IFS=. read -r major minor patch <<< "$RELEASED"
+          next="$major.$minor.$((patch + 1))-SNAPSHOT"
+          branch="chore/reopen-$major.$minor.$((patch + 1))"
+          title="Reopen main at $next after $GITHUB_REF_NAME"
+          if git ls-remote --exit-code --heads origin "$branch" > /dev/null; then
+            echo "$branch already exists: nothing to do."
+            exit 0
+          fi
+
+          ./mvnw -B -q --no-transfer-progress versions:set -DnewVersion="$next" -DgenerateBackupPoms=false
+          # An empty Unreleased section above the version just released, for the next entries.
+          if ! grep -q '^## \[Unreleased\]' CHANGELOG.md; then
+            awk '!done && /^## \[/ { print "## [Unreleased]\n"; done = 1 } { print }' CHANGELOG.md > CHANGELOG.new
+            mv CHANGELOG.new CHANGELOG.md
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$branch"
+          git commit -am "$title"
+          git push origin "$branch"
+
+          # The required checks, on the commit just pushed.
+          gh workflow run ci.yml --ref "$branch"
+
+          body="$GITHUB_REF_NAME is published. This sets \`pom.xml\` to $next and opens an Unreleased section in CHANGELOG.md. CI was dispatched on the branch, as a pull request opened by GITHUB_TOKEN starts no workflows."
+          if url=$(gh pr create --base main --head "$branch" --title "$title" --body "$body"); then
+            echo "Merge [the pull request]($url) to reopen main at \`$next\`." >> "$GITHUB_STEP_SUMMARY"
+          else
+            compare="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/main...$branch?expand=1"
+            echo "::warning::could not open the pull request; $branch is pushed: $compare"
+            echo "[Open the pull request]($compare) for \`$branch\` and merge it to reopen main at \`$next\`." >> "$GITHUB_STEP_SUMMARY"
+          fi
