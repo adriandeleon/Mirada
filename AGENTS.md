@@ -66,8 +66,9 @@ Run Maven from the project root, on JDK 25 (the enforcer refuses others). CI
 
 ## Change checklist
 
-- [ ] Every user action is a `Command` with a name, a description and a group, run through
-      `ViewerWindow.run`; menus, buttons and the palette reach it by the same constant.
+- [ ] Every user action is a `Command` with a dotted id, a name, a description and a group, run
+      through `ViewerWindow.run`; menus, buttons and the palette reach it by the same constant, and
+      its keys are in the keymaps (`src/main/resources/com/mirada/keymaps/*.json`), never in code.
 - [ ] A user-visible change has an entry under `## [Unreleased]` in `CHANGELOG.md` (Keep a
       Changelog), opening with a bold one-line summary for users.
 - [ ] A new dependency has an entry in `NOTICE`, with its licence.

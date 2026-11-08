@@ -187,7 +187,7 @@ A failed MUST blocks a release.
 | [DOCS-09](https://pauta-project.dev/4.0.1/documentation/#docs-09) | MUST | pass | `src/main/java/com/mirada/ui/Command.java:212`: every command has a description, shown in the palette; CommandTest:189 non-blank |
 | [DOCS-12](https://pauta-project.dev/4.0.1/documentation/#docs-12) | MUST | pass | `docs/README.md:1`: for contributors, user docs on the website, the code wins, every guide listed |
 | [DOCS-13](https://pauta-project.dev/4.0.1/documentation/#docs-13) | SHOULD | pass | `docs/decisions/README.md:1`: five records (native image, libjpeg-turbo, codecs from source, .properties, no TestFX), each with context, decision and consequences |
-| [DOCS-14](https://pauta-project.dev/4.0.1/documentation/#docs-14) | MUST | pass | `AGENTS.md:83`: 100 lines, commands, worktrees and the checklist, with a documentation map into docs/; CONTRIBUTING.md:25 links into docs/; history in docs/reference/ |
+| [DOCS-14](https://pauta-project.dev/4.0.1/documentation/#docs-14) | MUST | pass | `AGENTS.md:84`: 101 lines, commands, worktrees and the checklist, with a documentation map into docs/; CONTRIBUTING.md:25 links into docs/; history in docs/reference/ |
 | [DOCS-16](https://pauta-project.dev/4.0.1/documentation/#docs-16) | MUST | pass | `AGENTS.md:63`: docs change in the same pull request (CHANGELOG, docs/, website); CONTRIBUTING.md:33; docs/conventions.md:23 |
 | [DOCS-17](https://pauta-project.dev/4.0.1/documentation/#docs-17) | MUST | pass | `AGENTS.md:61`: the code wins, and the docs are fixed in the same change (also docs/README.md) |
 | [DOCS-18](https://pauta-project.dev/4.0.1/documentation/#docs-18) | SHOULD | pass | `src/test/java/com/mirada/ui/HeadlessDriver.java:116`: renders the real window to PNG (1×, not 2×) |
