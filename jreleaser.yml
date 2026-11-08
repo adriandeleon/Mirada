@@ -1,0 +1,84 @@
+# JReleaser: creates the GitHub release and nothing else (Pauta REL-03).
+#
+# It builds nothing. Each target's installers are made on its own runner by the release workflow
+# (-Pdist,native, jpackage, hdiutil; nothing cross-builds), signed there (macOS) or in the
+# sign-linux job (Linux), checked against the expected list, attested, and handed to JReleaser
+# under ./artifacts. It attaches them with checksums_sha256.txt and that file's signature by the
+# release key, as the release's notes this version's section of CHANGELOG.md
+# (scripts/release-notes.sh writes out/release-notes.md).
+#
+# The version comes from JRELEASER_PROJECT_VERSION, which the workflow takes from the pom. A run by
+# hand is `full-release --dry-run`: it renders everything and publishes nothing.
+#
+# What is attached is files.globs below; the attestation step's subject-path in release.yml must be
+# the same list, which ReleaseSupplyChainTest checks.
+project:
+  name: Mirada
+  description: A fast, folder-oriented image viewer
+  longDescription: |
+    Mirada is a fast, folder-oriented image viewer for Linux, macOS and Windows: open a picture and
+    step through its folder, with a command palette and every command on the keyboard.
+  links:
+    homepage: https://github.com/adriandeleon/Mirada
+    bugTracker: https://github.com/adriandeleon/Mirada/issues
+    license: https://github.com/adriandeleon/Mirada/blob/main/LICENSE
+  authors:
+    - Adrian De Leon
+  copyright: Adrián Arturo De León Saldivar
+  license: MIT
+  inceptionYear: '2026'
+  stereotype: DESKTOP
+  languages:
+    java:
+      groupId: com.mirada
+      artifactId: mirada
+      version: '25'
+
+release:
+  github:
+    owner: adriandeleon
+    name: Mirada
+    branch: main
+    tagName: 'v{{projectVersion}}'
+    releaseName: 'Mirada {{projectVersion}}'
+    # Editora's flow: the release is created as a draft, every file is uploaded while it is still
+    # mutable, then it is published. Required once GitHub's immutable releases are on for the
+    # repository (an upload to a published release is refused), harmless while they are off. It
+    # excludes `overwrite`: a re-run on the same tag needs the release deleted first
+    # (`gh release delete vX.Y.Z`, which keeps the tag).
+    immutableRelease: true
+    # A tag with a suffix (v0.5.0-rc1) is a pre-release.
+    prerelease:
+      pattern: '.*-.*'
+    changelog:
+      external: out/release-notes.md
+
+# One checksums_sha256.txt for every file, none per file.
+checksum:
+  individual: false
+
+# checksums_sha256.txt is signed with the release key (LINUX_GPG_KEY, whose public half is
+# packaging/linux/signing-key.asc and mirada-signing-key.asc) into checksums_sha256.txt.asc. The
+# publish job imports the key into a keyring of its own (GNUPGHOME) and names it in
+# JRELEASER_GPG_KEYNAME; a dry run without the secret signs with a throwaway key made on the runner.
+# COMMAND, gpg itself: MEMORY mode's BouncyCastle signature (JReleaser 1.26) is a "PGP MESSAGE" that
+# `gpg --verify` refuses. The downloads are signed before they get here (the Linux files in
+# sign-linux, their .asc among the globs; the dmg by the Developer ID), so only the checksums are.
+signing:
+  pgp:
+    active: ALWAYS
+    armored: true
+    mode: COMMAND
+    artifacts: false
+    files: false
+    checksums: true
+
+files:
+  globs:
+    - pattern: 'artifacts/Mirada-*.dmg'
+    - pattern: 'artifacts/Mirada-*.msi'
+    - pattern: 'artifacts/Mirada-*.deb'
+    - pattern: 'artifacts/Mirada-*.rpm'
+    - pattern: 'artifacts/Mirada-*.AppImage'
+    - pattern: 'artifacts/Mirada-*.tar.gz'
+    - pattern: 'artifacts/*.asc'

@@ -75,9 +75,13 @@ types it opens. Until the first signed release, each platform asks once:
 - **Windows** — run the `.msi`. SmartScreen warns about an unknown publisher: **More info → Run
   anyway**.
 
-A signed release carries `SHA256SUMS.asc` and the key that signed it, `mirada-signing-key.asc`:
-`gpg --import mirada-signing-key.asc && gpg --verify SHA256SUMS.asc && sha256sum -c SHA256SUMS`
-checks every download.
+From 0.4.0 the macOS dmg is notarized and opens without **Open Anyway**. Every release carries
+`checksums_sha256.txt`, its signature `checksums_sha256.txt.asc` and the key that signed it,
+`mirada-signing-key.asc` (also [`packaging/linux/signing-key.asc`](packaging/linux/signing-key.asc)):
+`gpg --import mirada-signing-key.asc && gpg --verify checksums_sha256.txt.asc && sha256sum
+--check --ignore-missing checksums_sha256.txt` checks a download. Each Linux file has its own `.asc`,
+and every download its build provenance: `gh attestation verify <file> --repo adriandeleon/Mirada`.
+0.3.0 and earlier have `SHA256SUMS` and `SHA256SUMS.asc` instead.
 
 ## Using it
 

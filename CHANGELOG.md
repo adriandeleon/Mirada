@@ -70,6 +70,11 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
   become the edit's.
 - **A saved TIFF keeps the EXIF and the colour profile**, as JPEG and PNG already did: the camera,
   the date, the exposure, the location, and the colours of a wide-gamut photo.
+- **The macOS download is notarized by Apple, and every release is signed**: the dmg opens without
+  **Open Anyway**, and a release is no longer published without its signatures. The checksums are
+  now `checksums_sha256.txt`, signed as `checksums_sha256.txt.asc` (they were `SHA256SUMS` and
+  `SHA256SUMS.asc`); the deb also carries a debsigs origin signature, which `debsig-verify` checks;
+  each Linux file keeps its `.asc`, and the signing key stays `mirada-signing-key.asc`.
 
 ### Fixed
 
