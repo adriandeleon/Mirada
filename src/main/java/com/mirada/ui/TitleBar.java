@@ -313,7 +313,7 @@ final class TitleBar {
 
     /** Help: the logs, reporting a problem and the update check (DIAG-03, DIAG-05, DIAG-06). */
     private static Menu help(Consumer<Command> run) {
-        Menu help = new Menu("Help");
+        Menu help = new Menu("Help", Icons.of(Icons.HELP));
         help.getItems()
                 .addAll(
                         item(Command.MESSAGE_LOG, run),

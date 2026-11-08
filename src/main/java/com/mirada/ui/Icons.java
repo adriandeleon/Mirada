@@ -21,6 +21,10 @@ final class Icons {
     static final String LEAVE_FULL_SCREEN = "M4 14 H10 V20 M20 10 H14 V4 M14 10 L21 3 M3 21 L10 14";
     static final String ROTATE = "M20 4 V9 H15 M20 9 A8.5 8.5 0 1 0 20.5 14";
     static final String INFO = "M12 3 A9 9 0 1 1 11.99 3 Z M12 11 V16.5 M12 7.5 V7.6";
+    /** A question mark in a circle: the Help submenu, which runs no command of its own (MENU-14). */
+    static final String HELP =
+            "M12 3 A9 9 0 1 1 11.99 3 Z M9.5 9.5 Q9.5 7 12 7 Q14.5 7 14.5 9.3 Q14.5 11 12 12 V13.5 M12 16.5 V16.6";
+
     static final String MENU = "M4 6.5 H20 M4 12 H20 M4 17.5 H20";
     static final String PREVIOUS = "M15 18 L9 12 L15 6";
     static final String NEXT = "M9 18 L15 12 L9 6";
