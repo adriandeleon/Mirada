@@ -225,6 +225,14 @@ class CommandTest {
                         .sum());
     }
 
+    /** Help → Documentation is a command like any other: in the palette, under Help (DOCS-06). */
+    @Test
+    void documentationIsAHelpCommandInThePalette() {
+        assertEquals("Help", Command.DOCUMENTATION.group());
+        assertTrue(Command.inPalette().contains(Command.DOCUMENTATION));
+        assertFalse(Command.DOCUMENTATION.description().isBlank());
+    }
+
     @Test
     void fileCommandsNeedAnImageAndASlideshowTwo() {
         assertEquals("No image is showing.", Command.MOVE_TO_TRASH.unavailable(0, 1, false));

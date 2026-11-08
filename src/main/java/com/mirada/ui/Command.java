@@ -188,7 +188,10 @@ enum Command {
             new KeyCodeCombination(KeyCode.O, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN)),
     CLOSE("Close Window", "Closes Mirada.", "quit exit", shortcut(KeyCode.W)),
     /** Its keys are the user's ({@link PaletteChords}), so {@link #forKey} never answers it. */
-    PALETTE("Command Palette", "Finds and runs any command by name.", "", none());
+    PALETTE("Command Palette", "Finds and runs any command by name.", "", none()),
+    /** Help → Documentation (DOCS-06, Pauta 4.0.1): the user guide on the website, in the browser. */
+    DOCUMENTATION(
+            "Documentation", "Opens Mirada's user guide in the browser.", "help manual guide docs website", none());
 
     /** Whether this is macOS, read once: its keys differ ({@link #forKey}, {@link #chord(boolean)}). */
     static final boolean MAC = isMac(System.getProperty("os.name", ""));
@@ -371,6 +374,7 @@ enum Command {
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER -> "Order";
             case INFO, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES, THUMBNAIL_CAPTIONS -> "Panels";
             case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, OPEN_FOLDER, OPEN_RECENT, CLOSE, PALETTE -> "Mirada";
+            case DOCUMENTATION -> "Help";
         };
     }
 

@@ -75,7 +75,7 @@ final class MacMenus {
                             List.of(Command.NOTE, Command.FOLDER_NOTE),
                             List.of(Command.NEXT_BOOKMARK, Command.PREVIOUS_BOOKMARK, Command.GO_TO_BOOKMARK),
                             List.of(Command.BOOKMARKS))),
-            new Heading("Help", List.of(List.of(Command.PALETTE, Command.SHORTCUTS))));
+            new Heading("Help", List.of(List.of(Command.PALETTE, Command.DOCUMENTATION, Command.SHORTCUTS))));
 
     /** The commands that are a setting or a panel, shown with a tick when on. */
     static final Set<Command> TICKED = Set.of(

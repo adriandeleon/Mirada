@@ -129,12 +129,12 @@ a half minutes.
 **The native image ships** (2026-11-01), on Linux (x64, arm64), Windows and Apple silicon; Intel
 Macs keep the jlink image, which GraalVM 25.4 no longer builds for. StaticFX's licence was cleared
 for shipping. `-Pdist,native` builds it inside jpackage's app image (`scripts/native-app-image.sh`),
-so the installers are made exactly as before; AGENTS.md, "The native image (what ships)", has the
+so the installers are made exactly as before; [building-and-packaging.md](building-and-packaging.md#the-native-image-what-ships) has the
 how.
 
 Since this page's measurements, libjpeg-turbo, libwebp and the first image's head start have moved
 the native image's numbers again: 123 ms to a small JPEG, 160–177 ms to a 24-megapixel one, about
-220 ms to a 24-megapixel WebP (AGENTS.md, "Start-up, measured").
+220 ms to a 24-megapixel WebP ([building-and-packaging.md](building-and-packaging.md#start-up-measured)).
 
 What is still open:
 

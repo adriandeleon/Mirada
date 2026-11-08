@@ -8,7 +8,8 @@
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 [![JDK 25](https://img.shields.io/badge/JDK-25-orange.svg)](https://openjdk.org/projects/jdk/25/)
 [![JavaFX 27](https://img.shields.io/badge/JavaFX-27-blue.svg)](https://openjfx.io/)
-[![platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](#building-it)
+[![platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](#installing-it)
+[![docs](https://img.shields.io/badge/docs-mirada--project.dev-0e8577)](https://mirada-project.dev/docs/)
 [![Pauta](https://img.shields.io/badge/Pauta-4.0.1-0e8577)](https://pauta-project.dev/4.0.1/)
 
 Java 25 + JavaFX 27. Built to [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), edition [4.0.1](https://pauta-project.dev/4.0.1/).
@@ -28,10 +29,36 @@ started from its design.
 
 <sub>Photos: [Jebulon](https://commons.wikimedia.org/wiki/User:Jebulon), CC0, on Wikimedia Commons.</sub>
 
-**Status:** early; [0.1.0](https://github.com/adriandeleon/Mirada/releases/tag/v0.1.0) is the first release. JPEG, PNG, GIF, BMP, WebP, TIFF, PSD, HEIC, AVIF and JPEG XL,
-turned upright, animated where the file is. The native decoders (libjpeg-turbo, libwebp, libheif,
-libjxl) are built from source and bundled; the build downloads them. Crop, turn and flip, and save
-the result as a new file. See the [changelog](CHANGELOG.md).
+**The user guide is at [mirada-project.dev/docs](https://mirada-project.dev/docs/)**:
+[getting started](https://mirada-project.dev/docs/getting-started),
+[the keyboard](https://mirada-project.dev/docs/keyboard), [Settings](https://mirada-project.dev/docs/settings)
+and the [FAQ](https://mirada-project.dev/docs/faq). What changed in each release is in the
+[changelog](CHANGELOG.md).
+
+## Highlights
+
+- **Fast.** The packaged app shows the first image about an eighth of a second after launch, the
+  first image decoding while the window is still being built; the neighbours are decoded before you
+  step to them.
+- **Every common format, upright.** JPEG, PNG, GIF, BMP, WebP, TIFF, PSD, HEIC, AVIF and JPEG XL,
+  turned by their EXIF orientation, animated where the file is. The native decoders (libjpeg-turbo,
+  libwebp, libheif, libjxl) are built from source and bundled
+  ([formats](https://mirada-project.dev/docs/formats)).
+- **The folder is the document.** Natural name order, or by date or size; a thumbnail strip along
+  the bottom or down the side; Go to Image and Open Recent by name
+  ([the folder](https://mirada-project.dev/docs/the-folder)).
+- **Keyboard first, with a command palette.** Every command has a key and a name: Ctrl+Shift+P,
+  Alt+X or F1 finds and runs any of them, and Ctrl+? lists every key
+  ([the keyboard](https://mirada-project.dev/docs/keyboard)).
+- **Crop, turn and flip**, and save the result as a new file that keeps the photo's EXIF, colour
+  profile and XMP ([editing](https://mirada-project.dev/docs/editing)).
+- **Bookmarks and notes** on images and folders, kept by Mirada, never written into the file.
+- **Properties**: file, image and camera details in a sidebar
+  ([properties](https://mirada-project.dev/docs/properties)).
+- **Rename, Move to Trash, Copy, Show in Folder, a slideshow**, and full screen
+  ([files](https://mirada-project.dev/docs/files), [viewing](https://mirada-project.dev/docs/viewing)).
+- **Native on each platform**: a header bar on Linux, a menu bar and Finder's and Preview's keys on
+  macOS, the Recycle Bin and the system's accent colour on Windows.
 
 ## Installing it
 
@@ -54,42 +81,49 @@ checks every download.
 
 ## Using it
 
-Open a photo or a folder from the command line, with Ctrl+O, or by dropping it on the window.
-Drag to pan a zoomed image; the wheel zooms about the pointer. Move the pointer over the image for
-the full-screen, previous/next and zoom controls; the header's buttons rotate, open the properties
-sidebar and the main menu.
+Open a photo or a folder from the command line, with Ctrl+O, or by dropping it on the window; an
+empty window has Open Image and Open Folder buttons. Arrow keys step through the folder, the wheel
+zooms about the pointer, and dragging pans a zoomed image. On macOS, Cmd takes Ctrl's place.
 
-| Key | Does |
+Every key, and how to change the palette's, is on the website's
+[keyboard page](https://mirada-project.dev/docs/keyboard); in the app, **Help → Documentation**
+opens the guide, and Ctrl+? lists every key.
+
+## Command line
+
+```
+Usage: mirada [options] [file-or-folder]
+
+Opens an image with its folder behind it, or a folder at its first image.
+
+Options:
+  --config-dir <dir>  keep settings and bookmarks in <dir>
+  --dev               keep them in ~/.mirada-dev, apart from your own
+  --version           print the version, build, commit and Pauta edition, and exit
+  --help              print this, and exit
+  --                  what follows is a file, even if it starts with --
+
+MIRADA_CONFIG_DIR names the config folder too; an option wins over it.
+```
+
+## Config folder
+
+Mirada keeps two plain files, meant to be readable and mendable by hand:
+
+| Platform | Folder |
 |---|---|
-| Right, Page Down, Space | Next image |
-| Left, Page Up, Backspace, Shift+Space | Previous image |
-| Home / End | First / last image |
-| `+` / `-` | Zoom in / out |
-| `0` / `1` | Fit to window / actual size (double-click toggles them) |
-| Shift+arrows, Up / Down | Pan a zoomed image |
-| `Z` | Keep the zoom when stepping (compare one detail across shots) |
-| `R` / Shift+`R` | Rotate right / left |
-| `E` | Edit: crop, turn, flip, undo (Ctrl+Z); Enter saves a copy, with its EXIF and colour profile; Escape cancels |
-| F2 | Rename |
-| Delete | Move to the Trash |
-| F5 | Slideshow |
-| `F`, F11 | Full screen |
-| Escape | Leave full screen, or close |
-| `B` / Shift+`B` | Bookmark the image / its folder (again takes it off) |
-| `N` / Shift+`N` | A note of your own on the image / its folder, kept by Mirada, not in the file |
-| `]` / `[` | Next / previous bookmarked image in the folder |
-| Ctrl+B | Go to a bookmark or note, in any folder, by name or by the note's words |
-| `I` | Properties sidebar: file, image and camera details, bookmarks and notes |
-| `T` | Thumbnail strip |
-| Ctrl+Shift+P, Alt+X (M-x), F1 | Command palette: every command, by name. Its keys are yours to change in Settings |
-| Ctrl+, | Settings: theme, panels at start, sort order, slideshow speed |
-| Ctrl+? | Keyboard shortcuts |
-| F12 | About |
-| Ctrl+O | Open |
-| Ctrl+W, Ctrl+Q | Close |
+| Linux | `~/.mirada` |
+| macOS | `~/Library/Application Support/Mirada` |
+| Windows | `%APPDATA%\Mirada` |
 
-On macOS, Cmd takes Ctrl's place. The folder can be sorted by name, date or size from the context
-menu or the palette.
+- `settings.properties` — the theme, the panels at start, the folder's order, the slideshow's pace,
+  the palette's keys, the window's place and the recent folders. Every value is checked as it is
+  read, so a bad edit cannot stop Mirada starting.
+- `bookmarks.properties` — your bookmarks and notes, by path.
+
+A file that will not read is kept beside it as `<name>.corrupt.bak`, and Mirada starts with the
+defaults. `--config-dir`, `--dev` or `MIRADA_CONFIG_DIR` point Mirada at another folder, to try
+something without touching your own settings.
 
 ## Building it
 
@@ -106,12 +140,16 @@ the project's `codecs-N` release.
 ```
 
 Add `-Dskip.installers=false` to wrap it into this platform's installers, in `target/installers`.
+How the pieces fit together is in
+[docs/building-and-packaging.md](docs/building-and-packaging.md).
 
-The native app starts in about an eighth of a second, with the first image decoding while the
-window is still being built. The JVM app takes about a quarter: a jlink runtime with an AOT cache
-trained by stepping through every format.
+## Contributing
 
-The project notes for contributors, human or not, are in [AGENTS.md](AGENTS.md).
+[CONTRIBUTING.md](CONTRIBUTING.md) says how to build, test and open a pull request, and
+[docs/](docs/README.md) how Mirada is built: its architecture, conventions, tests and the things
+that will bite you. Coding agents start at [AGENTS.md](AGENTS.md). A bug report is easiest with
+**About → Copy details** pasted into the
+[bug report form](https://github.com/adriandeleon/Mirada/issues/new?template=bug_report.yml).
 
 ## Licence
 

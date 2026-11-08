@@ -74,7 +74,10 @@ final class AboutWindow {
         // The edition Mirada meets, its numbered page, never latest/ (ABOUT-05, ABOUT-06).
         Hyperlink pauta = new Hyperlink(pautaLink(AppInfo.PAUTA_EDITION));
         pauta.setOnAction(e -> openLink.accept(AppInfo.pautaUrl()));
-        VBox links = new VBox(0, homepage, pauta);
+        // This build's release notes, or the changelog for a snapshot (DOCS-05).
+        Hyperlink releaseNotes = new Hyperlink("Release notes");
+        releaseNotes.setOnAction(e -> openLink.accept(AppInfo.releaseNotesUrl()));
+        VBox links = new VBox(0, homepage, releaseNotes, pauta);
 
         // Version, build, commit and Pauta edition first, then the runtime, the OS and the settings
         // file: what a bug report needs, and what Copy details copies (ABOUT-02, ABOUT-03).

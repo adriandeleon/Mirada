@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The ratchet behind NullAway (AGENTS.md, "Null annotations"). NullAway checks only a package whose
+ * The ratchet behind NullAway (docs/conventions.md, "Null annotations"). NullAway checks only a package whose
  * {@code package-info.java} says {@code @NullMarked}; nothing else would stop a new package from
  * starting unchecked, or the pom from losing the plugin. Editora's test, without its list: every
  * package here was marked from the start.
