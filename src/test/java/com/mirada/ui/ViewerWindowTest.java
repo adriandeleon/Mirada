@@ -189,6 +189,70 @@ class ViewerWindowTest {
         }
     }
 
+    // ---- Where the window opens, and what is dropped on it ----
+
+    @Test
+    void theWindowOpensWhereItClosedMaximisedIfItWasAndOnScreenIfThatPlaceIsGone() throws Exception {
+        photos = WindowFixture.threeImages(dir.resolve("photos"));
+        try (WindowFixture window = WindowFixture.open(dir.resolve("moved"), photos, s -> {})) {
+            fx(() -> {
+                window.stage.setX(20);
+                window.stage.setY(30);
+                window.stage.setWidth(700);
+            });
+        }
+        com.mirada.settings.Settings saved = new com.mirada.settings.Settings(dir.resolve("moved/settings.properties"));
+        saved.load();
+        assertEquals(20, saved.window().x(), "its place is saved as it closes");
+        assertEquals(700, saved.window().width());
+
+        try (WindowFixture window = WindowFixture.open(
+                dir.resolve("maximised"),
+                photos,
+                s -> s.setWindow(new com.mirada.settings.Settings.WindowPlace(0, 0, 800, 600, true)))) {
+            assertTrue(call(window.stage::isMaximized), "maximised, as it closed");
+        }
+        try (WindowFixture window = WindowFixture.open(
+                dir.resolve("gone"),
+                photos,
+                s -> s.setWindow(new com.mirada.settings.Settings.WindowPlace(5000, 5000, 800, 600, false)))) {
+            // Left where the system puts a new window (the headless glass: nowhere in particular).
+            assertFalse(call(window.stage::getX) == 5000, "a place no longer on a screen is not used");
+        }
+    }
+
+    @Test
+    void aFileDroppedOnTheWindowOpensWithItsFolder() throws Exception {
+        try (WindowFixture window = open("a.png")) {
+            Path other = WindowFixture.png(dir.resolve("dropped"), "x.png", 10, 10, Color.CYAN);
+            javafx.scene.input.DragEvent dropped =
+                    call(() -> drag(javafx.scene.input.DragEvent.DRAG_DROPPED, List.of(other.toFile())));
+            fx(() -> window.stage.getScene().getOnDragDropped().handle(dropped));
+            window.waitForImage("x.png");
+        }
+    }
+
+    /** A drag carrying {@code files}, from outside the window. */
+    private static javafx.scene.input.DragEvent drag(
+            javafx.event.EventType<javafx.scene.input.DragEvent> type, List<File> files) throws Exception {
+        // A dragboard is the toolkit's to make; the tests run on the classpath, where its internals
+        // are reachable by reflection (the compile is modular, hence the names as strings).
+        Class<?> clipboard = Class.forName("com.sun.javafx.tk.TKClipboard");
+        Object toolkit = Class.forName("com.sun.javafx.tk.Toolkit")
+                .getMethod("getToolkit")
+                .invoke(null);
+        Object local = toolkit.getClass().getMethod("createLocalClipboard").invoke(toolkit);
+        java.lang.reflect.Constructor<javafx.scene.input.Dragboard> make =
+                javafx.scene.input.Dragboard.class.getDeclaredConstructor(clipboard);
+        make.setAccessible(true);
+        javafx.scene.input.Dragboard board = make.newInstance(local);
+        javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+        content.putFiles(files);
+        board.setContent(content);
+        return new javafx.scene.input.DragEvent(
+                type, board, 10, 10, 10, 10, javafx.scene.input.TransferMode.COPY, null, null, null);
+    }
+
     // ---- The image ----
 
     @Test
@@ -751,6 +815,11 @@ class ViewerWindowTest {
 
             window.press(KeyCode.ENTER);
             assertEquals("Nothing to save: crop, turn or flip first", window.lastSaid());
+            // S, Z and Y alone are not the editor's (Ctrl with them is); nor is Q at all.
+            int said = window.said().size();
+            for (KeyCode alone : List.of(KeyCode.S, KeyCode.Z, KeyCode.Y, KeyCode.Q)) window.press(alone);
+            assertEquals(said, window.said().size());
+            assertTrue(call(editor::isShowing));
             window.press(KeyCode.R);
             window.press(KeyCode.H);
             window.press(KeyCode.V);

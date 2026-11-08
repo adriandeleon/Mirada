@@ -440,9 +440,9 @@
                                  docs/testing.md quotes this table; BuildHygieneTest holds the two
                                  to each other. -->
                             <rules>
-                                <!-- The whole build. Branches measured 0.75, under Pauta's 0.79:
-                                     their floor starts three points down and rises with the
-                                     parsers' malformed-input tests (docs/testing.md). -->
+                                <!-- The whole build, at Pauta's floors (PLAT-12). Linux measured
+                                     lines 0.93, methods 0.93, branches 0.80; macOS and Windows,
+                                     without the trash tests, about half a point less. -->
                                 <rule>
                                     <element>BUNDLE</element>
                                     <limits>
@@ -459,7 +459,7 @@
                                         <limit>
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.72</minimum>
+                                            <minimum>0.79</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
@@ -473,7 +473,7 @@
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.94</minimum>
+                                            <minimum>0.95</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
@@ -486,7 +486,7 @@
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.91</minimum>
+                                            <minimum>0.93</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
@@ -499,7 +499,7 @@
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.90</minimum>
+                                            <minimum>0.92</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
@@ -512,7 +512,7 @@
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.85</minimum>
+                                            <minimum>0.86</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

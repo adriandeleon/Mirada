@@ -22,9 +22,10 @@ repository root.
 
 - Put a rule in a pure class and test it there; tag a test that starts JavaFX `@Tag("fx")`. A
   window is tested as a user drives it, through `WindowFixture` ([testing](docs/testing.md)).
-- `verify` fails when coverage falls under its floors: 0.90 of lines and methods overall, and a
-  floor for each large package ([the table](docs/testing.md#the-coverage-gate)). New code comes
-  with its tests; when a package's coverage rises, raise its floor in `pom.xml` and in that table.
+- `verify` fails when coverage falls under its floors: 0.90 of lines and methods and 0.79 of
+  branches overall, and a floor for each large package
+  ([the table](docs/testing.md#the-coverage-gate)). New code comes with its tests; when a package's
+  coverage rises, raise its floor in `pom.xml` and in that table.
 - Every package is `@NullMarked`; NullAway fails the build on a possible null. Never suppress it.
 - [AGENTS.md](AGENTS.md) has the commands for packaging, the codec bundle and start-up timing.
   [docs/](docs/README.md) explains the rest: [architecture](docs/architecture.md),

@@ -241,6 +241,26 @@ class ToolWindowsTest {
         fx(() -> filter.clear());
         fx(() -> messages.add("Renamed to c.png", MessageLog.Severity.INFO, LocalTime.NOON.plusSeconds(2)));
         assertEquals(3, call(() -> log.listed().size()));
+        // From the filter, Down and Return go into the list; there, the shortcut and C copies.
+        javafx.scene.control.ListView<?> list = FxTestSupport.field(log, "list");
+        fx(filter::requestFocus);
+        FxTestSupport.waitUntil("the filter's focus", filter::isFocused);
+        logKey(card, KeyCode.DOWN, false, false);
+        FxTestSupport.waitUntil("the list's focus", list::isFocused);
+        assertEquals(0, call(() -> list.getSelectionModel().getSelectedIndex()));
+        logKey(card, KeyCode.C, true, false);
+        assertEquals(Command.COPY_MESSAGES, ran.getLast());
+        logKey(card, KeyCode.C, true, true); // with Shift, not a copy
+        assertEquals(Command.COPY_MESSAGES, ran.getLast());
+        logKey(card, KeyCode.G, false, true); // Alt+G: not C-g
+        assertTrue(call(log::isShowing));
+        logKey(card, KeyCode.G, true, false); // C-g closes, as Escape does
+        assertFalse(call(log::isShowing));
+        fx(() -> log.show(0));
+        assertEquals(List.of(), call(() -> MessageLogView.matching(log.listed(), "no such words")));
+        logKey(card, KeyCode.ESCAPE, false, false);
+        assertFalse(call(log::isShowing));
+        fx(() -> log.show(0));
         Node backdrop = FxTestSupport.field(log, "backdrop");
         fx(() -> backdrop.fireEvent(new MouseEvent(
                 MouseEvent.MOUSE_PRESSED,
@@ -289,6 +309,18 @@ class ToolWindowsTest {
         assertEquals(List.of(photo.getParent()), folders);
         fx(() -> panel.show(details, new InfoPanel.Marks(false, "", true, "")));
         fx(() -> panel.show(null, InfoPanel.Marks.NONE));
+    }
+
+    private static void logKey(Parent card, KeyCode code, boolean shortcut, boolean alt) throws Exception {
+        fx(() -> {
+            Node target = card.getScene() != null && card.getScene().getFocusOwner() != null
+                    ? card.getScene().getFocusOwner()
+                    : card;
+            boolean mac = Command.MAC;
+            Event.fireEvent(
+                    target,
+                    new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, shortcut && !mac, alt, shortcut && mac));
+        });
     }
 
     private static void collect(Node node, List<String> found) {

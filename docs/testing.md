@@ -35,20 +35,22 @@ table and the pom disagree, so change both together.
 |---|---|---|
 | Bundle | LINE | 0.90 |
 | Bundle | METHOD | 0.90 |
-| Bundle | BRANCH | 0.72 |
-| `com.mirada.edit` | LINE | 0.94 |
-| `com.mirada.ui` | LINE | 0.91 |
-| `com.mirada.settings` | LINE | 0.90 |
-| `com.mirada.image` | LINE | 0.85 |
+| Bundle | BRANCH | 0.79 |
+| `com.mirada.edit` | LINE | 0.95 |
+| `com.mirada.ui` | LINE | 0.93 |
+| `com.mirada.settings` | LINE | 0.92 |
+| `com.mirada.image` | LINE | 0.86 |
 | `com.mirada.os` | LINE | 0.35 |
 
-- **A floor is a regression net, not a target.** Each package of 300 lines or more has one about
-  three points under what Linux measured (2026-11-08: lines 0.92, methods 0.93, branches 0.76; edit
-  0.97, ui 0.96, settings 0.93, image 0.88, os 0.39). macOS and Windows skip the Linux-only trash
-  tests and measure about a point less. When a package's coverage rises, raise its floor.
-- **Branches start under Pauta's 0.79.** Most of the missing ones are the file parsers' defences
-  against malformed input (`Containers`, `IccProfile`, `ExifBlock`, `Xmp`) and the window's rarer
-  paths. Raise the floor as those get tests.
+- **A floor is a regression net, not a target.** The whole build is held to Pauta's 0.90 of lines
+  and methods and 0.79 of branches; each package of 300 lines or more has a floor about three
+  points under what Linux measured (2026-11-08: lines 0.93, methods 0.93, branches 0.80; edit 0.98,
+  ui 0.96, settings 0.95, image 0.89, os 0.39). macOS and Windows skip the Linux-only trash tests and
+  measure about half a point less (branches 0.796 without them). When a package's coverage rises,
+  raise its floor.
+- **Branches are the tightest.** Many of them are defences against damaged files, which
+  `DamagedFilesTest` and `DamagedImagesTest` reach by cutting and overwriting real fixtures; a new
+  parser or decoder path wants the same.
 - **`os` is low on purpose.** Most of it is macOS's and Windows' glue (the Objective-C bridge for
   Finder's open-files event, the application menu, the Recycle Bin through FFM, `gio trash`), which
   CI's smoke tests of the packaged app exercise, not a unit test on Linux.
@@ -89,6 +91,12 @@ table and the pom disagree, so change both together.
 - **Everything that grows is bounded** (PERF-11): `ImageCacheTest`, `ThumbnailsTest`,
   `TrashUndoTest`, `HistoryTest`, `MessageLogTest`, `DebugLogTest` fill each past its cap and find
   the oldest dropped.
+- **Every command, in every state** (QUAL-11, QUAL-08): `CommandSweepTest` runs the whole registry
+  in an empty window, on an image, turned and zoomed, in the editor and full screen, and finds
+  Mirada's real settings folders and the desktop's trash untouched afterwards.
+- **Damaged files**: `DamagedFilesTest` cuts short and overwrites the fixtures of every container
+  the EXIF, profile and XMP readers walk; `DamagedImagesTest` gives every decoder the format matrix
+  cut short. Each must read the file or refuse it with an IOException, nothing else.
 - **The build itself**: `NoticeCoverageTest` (every dependency that ships is named in NOTICE),
   `BuildHygieneTest` (LICENSE and NOTICE are packaged, the coverage gate is wired and quoted here
   right, FX tests are tagged), `ReleaseSupplyChainTest`.

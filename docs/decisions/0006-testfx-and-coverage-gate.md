@@ -27,12 +27,14 @@ almost none of the window's.
 
 ## Consequences
 
-- `./mvnw verify` runs about 490 tests in 15 seconds on this machine, and fails when coverage falls.
+- `./mvnw verify` runs about 500 tests in 15 seconds on this machine, and fails when coverage falls.
 - Writing the window tests found three bugs, fixed with them: the tool windows outlived the viewer
   and kept the app running; a closed window's decoder, preview and thumbnail threads (the Bookmarks
   window's too) were never stopped; and the Bookmarks and Notes window threw for a folder marked
   with no image marked in it.
-- Branch coverage measured 0.75, under Pauta's 0.79; its floor starts at 0.72 and rises as the file
-  parsers (`Containers`, `IccProfile`, `ExifBlock`, `Xmp`) get malformed-input tests.
+- Branches were the hardest of the three to raise: many are defences against damaged files, reached
+  by cutting short and overwriting real fixtures (`DamagedFilesTest`, `DamagedImagesTest`) rather
+  than one test per branch. Linux measures 0.80 against the 0.79 floor, the other platforms about
+  half a point less, so a branch-heavy change without tests can fail the gate there first.
 - A test of the window must not reach the desktop: surefire puts Linux's trash under `target/`
   (`XDG_DATA_HOME`) and unsets the display and the session bus; Show in Folder is not driven.

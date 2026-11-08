@@ -271,6 +271,38 @@ class BookmarksWindowTest {
     }
 
     @Test
+    void theOtherKeysOfTheListDoWhatTheHintSays() throws Exception {
+        press(KeyCode.NUMPAD3, true);
+        assertEquals("1 image", count(), "the keypad's 3: notes");
+        press(KeyCode.NUMPAD2, true);
+        press(KeyCode.NUMPAD1, true);
+        assertEquals("3 images, 1 folder", count());
+        press(KeyCode.DIGIT9, true); // no kind of its own
+        press(KeyCode.L, true);
+        assertTrue(call(() -> filter().isFocused()) || call(stage::isShowing));
+        // Return on a file that has gone does nothing; Delete while filtering edits the filter.
+        fx(() -> filter().setText("gone"));
+        press(KeyCode.DOWN);
+        assertEquals("gone.png", selectedName());
+        press(KeyCode.ENTER);
+        assertEquals(List.of(), opened, "a missing file is not opened");
+        press(KeyCode.DELETE);
+        assertTrue(bookmarks.isBookmarked(dir.resolve("gone.png").toAbsolutePath()), "Delete edited the filter");
+        // Ctrl+E edits the note too; cancelled, nothing changes.
+        WindowFixture.answerNextDialog(pane -> WindowFixture.press(pane, "Cancel"));
+        press(KeyCode.E, true);
+        assertEquals("", bookmarks.note(dir.resolve("gone.png").toAbsolutePath()));
+        // With nothing listed, the keys have nothing to act on.
+        fx(() -> filter().setText("nothing like this at all"));
+        for (KeyCode code : List.of(KeyCode.DOWN, KeyCode.UP, KeyCode.ENTER, KeyCode.F2)) press(code);
+        press(KeyCode.B, true);
+        press(REMOVE, true);
+        assertEquals("0 images", count());
+        press(KeyCode.Q); // not the list's
+        assertTrue(call(stage::isShowing));
+    }
+
+    @Test
     void anEmptyListSaysHowToMarkSomething() throws Exception {
         fx(() -> {
             for (Bookmarks.Mark mark : bookmarks.all()) bookmarks.remove(mark.path());

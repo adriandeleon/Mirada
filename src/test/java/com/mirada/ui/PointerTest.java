@@ -223,6 +223,51 @@ class PointerTest {
         assertEquals(0.0, call(viewport::contentWidth));
     }
 
+    @Test
+    void aPreviewStandsInAtTheFullSizeAndATurnedOrMirroredImageIsLaidOutTurned() throws Exception {
+        ImageViewport viewport = shown(new ImageViewport());
+        javafx.scene.Node view = FxTestSupport.field(viewport, "view");
+        fx(() -> {
+            viewport.show(new WritableImage(100, 75), Orientation.MIRROR, 800, 600);
+            viewport.layout();
+        });
+        assertEquals(800.0, call(viewport::contentWidth), "the preview is laid out at the full image's size");
+        assertEquals(-1.0, call(view::getScaleX), "mirrored");
+        fx(() -> {
+            viewport.replace(new WritableImage(800, 600));
+            viewport.layout();
+        });
+        assertEquals(800.0, call(viewport::contentWidth));
+        // An orientation that turns it: laid out sideways, so the content is the turned size.
+        fx(() -> {
+            viewport.show(new WritableImage(800, 600), Orientation.TRANSVERSE);
+            viewport.layout();
+        });
+        assertEquals(600.0, call(viewport::contentWidth));
+        fx(() -> viewport.pan(0.1, 0.1)); // fitted: nothing to pan
+        // Kept, the zoom carries to the next image.
+        fx(() -> {
+            viewport.setKeepZoom(true);
+            viewport.actualSize();
+            viewport.zoomIn();
+            viewport.zoomIn();
+            viewport.layout();
+        });
+        double scale = call(() -> viewport.scaleProperty().get());
+        fx(() -> {
+            viewport.show(new WritableImage(640, 480), Orientation.NORMAL);
+            viewport.layout();
+        });
+        assertEquals(scale, call(() -> viewport.scaleProperty().get()), "the zoom kept across the step");
+        javafx.scene.image.ImageView picture = (javafx.scene.image.ImageView) view;
+        assertFalse(call(picture::isSmooth) && scale >= Zoom.CRISP_FROM, "crisp pixels when zoomed in far");
+        fx(() -> {
+            viewport.clear();
+            viewport.layout();
+        });
+        assertEquals(0.0, call(viewport::contentWidth));
+    }
+
     // ---- The crop ----
 
     @Test

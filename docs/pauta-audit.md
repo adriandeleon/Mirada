@@ -10,8 +10,8 @@ never because Mirada lacks a part another rule requires.
 
 |        | Pass | Fail | Manual | N.a. |
 |--------|-----:|-----:|-------:|-----:|
-| MUST   | 93 | 45 | 4 | 20 |
-| SHOULD | 50 | 57 | 15 | 58 |
+| MUST   | 94 | 44 | 4 | 20 |
+| SHOULD | 52 | 55 | 15 | 58 |
 | MAY    | 1 | 2 | 0 | 6 |
 
 A failed MUST blocks a release.
@@ -22,7 +22,6 @@ A failed MUST blocks a release.
 |----|-------|--------|----------|
 | [PLAT-01](https://pauta-project.dev/4.0.1/platform/#plat-01) | MUST | fail | `pom.xml:202`: release 25, but the enforcer's range is [25,26), a ceiling (the formatter broke on 27) |
 | [PLAT-06](https://pauta-project.dev/4.0.1/platform/#plat-06) | MUST | fail | `src/main/resources/com/mirada/styles/mirada.css:50`: fixed hexes in component rules (:50, :161, :490, :531, :535) |
-| [PLAT-12](https://pauta-project.dev/4.0.1/platform/#plat-12) | MUST | fail | `pom.xml`: jacoco-check at verify, BUNDLE LINE 0.90 and METHOD 0.90 met (Linux 0.92/0.93), package floors; but BRANCH floor 0.72 (measured 0.757), under 0.79: the parsers' malformed-input branches (Containers, IccProfile, ExifBlock, Xmp) and ViewerWindow's rarer paths remain (docs/testing.md#the-coverage-gate) |
 | [DOCS-01](https://pauta-project.dev/4.0.1/documentation/#docs-01) | MUST | fail | mirada-website/src/content/docs has getting started, features, keyboard, settings, FAQ, but no screenshots in the pages |
 | [DOCS-05](https://pauta-project.dev/4.0.1/documentation/#docs-05) | MUST | fail | `src/main/java/com/mirada/ui/AboutWindow.java:79`: About opens `AppInfo.releaseNotesUrl()` (the GitHub release, the changelog for a snapshot; Mirada has no Welcome page); but mirada-website does not generate its What's new from CHANGELOG.md (its scripts/ has GenCommands only) |
 | [QUAL-12](https://pauta-project.dev/4.0.1/quality/#qual-12) | MUST | fail | no message catalogs, so no parity test (descriptions are checked: CommandTest:189) |
@@ -64,7 +63,7 @@ A failed MUST blocks a release.
 | [INTL-01](https://pauta-project.dev/4.0.1/i18n/#intl-01) | MUST | fail | no messages*.properties; every string is an English literal |
 | [INTL-08](https://pauta-project.dev/4.0.1/i18n/#intl-08) | MUST | fail | no catalogs, no parity test |
 | [PAL-02](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-02) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:337`: inPalette() leaves out Escape, Command Palette and the four Pan commands |
-| [REL-19](https://pauta-project.dev/4.0.1/release/#rel-19) | MUST | fail | `.github/workflows/ci.yml:15`: push to main and every pull request; Format (`spotless:check`) and Build & Test (`./mvnw verify`, now with the JaCoCo gate) are separate jobs. Missing: the two checks are not required on main yet (branch protection, a repository setting the owner turns on), and the gate's branch floor is under PLAT-12's 0.79 |
+| [REL-19](https://pauta-project.dev/4.0.1/release/#rel-19) | MUST | fail | `.github/workflows/ci.yml:15`: push to main and every pull request; Format (`spotless:check`) and Build & Test (`./mvnw verify`, the JaCoCo gate included) are separate jobs. Missing: the two checks are not required on main yet (branch protection, a repository setting the owner turns on) |
 
 ## Other failures
 
@@ -77,8 +76,6 @@ A failed MUST blocks a release.
 | [DOCS-10](https://pauta-project.dev/4.0.1/documentation/#docs-10) | MAY | fail | no per-command docs |
 | [DOCS-11](https://pauta-project.dev/4.0.1/documentation/#docs-11) | MAY | fail | no Help-for-page links in Settings |
 | [DOCS-15](https://pauta-project.dev/4.0.1/documentation/#docs-15) | SHOULD | fail | no stacked Javadoc today, but no test guards it |
-| [QUAL-08](https://pauta-project.dev/4.0.1/quality/#qual-08) | SHOULD | fail | tests use @TempDir, but nothing checks the home folder stays untouched |
-| [QUAL-11](https://pauta-project.dev/4.0.1/quality/#qual-11) | SHOULD | fail | no command sweep |
 | [QUAL-14](https://pauta-project.dev/4.0.1/quality/#qual-14) | SHOULD | fail | `src/test/java/com/mirada/ui/AccentTest.java:36`: contrast for the accent only, not the stylesheet's tokens |
 | [PERF-04](https://pauta-project.dev/4.0.1/performance/#perf-04) | SHOULD | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:92`: details and EXIF virtual-thread executors are unnamed |
 | [PERF-16](https://pauta-project.dev/4.0.1/performance/#perf-16) | SHOULD | fail | `src/main/java/com/mirada/App.java:55`: settings read on the FX thread in start() |
@@ -166,6 +163,7 @@ A failed MUST blocks a release.
 | [PLAT-09](https://pauta-project.dev/4.0.1/platform/#plat-09) | MUST | pass | `pom.xml:261`: -Xep:NullAway:ERROR; @NullMarked everywhere (NullMarkedPackagesTest) |
 | [PLAT-10](https://pauta-project.dev/4.0.1/platform/#plat-10) | MUST | pass | `pom.xml:217`: palantirJavaFormat; spotless check bound to verify |
 | [PLAT-11](https://pauta-project.dev/4.0.1/platform/#plat-11) | MUST | pass | `pom.xml:325`: surefire sets glass.platform Headless; TestFX 4.0.18 (test scope) starts the toolkit (`src/test/java/com/mirada/ui/FxTestSupport.java:40`), every FX test `@Tag("fx")` (`BuildHygieneTest.everyTestThatStartsTheToolkitIsTaggedFx`); no Monocle; no Maven run under xvfb (xvfb stays only for the packaged GTK app's smoke test, ci.yml:217) |
+| [PLAT-12](https://pauta-project.dev/4.0.1/platform/#plat-12) | MUST | pass | `pom.xml` jacoco-check at verify: BUNDLE LINE 0.90, METHOD 0.90, BRANCH 0.79 (Linux measures 0.93, 0.93, 0.80; without the Linux-only trash tests 0.92, 0.92, 0.796), and a LINE floor per large package; com.mirada.perf (timing and AOT-training launches only) not measured |
 | [PLAT-13](https://pauta-project.dev/4.0.1/platform/#plat-13) | SHOULD | pass | `src/main/java/com/mirada/diagnostics/DebugLog.java:114`: a handler on the root JUL logger; the code logs through java.util.logging only (System.out is the CLI and the perf trace) |
 | [REPO-01](https://pauta-project.dev/4.0.1/repository/#repo-01) | MUST | pass | `README.md:1`: 156 lines: logo, badges, pitch, hero, highlights, install, command line, config folder, build, licence; the rest links into mirada-project.dev/docs |
 | [REPO-02](https://pauta-project.dev/4.0.1/repository/#repo-02) | MUST | pass | `CHANGELOG.md:3`: Keep a Changelog 1.1 and SemVer, "## [Unreleased]" with Added/Changed/Fixed, bold-led entries |
@@ -190,12 +188,14 @@ A failed MUST blocks a release.
 | [DOCS-19](https://pauta-project.dev/4.0.1/documentation/#docs-19) | MUST | pass | `README.md:32`: links into mirada-project.dev/docs (getting started, keyboard, Settings, FAQ, a page per area); no key table or feature catalog |
 | [QUAL-01](https://pauta-project.dev/4.0.1/quality/#qual-01) | MUST | pass | `pom.xml:261`: NullAway an error; NullMarkedPackagesTest |
 | [QUAL-02](https://pauta-project.dev/4.0.1/quality/#qual-02) | SHOULD | pass | no @SuppressWarnings("NullAway") in src/main |
-| [QUAL-03](https://pauta-project.dev/4.0.1/quality/#qual-03) | SHOULD | pass | `pom.xml` jacoco-check: a PACKAGE LINE floor for each package of 300+ lines (edit 0.94, ui 0.91, settings 0.90, image 0.85, os 0.35), about three under measured |
-| [QUAL-04](https://pauta-project.dev/4.0.1/quality/#qual-04) | SHOULD | pass | `docs/testing.md#the-coverage-gate` quotes the floors; `BuildHygieneTest.theCoverageFloorsQuotedInTheTestingGuideAreTheOnesTheBuildEnforces` compares them with the pom |
+| [QUAL-03](https://pauta-project.dev/4.0.1/quality/#qual-03) | SHOULD | pass | `pom.xml` jacoco-check: a PACKAGE LINE floor for each package of 300+ lines (edit 0.95, ui 0.93, settings 0.92, image 0.86, os 0.35), about three under measured |
+| [QUAL-04](https://pauta-project.dev/4.0.1/quality/#qual-04) | SHOULD | pass | `docs/testing.md#the-coverage-gate` quotes the floors; `BuildHygieneTest.theCoverageFloorsQuotedInTheTestingGuideAreTheOnesTheBuildEnforces` compares them with the pom (seen failing with one floor changed in the table) |
 | [QUAL-05](https://pauta-project.dev/4.0.1/quality/#qual-05) | MUST | pass | pure rules with plain tests: Zoom, FolderImages, NaturalOrder, Renaming, BookmarkList, Command.unavailable (CommandTest:229) |
 | [QUAL-06](https://pauta-project.dev/4.0.1/quality/#qual-06) | MUST | pass | `src/test/java/com/mirada/BuildHygieneTest.java`: everyTestThatStartsTheToolkitIsTaggedFx holds @Tag("fx") on every test that boots the toolkit |
 | [QUAL-07](https://pauta-project.dev/4.0.1/quality/#qual-07) | SHOULD | pass | Thread.sleep only in HeadlessDriver, not a test surefire runs |
+| [QUAL-08](https://pauta-project.dev/4.0.1/quality/#qual-08) | SHOULD | pass | `src/test/java/com/mirada/ui/CommandSweepTest.java`: after every command in every state, Mirada's real settings folders and the desktop's trash are as they were; surefire points the trash at target/ and unsets the display and session bus |
 | [QUAL-09](https://pauta-project.dev/4.0.1/quality/#qual-09) | MUST | pass | `scripts/headless-run.sh`: with HeadlessDriver: the real window, robot keys and clicks |
+| [QUAL-11](https://pauta-project.dev/4.0.1/quality/#qual-11) | SHOULD | pass | `src/test/java/com/mirada/ui/CommandSweepTest.java`: every command of the registry run (or found unavailable, with its reason) in an empty window, on an image, turned and zoomed, in the editor and full screen; the context menu greys the same |
 | [QUAL-13](https://pauta-project.dev/4.0.1/quality/#qual-13) | SHOULD | pass | `src/test/java/com/mirada/ui/SettingsWindowTest.java`: everyControlSetInTheWindowSurvivesARestart sets every control, reloads the settings and reads each back in a new window |
 | [QUAL-15](https://pauta-project.dev/4.0.1/quality/#qual-15) | SHOULD | pass | `src/test/java/com/mirada/ReleaseSupplyChainTest.java:259`: fails when a signing, notarization or attestation step moves or goes, or a tag could publish without its secrets |
 | [PERF-02](https://pauta-project.dev/4.0.1/performance/#perf-02) | MUST | pass | `src/main/java/com/mirada/ui/ViewerWindow.java:463`: background results return through Platform.runLater |
