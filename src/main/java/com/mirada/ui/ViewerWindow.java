@@ -104,8 +104,8 @@ public final class ViewerWindow {
 
     private final Stage stage;
     private final ImageViewport viewport = new ImageViewport();
-    private final Label placeholder =
-            new Label("Open an image with " + Command.OPEN.chord().getDisplayText() + ", or drop one here");
+    /** Says how to open an image, or why the one asked for is not showing; its first words wait for {@link #offerToOpen}. */
+    private final Label placeholder = new Label();
     /** The placeholder, with Open Image and Open Folder under it while no folder is open. */
     private final VBox emptyState = new VBox(placeholder);
     /** Those two buttons, built the first time the window has no folder to show. */
@@ -289,14 +289,9 @@ public final class ViewerWindow {
             OnScreenControls built = controls;
             if (built != null) built.setIdle(settings.controlsHideSeconds());
         });
-        PaletteChords.use(settings.paletteKeys());
-        settings.addListener(() -> {
-            if (!PaletteChords.use(settings.paletteKeys())) return;
-            MenuBar bar = macMenus;
-            if (bar != null) MacMenus.refreshAccelerators(bar);
-            ShortcutsWindow shortcuts = shortcutsWindow;
-            if (shortcuts != null) shortcuts.refresh();
-        });
+        // Nothing is read here: the keymap is parsed when a key is first pressed or a chord first shown.
+        Keybindings.use(settings.keymap(), settings.keys(), settings.paletteKeys());
+        settings.addListener(this::followKeys);
         viewport.fittedProperty().addListener((o, was, now) -> updateControls());
 
         root = new BorderPane(canvas);
@@ -394,6 +389,18 @@ public final class ViewerWindow {
         String appMenu = MacAppMenu.install(
                 Command.ABOUT.label(), () -> run(Command.ABOUT), "Settings…", () -> run(Command.SETTINGS));
         if (Startup.enabled()) System.out.println("[perf] application menu: " + appMenu);
+    }
+
+    /** Follows the settings' keys: the keymap, the user's, the palette's; what shows them reads them again. */
+    private void followKeys() {
+        if (!Keybindings.use(settings.keymap(), settings.keys(), settings.paletteKeys())) return;
+        palette.refreshKeys();
+        BookmarksWindow marks = bookmarksWindow;
+        if (marks != null) marks.refreshKeys();
+        MenuBar bar = macMenus;
+        if (bar != null) MacMenus.refreshAccelerators(bar);
+        ShortcutsWindow shortcuts = shortcutsWindow;
+        if (shortcuts != null) shortcuts.refresh();
     }
 
     private void afterFirstPaint(Runnable task) {
@@ -738,26 +745,11 @@ public final class ViewerWindow {
     }
 
     private void onKey(KeyEvent e) {
-        // The editor's keys are its own while it is open; the viewer's wait.
-        Editor open = editor;
-        if (open != null && open.isShowing()) {
-            if (open.onKey(e)) e.consume();
-            return;
-        }
         // The Message Log's keys are its own while it is open: Escape closes it, not the window.
         MessageLogView log = messageLog;
         if (log != null && log.isShowing()) return;
-        // The palette's keys are the user's, and win over a key's built-in command.
+        // The palette's keys are the user's, and win over every other key, the editor's too.
         boolean paletteKey = PaletteChords.opens(e);
-        Command command = paletteKey
-                ? Command.PALETTE
-                : Command.forKey(
-                        e.getCode(),
-                        e.isShiftDown(),
-                        e.isShortcutDown(),
-                        e.isControlDown(),
-                        Command.MAC,
-                        Command.vertical());
         // While the palette is up, keys are its own (typing "r" must not rotate the image); only its
         // chord reaches here, to close it again — unless the palette moves by that key (C-p).
         if (palette.isShowing()) {
@@ -767,9 +759,27 @@ public final class ViewerWindow {
             }
             return;
         }
-        if (command == null) return;
-        run(command);
-        e.consume();
+        if (paletteKey) {
+            run(Command.PALETTE);
+            e.consume();
+            return;
+        }
+        // The editor's keys are its own while it is open; the viewer's wait.
+        Editor open = editor;
+        boolean editing = open != null && open.isShowing();
+        Command command = Keybindings.current().commandFor(context(), e);
+        if (command != null) {
+            run(command);
+            e.consume();
+        } else if (open != null && editing && open.onKey(e)) {
+            e.consume();
+        }
+    }
+
+    /** Where the keys go now: the editor's tools while it is open, else the viewer's. */
+    private Command.Context context() {
+        Editor open = editor;
+        return open != null && open.isShowing() ? Command.Context.EDITOR : Command.Context.VIEWER;
     }
 
     private void run(Command command) {
@@ -805,7 +815,7 @@ public final class ViewerWindow {
             case CLOSE -> {
                 if (mayClose()) stage.close();
             }
-            case PALETTE -> palette.show(Command.inPalette(), this::unavailable);
+            case PALETTE -> palette.show(Command.inPalette(context()), this::unavailable);
             case GO_TO_IMAGE -> goToImage();
             case OPEN_RECENT -> openRecent();
             case INFO -> infoShowing.set(!infoShowing.get());
@@ -876,6 +886,31 @@ public final class ViewerWindow {
                 String page = updates.releasePage();
                 if (page != null) openLink.accept(page);
             }
+            case COPY_DETAILS ->
+                copyText(AppInfo.environment(AppInfo.runtime(), settings.file()), "Copied the details");
+            case EDITOR_ROTATE_LEFT,
+                    EDITOR_ROTATE_RIGHT,
+                    EDITOR_FLIP_HORIZONTALLY,
+                    EDITOR_FLIP_VERTICALLY,
+                    EDITOR_NEXT_SHAPE,
+                    EDITOR_RESET,
+                    EDITOR_UNDO,
+                    EDITOR_REDO,
+                    EDITOR_SAVE,
+                    EDITOR_CANCEL -> {
+                if (open != null && open.isShowing()) open.run(command);
+            }
+            case BOOKMARKS_OPEN,
+                    BOOKMARKS_EDIT_NOTE,
+                    BOOKMARKS_TOGGLE,
+                    BOOKMARKS_SHOW_IN_FOLDER,
+                    BOOKMARKS_REMOVE,
+                    BOOKMARKS_LIST_ALL,
+                    BOOKMARKS_LIST_BOOKMARKED,
+                    BOOKMARKS_LIST_NOTES -> {
+                BookmarksWindow window = bookmarksWindow;
+                if (window != null && window.isShowing()) window.run(command);
+            }
         }
     }
 
@@ -885,10 +920,13 @@ public final class ViewerWindow {
         return open == null || open.mayDiscard();
     }
 
-    /** The commands that leave the image alone, so they can run while the editor is open. */
+    /** The commands that leave the image alone, so they can run while the editor is open: its own too. */
     private static boolean duringEdit(Command command) {
+        if (command.context() != Command.Context.VIEWER) return true;
         return switch (command) {
-            case FULL_SCREEN,
+            case PALETTE,
+                    COPY_DETAILS,
+                    FULL_SCREEN,
                     INFO,
                     THUMBNAILS,
                     SETTINGS,
@@ -1415,7 +1453,8 @@ public final class ViewerWindow {
     private BookmarksWindow bookmarksWindow() {
         BookmarksWindow made = bookmarksWindow;
         if (made == null) {
-            made = new BookmarksWindow(bookmarks, this::openFromBookmarks, this::reveal, stylesheet());
+            made = new BookmarksWindow(
+                    bookmarks, this::openFromBookmarks, this::reveal, this::run, this::unavailable, stylesheet());
             bookmarksWindow = made;
         }
         return made;
@@ -1458,14 +1497,31 @@ public final class ViewerWindow {
     private AboutWindow aboutWindow() {
         AboutWindow made = about;
         if (made == null) {
-            made = new AboutWindow(settings.file(), openLink, updates, stylesheet());
+            made = new AboutWindow(settings.file(), openLink, updates, () -> run(Command.COPY_DETAILS), stylesheet());
             about = made;
         }
         return made;
     }
 
-    /** Why {@code command} cannot run right now, or null when it can. */
+    /**
+     * Why {@code command} cannot run right now, or null when it can: the palette greys it with this
+     * as its reason, the menus disable it. The editor's tools need the editor, the Bookmarks
+     * window's row actions that window; while the editor is open, what would change the image
+     * under it waits.
+     */
     private @Nullable String unavailable(Command command) {
+        Editor open = editor;
+        boolean editing = open != null && open.isShowing();
+        if (command.context() == Command.Context.EDITOR) {
+            return open != null && editing ? open.unavailable(command) : "The editor is not open.";
+        }
+        if (command.context() == Command.Context.BOOKMARKS) {
+            BookmarksWindow window = bookmarksWindow;
+            return window != null && window.isShowing()
+                    ? window.unavailable(command)
+                    : "The Bookmarks and Notes window is not open.";
+        }
+        if (editing && !duringEdit(command)) return "Finish editing first: Save or Cancel.";
         if (command == Command.OPEN_RECENT && settings.recent().isEmpty()) return "No folder has been opened yet.";
         if (command == Command.GO_TO_BOOKMARK && bookmarks.all().isEmpty())
             return "Nothing is bookmarked or noted yet.";
@@ -1516,6 +1572,8 @@ public final class ViewerWindow {
             if (buttons != null) buttons.setVisible(false);
             return;
         }
+        if (placeholder.getText().isEmpty())
+            placeholder.setText("Open an image with " + Command.OPEN.chord().getDisplayText() + ", or drop one here");
         if (buttons == null) {
             buttons = new HBox(openButton(Command.OPEN), openButton(Command.OPEN_FOLDER));
             buttons.getStyleClass().add("open-buttons");

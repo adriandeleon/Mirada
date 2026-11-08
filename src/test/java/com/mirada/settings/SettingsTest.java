@@ -158,6 +158,25 @@ class SettingsTest {
         assertEquals("C-S-p M-x", Settings.paletteKeysOf(" C-S-p , M-x", false));
     }
 
+    /** The keymap and the user's keys over it (KBD-11): hand-edited, kept through every write. */
+    @Test
+    void theKeymapAndTheUsersKeysAreKept(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("settings.properties");
+        Files.writeString(file, "keymap=Emacs\nkeys.go.next=n,  space\nkeys.view.zoomIn=\nkeys.=x\n");
+        Settings settings = new Settings(file);
+        settings.load();
+        assertEquals("emacs", settings.keymap());
+        assertEquals(java.util.Map.of("go.next", "n space", "view.zoomIn", ""), settings.keys());
+        settings.setKeepZoom(true); // any change writes the file
+        Settings again = new Settings(file);
+        again.load();
+        assertEquals("emacs", again.keymap());
+        assertEquals(settings.keys(), again.keys());
+        again.setKeymap(" ");
+        assertEquals(Settings.DEFAULT_KEYMAP, again.keymap());
+        assertEquals(Settings.DEFAULT_KEYMAP, new Settings(dir.resolve("none")).keymap());
+    }
+
     @Test
     void eachPlatformKeepsTheSettingsInItsOwnFolder() {
         assertEquals(Path.of("/home/a/.mirada"), Settings.folder(null, "/home/a", "Linux", null));

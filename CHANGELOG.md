@@ -10,6 +10,16 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Added
 
+- **Keymaps: Mirada's own keys or Emacs's, and your own on top.** Settings › Keys › Keymap picks
+  one; in Emacs's, N and P step, M-< and M-> go to the first and last image, C-f, C-b, C-n and C-p
+  pan, M-w copies and C-g leaves. Any command can be given keys of your own with
+  `keys.<command id>` in the settings file (`keys.go.next=n space`; blank takes its keys away), and
+  they win over the keymap's. Every command now has an id, such as `go.next` or `editor.save`.
+- **The editor's tools and the Bookmarks and Notes window's actions are in the command palette.**
+  The palette's keys open it while the editor is up, its tools listed first; the Bookmarks window has
+  a palette of its own, for Open, Edit Note, Bookmark, Show in Folder, Remove and the three lists.
+  **Copy Details**, About's button, is a command too. The palette now lists every command, Escape
+  and the Pan commands included, greyed with the reason where one cannot run.
 - **Help → Documentation opens the user guide** at
   [mirada-project.dev/docs](https://mirada-project.dev/docs/) in your browser: in the palette, in the
   header's menu and the Mac's Help menu right after Command Palette, and as a link in an empty
@@ -72,6 +82,10 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Changed
 
+- **Keyboard Shortcuts lists each command's first few keys** (Right, Page Down, Space for Next
+  Image), from the keymap in use, in place of a paragraph of the second ways. A key with Shift no
+  longer does what it does without (Shift+F was full screen, Alt+Right the next image), except
+  where Shift is part of the key: Shift+Space still steps back.
 - **Leaving the editor with an edit not yet saved asks first**: Cancel, Escape, Close Window and the
   window's close button offer Discard or Cancel. Saving under a name that only the added extension
   makes into an existing file asks before replacing it.

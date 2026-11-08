@@ -149,6 +149,25 @@ final class SettingsWindow {
             if (now != null) settings.setSlideshowSeconds(now);
         });
 
+        // The bundled keymaps by name; one the file names that is not bundled shows as the default.
+        ChoiceBox<String> keymap = new ChoiceBox<>();
+        keymap.getItems().addAll(Keymap.PRESETS);
+        keymap.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(String id) {
+                return id == null ? "" : Keymap.load(id, Command.MAC).name();
+            }
+
+            @Override
+            public String fromString(String text) {
+                return Keymap.DEFAULT;
+            }
+        });
+        keymap.setValue(Keymap.resolve(settings.keymap()));
+        keymap.valueProperty().addListener((o, was, now) -> {
+            if (now != null && !now.equals(Keymap.resolve(settings.keymap()))) settings.setKeymap(now);
+        });
+
         Label paletteKeys = new Label(shownKeys(settings));
         paletteKeys.getStyleClass().add("shortcut-key");
         Button addKey = new Button("Add a key…");
@@ -185,6 +204,7 @@ final class SettingsWindow {
             names.setSelected(settings.thumbnailNames());
             captions.setSelected(settings.thumbnailCaptions());
             statusBar.setSelected(settings.statusBar());
+            keymap.setValue(Keymap.resolve(settings.keymap()));
         });
 
         VBox root = new VBox(
@@ -240,6 +260,11 @@ final class SettingsWindow {
                                 updates)),
                 group(
                         "Keys",
+                        row(
+                                "Keymap",
+                                "Mirada's own keys, or Emacs's. Your own go on top of it: keys.<command id> in the"
+                                        + " settings file.",
+                                keymap),
                         row(
                                 "Command palette",
                                 "The keys that open the palette. Add a key, then press it; pressing one"

@@ -11,8 +11,6 @@ import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.Clipboard;
-import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -42,7 +40,13 @@ final class AboutWindow {
     private final Hyperlink updateLink = new Hyperlink("Open its page");
     private final Runnable refreshUpdate = this::refreshUpdate;
 
-    AboutWindow(Path settingsFile, Consumer<String> openLink, UpdateCoordinator updates, String stylesheet) {
+    /** @param copyDetails runs Copy Details ({@code help.copyDetails}), the command the button is for */
+    AboutWindow(
+            Path settingsFile,
+            Consumer<String> openLink,
+            UpdateCoordinator updates,
+            Runnable copyDetails,
+            String stylesheet) {
         this.updates = updates;
         stage.setTitle("About " + AppInfo.NAME);
         stage.setResizable(false);
@@ -97,10 +101,9 @@ final class AboutWindow {
         environmentBlock.getStyleClass().add("about-path");
         environmentBlock.setWrapText(true);
         Button copy = new Button(COPY_DETAILS);
+        // The command copies what this block shows: the same AppInfo.environment.
         copy.setOnAction(e -> {
-            ClipboardContent content = new ClipboardContent();
-            content.putString(environment);
-            Clipboard.getSystemClipboard().setContent(content);
+            copyDetails.run();
             copy.setText(COPIED);
         });
         stage.setOnHidden(e -> {

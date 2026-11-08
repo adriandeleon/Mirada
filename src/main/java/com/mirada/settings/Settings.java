@@ -9,9 +9,12 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
 
 import com.mirada.folder.Sorting;
 import org.jspecify.annotations.Nullable;
@@ -19,7 +22,7 @@ import org.jspecify.annotations.Nullable;
 /**
  * Mirada's settings: theme, what opens at start, how long the floating controls stay, the folder's
  * order, whether stepping keeps the zoom, the slideshow's pace, the keys that open the palette, the
- * status bar, and the update check. In {@code settings.properties},
+ * keymap and the user's own keys on top of it, the status bar, and the update check. In {@code settings.properties},
  * in the platform's folder for it ({@link #folder}; {@code MIRADA_CONFIG_DIR} moves it, for tests
  * and timing runs), Termina's way: a plain file meant to be hand-edited, every
  * value clamped on read as well as on write, so a bad edit cannot break the next start, and every
@@ -54,6 +57,12 @@ public final class Settings {
     static final String WINDOW_MAXIMIZED = "window.maximized";
     static final String SLIDESHOW_SECONDS = "slideshow.seconds";
     static final String PALETTE_KEYS = "palette.keys";
+    static final String KEYMAP = "keymap";
+    /** {@code keys.<command id>}: the user's keys for a command, over the keymap's; blank for none. */
+    static final String KEYS = "keys.";
+    /** The keymap when the file names none: Mirada's own keys. */
+    public static final String DEFAULT_KEYMAP = "cua";
+
     static final String STATUS_BAR = "window.statusBar";
     static final String CHECK_FOR_UPDATES = "updates.check";
     static final String LAST_UPDATE_CHECK = "updates.lastCheck";
@@ -80,6 +89,8 @@ public final class Settings {
     private List<Path> recent = List.of();
     private int slideshowSeconds = DEFAULT_SLIDESHOW_SECONDS;
     private String paletteKeys = defaultPaletteKeys(isMac(System.getProperty("os.name", "")));
+    private String keymap = DEFAULT_KEYMAP;
+    private Map<String, String> keys = Map.of();
     private boolean statusBar = true;
     private boolean checkForUpdates = true;
     private long lastUpdateCheck;
@@ -198,6 +209,8 @@ public final class Settings {
         recent = List.copyOf(folders);
         slideshowSeconds = slideshowSecondsOf(properties.getProperty(SLIDESHOW_SECONDS));
         paletteKeys = paletteKeysOf(properties.getProperty(PALETTE_KEYS), isMac(System.getProperty("os.name", "")));
+        keymap = keymapOf(properties.getProperty(KEYMAP));
+        keys = keysOf(properties);
         statusBar =
                 Boolean.parseBoolean(properties.getProperty(STATUS_BAR, "true").trim());
         checkForUpdates = Boolean.parseBoolean(
@@ -234,6 +247,31 @@ public final class Settings {
                 ? ""
                 : String.join(" ", value.trim().split("[\\s,]+")).trim();
         return keys.isEmpty() ? defaultPaletteKeys(mac) : keys;
+    }
+
+    /**
+     * The keymap's name as written, lower case; the default for none. Whether it names a bundled
+     * keymap is the window's to decide: one that does not is the default there, and is kept here
+     * as written, so a newer Mirada's keymap survives a run of an older one.
+     */
+    static String keymapOf(@Nullable String value) {
+        String name = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+        return name.isEmpty() ? DEFAULT_KEYMAP : name;
+    }
+
+    /**
+     * Every {@code keys.<id>} line, the id after the prefix, its keys collapsed to single spaces;
+     * blank stays blank (no keys). Whether the id is a command and the keys are keys is the
+     * window's to decide. Pure.
+     */
+    static Map<String, String> keysOf(Properties properties) {
+        Map<String, String> out = new TreeMap<>();
+        for (String name : properties.stringPropertyNames()) {
+            if (!name.startsWith(KEYS) || name.length() == KEYS.length()) continue;
+            String value = properties.getProperty(name, "").trim();
+            out.put(name.substring(KEYS.length()), value.isEmpty() ? "" : String.join(" ", value.split("[\\s,]+")));
+        }
+        return Collections.unmodifiableMap(out);
     }
 
     private static boolean isMac(String osName) {
@@ -400,6 +438,26 @@ public final class Settings {
         changed();
     }
 
+    /** The keymap the keys start from ({@code cua}, {@code emacs}), before the user's own. */
+    public String keymap() {
+        return keymap;
+    }
+
+    public void setKeymap(String value) {
+        String name = keymapOf(value);
+        if (name.equals(keymap)) return;
+        keymap = name;
+        changed();
+    }
+
+    /**
+     * The user's own keys by command id, as chord tokens separated by spaces, blank for none: the
+     * layer over the keymap. Edited in the file; sorted by id.
+     */
+    public Map<String, String> keys() {
+        return keys;
+    }
+
     public void setSorting(Sorting value) {
         sorting = value;
         changed();
@@ -504,6 +562,8 @@ public final class Settings {
         }
         properties.setProperty(SLIDESHOW_SECONDS, Integer.toString(slideshowSeconds));
         properties.setProperty(PALETTE_KEYS, paletteKeys);
+        properties.setProperty(KEYMAP, keymap);
+        keys.forEach((id, chords) -> properties.setProperty(KEYS + id, chords));
         properties.setProperty(STATUS_BAR, Boolean.toString(statusBar));
         properties.setProperty(CHECK_FOR_UPDATES, Boolean.toString(checkForUpdates));
         if (lastUpdateCheck > 0) properties.setProperty(LAST_UPDATE_CHECK, Long.toString(lastUpdateCheck));

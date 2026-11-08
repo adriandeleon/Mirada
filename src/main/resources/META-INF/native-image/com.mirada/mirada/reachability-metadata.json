@@ -3056,6 +3056,15 @@
       "glob": "com/mirada/icon.png"
     },
     {
+      "glob": "com/mirada/keymaps/cua.json"
+    },
+    {
+      "glob": "com/mirada/keymaps/cua.mac.json"
+    },
+    {
+      "glob": "com/mirada/keymaps/emacs.json"
+    },
+    {
       "glob": "com/mirada/styles/mirada.css"
     },
     {

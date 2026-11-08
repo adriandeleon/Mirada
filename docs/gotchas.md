@@ -149,18 +149,31 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
 
 ## Keys, commands and the palette
 
-- **Every command has one name and one chord, in `Command`.** The key filter (`forKey`), the
-  palette and the context menu all read from it; `CommandTest.everyShownChordRunsItsCommand` checks
-  the chord a command shows is one that runs it, on both platforms (the palette's excepted: above). macOS shows its own for two
-  (`chord(boolean mac)`): ⌘⌫ to trash, as a Mac's Delete key is Backspace, which steps back; Return
-  to rename, as F2 is a brightness key. `forKey` takes the Ctrl key apart from the shortcut for ⌃⌘F.
-  Stepping follows the strip: while it stands down the side (`Command.vertical`, set by
-  `ViewerWindow.stepAlong`) Up and Down step and Left and Right pan, and `chord()`, the floating
-  arrows and the shortcuts window follow; the test checks both axes.
+- **Every command is in `Command`, with a dotted id** (`go.next`, `editor.save`, `help.copyDetails`;
+  `<area>.<camelCase>`, KBD-02), its name, its description, its group and where its keys work
+  (`Command.Context`: the viewer, the editor while it is open, the Bookmarks and Notes window). The
+  key filters, the palettes, the menus and the buttons all run commands from there (KBD-01): the
+  editor's tools (`Editor.run`), the Bookmarks window's row actions (`BookmarksWindow.run`) and
+  About's Copy details (`help.copyDetails`) included. Translations will key their strings by the id.
+- **Keys come from a keymap, never from code** (KBD-09, KBD-11). `keymaps/cua.json` (Mirada's own
+  keys), `cua.mac.json` (Cmd for Ctrl, with Finder's and Preview's keys: ⌘⌫ to trash, as a Mac's
+  Delete is Backspace, which steps back; Return to rename, as F2 is a brightness key; ⌘L, ⌘I, ⌃⌘F)
+  and `emacs.json` bind ids to `KeyChord` tokens, the shown one first; `keymap` in the settings
+  picks one. `Keybindings.layered` is the one place the layers go on: the keymap, its `vertical`
+  bindings while the strip stands down the side (`Command.vertical`, set by
+  `ViewerWindow.stepAlong`: Up and Down step and Left and Right pan, and `chord()`, the floating
+  arrows and the shortcuts window follow), then the user's (`keys.<id>` in the settings, blank to
+  unbind, and `palette.keys`). A user key takes the same key from another command where both work.
+  `CommandTest.everyShownChordRunsItsCommand` checks every key of every command in every keymap,
+  both platforms and both axes, runs that command; `everyKeymapBindsCommandsToKeysOnce` that no key
+  is bound twice. A token's modifiers may come in any order; one whose key is a character no key is
+  named for (`C-?`) matches that character with or without Shift. The JSON is read with the update
+  check's small reader (`update.Json`) the first time a key is pressed or a chord shown, which is
+  after the first paint (`TitleBar.finish`), and registered as resources in the native metadata.
 - **A menu's keys are shown, never registered** (`MenuChord`). JavaFX puts a `MenuButton`'s and
   a context menu's accelerators into the scene, where a bare one fires under the palette's text
   field and any other runs a second time. `MenuChord` is a `KeyCombination` that names the
-  command's chord and never matches, so `Command.forKey` stays the only way in. Styled as Editora's
+  command's chord and never matches, so the key filter (`Keybindings.commandFor`) stays the only way in. Styled as Editora's
   `.menu-item-chord`: 11px in its `-state-key` periwinkle, defined on `.root` in `mirada.css`.
 - **Escape is ours, not the stage's.** JavaFX's full-screen exit key would leave full screen and
   then let the same press reach the key filter, which would close the window.
@@ -189,10 +202,21 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   (`PaletteChords.keptByPalette`: a user who binds C-p keeps C-p as the row above in there). Escape
   is the palette's then, not the window's.
 - **The palette's keys are the user's** (`PaletteChords`, `palette.keys` in the settings, as
-  `KeyChord` tokens: `C-S-p M-x f1` by default, `Cmd-S-p` on a Mac). `onKey` asks them before
-  `Command.forKey`, which never answers `PALETTE`, so a chosen key wins over its built-in command.
-  The first is the one shown (`Command.PALETTE.chord()`), the Mac menu's is the first with Cmd, and
-  a setting with no readable key is the default. Parsed on the first key press, not at start-up.
+  `KeyChord` tokens: `C-S-p M-x f1` by default, `Cmd-S-p` on a Mac): the user's layer over the
+  keymap's `palette.show`, put on before any other user key, so nothing takes them. `onKey` asks them
+  before any other key, the editor's too, in the viewer and in the Bookmarks window, which has a
+  palette of its own. The first is the one shown (`Command.PALETTE.chord()`), the Mac menu's is the
+  first with Cmd, and a setting with no readable key is the default. Parsed on the first key press,
+  not at start-up.
+- **The palette lists every command** (PAL-02), Escape, Command Palette, the Pan commands, the
+  editor's tools and the Bookmarks window's included, greyed with the reason where they cannot run
+  (`ViewerWindow.unavailable`: "The editor is not open.", or "Finish editing first" for what would
+  change the image under the editor). Those that work where it opened lead its list
+  (`Command.inPalette(Context)`).
+- **The editor's and the Bookmarks window's own keys stay theirs where no command fits.** The arrows
+  move and size the crop (`Editor.onKey`); the Bookmarks window's filter keeps Up, Down, Ctrl+P and
+  Ctrl+N to move, Escape, and Delete to remove while the filter is empty. Everything else there is a
+  command, so it has a key in the keymap and a row in the palette.
 
 ## Bookmarks and notes
 

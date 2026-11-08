@@ -11,13 +11,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CommandPaletteTest {
 
     private static List<Command> find(String query) {
-        return CommandPalette.orderedMatches(Command.inPalette(), query);
+        return CommandPalette.orderedMatches(Command.inPalette(Command.Context.VIEWER), query);
     }
 
     @Test
     void anEmptyQueryKeepsThePaletteOrder() {
-        assertEquals(Command.inPalette(), find(""));
-        assertEquals(Command.inPalette(), find("   "));
+        assertEquals(Command.inPalette(Command.Context.VIEWER), find(""));
+        assertEquals(Command.inPalette(Command.Context.VIEWER), find("   "));
     }
 
     @Test

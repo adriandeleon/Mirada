@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javafx.application.Platform;
 import javafx.css.PseudoClass;
@@ -27,7 +28,6 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -50,10 +50,13 @@ import org.jspecify.annotations.Nullable;
  * found by typing a word of its name, its folder's or its note.
  *
  * <p>The keys stay in the filter field, as in the palette: Up and Down (Ctrl+P and Ctrl+N) move,
- * Return opens in the viewer, F2 edits the note, Ctrl+B bookmarks, Ctrl+Delete removes the mark
- * (Delete too while the filter is empty), Ctrl+1–3 list all, the bookmarks or the notes, Escape
- * clears the filter and then closes. A mark whose file has gone stays listed, dimmed, so it can be
- * removed. Built the first time it is opened; it follows every change to the marks while it is up.
+ * Escape clears the filter and then closes. What can be done to a row is a command ({@link
+ * Command.Context#BOOKMARKS}, {@link #run}), on its key from the keymap (Return opens in the viewer,
+ * F2 edits the note, Ctrl+B bookmarks, Ctrl+Delete removes the mark, Ctrl+1–3 list all, the
+ * bookmarks or the notes), from the row's menu, and from the window's own command palette, which
+ * the palette's keys open here as in the viewer and which lists every command. Delete also removes
+ * while the filter is empty. A mark whose file has gone stays listed, dimmed, so it can be removed.
+ * Built the first time it is opened; it follows every change to the marks while it is up.
  */
 final class BookmarksWindow {
 
@@ -62,18 +65,18 @@ final class BookmarksWindow {
     private static final PseudoClass MISSING = PseudoClass.getPseudoClass("missing");
     private static final PseudoClass FOLDER = PseudoClass.getPseudoClass("folder");
 
-    private static final KeyCombination EDIT_NOTE = new KeyCodeCombination(KeyCode.F2);
-    private static final KeyCombination TOGGLE = new KeyCodeCombination(KeyCode.B, KeyCombination.SHORTCUT_DOWN);
-    private static final KeyCombination REMOVE =
-            new KeyCodeCombination(Command.MAC ? KeyCode.BACK_SPACE : KeyCode.DELETE, KeyCombination.SHORTCUT_DOWN);
-
     private final Stage stage = new Stage();
     private final Bookmarks bookmarks;
     /** Opens a mark in the viewer: the path, and whether it is a folder. */
     private final BiConsumer<Path, Boolean> opener;
 
     private final Consumer<Path> reveal;
+    /** Runs a command the window's palette chose: the viewer's run, which hands this window's back to {@link #run}. */
+    private final Consumer<Command> runner;
+
+    private final Function<Command, @Nullable String> unavailable;
     private final String stylesheet;
+    private final CommandPalette palette;
     private final Thumbnails thumbnails = new Thumbnails();
 
     private final TextField filter = new TextField();
@@ -81,15 +84,28 @@ final class BookmarksWindow {
     private final ListView<BookmarkList.Row> list = new ListView<>();
     private final Label empty = new Label();
     private final Label count = new Label();
+    private final Label hint = new Label();
     /** The marks whose file or folder was not there when the list was last made. */
     private final Set<Path> missing = new HashSet<>();
 
     private BookmarkList.Show show = BookmarkList.Show.ALL;
 
-    BookmarksWindow(Bookmarks bookmarks, BiConsumer<Path, Boolean> opener, Consumer<Path> reveal, String stylesheet) {
+    /**
+     * @param runner runs any command, as the viewer's keys would: what the window's palette runs
+     * @param unavailable why a command cannot run now, or null: the window's palette greys it
+     */
+    BookmarksWindow(
+            Bookmarks bookmarks,
+            BiConsumer<Path, Boolean> opener,
+            Consumer<Path> reveal,
+            Consumer<Command> runner,
+            Function<Command, @Nullable String> unavailable,
+            String stylesheet) {
         this.bookmarks = bookmarks;
         this.opener = opener;
         this.reveal = reveal;
+        this.runner = runner;
+        this.unavailable = unavailable;
         this.stylesheet = stylesheet;
         stage.setTitle("Bookmarks and Notes");
         WindowIcon.applyTo(stage);
@@ -133,8 +149,7 @@ final class BookmarksWindow {
         empty.setWrapText(true);
         list.setPlaceholder(empty);
 
-        Label hint = new Label("Return opens · " + EDIT_NOTE.getDisplayText() + " note · " + TOGGLE.getDisplayText()
-                + " bookmark · " + REMOVE.getDisplayText() + " removes");
+        hint.setText(hintText());
         hint.getStyleClass().add("bookmarks-hint");
         hint.setTextOverrun(OverrunStyle.ELLIPSIS);
         hint.setMinWidth(0);
@@ -146,8 +161,11 @@ final class BookmarksWindow {
         bottom.setAlignment(Pos.CENTER_LEFT);
         bottom.setPadding(new Insets(6, 12, 8, 12));
 
-        BorderPane root = new BorderPane(list, top, null, bottom, null);
-        root.getStyleClass().add("bookmarks-window");
+        BorderPane content = new BorderPane(list, top, null, bottom, null);
+        content.getStyleClass().add("bookmarks-window");
+        // A root the palette can lie over, as the viewer's does.
+        StackPane root = new StackPane(content);
+        palette = new CommandPalette(root, runner);
         Scene scene = new Scene(root, WIDTH, 640);
         scene.getStylesheets().add(stylesheet);
         scene.addEventFilter(KeyEvent.KEY_PRESSED, this::onKey);
@@ -217,6 +235,26 @@ final class BookmarksWindow {
     }
 
     private void onKey(KeyEvent e) {
+        // While the palette is up, keys are its own; its chord closes it, unless it moves by that key.
+        boolean paletteKey = PaletteChords.opens(e);
+        if (palette.isShowing()) {
+            if (paletteKey && !PaletteChords.keptByPalette(KeyChord.of(e))) {
+                palette.hide();
+                e.consume();
+            }
+            return;
+        }
+        if (paletteKey) {
+            palette.show(Command.inPalette(Command.Context.BOOKMARKS), unavailable);
+            e.consume();
+            return;
+        }
+        Command command = Keybindings.current().commandFor(Command.Context.BOOKMARKS, e);
+        if (command != null) {
+            run(command);
+            e.consume();
+            return;
+        }
         KeyCode code = e.getCode();
         boolean control = e.isControlDown() && !e.isAltDown();
         if (code == KeyCode.ESCAPE) {
@@ -230,41 +268,79 @@ final class BookmarksWindow {
             move(-10);
         } else if (code == KeyCode.PAGE_DOWN) {
             move(10);
-        } else if (code == KeyCode.ENTER) {
-            open(selected());
-        } else if (EDIT_NOTE.match(e) || (e.isShortcutDown() && code == KeyCode.E)) {
-            editNote(selected());
-        } else if (TOGGLE.match(e)) {
-            toggle(selected());
-        } else if (REMOVE.match(e)
-                || (code == KeyCode.DELETE
-                        && !e.isShortcutDown()
-                        && filter.getText().isEmpty())) {
-            remove(selected());
+        } else if (code == KeyCode.DELETE
+                && !e.isShortcutDown()
+                && filter.getText().isEmpty()) {
+            // The field has nothing to delete, so Delete is the row's.
+            run(Command.BOOKMARKS_REMOVE);
         } else if (e.isShortcutDown() && (code == KeyCode.F || code == KeyCode.L)) {
             filter.requestFocus();
             filter.selectAll();
         } else if (e.isShortcutDown() && code == KeyCode.W) {
             stage.hide();
-        } else if (e.isShortcutDown() && code.isDigitKey() && kind(code) != null) {
-            BookmarkList.Show kind = kind(code);
-            showing.getToggles().stream()
-                    .filter(toggle -> toggle.getUserData() == kind)
-                    .findFirst()
-                    .ifPresent(showing::selectToggle);
         } else {
             return;
         }
         e.consume();
     }
 
-    private static BookmarkList.@Nullable Show kind(KeyCode code) {
-        return switch (code) {
-            case DIGIT1, NUMPAD1 -> BookmarkList.Show.ALL;
-            case DIGIT2, NUMPAD2 -> BookmarkList.Show.BOOKMARKS;
-            case DIGIT3, NUMPAD3 -> BookmarkList.Show.NOTES;
+    /** Shows the keys in force again after the settings changed them: the hint and the palette's chips. */
+    void refreshKeys() {
+        hint.setText(hintText());
+        palette.refreshKeys();
+    }
+
+    private static String hintText() {
+        return key(Command.BOOKMARKS_OPEN) + " opens · " + key(Command.BOOKMARKS_EDIT_NOTE) + " note · "
+                + key(Command.BOOKMARKS_TOGGLE) + " bookmark · " + key(Command.BOOKMARKS_REMOVE) + " removes";
+    }
+
+    /** Runs one of the window's commands on the selected row, from its key, its menu or a palette. */
+    void run(Command command) {
+        BookmarkList.Row row = selected();
+        switch (command) {
+            case BOOKMARKS_OPEN -> open(row);
+            case BOOKMARKS_EDIT_NOTE -> editNote(row);
+            case BOOKMARKS_TOGGLE -> toggle(row);
+            case BOOKMARKS_SHOW_IN_FOLDER -> showInFolder(row);
+            case BOOKMARKS_REMOVE -> remove(row);
+            case BOOKMARKS_LIST_ALL -> list(BookmarkList.Show.ALL);
+            case BOOKMARKS_LIST_BOOKMARKED -> list(BookmarkList.Show.BOOKMARKS);
+            case BOOKMARKS_LIST_NOTES -> list(BookmarkList.Show.NOTES);
+            default -> runner.accept(command);
+        }
+    }
+
+    /** Why one of the window's commands cannot run now, or null when it can. */
+    @Nullable
+    String unavailable(Command command) {
+        BookmarkList.Row row = selected();
+        return switch (command) {
+            case BOOKMARKS_OPEN, BOOKMARKS_SHOW_IN_FOLDER ->
+                row == null
+                        ? "Nothing is selected."
+                        : missing.contains(row.path())
+                                ? (row instanceof BookmarkList.FolderRow ? "The folder" : "The file") + " is not there."
+                                : null;
+            case BOOKMARKS_EDIT_NOTE, BOOKMARKS_TOGGLE -> row == null ? "Nothing is selected." : null;
+            case BOOKMARKS_REMOVE ->
+                row == null ? "Nothing is selected." : markOf(row) == null ? "The folder itself has no mark." : null;
             default -> null;
         };
+    }
+
+    /** Lists all marks, the bookmarks or the notes, as the buttons at the top do. */
+    private void list(BookmarkList.Show kind) {
+        showing.getToggles().stream()
+                .filter(toggle -> toggle.getUserData() == kind)
+                .findFirst()
+                .ifPresent(showing::selectToggle);
+    }
+
+    /** The key shown for {@code command}, or its label for none. */
+    private static String key(Command command) {
+        KeyCombination chord = command.chord();
+        return chord == KeyCombination.NO_MATCH ? command.label() : chord.getDisplayText();
     }
 
     /** Moves the selection by {@code delta} rows, stopping at either end. */
@@ -306,6 +382,10 @@ final class BookmarksWindow {
         filter.requestFocus();
     }
 
+    private void showInFolder(BookmarkList.@Nullable Row row) {
+        if (row != null && !missing.contains(row.path())) reveal.accept(row.path());
+    }
+
     private void toggle(BookmarkList.@Nullable Row row) {
         if (row != null) bookmarks.toggle(row.path(), row instanceof BookmarkList.FolderRow);
     }
@@ -327,23 +407,24 @@ final class BookmarksWindow {
         boolean folder = row instanceof BookmarkList.FolderRow;
         MenuItem open =
                 new MenuItem(folder ? "Open Folder" : "Open", Icons.of(folder ? Icons.FOLDER_OPEN : Icons.PICTURE));
-        open.setAccelerator(MenuChord.shown(new KeyCodeCombination(KeyCode.ENTER)));
+        MenuChord.on(open, Command.BOOKMARKS_OPEN);
         open.setOnAction(e -> open(row));
         open.setDisable(missing.contains(row.path()));
         MenuItem note = new MenuItem(mark != null && mark.hasNote() ? "Edit Note…" : "Add Note…", Icons.of(Icons.NOTE));
-        note.setAccelerator(MenuChord.shown(EDIT_NOTE));
+        MenuChord.on(note, Command.BOOKMARKS_EDIT_NOTE);
         note.setOnAction(e -> editNote(row));
         boolean bookmarked = mark != null && mark.bookmarked();
         MenuItem bookmark = new MenuItem(
                 bookmarked ? "Take the Bookmark Off" : folder ? "Bookmark Folder" : "Bookmark Image",
                 Icons.of(Icons.BOOKMARK));
-        bookmark.setAccelerator(MenuChord.shown(TOGGLE));
+        MenuChord.on(bookmark, Command.BOOKMARKS_TOGGLE);
         bookmark.setOnAction(e -> toggle(row));
         MenuItem show = new MenuItem("Show in Folder", Icons.of(Icons.FOLDER));
-        show.setOnAction(e -> reveal.accept(row.path()));
+        MenuChord.on(show, Command.BOOKMARKS_SHOW_IN_FOLDER);
+        show.setOnAction(e -> showInFolder(row));
         show.setDisable(missing.contains(row.path()));
         MenuItem remove = new MenuItem("Remove", Icons.of(Icons.TRASH));
-        remove.setAccelerator(MenuChord.shown(REMOVE));
+        MenuChord.on(remove, Command.BOOKMARKS_REMOVE);
         remove.setOnAction(e -> remove(row));
         remove.setDisable(mark == null);
         ContextMenu menu =

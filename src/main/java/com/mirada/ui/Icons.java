@@ -125,7 +125,7 @@ final class Icons {
             case STATUS_BAR -> STATUS_BAR;
             case MESSAGE_LOG -> MESSAGES;
             case DEBUG_LOG -> LOG;
-            case COPY_MESSAGES, COPY_DEBUG_LOG -> COPY;
+            case COPY_MESSAGES, COPY_DEBUG_LOG, COPY_DETAILS -> COPY;
             case CLEAR_MESSAGES, CLEAR_DEBUG_LOG -> TRASH;
             case EXPORT_DEBUG_LOG, OPEN_RELEASE -> DOWNLOAD;
             case REPORT_PROBLEM -> WARNING;
