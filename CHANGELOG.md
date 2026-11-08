@@ -97,6 +97,11 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Fixed
 
+- **Closing the viewer closes its other windows** (About, Settings, Keyboard Shortcuts, Bookmarks
+  and Notes, Debug Log, Report a Problem): one left open used to keep Mirada running with no viewer.
+  The viewer's decoding and thumbnail threads now stop with it too.
+- **The Bookmarks and Notes window opens when only a folder is marked.** A folder bookmarked or
+  noted with no image marked in it made the window fail to list anything.
 - **A settings or bookmarks file that will not read is no longer lost.** One that will not decode is
   kept beside it as `….corrupt.bak`, and Mirada starts from the defaults; one that cannot be read at
   all is left alone, where before the next bookmark could replace every mark in it.

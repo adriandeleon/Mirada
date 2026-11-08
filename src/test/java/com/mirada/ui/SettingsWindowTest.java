@@ -1,6 +1,7 @@
 package com.mirada.ui;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 
 import javafx.event.Event;
@@ -181,6 +182,66 @@ class SettingsWindowTest {
         fx(() -> settings.setPaletteKeys("f3"));
         fx(defaults::fire);
         assertEquals(Settings.defaultPaletteKeys(Command.MAC), settings.paletteKeys());
+    }
+
+    @Test
+    void everyControlSetInTheWindowSurvivesARestart() throws Exception {
+        // Every control away from its default, through the window.
+        fx(() -> this.<ChoiceBox<Settings.ThemeChoice>>control("Theme").setValue(Settings.ThemeChoice.DARK));
+        for (String box : List.of(
+                "Thumbnails at start",
+                "Thumbnails at the side",
+                "File names under thumbnails",
+                "File names instead of pictures",
+                "Properties at start",
+                "Status bar",
+                "Keep zoom when stepping",
+                "Check for updates",
+                "Reverse order")) {
+            CheckBox check = control(box);
+            fx(check::fire);
+        }
+        fx(() -> this.<ChoiceBox<Sorting.By>>control("Sort by").setValue(Sorting.By.SIZE));
+        fx(() -> this.<Spinner<Integer>>control("Hide controls after").increment(3));
+        fx(() -> this.<Spinner<Integer>>control("Slideshow speed").increment(4));
+        fx(() -> settings.setPaletteKeys(settings.paletteKeys() + " f2"));
+        Settings was = settings;
+
+        // A restart: the file read again, and a new window over it.
+        Settings again = new Settings(dir.resolve("settings.properties"));
+        again.load();
+        assertEquals(Settings.ThemeChoice.DARK, again.theme());
+        assertEquals(!new Settings(dir.resolve("none.properties")).startWithThumbnails(), again.startWithThumbnails());
+        assertEquals(was.thumbnailsAtSide(), again.thumbnailsAtSide());
+        assertEquals(was.thumbnailCaptions(), again.thumbnailCaptions());
+        assertEquals(was.thumbnailNames(), again.thumbnailNames());
+        assertEquals(was.startWithInfo(), again.startWithInfo());
+        assertEquals(was.statusBar(), again.statusBar());
+        assertEquals(was.keepZoom(), again.keepZoom());
+        assertEquals(was.checkForUpdates(), again.checkForUpdates());
+        assertEquals(new Sorting(Sorting.By.SIZE, true), again.sorting());
+        assertEquals(was.controlsHideSeconds(), again.controlsHideSeconds());
+        assertEquals(was.slideshowSeconds(), again.slideshowSeconds());
+        assertEquals(was.paletteKeys(), again.paletteKeys());
+
+        settings = again;
+        SettingsWindow reopened = call(() -> new SettingsWindow(again, ViewerWindow.stylesheet()));
+        fx(() -> reopened.show(stage));
+        stage = reopened.stage();
+        assertEquals(
+                Settings.ThemeChoice.DARK,
+                call(() ->
+                        this.<ChoiceBox<Settings.ThemeChoice>>control("Theme").getValue()));
+        assertEquals(
+                Sorting.By.SIZE,
+                call(() -> this.<ChoiceBox<Sorting.By>>control("Sort by").getValue()));
+        assertEquals(
+                again.statusBar(),
+                call(() -> this.<CheckBox>control("Status bar").isSelected()));
+        assertEquals(
+                again.slideshowSeconds(),
+                call(() -> this.<Spinner<Integer>>control("Slideshow speed").getValue()));
+        assertTrue(call(() -> this.<CheckBox>control("Reverse order").isSelected()));
     }
 
     @Test

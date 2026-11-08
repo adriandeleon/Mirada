@@ -127,4 +127,39 @@ class DebugLogTest {
         assertTrue(Files.readString(folder.resolve(DebugLog.FILE), StandardCharsets.UTF_8)
                 .contains("kept on disk"));
     }
+
+    @Test
+    void pastItsCapTheSessionFileStartsOverWithANoteAndTheNewestLines() throws IOException {
+        DebugLog.attachFile(folder);
+        // Lines of 5 KB: the in-memory cap (2000) holds 10 MB of them, past the file's 8 MB.
+        String filler = "x".repeat(5_000);
+        for (int i = 0; i < DebugLog.MAX_ENTRIES; i++) DebugLog.append(i + " " + filler);
+        Path file = folder.resolve(DebugLog.FILE);
+        long size = Files.size(file);
+        assertTrue(size <= DebugLog.MAX_FILE_BYTES, "held under the cap: " + size);
+        String written = Files.readString(file, StandardCharsets.UTF_8);
+        assertTrue(written.startsWith("… earlier lines were cut") || written.contains("earlier lines were cut"));
+        assertTrue(written.contains((DebugLog.MAX_ENTRIES - 1) + " " + filler), "the newest is kept");
+        assertFalse(written.contains(System.lineSeparator() + "0 " + filler), "the oldest was dropped");
+    }
+
+    @Test
+    void aSessionFileHeldByAnotherMiradaLeavesItAloneAndWritesItsOwn() throws IOException {
+        Path theirs = folder.resolve(DebugLog.FILE);
+        Files.writeString(theirs, "the other window's session\n", StandardCharsets.UTF_8);
+        try (java.nio.channels.FileChannel other =
+                        java.nio.channels.FileChannel.open(theirs, java.nio.file.StandardOpenOption.WRITE);
+                java.nio.channels.FileLock held = other.lock(DebugLog.LOCK_POSITION, 1, false)) {
+            assertTrue(held.isValid());
+            DebugLog.attachFile(folder);
+            DebugLog.append("this one's");
+            Path mine = DebugLog.file();
+            assertNotNull(mine);
+            assertEquals(
+                    "mirada-session-" + ProcessHandle.current().pid() + ".log",
+                    mine.getFileName().toString());
+            assertTrue(Files.readString(mine, StandardCharsets.UTF_8).contains("this one's"));
+            assertEquals("the other window's session\n", Files.readString(theirs, StandardCharsets.UTF_8));
+        }
+    }
 }

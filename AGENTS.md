@@ -24,7 +24,7 @@ prefix. Regenerate it, never edit it by hand.
 
 - Run: `./mvnw javafx:run`, or on a file or folder: `./mvnw javafx:run -Djavafx.args=/path/to/photo.jpg`
 - Test: `./mvnw test`
-- Everything CI would check (tests, NullAway, format): `./mvnw verify`
+- Everything CI would check (tests, NullAway, the coverage floors, format): `./mvnw verify`; the floors and how the window is tested are in [docs/testing.md](docs/testing.md)
 - Format: `./mvnw spotless:apply` (Palantir, as in Termina and Torrenta)
 - App image, as it ships: **`./mvnw clean -Pdist,native -DskipTests package`** with Oracle GraalVM
   25.4 as `JAVA_HOME` ⇒ `target/dist/Mirada{.app}`, the native executable with AWT's libraries and

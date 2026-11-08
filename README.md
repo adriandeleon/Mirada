@@ -138,7 +138,7 @@ the project's `codecs-N` release.
 ```
 ./mvnw javafx:run                                   # an empty window
 ./mvnw javafx:run -Djavafx.args=/path/to/photo.jpg  # a photo and its folder
-./mvnw verify                                       # tests, null checks, formatting
+./mvnw verify                                       # tests, null checks, coverage, formatting
 ./mvnw clean -Pdist,native -DskipTests package      # the app as it ships, in target/dist (GraalVM)
 ./mvnw clean -Pdist -DskipTests package             # the JVM app, on any JDK 25
 ```

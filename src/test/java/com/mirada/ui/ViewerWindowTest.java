@@ -192,6 +192,26 @@ class ViewerWindowTest {
     // ---- The image ----
 
     @Test
+    void anAnimationPlaysOnceItsFramesAreDecodedAndStopsWhenSteppedAway() throws Exception {
+        Path folder = Files.createDirectories(dir.resolve("moving"));
+        for (String name : List.of("webp-animated.webp", "jxl-animated.jxl")) {
+            try (var in = ViewerWindowTest.class.getResourceAsStream("/com/mirada/matrix/" + name)) {
+                Files.copy(Objects.requireNonNull(in), folder.resolve(name));
+            }
+        }
+        try (WindowFixture window = WindowFixture.open(dir.resolve("config"), folder.resolve("jxl-animated.jxl"))) {
+            window.waitForImage("jxl-animated.jxl");
+            waitUntil("the animation", () -> window.field("playing") != null);
+            waitUntil("a later frame", () -> FxTestSupport.<Integer>field(window.window, "frame") > 0);
+            window.run(Command.NEXT);
+            window.waitForImage("webp-animated.webp");
+            waitUntil("the next animation", () -> window.field("playing") != null);
+            window.run(Command.EDIT); // the editor takes a still
+            assertNull(window.field("playing"), "stopped for the editor");
+        }
+    }
+
+    @Test
     void rotatingZoomingAndPanningMoveTheViewNotThePixels() throws Exception {
         try (WindowFixture window = open("a.png")) {
             ImageViewport viewport = viewport(window);
@@ -759,6 +779,70 @@ class ViewerWindowTest {
             assertTrue(written.getWidth() <= 48 && written.getHeight() <= 64, "turned a quarter, then cropped");
             assertEquals(4, folder(window).size(), "the new file joins the folder");
         }
+    }
+
+    @Test
+    void theEditorsToolbarDoesWhatItsKeysDo() throws Exception {
+        try (WindowFixture window = open("a.png")) {
+            window.run(Command.EDIT);
+            Editor editor = window.field("editor");
+            javafx.scene.layout.BorderPane node = FxTestSupport.field(editor, "node");
+            CropView crop = FxTestSupport.field(editor, "crop");
+            for (String tool : List.of("Rotate Right", "Rotate Left", "Flip Horizontally", "Flip Vertically")) {
+                fx(() -> toolbarButton(node, tool).fire());
+            }
+            fx(() -> toolbarButton(node, "Undo").fire());
+            fx(() -> toolbarButton(node, "Redo").fire());
+            // A crop, then a shape: the crop is held to the shape where it stands.
+            window.press(KeyCode.LEFT, true, false);
+            window.press(KeyCode.UP, true, false);
+            javafx.scene.control.ChoiceBox<com.mirada.edit.AspectRatio> shape = FxTestSupport.field(editor, "shape");
+            fx(() -> shape.setValue(com.mirada.edit.AspectRatio.values()[2]));
+            com.mirada.edit.CropBox box = call(crop::box);
+            assertTrue(box.width() < call(crop::pictureWidth), "still cropped");
+            assertEquals(com.mirada.edit.AspectRatio.FREE, shape.getConverter().fromString("anything"));
+            fx(() -> toolbarButton(node, "Reset").fire());
+            assertEquals(com.mirada.edit.AspectRatio.FREE, call(shape::getValue));
+            // Save with nothing to save, then Cancel with nothing to lose.
+            fx(() -> toolbarButton(node, "Save…").fire());
+            assertEquals("Nothing to save: crop, turn or flip first", window.lastSaid());
+            fx(() -> toolbarButton(node, "Cancel").fire());
+            assertFalse(call(editor::isShowing));
+        }
+    }
+
+    @Test
+    void aSaveThatFailsSaysWhyAndKeepsTheEditorOpen() throws Exception {
+        try (WindowFixture window = open("a.png")) {
+            window.run(Command.EDIT);
+            window.press(KeyCode.R);
+            Editor editor = window.field("editor");
+            // A folder that is not there cannot take the file.
+            FileDialogs.answeredBy(
+                    (title, folder, name) -> dir.resolve("no-such-folder/a.png").toFile());
+            window.press(KeyCode.ENTER);
+            window.waitToSay("Couldn't save a.png");
+            assertTrue(call(editor::isShowing));
+            // Cancelled, the dialog saves nothing.
+            FileDialogs.answeredBy((title, folder, name) -> null);
+            int said = window.said().size();
+            window.press(KeyCode.ENTER);
+            assertEquals(said, window.said().size());
+            // A name without an extension gets the file's; one that would replace a file asks.
+            Files.writeString(photos.resolve("copy.png"), "already here");
+            FileDialogs.answeredBy(
+                    (title, folder, name) -> photos.resolve("copy").toFile());
+            WindowFixture.answerNextDialog(pane -> WindowFixture.press(pane, "Cancel"));
+            window.press(KeyCode.ENTER);
+            assertEquals("already here", Files.readString(photos.resolve("copy.png")), "not replaced");
+        }
+    }
+
+    private static javafx.scene.control.Button toolbarButton(Parent root, String text) {
+        for (Node node : root.lookupAll(".button")) {
+            if (node instanceof javafx.scene.control.Button button && text.equals(button.getText())) return button;
+        }
+        throw new AssertionError("no button " + text);
     }
 
     @Test
