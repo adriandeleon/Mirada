@@ -54,7 +54,7 @@ final class MacMenus {
                     List.of(
                             List.of(Command.ZOOM_IN, Command.ZOOM_OUT, Command.FIT, Command.ACTUAL_SIZE),
                             List.of(Command.KEEP_ZOOM),
-                            List.of(Command.INFO, Command.THUMBNAILS),
+                            List.of(Command.INFO, Command.THUMBNAILS, Command.STATUS_BAR),
                             List.of(Command.THUMBNAILS_AT_SIDE, Command.THUMBNAIL_CAPTIONS, Command.THUMBNAIL_NAMES),
                             List.of(Command.FULL_SCREEN))),
             new Heading(
@@ -75,7 +75,18 @@ final class MacMenus {
                             List.of(Command.NOTE, Command.FOLDER_NOTE),
                             List.of(Command.NEXT_BOOKMARK, Command.PREVIOUS_BOOKMARK, Command.GO_TO_BOOKMARK),
                             List.of(Command.BOOKMARKS))),
-            new Heading("Help", List.of(List.of(Command.PALETTE, Command.DOCUMENTATION, Command.SHORTCUTS))));
+            new Heading(
+                    "Help",
+                    List.of(
+                            List.of(Command.PALETTE, Command.DOCUMENTATION, Command.SHORTCUTS),
+                            List.of(Command.CHECK_FOR_UPDATES, Command.OPEN_RELEASE),
+                            List.of(Command.MESSAGE_LOG, Command.COPY_MESSAGES, Command.CLEAR_MESSAGES),
+                            List.of(
+                                    Command.DEBUG_LOG,
+                                    Command.COPY_DEBUG_LOG,
+                                    Command.EXPORT_DEBUG_LOG,
+                                    Command.CLEAR_DEBUG_LOG),
+                            List.of(Command.REPORT_PROBLEM))));
 
     /** The commands that are a setting or a panel, shown with a tick when on. */
     static final Set<Command> TICKED = Set.of(
@@ -84,6 +95,7 @@ final class MacMenus {
             Command.KEEP_ZOOM,
             Command.INFO,
             Command.THUMBNAILS,
+            Command.STATUS_BAR,
             Command.THUMBNAILS_AT_SIDE,
             Command.THUMBNAIL_NAMES,
             Command.THUMBNAIL_CAPTIONS,

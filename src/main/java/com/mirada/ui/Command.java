@@ -175,6 +175,52 @@ enum Command {
             "Version, licence, and the runtime and codec versions.",
             "version help credits",
             key(KeyCode.F12)),
+    STATUS_BAR(
+            "Status Bar",
+            "Shows the line along the bottom of the window that says what the last command did.",
+            "echo messages bottom bar footer",
+            none()),
+    MESSAGE_LOG(
+            "Message Log",
+            "Lists everything the status bar has said this session, newest first.",
+            "messages history echo status notifications errors",
+            none()),
+    COPY_MESSAGES(
+            "Copy Messages",
+            "Copies the messages as text: those the Message Log shows, or all of this session's.",
+            "message log clipboard",
+            none()),
+    CLEAR_MESSAGES(
+            "Clear Messages", "Empties the Message Log and its count of unread errors.", "message log empty", none()),
+    DEBUG_LOG(
+            "Debug Log",
+            "Shows what Mirada has logged this session, errors with their details, in a window of its own.",
+            "diagnostics logging errors exceptions trace console problems",
+            none()),
+    COPY_DEBUG_LOG("Copy Debug Log", "Copies the Debug Log as text.", "diagnostics clipboard logging", none()),
+    EXPORT_DEBUG_LOG(
+            "Export Debug Log…", "Saves the Debug Log to a text file.", "diagnostics save file logging", none()),
+    CLEAR_DEBUG_LOG(
+            "Clear Debug Log",
+            "Empties the Debug Log here; the session file in the settings folder keeps what it has.",
+            "diagnostics logging empty",
+            none()),
+    REPORT_PROBLEM(
+            "Report a Problem…",
+            "Writes a report with private details taken out, for you to read and edit, then opens a GitHub"
+                    + " issue with it. Nothing is sent by itself.",
+            "bug issue feedback support crash help",
+            none()),
+    CHECK_FOR_UPDATES(
+            "Check for Updates",
+            "Asks GitHub whether a newer Mirada is out. Nothing is downloaded.",
+            "update version release new upgrade",
+            none()),
+    OPEN_RELEASE(
+            "Open the New Release",
+            "Opens the newer release's page in the browser, to download it from there.",
+            "update download upgrade version",
+            none()),
     OPEN("Open Image…", "Opens an image, with the rest of its folder.", "file", shortcut(KeyCode.O)),
     OPEN_FOLDER(
             "Open Folder…",
@@ -372,7 +418,17 @@ enum Command {
                     GO_TO_BOOKMARK,
                     BOOKMARKS -> "Bookmarks";
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER -> "Order";
-            case INFO, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES, THUMBNAIL_CAPTIONS -> "Panels";
+            case INFO, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES, THUMBNAIL_CAPTIONS, STATUS_BAR -> "Panels";
+            case MESSAGE_LOG,
+                    COPY_MESSAGES,
+                    CLEAR_MESSAGES,
+                    DEBUG_LOG,
+                    COPY_DEBUG_LOG,
+                    EXPORT_DEBUG_LOG,
+                    CLEAR_DEBUG_LOG,
+                    REPORT_PROBLEM,
+                    CHECK_FOR_UPDATES,
+                    OPEN_RELEASE -> "Help";
             case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, OPEN_FOLDER, OPEN_RECENT, CLOSE, PALETTE -> "Mirada";
             case DOCUMENTATION -> "Help";
         };

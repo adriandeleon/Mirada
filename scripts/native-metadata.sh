@@ -8,8 +8,9 @@
 # ImageIO's plugins and the JDK's native image code behind them (JNI), the libheif and libjxl
 # bindings, the EXIF reader, the stylesheets and the icon. Each image shown is also copied
 # (-Dmirada.tourCopies), for the clipboard's natives, which nothing else on a tour reaches. The
-# second run merges into the first, and a third writes one image in every format the editor saves
-# (com.mirada.edit.Encoder's main).
+# second run merges into the first, a third writes one image in every format the editor saves
+# (com.mirada.edit.Encoder's main), and a fourth asks GitHub for the latest release, as the update
+# check does (com.mirada.update.UpdateService's main).
 # It runs from the class path, as the native image is built. JavaFX's own metadata comes from StaticFX.
 #
 # Afterwards: JavaFX's own native libraries are dropped from the resources (StaticFX links them in), and
@@ -54,6 +55,10 @@ encoded="$(mktemp -d)"
 "$graal/bin/java" -agentlib:native-image-agent=config-merge-dir="$out" -Djava.awt.headless=true \
     -cp "$classpath" com.mirada.edit.Encoder "$encoded"
 rm -rf "$encoded"
+# The update check: HttpClient, TLS and the security providers behind them, which no tour reaches
+# (the tours never check). Asks GitHub once.
+"$graal/bin/java" -agentlib:native-image-agent=config-merge-dir="$out" \
+    -cp "$classpath" com.mirada.update.UpdateService
 
 python="$(command -v python3 || command -v python)"
 "$python" - "$out/reachability-metadata.json" <<'PY'

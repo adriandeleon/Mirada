@@ -298,6 +298,10 @@
                              an initialised AWT contends with JavaFX. -->
                         <java.awt.headless>true</java.awt.headless>
                         <mirada.codecs>${codecs.dir}</mirada.codecs>
+                        <!-- No test reaches GitHub: the automatic update check is off, and a check
+                             by hand goes to a closed local port (UpdateCoordinator, UpdateService). -->
+                        <mirada.updateCheck>off</mirada.updateCheck>
+                        <mirada.updateUrl>http://127.0.0.1:9/releases/latest</mirada.updateUrl>
                     </systemPropertyVariables>
                     <!-- JavaFX loads its native libraries from the classpath here; without this the
                          JDK warns that it will refuse in a future release. -->

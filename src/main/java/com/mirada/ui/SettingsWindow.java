@@ -128,6 +128,16 @@ final class SettingsWindow {
             if (now != settings.thumbnailNames()) settings.setThumbnailNames(now);
         });
 
+        CheckBox statusBar = new CheckBox();
+        statusBar.setSelected(settings.statusBar());
+        statusBar.selectedProperty().addListener((o, was, now) -> {
+            if (now != settings.statusBar()) settings.setStatusBar(now);
+        });
+
+        CheckBox updates = new CheckBox();
+        updates.setSelected(settings.checkForUpdates());
+        updates.selectedProperty().addListener((o, was, now) -> settings.setCheckForUpdates(now));
+
         CheckBox keepZoom = new CheckBox();
         keepZoom.setSelected(settings.keepZoom());
         keepZoom.selectedProperty().addListener((o, was, now) -> settings.setKeepZoom(now));
@@ -174,6 +184,7 @@ final class SettingsWindow {
             atSide.setSelected(settings.thumbnailsAtSide());
             names.setSelected(settings.thumbnailNames());
             captions.setSelected(settings.thumbnailCaptions());
+            statusBar.setSelected(settings.statusBar());
         });
 
         VBox root = new VBox(
@@ -202,6 +213,11 @@ final class SettingsWindow {
                                 "Opens the properties sidebar when Mirada starts. I toggles it.",
                                 info),
                         row(
+                                "Status bar",
+                                "A line along the bottom saying what the last command did; a click on it"
+                                        + " lists every message.",
+                                statusBar),
+                        row(
                                 "Hide controls after",
                                 "Seconds without moving the pointer before the floating controls fade.",
                                 hide),
@@ -215,6 +231,13 @@ final class SettingsWindow {
                         row("Sort by", "The order images are stepped through.", sortBy),
                         row("Reverse order", "Last first: newest, largest, or Z to A.", reversed),
                         row("Slideshow speed", "Seconds each image shows in a slideshow. F5 starts it.", slideshow)),
+                group(
+                        "Updates",
+                        row(
+                                "Check for updates",
+                                "Once a day, a few seconds after start, asks GitHub whether a newer Mirada"
+                                        + " is out, and says so in the status bar. Nothing is downloaded.",
+                                updates)),
                 group(
                         "Keys",
                         row(

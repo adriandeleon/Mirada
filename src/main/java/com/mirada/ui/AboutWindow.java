@@ -1,8 +1,5 @@
 package com.mirada.ui;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
@@ -25,8 +22,7 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 
 import com.mirada.AppInfo;
-import com.mirada.image.NativeLibraries;
-import org.jspecify.annotations.Nullable;
+import com.mirada.update.UpdateCoordinator;
 
 /**
  * About: what this build is and where it came from — Termina's window, with Mirada's extras: the
@@ -41,7 +37,13 @@ final class AboutWindow {
 
     private final Stage stage = new Stage();
 
-    AboutWindow(Path settingsFile, Consumer<String> openLink, String stylesheet) {
+    private final UpdateCoordinator updates;
+    private final Label updateLine = new Label();
+    private final Hyperlink updateLink = new Hyperlink("Open its page");
+    private final Runnable refreshUpdate = this::refreshUpdate;
+
+    AboutWindow(Path settingsFile, Consumer<String> openLink, UpdateCoordinator updates, String stylesheet) {
+        this.updates = updates;
         stage.setTitle("About " + AppInfo.NAME);
         stage.setResizable(false);
         WindowIcon.applyTo(stage);
@@ -79,14 +81,18 @@ final class AboutWindow {
         releaseNotes.setOnAction(e -> openLink.accept(AppInfo.releaseNotesUrl()));
         VBox links = new VBox(0, homepage, releaseNotes, pauta);
 
+        // The last update check's answer, and nothing claimed before one (ABOUT-02, ABOUT-04, WIN-07).
+        updateLine.getStyleClass().add("about-update");
+        updateLink.setOnAction(e -> {
+            String page = updates.releasePage();
+            if (page != null) openLink.accept(page);
+        });
+        HBox update = new HBox(4, updateLine, updateLink);
+        update.setAlignment(Pos.CENTER_LEFT);
+
         // Version, build, commit and Pauta edition first, then the runtime, the OS and the settings
         // file: what a bug report needs, and what Copy details copies (ABOUT-02, ABOUT-03).
-        String environment = AppInfo.environment(
-                runtime(
-                        System.getProperty("java.runtime.version"),
-                        System.getProperty("javafx.runtime.version"),
-                        codecVersions()),
-                settingsFile);
+        String environment = AppInfo.environment(AppInfo.runtime(), settingsFile);
         Label environmentBlock = new Label(environment);
         environmentBlock.getStyleClass().add("about-path");
         environmentBlock.setWrapText(true);
@@ -97,7 +103,11 @@ final class AboutWindow {
             Clipboard.getSystemClipboard().setContent(content);
             copy.setText(COPIED);
         });
-        stage.setOnHidden(e -> copy.setText(COPY_DETAILS));
+        stage.setOnHidden(e -> {
+            copy.setText(COPY_DETAILS);
+            // Listening only while open: a closed About keeps nothing alive.
+            updates.removeListener(refreshUpdate);
+        });
 
         Label credits =
                 new Label("Decoding by JavaFX, libjpeg-turbo, libwebp, TwelveMonkeys ImageIO, libheif, libde265,"
@@ -113,7 +123,7 @@ final class AboutWindow {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox footer = new HBox(spacer, close);
 
-        VBox root = new VBox(10, heading, details, links, environmentBlock, copy, credits, footer);
+        VBox root = new VBox(10, heading, details, links, update, environmentBlock, copy, credits, footer);
         root.setPadding(new Insets(20));
         root.getStyleClass().add("about");
         VBox.setMargin(footer, new Insets(8, 0, 0, 0));
@@ -128,12 +138,14 @@ final class AboutWindow {
 
     /** Shows the window beside {@code from}, or brings it forward if it is already up. */
     void show(Window from) {
+        refreshUpdate();
         if (stage.isShowing()) {
             stage.toFront();
             return;
         }
         stage.setX(from.getX() + Math.max(0, (from.getWidth() - WIDTH) / 2));
         stage.setY(from.getY() + 80);
+        updates.addListener(refreshUpdate);
         stage.show();
     }
 
@@ -142,30 +154,10 @@ final class AboutWindow {
         return "Built to Pauta " + edition;
     }
 
-    /** {@code Java 25.0.1 · JavaFX 27 · Codecs: libheif v1.23.7, ...}, leaving out what is unknown. */
-    static String runtime(@Nullable String java, @Nullable String javafx, @Nullable String codecs) {
-        StringBuilder out = new StringBuilder();
-        if (java != null) out.append("Java ").append(java);
-        if (javafx != null)
-            out.append(out.isEmpty() ? "" : " · ").append("JavaFX ").append(javafx);
-        out.append(out.isEmpty() ? "" : "\n")
-                .append("Codecs: ")
-                .append(codecs == null || codecs.isBlank() ? "the system's, or none" : codecs);
-        return out.toString();
-    }
-
-    /** The bundle's VERSIONS.txt, joined on one line; null without a bundle. */
-    private static @Nullable String codecVersions() {
-        Path versions = NativeLibraries.versionsFile();
-        if (versions == null) return null;
-        try {
-            return String.join(", ", Files.readAllLines(versions, StandardCharsets.UTF_8))
-                    .replace(" (asm: true)", "")
-                    .replace(" (asm: false)", " (no asm)")
-                    .replace(" (simd: ON)", "")
-                    .replace(" (simd: OFF)", " (no SIMD)");
-        } catch (IOException | RuntimeException e) {
-            return null;
-        }
+    private void refreshUpdate() {
+        updateLine.setText(updates.summary());
+        boolean available = updates.state() == UpdateCoordinator.State.AVAILABLE;
+        updateLink.setVisible(available);
+        updateLink.setManaged(available);
     }
 }

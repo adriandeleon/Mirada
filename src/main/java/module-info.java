@@ -20,5 +20,10 @@ module com.mirada {
     requires com.twelvemonkeys.imageio.tiff;
     requires com.twelvemonkeys.imageio.psd;
 
+    // The Debug Log captures java.util.logging (DIAG-02, PLAT-13), and the update check asks GitHub
+    // over HttpClient (DIAG-05).
+    requires java.logging;
+    requires java.net.http;
+
     exports com.mirada;
 }

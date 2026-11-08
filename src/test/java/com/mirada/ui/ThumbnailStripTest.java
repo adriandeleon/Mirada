@@ -4,6 +4,7 @@ import java.util.List;
 
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 
 import org.junit.jupiter.api.Test;
 
@@ -31,17 +32,20 @@ class ThumbnailStripTest {
     }
 
     @Test
-    void theStripGoesToTheSideAndBackToTheBottom() {
+    void theStripGoesToTheSideAndBackToTheBottomAboveTheStatusBar() {
         BorderPane root = new BorderPane();
+        Region statusBar = new Region();
+        VBox bottom = new VBox(statusBar);
+        root.setBottom(bottom);
         Region strip = new Region();
-        ThumbnailStrip.place(root, strip, false);
-        ThumbnailStrip.place(root, strip, true);
+        ThumbnailStrip.place(root, bottom, strip, false);
+        ThumbnailStrip.place(root, bottom, strip, true);
         assertSame(strip, root.getLeft());
-        assertNull(root.getBottom());
-        ThumbnailStrip.place(root, strip, false);
-        assertSame(strip, root.getBottom());
+        assertEquals(List.of(statusBar), bottom.getChildren());
+        ThumbnailStrip.place(root, bottom, strip, false);
+        assertEquals(List.of(strip, statusBar), bottom.getChildren());
         assertNull(root.getLeft());
-        assertEquals(List.of(strip), root.getChildren());
+        assertEquals(List.of(bottom), root.getChildren());
     }
 
     @Test

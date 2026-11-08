@@ -18,7 +18,8 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Mirada's settings: theme, what opens at start, how long the floating controls stay, the folder's
- * order, whether stepping keeps the zoom, the slideshow's pace, and the keys that open the palette. In {@code settings.properties},
+ * order, whether stepping keeps the zoom, the slideshow's pace, the keys that open the palette, the
+ * status bar, and the update check. In {@code settings.properties},
  * in the platform's folder for it ({@link #folder}; {@code MIRADA_CONFIG_DIR} moves it, for tests
  * and timing runs), Termina's way: a plain file meant to be hand-edited, every
  * value clamped on read as well as on write, so a bad edit cannot break the next start, and every
@@ -53,6 +54,9 @@ public final class Settings {
     static final String WINDOW_MAXIMIZED = "window.maximized";
     static final String SLIDESHOW_SECONDS = "slideshow.seconds";
     static final String PALETTE_KEYS = "palette.keys";
+    static final String STATUS_BAR = "window.statusBar";
+    static final String CHECK_FOR_UPDATES = "updates.check";
+    static final String LAST_UPDATE_CHECK = "updates.lastCheck";
 
     public static final int MIN_HIDE_SECONDS = 1;
     public static final int MAX_HIDE_SECONDS = 10;
@@ -76,6 +80,9 @@ public final class Settings {
     private List<Path> recent = List.of();
     private int slideshowSeconds = DEFAULT_SLIDESHOW_SECONDS;
     private String paletteKeys = defaultPaletteKeys(isMac(System.getProperty("os.name", "")));
+    private boolean statusBar = true;
+    private boolean checkForUpdates = true;
+    private long lastUpdateCheck;
 
     public Settings(Path file) {
         this.file = file;
@@ -191,6 +198,21 @@ public final class Settings {
         recent = List.copyOf(folders);
         slideshowSeconds = slideshowSecondsOf(properties.getProperty(SLIDESHOW_SECONDS));
         paletteKeys = paletteKeysOf(properties.getProperty(PALETTE_KEYS), isMac(System.getProperty("os.name", "")));
+        statusBar =
+                Boolean.parseBoolean(properties.getProperty(STATUS_BAR, "true").trim());
+        checkForUpdates = Boolean.parseBoolean(
+                properties.getProperty(CHECK_FOR_UPDATES, "true").trim());
+        lastUpdateCheck = millisOf(properties.getProperty(LAST_UPDATE_CHECK));
+    }
+
+    /** A time in milliseconds since the epoch, or 0 for none or anything that is not one. */
+    static long millisOf(@Nullable String value) {
+        if (value == null) return 0;
+        try {
+            return Math.max(0, Long.parseLong(value.trim()));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     /**
@@ -413,6 +435,36 @@ public final class Settings {
         changed();
     }
 
+    /** Whether the status bar shows along the bottom of the window (WIN-01). */
+    public boolean statusBar() {
+        return statusBar;
+    }
+
+    public void setStatusBar(boolean value) {
+        statusBar = value;
+        changed();
+    }
+
+    /** Whether Mirada asks GitHub, once a day, whether a newer release is out (DIAG-05). */
+    public boolean checkForUpdates() {
+        return checkForUpdates;
+    }
+
+    public void setCheckForUpdates(boolean value) {
+        checkForUpdates = value;
+        changed();
+    }
+
+    /** When the update check last had an answer, in milliseconds since the epoch; 0 for never. */
+    public long lastUpdateCheck() {
+        return lastUpdateCheck;
+    }
+
+    public void setLastUpdateCheck(long value) {
+        lastUpdateCheck = Math.max(0, value);
+        changed();
+    }
+
     /** Called after every change, once it is saved, so whatever shows a setting can apply it live. */
     public void addListener(Runnable listener) {
         listeners.add(listener);
@@ -452,6 +504,9 @@ public final class Settings {
         }
         properties.setProperty(SLIDESHOW_SECONDS, Integer.toString(slideshowSeconds));
         properties.setProperty(PALETTE_KEYS, paletteKeys);
+        properties.setProperty(STATUS_BAR, Boolean.toString(statusBar));
+        properties.setProperty(CHECK_FOR_UPDATES, Boolean.toString(checkForUpdates));
+        if (lastUpdateCheck > 0) properties.setProperty(LAST_UPDATE_CHECK, Long.toString(lastUpdateCheck));
         try {
             Path folder = file.toAbsolutePath().getParent();
             if (folder != null) Files.createDirectories(folder);

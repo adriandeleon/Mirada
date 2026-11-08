@@ -10,6 +10,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javafx.application.Platform;
 import javafx.scene.image.Image;
@@ -37,6 +39,11 @@ import org.jspecify.annotations.Nullable;
  * <p>FX thread only.
  */
 public final class ImageCache {
+
+    /** Asked for when something is logged: starting the logging system is no part of start-up. */
+    private static Logger log() {
+        return Logger.getLogger(ImageCache.class.getName());
+    }
 
     /** Longer side of a preview, in pixels. */
     static final int PREVIEW_SIZE = 1280;
@@ -140,7 +147,7 @@ public final class ImageCache {
                     Throwable cause = innermost(error);
                     // A broken file is an IOException and says so in the window. Anything else is a
                     // bug, or a native image missing metadata, and its trace is what finds it.
-                    if (!(cause instanceof IOException)) cause.printStackTrace();
+                    if (!(cause instanceof IOException)) log().log(Level.WARNING, "Could not decode " + file, cause);
                     return Decoded.failed(message(error));
                 });
         return new Entry(file, ready, cancel, previews.get(file));

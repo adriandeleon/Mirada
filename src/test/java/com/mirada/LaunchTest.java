@@ -50,13 +50,24 @@ class LaunchTest {
     }
 
     @Test
+    void reportKeepsTheConfigFolderOnEitherSide() {
+        assertEquals(Launch.Action.REPORT, parse("--report").action());
+        Launch before = parse("--report", "--config-dir", "/tmp/c");
+        assertEquals(Launch.Action.REPORT, before.action());
+        assertEquals(Path.of("/tmp/c"), before.configDir());
+        assertEquals(
+                Path.of("/home/u", ".mirada-dev"), parse("--dev", "--report").configDir());
+        assertEquals(Launch.Action.HELP, parse("--report", "--help").action());
+    }
+
+    @Test
     void afterTheDoubleDashEverythingIsAFile() {
         assertEquals(List.of("--help"), parse("--", "--help").files());
     }
 
     @Test
     void theUsageNamesEveryOption() {
-        for (String option : List.of("--config-dir", "--dev", "--version", "--help"))
+        for (String option : List.of("--config-dir", "--dev", "--report", "--version", "--help"))
             assertTrue(Launch.USAGE.contains(option), option);
     }
 }
