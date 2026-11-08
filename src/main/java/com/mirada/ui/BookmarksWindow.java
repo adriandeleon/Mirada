@@ -469,4 +469,9 @@ final class BookmarksWindow {
             setGraphic(row);
         }
     }
+
+    /** Its stage, closed with the viewer's. */
+    Stage stage() {
+        return stage;
+    }
 }

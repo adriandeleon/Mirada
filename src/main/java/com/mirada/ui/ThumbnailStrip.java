@@ -102,6 +102,11 @@ final class ThumbnailStrip {
      * What a right-click on the strip opens: closing it, and where it stands and what it shows. Made
      * when asked for, so it ticks what is on now.
      */
+    /** Stops making thumbnails, for a window that has closed. */
+    void close() {
+        thumbnails.close();
+    }
+
     void setMenu(Supplier<ContextMenu> menu) {
         list.setOnContextMenuRequested(e -> {
             menu.get().show(list, e.getScreenX(), e.getScreenY());

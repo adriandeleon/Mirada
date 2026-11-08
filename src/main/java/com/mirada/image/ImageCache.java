@@ -5,10 +5,12 @@ import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -102,6 +104,18 @@ public final class ImageCache {
         this.metadataReader = metadataReader;
         this.imageDecoder = imageDecoder;
         this.fxThread = fxThread;
+    }
+
+    /**
+     * Stops the decoder, metadata and preview threads, for a window that has closed (PERF-13): what is
+     * still loading is dropped.
+     */
+    public void close() {
+        for (Executor executor : List.of(metadataReader, imageDecoder, previewMaker)) {
+            if (executor instanceof ExecutorService service) service.shutdownNow();
+        }
+        entries.clear();
+        previews.clear();
     }
 
     /** The entry for {@code file}, starting its load if it is not cached; marks it most recently used. */

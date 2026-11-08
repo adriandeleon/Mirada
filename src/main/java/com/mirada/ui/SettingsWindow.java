@@ -311,4 +311,9 @@ final class SettingsWindow {
         row.getStyleClass().add("info-row");
         return row;
     }
+
+    /** Its stage, closed with the viewer's. */
+    Stage stage() {
+        return stage;
+    }
 }

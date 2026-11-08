@@ -58,6 +58,7 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import javafx.util.Duration;
 
 import com.mirada.AppInfo;
@@ -209,7 +210,10 @@ public final class ViewerWindow {
     /** What Move to Trash can put back, the latest first; only Linux's trash says where a file went. */
     private final Deque<Trash.Trashed> trashed = new ArrayDeque<>();
 
-    private static final int UNDO_DEPTH = 20;
+    static final int UNDO_DEPTH = 20;
+
+    /** The tool windows this window has opened: About, Settings and the rest, closed with it. */
+    private final List<Stage> toolWindows = new ArrayList<>();
     /** The image whose preview the viewport shows until its full resolution arrives; else null. */
     private @Nullable Path previewing;
 
@@ -274,6 +278,7 @@ public final class ViewerWindow {
         stage.setOnHidden(e -> {
             slideshow.stop();
             rememberPlace();
+            release();
         });
         canvas = new StackPane(viewport, emptyState, toast);
         canvas.getStyleClass().add("canvas");
@@ -613,6 +618,22 @@ public final class ViewerWindow {
         }
     }
 
+    /**
+     * Lets go of what this window started, as it closes (PERF-13): its tool windows, which are not
+     * owned by it and would otherwise keep the app running; its timers; the decoder and thumbnail
+     * threads.
+     */
+    private void release() {
+        for (Stage tool : List.copyOf(toolWindows)) tool.close();
+        toolWindows.clear();
+        toastTimer.stop();
+        frameTimer.stop();
+        pointerIdle.stop();
+        cache.close();
+        ThumbnailStrip built = strip;
+        if (built != null) built.close();
+    }
+
     /** Saves where the window is, for the next start: once, as it closes or the app quits. */
     public void rememberPlace() {
         Rectangle2D place = normalPlace;
@@ -868,9 +889,14 @@ public final class ViewerWindow {
                 if (window != null) window.refresh();
             }
             case EXPORT_DEBUG_LOG -> exportDebugLog();
-            case REPORT_PROBLEM ->
-                new ReportProblemWindow(settings, Redactor.forThisMachine(), openLink, this::say, stylesheet())
-                        .show(stage);
+            case REPORT_PROBLEM -> {
+                ReportProblemWindow report =
+                        new ReportProblemWindow(settings, Redactor.forThisMachine(), openLink, this::say, stylesheet());
+                Stage reportStage = report.stage();
+                toolWindows.add(reportStage);
+                reportStage.addEventHandler(WindowEvent.WINDOW_HIDDEN, e -> toolWindows.remove(reportStage));
+                report.show(stage);
+            }
             case CHECK_FOR_UPDATES -> updates.checkNow(true);
             case OPEN_RELEASE -> {
                 String page = updates.releasePage();
@@ -979,6 +1005,7 @@ public final class ViewerWindow {
         if (made == null) {
             made = new DebugLogWindow(this::run, stylesheet());
             debugLog = made;
+            toolWindows.add(made.stage());
         }
         return made;
     }
@@ -1417,6 +1444,7 @@ public final class ViewerWindow {
         if (made == null) {
             made = new BookmarksWindow(bookmarks, this::openFromBookmarks, this::reveal, stylesheet());
             bookmarksWindow = made;
+            toolWindows.add(made.stage());
         }
         return made;
     }
@@ -1442,6 +1470,7 @@ public final class ViewerWindow {
         if (made == null) {
             made = new ShortcutsWindow(stylesheet());
             shortcutsWindow = made;
+            toolWindows.add(made.stage());
         }
         return made;
     }
@@ -1451,6 +1480,7 @@ public final class ViewerWindow {
         if (made == null) {
             made = new SettingsWindow(settings, stylesheet());
             settingsWindow = made;
+            toolWindows.add(made.stage());
         }
         return made;
     }
@@ -1460,6 +1490,7 @@ public final class ViewerWindow {
         if (made == null) {
             made = new AboutWindow(settings.file(), openLink, updates, stylesheet());
             about = made;
+            toolWindows.add(made.stage());
         }
         return made;
     }
