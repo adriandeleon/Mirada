@@ -117,6 +117,12 @@ enum Command {
             "Finds a bookmarked image or folder, or one with a note, by its name or its note, and opens it.",
             "bookmarks notes find search jump favourites favorites",
             shortcut(KeyCode.B)),
+    BOOKMARKS(
+            "Bookmarks and Notes",
+            "Lists every bookmark and note, by folder, with each image's thumbnail and note, to find, open,"
+                    + " edit or remove.",
+            "bookmarks notes list all manage window panel favourites favorites organise organize",
+            new KeyCodeCombination(KeyCode.B, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN)),
     SORT_BY_NAME("Sort by Name", "Orders the folder by file name, as a person counts.", "order", none()),
     SORT_BY_DATE(
             "Sort by Date", "Orders the folder by when each file was last changed.", "order modified time", none()),
@@ -354,8 +360,14 @@ enum Command {
                     UNDO_TRASH,
                     COPY,
                     SHOW_IN_FOLDER -> "Image";
-            case BOOKMARK, BOOKMARK_FOLDER, NOTE, FOLDER_NOTE, NEXT_BOOKMARK, PREVIOUS_BOOKMARK, GO_TO_BOOKMARK ->
-                "Bookmarks";
+            case BOOKMARK,
+                    BOOKMARK_FOLDER,
+                    NOTE,
+                    FOLDER_NOTE,
+                    NEXT_BOOKMARK,
+                    PREVIOUS_BOOKMARK,
+                    GO_TO_BOOKMARK,
+                    BOOKMARKS -> "Bookmarks";
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER -> "Order";
             case INFO, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES, THUMBNAIL_CAPTIONS -> "Panels";
             case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, OPEN_FOLDER, OPEN_RECENT, CLOSE, PALETTE -> "Mirada";
@@ -393,7 +405,7 @@ enum Command {
                 case Z -> shift ? null : UNDO_TRASH;
                 case W, Q -> CLOSE;
                 case P -> shift ? null : GO_TO_IMAGE;
-                case B -> shift ? null : GO_TO_BOOKMARK;
+                case B -> shift ? BOOKMARKS : GO_TO_BOOKMARK;
                 case R -> shift ? ROTATE_COUNTERCLOCKWISE : ROTATE_CLOCKWISE;
                 case L -> mac && !shift ? ROTATE_COUNTERCLOCKWISE : null;
                 case I -> mac && !shift ? INFO : null;

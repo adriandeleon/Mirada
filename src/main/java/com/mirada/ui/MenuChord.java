@@ -28,6 +28,11 @@ final class MenuChord extends KeyCombination {
         return chord == KeyCombination.NO_MATCH ? null : new MenuChord(chord.getDisplayText());
     }
 
+    /** What to show beside an item whose key is a window's own, not a command's. */
+    static KeyCombination shown(KeyCombination chord) {
+        return new MenuChord(chord.getDisplayText());
+    }
+
     /** Shows {@code command}'s chord beside {@code item}. */
     static <T extends MenuItem> T on(T item, Command command) {
         item.setAccelerator(of(command));

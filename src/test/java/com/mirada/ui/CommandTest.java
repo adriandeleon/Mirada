@@ -272,7 +272,9 @@ class CommandTest {
         assertEquals(Command.PREVIOUS_BOOKMARK, key(KeyCode.OPEN_BRACKET, false, false));
         assertEquals(Command.GO_TO_BOOKMARK, key(KeyCode.B, false, true));
         assertEquals(Command.GO_TO_BOOKMARK, mac(KeyCode.B, false, true, false));
-        assertNull(key(KeyCode.B, true, true));
+        assertEquals(Command.BOOKMARKS, key(KeyCode.B, true, true));
+        assertEquals(Command.BOOKMARKS, mac(KeyCode.B, true, true, false));
+        assertEquals("Bookmarks", Command.BOOKMARKS.group());
         assertEquals("No folder is open.", Command.BOOKMARK.unavailable(0, 0, false));
         // A file that would not decode can still be bookmarked, to come back to.
         assertNull(Command.NOTE.unavailable(0, 1, false));

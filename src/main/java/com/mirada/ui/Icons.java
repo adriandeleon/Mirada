@@ -92,6 +92,7 @@ final class Icons {
             case COPY -> COPY;
             case SHOW_IN_FOLDER -> FOLDER;
             case BOOKMARK, BOOKMARK_FOLDER, GO_TO_BOOKMARK -> BOOKMARK;
+            case BOOKMARKS -> NOTE;
             case NOTE, FOLDER_NOTE -> NOTE;
             case NEXT_BOOKMARK -> NEXT_BOOKMARK;
             case PREVIOUS_BOOKMARK -> PREVIOUS_BOOKMARK;

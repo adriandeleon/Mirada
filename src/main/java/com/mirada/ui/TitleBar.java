@@ -230,6 +230,7 @@ final class TitleBar {
                         new SeparatorMenuItem(),
                         panel(Command.THUMBNAILS, thumbnailsShowing),
                         panel(Command.INFO, infoShowing),
+                        item(Command.BOOKMARKS, run),
                         new SeparatorMenuItem(),
                         item(Command.EDIT, run),
                         item(Command.ROTATE_COUNTERCLOCKWISE, run),
