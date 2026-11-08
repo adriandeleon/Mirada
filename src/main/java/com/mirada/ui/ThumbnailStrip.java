@@ -104,7 +104,7 @@ final class ThumbnailStrip {
      */
     void setMenu(Supplier<ContextMenu> menu) {
         list.setOnContextMenuRequested(e -> {
-            menu.get().show(list, e.getScreenX(), e.getScreenY());
+            Popups.show(menu.get(), list, e.getScreenX(), e.getScreenY());
             e.consume();
         });
     }

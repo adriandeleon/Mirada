@@ -16,6 +16,7 @@ import com.mirada.report.Browser;
 import com.mirada.report.Redactor;
 import com.mirada.report.ReportCommand;
 import com.mirada.settings.Settings;
+import com.mirada.ui.Fonts;
 import com.mirada.ui.Theme;
 import com.mirada.ui.ViewerWindow;
 import org.jspecify.annotations.Nullable;
@@ -112,6 +113,8 @@ public final class App extends Application {
     @Override
     public void start(Stage stage) {
         Startup.mark("fx-start");
+        // Inter's four faces register on a thread of their own while the window is built (Fonts).
+        Fonts.load();
         Settings settings = new Settings(Settings.defaultFile(configDir));
         settings.load();
         // The Debug Log's session file beside the settings, off the FX thread: rotating last
@@ -127,6 +130,11 @@ public final class App extends Application {
         ViewerWindow window = new ViewerWindow(stage, settings, getHostServices()::showDocument);
         this.window = window;
         shown = window;
+        Startup.mark("window-built");
+        // The first styling resolves the family, so the faces must be in by then.
+        Fonts.ready();
+        Startup.mark("fonts-ready");
+        if (Startup.enabled()) System.out.println("[perf] fonts: " + Fonts.registered());
         window.show();
         Startup.mark("window-shown");
         List<String> args = files;

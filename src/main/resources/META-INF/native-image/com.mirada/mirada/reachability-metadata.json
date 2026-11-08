@@ -3053,10 +3053,25 @@
       "glob": "com/mirada/build-info.properties"
     },
     {
+      "glob": "com/mirada/fonts/inter/Inter-Bold.ttf"
+    },
+    {
+      "glob": "com/mirada/fonts/inter/Inter-BoldItalic.ttf"
+    },
+    {
+      "glob": "com/mirada/fonts/inter/Inter-Italic.ttf"
+    },
+    {
+      "glob": "com/mirada/fonts/inter/Inter-Regular.ttf"
+    },
+    {
       "glob": "com/mirada/icon.png"
     },
     {
       "glob": "com/mirada/styles/mirada.css"
+    },
+    {
+      "glob": "com/mirada/styles/ui-font.css"
     },
     {
       "glob": "com/sun/glass/ui/gtk/WindowDecorationGnome.bss"

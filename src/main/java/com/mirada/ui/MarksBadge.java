@@ -21,31 +21,27 @@ import javafx.util.Duration;
  */
 final class MarksBadge {
 
+    /** What a click on the bookmark does. */
+    static final String TAKE_OFF = "Take the Bookmark Off";
+
     private final HBox pill;
-    private final Button bookmark = new Button();
-    private final Button note = new Button();
-    private final Tooltip noteTip = new Tooltip();
+    private final Button bookmark;
+    private final Button note;
+    private String noteText = "";
 
     /** @param run runs a command, the same as its key would */
     MarksBadge(StackPane canvas, Consumer<Command> run) {
-        bookmark.setGraphic(Icons.of(Icons.BOOKMARK));
-        bookmark.setTooltip(new Tooltip(
-                "Bookmarked: click to take it off (" + Command.BOOKMARK.chord().getDisplayText() + ")"));
-        bookmark.setAccessibleText("Bookmarked");
+        bookmark = Icons.button(Command.BOOKMARK, "osd-button", () -> run.accept(Command.BOOKMARK));
         bookmark.getStyleClass().add("mark-bookmark");
-        bookmark.setOnAction(e -> run.accept(Command.BOOKMARK));
-        note.setGraphic(Icons.of(Icons.NOTE));
+        note = Icons.button(Command.NOTE, "osd-button", () -> run.accept(Command.NOTE));
+        Tooltip noteTip = note.getTooltip();
         noteTip.setWrapText(true);
         noteTip.setMaxWidth(360);
         noteTip.setShowDelay(Duration.millis(250));
         noteTip.setShowDuration(Duration.INDEFINITE);
-        note.setTooltip(noteTip);
-        note.setOnAction(e -> run.accept(Command.NOTE));
-        for (Button button : new Button[] {bookmark, note}) {
-            button.getStyleClass().addAll("osd-button", "flat");
-            button.setFocusTraversable(false);
+        relabel();
+        for (Button button : new Button[] {bookmark, note})
             button.managedProperty().bind(button.visibleProperty());
-        }
         pill = new HBox(2, bookmark, note);
         pill.getStyleClass().addAll("osd", "marks-badge");
         pill.setAlignment(Pos.CENTER);
@@ -57,12 +53,21 @@ final class MarksBadge {
         canvas.getChildren().add(pill);
     }
 
+    /**
+     * The buttons' names from the commands' chords now (TBAR-03): the bookmark's says what a click
+     * does, takes it off; the note's is the note itself, as clicking it edits it.
+     */
+    void relabel() {
+        Icons.name(bookmark, TAKE_OFF, Command.BOOKMARK.chord());
+        Icons.name(note, "Note: " + noteText, Command.NOTE.chord());
+    }
+
     /** Shows the marks of the image on screen; nothing at all while {@code hidden} (a slideshow). */
     void show(boolean bookmarked, String noteText, boolean hidden) {
         bookmark.setVisible(bookmarked);
         note.setVisible(!noteText.isEmpty());
-        noteTip.setText(noteText + "\n\nClick to edit (" + Command.NOTE.chord().getDisplayText() + ")");
-        note.setAccessibleText("Note: " + noteText);
+        this.noteText = noteText;
+        relabel();
         pill.setVisible(!hidden && (bookmarked || !noteText.isEmpty()));
     }
 }

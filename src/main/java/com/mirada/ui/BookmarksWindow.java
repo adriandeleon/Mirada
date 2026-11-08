@@ -11,7 +11,9 @@ import java.util.function.Consumer;
 
 import javafx.application.Platform;
 import javafx.css.PseudoClass;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -152,6 +154,7 @@ final class BookmarksWindow {
         scene.getStylesheets().add(stylesheet);
         scene.addEventFilter(KeyEvent.KEY_PRESSED, this::onKey);
         Popups.closeOnPressOutside(stage, scene);
+        Popups.menusByKey(scene);
         stage.setScene(scene);
 
         bookmarks.addListener(() -> {
@@ -230,6 +233,8 @@ final class BookmarksWindow {
             move(-10);
         } else if (code == KeyCode.PAGE_DOWN) {
             move(10);
+        } else if (Popups.isMenuKey(e)) {
+            showMenuFromKeyboard();
         } else if (code == KeyCode.ENTER) {
             open(selected());
         } else if (EDIT_NOTE.match(e) || (e.isShortcutDown() && code == KeyCode.E)) {
@@ -322,6 +327,18 @@ final class BookmarksWindow {
         filter.requestFocus();
     }
 
+    /**
+     * The selected row's menu, opened by the Menu key or Shift+F10 under the row, scrolled into view
+     * first (MENU-09): the keys stay in the filter field, so they never reach a row of their own.
+     */
+    private void showMenuFromKeyboard() {
+        BookmarkList.Row row = list.getSelectionModel().getSelectedItem();
+        Bounds bounds = Popups.selectedRow(list);
+        if (row == null || bounds == null) return;
+        Point2D at = Popups.under(bounds);
+        Popups.show(menu(row), list, at.getX(), at.getY());
+    }
+
     private ContextMenu menu(BookmarkList.Row row) {
         Bookmarks.Mark mark = markOf(row);
         boolean folder = row instanceof BookmarkList.FolderRow;
@@ -342,7 +359,7 @@ final class BookmarksWindow {
         MenuItem show = new MenuItem("Show in Folder", Icons.of(Icons.FOLDER));
         show.setOnAction(e -> reveal.accept(row.path()));
         show.setDisable(missing.contains(row.path()));
-        MenuItem remove = new MenuItem("Remove", Icons.of(Icons.TRASH));
+        MenuItem remove = new MenuItem("Remove", Icons.of(Icons.REMOVE_MARK));
         remove.setAccelerator(MenuChord.shown(REMOVE));
         remove.setOnAction(e -> remove(row));
         remove.setDisable(mark == null);
@@ -401,7 +418,7 @@ final class BookmarksWindow {
                 BookmarkList.Row item = getItem();
                 if (isEmpty() || item == null) return;
                 getListView().getSelectionModel().select(getIndex());
-                menu(item).show(this, e.getScreenX(), e.getScreenY());
+                Popups.show(menu(item), this, e.getScreenX(), e.getScreenY());
                 e.consume();
             });
         }

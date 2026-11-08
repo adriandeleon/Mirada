@@ -10,8 +10,8 @@ never because Mirada lacks a part another rule requires.
 
 |        | Pass | Fail | Manual | N.a. |
 |--------|-----:|-----:|-------:|-----:|
-| MUST   | 85 | 53 | 4 | 20 |
-| SHOULD | 47 | 59 | 15 | 59 |
+| MUST   | 105 | 33 | 4 | 20 |
+| SHOULD | 51 | 55 | 15 | 59 |
 | MAY    | 1 | 2 | 0 | 6 |
 
 A failed MUST blocks a release.
@@ -21,7 +21,6 @@ A failed MUST blocks a release.
 | ID | Level | Result | Evidence |
 |----|-------|--------|----------|
 | [PLAT-01](https://pauta-project.dev/4.0.1/platform/#plat-01) | MUST | fail | `pom.xml:202`: release 25, but the enforcer's range is [25,26), a ceiling (the formatter broke on 27) |
-| [PLAT-06](https://pauta-project.dev/4.0.1/platform/#plat-06) | MUST | fail | `src/main/resources/com/mirada/styles/mirada.css:50`: fixed hexes in component rules (:50, :161, :490, :531, :535) |
 | [PLAT-11](https://pauta-project.dev/4.0.1/platform/#plat-11) | MUST | fail | `pom.xml:295`: Headless glass and JUnit 5, no Monocle; but no TestFX (src/test/java/com/mirada/image/FxToolkit.java:22 starts the toolkit by hand; why: docs/decisions/0005-no-testfx-yet.md) |
 | [PLAT-12](https://pauta-project.dev/4.0.1/platform/#plat-12) | MUST | fail | `pom.xml`: no jacoco-maven-plugin, no jacoco-check |
 | [REPO-04](https://pauta-project.dev/4.0.1/repository/#repo-04) | MUST | fail | NOTICE:1 name, copyright, "licensed under the MIT License", every component; but no NoticeCoverageTest or BuildHygieneTest |
@@ -41,26 +40,7 @@ A failed MUST blocks a release.
 | [KBD-03](https://pauta-project.dev/4.0.1/keyboard/#kbd-03) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:20`: titles and descriptions are English literals, no catalog |
 | [KBD-09](https://pauta-project.dev/4.0.1/keyboard/#kbd-09) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:397`: bindings hard-coded; no Emacs or CUA keymap JSON |
 | [KBD-11](https://pauta-project.dev/4.0.1/keyboard/#kbd-11) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:684`: user keys only for the palette |
-| [KBD-17](https://pauta-project.dev/4.0.1/keyboard/#kbd-17) | MUST | fail | `src/main/java/com/mirada/ui/InfoPanel.java:86`: icon-only buttons built in four places, no single helper; InfoPanel's lack accessible text |
-| [ICON-01](https://pauta-project.dev/4.0.1/icons-and-color/#icon-01) | MUST | fail | `src/main/java/com/mirada/ui/Theme.java:59`: window listener exists, but no ui-font.css and no Inter |
-| [ICON-02](https://pauta-project.dev/4.0.1/icons-and-color/#icon-02) | MUST | fail | no fonts/inter, no Font.loadFont |
-| [ICON-08](https://pauta-project.dev/4.0.1/icons-and-color/#icon-08) | MUST | fail | `src/main/resources/com/mirada/styles/mirada.css:50`: hexes outside .root (:50, :161, :490, :531, :535) and literal white/black/rgba |
-| [ICON-10](https://pauta-project.dev/4.0.1/icons-and-color/#icon-10) | MUST | fail | `src/main/resources/com/mirada/styles/mirada.css:260`: Cupertino Light's accent text #007aff is 3.5–4.0:1 on its subtle fills; Accent.java:31 aims at 3:1 |
-| [ICON-11](https://pauta-project.dev/4.0.1/icons-and-color/#icon-11) | MUST | fail | `src/main/resources/com/mirada/styles/mirada.css:121`: fg-emphasis on accent rows, but white on #007aff is 4.0:1 and nothing checks it |
-| [ICON-12](https://pauta-project.dev/4.0.1/icons-and-color/#icon-12) | MUST | fail | no -focus-ring token, no :focus-visible block |
-| [ICON-20](https://pauta-project.dev/4.0.1/icons-and-color/#icon-20) | MUST | fail | `src/main/java/com/mirada/ui/OnScreenControls.java:41`: zoom button's glyphs differ from the zoom menu's; InfoPanel's note button wears RENAME (InfoPanel.java:139) |
-| [ICON-21](https://pauta-project.dev/4.0.1/icons-and-color/#icon-21) | MUST | fail | `src/main/java/com/mirada/ui/InfoPanel.java:86`: two icon-only buttons with a tooltip and no accessible text; no one helper |
-| [TBAR-01](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-01) | MUST | fail | `src/main/java/com/mirada/ui/InfoPanel.java:88`: setTooltip without setAccessibleText; TitleBar sets them from different strings |
-| [TBAR-03](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-03) | MUST | fail | `src/main/java/com/mirada/ui/TitleBar.java:220`: tooltips typed ("Rotate Right (R)"), also OnScreenControls.java:39, Editor.java:90 |
-| [TBAR-08](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-08) | MUST | fail | `src/main/java/com/mirada/ui/OnScreenControls.java:39`: Previous and Next are in no in-window menu on Linux and Windows |
 | [TABS-14](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-14) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:358`: panels built on first use, but no test that none is built before the first paint |
-| [MENU-14](https://pauta-project.dev/4.0.1/menus/#menu-14) | MUST | fail | `src/main/java/com/mirada/ui/Icons.java:95`: every row has an icon, but borrowed ones (Bookmarks wears Note's, About Info's, Hide Thumbnails Close's) and no FX test |
-| [MENU-15](https://pauta-project.dev/4.0.1/menus/#menu-15) | MUST | fail | `src/main/java/com/mirada/ui/MenuChord.java:37`: in-window chords shown in -state-key, but the Mac bar hides bare chords and they aren't Inter |
-| [MENU-16](https://pauta-project.dev/4.0.1/menus/#menu-16) | MUST | fail | no Inter, nothing pinned on .context-menu |
-| [MENU-02](https://pauta-project.dev/4.0.1/menus/#menu-02) | MUST | fail | `src/main/java/com/mirada/ui/MacMenus.java:152`: the macOS bar registers real Cmd accelerators (in-window menus use MenuChord, which never matches) |
-| [MENU-06](https://pauta-project.dev/4.0.1/menus/#menu-06) | MUST | fail | `src/main/java/com/mirada/ui/Popups.java:34`: an open menu closes before the next, but no test |
-| [MENU-07](https://pauta-project.dev/4.0.1/menus/#menu-07) | MUST | fail | `src/main/java/com/mirada/ui/Popups.java:36`: the outside press is consumed |
-| [MENU-09](https://pauta-project.dev/4.0.1/menus/#menu-09) | MUST | fail | no Menu key or Shift+F10 handling |
 | [SET-02](https://pauta-project.dev/4.0.1/settings/#set-02) | MUST | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:179`: one page of cards; no page sidebar, no search field |
 | [SET-03](https://pauta-project.dev/4.0.1/settings/#set-03) | MUST | fail | no Settings search and no ranking test |
 | [SET-06](https://pauta-project.dev/4.0.1/settings/#set-06) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:120`: no palette command for theme, thumbnails/properties at start, controls delay, slideshow speed, palette keys |
@@ -78,7 +58,6 @@ A failed MUST blocks a release.
 
 | ID | Level | Result | Evidence |
 |----|-------|--------|----------|
-| [PLAT-07](https://pauta-project.dev/4.0.1/platform/#plat-07) | SHOULD | fail | no Inter, no Font.loadFont, no ui-font.css |
 | [PLAT-14](https://pauta-project.dev/4.0.1/platform/#plat-14) | SHOULD | fail | `src/main/java/com/mirada/settings/Settings.java:456`: .properties, no schema version |
 | [DOCS-03](https://pauta-project.dev/4.0.1/documentation/#docs-03) | SHOULD | fail | `mirada-website/astro.config.mjs:27`: docs not versioned; no docs URL in the app |
 | [DOCS-04](https://pauta-project.dev/4.0.1/documentation/#docs-04) | SHOULD | fail | `mirada-website/scripts/GenCommands.java`: generates commands and version, but What's new is hand-written and no check:docs |
@@ -100,16 +79,13 @@ A failed MUST blocks a release.
 | [KBD-10](https://pauta-project.dev/4.0.1/keyboard/#kbd-10) | SHOULD | fail | no IntelliJ, VS Code or Sublime keymaps |
 | [KBD-12](https://pauta-project.dev/4.0.1/keyboard/#kbd-12) | SHOULD | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:143`: edits only the palette keys |
 | [KBD-13](https://pauta-project.dev/4.0.1/keyboard/#kbd-13) | SHOULD | fail | `src/main/java/com/mirada/ui/Editor.java:90`: chords typed into text ("Ctrl+Z" on a Mac too) |
-| [KBD-16](https://pauta-project.dev/4.0.1/keyboard/#kbd-16) | SHOULD | fail | no :focus-visible layer in mirada.css |
+| [KBD-16](https://pauta-project.dev/4.0.1/keyboard/#kbd-16) | SHOULD | fail | `src/main/resources/com/mirada/styles/mirada.css:791`: one `:focus-visible` layer at the end, but no FX test tabs to each control family |
 | [KBD-18](https://pauta-project.dev/4.0.1/keyboard/#kbd-18) | SHOULD | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:68`: on/off rows are CheckBoxes, not a switch |
 | [WIN-04](https://pauta-project.dev/4.0.1/window-shell/#win-04) | SHOULD | fail | `src/main/java/com/mirada/ui/NoteDialog.java:32`: each dialog styles itself; no Dialogs.styled |
 | [WIN-08](https://pauta-project.dev/4.0.1/window-shell/#win-08) | SHOULD | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:529`: window place restored (WindowPlacementTest), the open folder isn't; no --no-session |
 | [WIN-09](https://pauta-project.dev/4.0.1/window-shell/#win-09) | SHOULD | fail | `src/main/java/com/mirada/ui/Command.java:415`: Ctrl/Cmd + - 0 zoom the image; the zoom isn't kept |
 | [ICON-05](https://pauta-project.dev/4.0.1/icons-and-color/#icon-05) | SHOULD | fail | `src/main/java/com/mirada/ui/Theme.java:83`: Cupertino, not Caret & Ink |
-| [ICON-06](https://pauta-project.dev/4.0.1/icons-and-color/#icon-06) | SHOULD | fail | `src/main/resources/com/mirada/styles/mirada.css:128`: -state-key is Editora's ladder (9.1/8.2:1 light), but no test |
 | [ICON-09](https://pauta-project.dev/4.0.1/icons-and-color/#icon-09) | SHOULD | fail | `src/main/resources/com/mirada/styles/mirada.css:116`: fg-subtle only for disabled text, but no test |
-| [ICON-13](https://pauta-project.dev/4.0.1/icons-and-color/#icon-13) | SHOULD | fail | `src/main/resources/com/mirada/styles/mirada.css:129`: periwinkle is a ladder, but no test |
-| [ICON-14](https://pauta-project.dev/4.0.1/icons-and-color/#icon-14) | SHOULD | fail | `src/test/java/com/mirada/ui/AccentTest.java`: does WCAG arithmetic but never reads the stylesheets |
 | [TABS-10](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-10) | SHOULD | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:589`: title "name — Mirada", without the folder |
 | [TABS-15](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-15) | SHOULD | fail | strip layout persists; open panels are a start setting, not the last state |
 | [MENU-03](https://pauta-project.dev/4.0.1/menus/#menu-03) | SHOULD | fail | `src/main/java/com/mirada/ui/TitleBar.java:246`: the header menu refreshes chords on showing but never greys a row |
@@ -168,6 +144,30 @@ A failed MUST blocks a release.
 
 | ID | Level | Result | Evidence |
 |----|-------|--------|----------|
+| [PLAT-06](https://pauta-project.dev/4.0.1/platform/#plat-06) | MUST | pass | `src/main/resources/com/mirada/styles/mirada.css:9`: every colour named once in the `.root` block, from `-color-*` roles or ladders of them; no rule after it holds a fixed colour (StyleContrastTest.noRuleAfterTheTokenBlockHoldsAFixedColour) |
+| [KBD-17](https://pauta-project.dev/4.0.1/keyboard/#kbd-17) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:173`: `Icons.button` and `Icons.name` (:202) set tooltip and accessible text together; TitleBar, OnScreenControls, MarksBadge and InfoPanel use them (MenusFxTest.everyIconButtonIsNamedAndWearsItsCommandsGlyph) |
+| [ICON-01](https://pauta-project.dev/4.0.1/icons-and-color/#icon-01) | MUST | pass | `src/main/java/com/mirada/ui/Fonts.java:94`: a `Window.getWindows()` listener puts `ui-font.css` on every scene and on a scene a window is given later; no font-family in mirada.css (StyleContrastTest.theUiFontIsTheSceneSheetsNotTheAppSheets) |
+| [ICON-02](https://pauta-project.dev/4.0.1/icons-and-color/#icon-02) | MUST | pass | `src/main/resources/com/mirada/fonts/inter/`: the four faces and OFL.txt; `Font.loadFont` from `Fonts.load` (`src/main/java/com/mirada/App.java:117`), awaited before the window is shown (:135) |
+| [ICON-08](https://pauta-project.dev/4.0.1/icons-and-color/#icon-08) | MUST | pass | `src/main/resources/com/mirada/styles/mirada.css:9`: no hex, rgb(a) or named colour outside the `.root` block; StyleContrastTest fails one |
+| [ICON-10](https://pauta-project.dev/4.0.1/icons-and-color/#icon-10) | MUST | pass | `src/main/resources/com/mirada/styles/mirada.css:18`: the four roles' `-fg` overridden as ladders; StyleContrastTest.tintedTextReachesAaOnItsOwnFillAndOnBothGrounds computes each on its subtle fill and both grounds, light and dark; Accent.java does the same for the system accent (AccentTest) |
+| [ICON-11](https://pauta-project.dev/4.0.1/icons-and-color/#icon-11) | MUST | pass | `src/main/resources/com/mirada/styles/mirada.css:19`: the emphasis fills darkened until `-color-fg-emphasis` reads at 4.5:1; StyleContrastTest.inkOnAnEmphasisFillIsTheThemesOnEmphasisColour, and the rules on emphasis fills use it |
+| [ICON-12](https://pauta-project.dev/4.0.1/icons-and-color/#icon-12) | MUST | pass | `src/main/resources/com/mirada/styles/mirada.css:34`: `-focus-ring: -color-accent-emphasis`, drawn by the `:focus-visible` block at the end (:791); StyleContrastTest.theFocusRingIsAtLeastThreeToOneOnEverySurface |
+| [ICON-20](https://pauta-project.dev/4.0.1/icons-and-color/#icon-20) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:173`: a button takes its command's glyph from `forCommand`, as the menus do; the zoom button Actual Size's or Zoom to Fit's, the note buttons Note's (MenusFxTest.everyIconButtonIsNamedAndWearsItsCommandsGlyph) |
+| [ICON-21](https://pauta-project.dev/4.0.1/icons-and-color/#icon-21) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:173`: every icon-only button built by `Icons.button` or named by `Icons.name` (MenusFxTest) |
+| [TBAR-01](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-01) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:202`: `Icons.name` sets the tooltip and the accessible text from one title (MenusFxTest) |
+| [TBAR-03](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-03) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:212`: "title (chord)" from the command's title and `Command.chord()`, rebuilt on a palette-key or strip-axis change (`ViewerWindow.relabelButtons`, `src/main/java/com/mirada/ui/ViewerWindow.java:790`); the editor's from KeyCombinations (Editor.java:433); IconsTest, MenusFxTest |
+| [TBAR-08](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-08) | MUST | pass | `src/main/java/com/mirada/ui/TitleBar.java:256`: Previous and Next in the header's menu, beside the palette and the Mac's Go menu (MenusFxTest.previousAndNextAreInTheHeadersMenu) |
+| [MENU-14](https://pauta-project.dev/4.0.1/menus/#menu-14) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:132`: own glyphs for Bookmarks and Notes, About, Remove (a mark); Hide Thumbnails wears Thumbnails'; MenusFxTest.everyRowOfEveryMenuHasAGlyph opens the header, zoom, image and bookmark-row menus |
+| [MENU-15](https://pauta-project.dev/4.0.1/menus/#menu-15) | MUST | pass | `src/main/java/com/mirada/ui/MacMenus.java:109`: the Mac bar writes every bound chord into the title; in-window rows show it in `-state-key` at Inter 11px (MenuChord, ui-font.css); MacMenusTest.theBarHasNoAcceleratorsAndShowsEveryChord |
+| [MENU-16](https://pauta-project.dev/4.0.1/menus/#menu-16) | MUST | pass | `src/main/resources/com/mirada/styles/ui-font.css:19`: Inter 14px pinned on `.context-menu` and its rows, keys 11px; MenusFxTest.menusAreInterFourteenWhateverTheyOpenFrom reads it from the header's, the image's and a bookmark row's menus |
+| [MENU-02](https://pauta-project.dev/4.0.1/menus/#menu-02) | MUST | pass | `src/main/java/com/mirada/ui/MacMenus.java:109`: no `setAccelerator` on the Mac bar, the chord in the title, no icons; in-window rows show `MenuChord`, which never matches (MacMenusTest) |
+| [MENU-06](https://pauta-project.dev/4.0.1/menus/#menu-06) | MUST | pass | `src/main/java/com/mirada/ui/Popups.java:85`: `Popups.show` closes every open menu before the next; MenusFxTest.oneRightClickMenuAtATimeAndThePressThatClosesItStillLands |
+| [MENU-07](https://pauta-project.dev/4.0.1/menus/#menu-07) | MUST | pass | `src/main/java/com/mirada/ui/Popups.java:52`: a press in the window closes the menus and is not consumed; the menu buttons keep auto-hide; MenusFxTest |
+| [MENU-09](https://pauta-project.dev/4.0.1/menus/#menu-09) | MUST | pass | `src/main/java/com/mirada/ui/Popups.java:93`: the Menu key and Shift+F10 open the image's menu (ViewerWindow.java:777) and the selected bookmark row's, scrolled into view and anchored under it (BookmarksWindow.java:236); MenusFxTest, PopupsTest |
+| [PLAT-07](https://pauta-project.dev/4.0.1/platform/#plat-07) | SHOULD | pass | `src/main/java/com/mirada/ui/Fonts.java:46`: the four Inter faces and OFL.txt, registered before the first window is styled; `ui-font.css` on every scene |
+| [ICON-06](https://pauta-project.dev/4.0.1/icons-and-color/#icon-06) | SHOULD | pass | `src/main/resources/com/mirada/styles/mirada.css:31`: -state-key is Editora's ladder; StyleContrastTest.theKeyboardPeriwinkleReadsInBothThemes resolves it on both themes' grounds |
+| [ICON-13](https://pauta-project.dev/4.0.1/icons-and-color/#icon-13) | SHOULD | pass | `src/main/resources/com/mirada/styles/mirada.css:31`: periwinkle and the role overrides are ladders of the ground; StyleContrastTest resolves each in both themes |
+| [ICON-14](https://pauta-project.dev/4.0.1/icons-and-color/#icon-14) | SHOULD | pass | `src/test/java/com/mirada/ui/StyleContrastTest.java`: reads Cupertino's palette and mirada.css, resolves ladders, WCAG arithmetic, no toolkit |
 | [PLAT-02](https://pauta-project.dev/4.0.1/platform/#plat-02) | MUST | pass | `pom.xml:388`: dist profile: jpackage app image with jLinkOptions; the native image replaces the runtime on four targets |
 | [PLAT-03](https://pauta-project.dev/4.0.1/platform/#plat-03) | MUST | pass | `pom.xml:28`: javafx.version 27 |
 | [PLAT-04](https://pauta-project.dev/4.0.1/platform/#plat-04) | MUST | pass | `src/main/java/module-info.java:1`: module com.mirada, no opens |
@@ -222,15 +222,15 @@ A failed MUST blocks a release.
 | [WIN-07](https://pauta-project.dev/4.0.1/window-shell/#win-07) | MUST | pass | `src/main/java/com/mirada/ui/AboutWindow.java:155`: version, build, edition from AppInfo (:92) and the update checker's last answer (`UpdateCoordinator.summary`) |
 | [WIN-10](https://pauta-project.dev/4.0.1/window-shell/#win-10) | MAY | n/a | no modes |
 | [ICON-04](https://pauta-project.dev/4.0.1/icons-and-color/#icon-04) | SHOULD | n/a | ships no theme file; AtlantaFX Cupertino unchanged (src/main/java/com/mirada/ui/Theme.java:83) |
-| [ICON-07](https://pauta-project.dev/4.0.1/icons-and-color/#icon-07) | MUST | pass | `src/main/resources/com/mirada/styles/mirada.css:128`: -state-key only in .root, a ladder() of -color-bg-default |
+| [ICON-07](https://pauta-project.dev/4.0.1/icons-and-color/#icon-07) | MUST | pass | `src/main/resources/com/mirada/styles/mirada.css:31`: -state-key only in the `.root` block, a ladder() of -color-bg-default |
 | [ICON-15](https://pauta-project.dev/4.0.1/icons-and-color/#icon-15) | MUST | pass | `src/main/java/com/mirada/ui/Theme.java:84`: Application.setUserAgentStylesheet, live |
 | [ICON-16](https://pauta-project.dev/4.0.1/icons-and-color/#icon-16) | MUST | pass | `src/main/java/com/mirada/ui/Theme.java:54`: colorScheme listener re-applies; WindowsTest |
 | [ICON-17](https://pauta-project.dev/4.0.1/icons-and-color/#icon-17) | MUST | pass | `src/main/java/com/mirada/settings/Settings.java:227`: unknown theme falls back to SYSTEM; SettingsTest:138 |
 | [ICON-18](https://pauta-project.dev/4.0.1/icons-and-color/#icon-18) | SHOULD | pass | no semantic colours used as decoration |
 | [ICON-19](https://pauta-project.dev/4.0.1/icons-and-color/#icon-19) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:125`: one glyph family ("icon") |
 | [ICON-23](https://pauta-project.dev/4.0.1/icons-and-color/#icon-23) | SHOULD | n/a | draws no file-type glyphs (thumbnails) |
-| [ICON-24](https://pauta-project.dev/4.0.1/icons-and-color/#icon-24) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:14`: hand-drawn glyphs, no fonts; NOTICE credits AtlantaFX |
-| [TBAR-02](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-02) | MUST | pass | `src/main/java/com/mirada/ui/TitleBar.java:180`: header, OSD and badge buttons out of the Tab order |
+| [ICON-24](https://pauta-project.dev/4.0.1/icons-and-color/#icon-24) | MUST | pass | `NOTICE`: Inter (OFL-1.1) and AtlantaFX credited; the icons are hand-drawn (src/main/java/com/mirada/ui/Icons.java:25) |
+| [TBAR-02](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-02) | MUST | pass | `src/main/java/com/mirada/ui/Icons.java:173`: `Icons.button` takes buttons out of the Tab order; the header's toggle and menu too (TitleBar.java:193) |
 | [TBAR-04](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-04) | SHOULD | pass | no separators; groups by spacing (src/main/java/com/mirada/ui/TitleBar.java:186) |
 | [TBAR-05](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-05) | SHOULD | n/a | no group is ever hidden |
 | [TBAR-07](https://pauta-project.dev/4.0.1/toolbars-and-tooltips/#tbar-07) | SHOULD | pass | `src/main/java/com/mirada/ui/TitleBar.java:177`: info toggle selected while the sidebar shows |

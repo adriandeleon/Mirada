@@ -1,5 +1,6 @@
 package com.mirada.ui;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 import javafx.animation.FadeTransition;
@@ -8,10 +9,11 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.Control;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
-import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -36,25 +38,25 @@ final class OnScreenControls {
     private final HBox navigation;
     private final HBox zooming;
     private final HBox screen;
-    private final Button previous = button(Icons.PREVIOUS, "Previous Image (←)");
-    private final Button next = button(Icons.NEXT, "Next Image (→)");
-    private final Button zoom = button(Icons.ZOOM_IN, "Actual Size (1)");
+    private final Button previous;
+    private final Button next;
+    private final Button zoom;
     private final MenuButton zoomMenu = new MenuButton();
-    private final Button fullScreen = button(Icons.FULL_SCREEN, "Full Screen (F)");
+    private final Button fullScreen;
     private final PauseTransition idle = new PauseTransition(IDLE);
     private boolean fitted = true;
     private boolean hasImage;
     private boolean vertical;
 
     OnScreenControls(StackPane canvas, Consumer<Command> run) {
-        previous.setOnAction(e -> run.accept(Command.PREVIOUS));
-        next.setOnAction(e -> run.accept(Command.NEXT));
+        previous = Icons.button(Command.PREVIOUS, "osd-button", () -> run.accept(Command.PREVIOUS));
+        next = Icons.button(Command.NEXT, "osd-button", () -> run.accept(Command.NEXT));
         // One button between the two views people want most, as GNOME's: the whole image, and
-        // its pixels.
-        zoom.setOnAction(e -> run.accept(fitted ? Command.ACTUAL_SIZE : Command.FIT));
+        // its pixels. It wears the glyph of the one it would show, as the zoom menu does.
+        zoom = Icons.button(Command.ACTUAL_SIZE, "osd-button", () -> run.accept(zoomCommand()));
+        fullScreen = Icons.button(Command.FULL_SCREEN, "osd-button", () -> run.accept(Command.FULL_SCREEN));
         zoomMenu.setGraphic(Icons.of(Icons.CHEVRON_DOWN));
-        zoomMenu.setTooltip(new Tooltip("Zoom"));
-        zoomMenu.setAccessibleText("Zoom");
+        Icons.name(zoomMenu, "Zoom", KeyCombination.NO_MATCH);
         zoomMenu.getStyleClass().addAll("osd-button", "flat", "no-arrow");
         zoomMenu.setFocusTraversable(false);
         zoomMenu.getItems()
@@ -67,7 +69,6 @@ final class OnScreenControls {
 
         navigation = pill(previous, next);
         zooming = pill(zoom, zoomMenu);
-        fullScreen.setOnAction(e -> run.accept(Command.FULL_SCREEN));
         screen = pill(fullScreen);
         StackPane.setAlignment(navigation, Pos.BOTTOM_LEFT);
         StackPane.setAlignment(zooming, Pos.BOTTOM_RIGHT);
@@ -95,12 +96,9 @@ final class OnScreenControls {
         setVisible(screen, false);
     }
 
-    /** The full-screen button's way: into full screen, or out of it. */
+    /** The full-screen button's way: into full screen, or out of it ({@link Icons#setFullScreen}). */
     void setFullScreen(boolean full) {
-        fullScreen.setGraphic(Icons.of(full ? Icons.LEAVE_FULL_SCREEN : Icons.FULL_SCREEN));
-        String tip = full ? "Leave Full Screen (F)" : "Full Screen (F)";
-        fullScreen.getTooltip().setText(tip);
-        fullScreen.setAccessibleText(spoken(tip));
+        Icons.relabel(fullScreen, Command.FULL_SCREEN);
     }
 
     /**
@@ -110,14 +108,33 @@ final class OnScreenControls {
     void setVertical(boolean value) {
         if (value == vertical) return;
         vertical = value;
-        point(previous, value ? Icons.UP : Icons.PREVIOUS, value ? "Previous Image (↑)" : "Previous Image (←)");
-        point(next, value ? Icons.DOWN : Icons.NEXT, value ? "Next Image (↓)" : "Next Image (→)");
+        relabel();
     }
 
-    private static void point(Button button, String icon, String tip) {
-        button.setGraphic(Icons.of(icon));
-        button.getTooltip().setText(tip);
-        button.setAccessibleText(spoken(tip));
+    /**
+     * Every button's glyph and name again, from the commands' chords now: the strip's axis or the
+     * user's keys changed (TBAR-03).
+     */
+    void relabel() {
+        Icons.relabel(previous, Command.PREVIOUS);
+        Icons.relabel(next, Command.NEXT);
+        Icons.relabel(zoom, zoomCommand());
+        Icons.relabel(fullScreen, Command.FULL_SCREEN);
+    }
+
+    /** What the zoom button does now: the image's pixels while it is fitted, the whole image after. */
+    private Command zoomCommand() {
+        return fitted ? Command.ACTUAL_SIZE : Command.FIT;
+    }
+
+    /** The zoom button's menu, for the tests. */
+    MenuButton zoomMenu() {
+        return zoomMenu;
+    }
+
+    /** Every button, for the tests. */
+    List<Control> buttons() {
+        return List.of(previous, next, zoom, zoomMenu, fullScreen);
     }
 
     /** How long the pointer may rest before the controls fade, in seconds (Settings). */
@@ -141,10 +158,7 @@ final class OnScreenControls {
         fitted = fittedNow;
         previous.setDisable(Command.PREVIOUS.unavailable(index, size, imageShowing) != null);
         next.setDisable(Command.NEXT.unavailable(index, size, imageShowing) != null);
-        zoom.setGraphic(Icons.of(fittedNow ? Icons.ZOOM_IN : Icons.ZOOM_FIT));
-        String tip = fittedNow ? "Actual Size (1)" : "Zoom to Fit (0)";
-        zoom.getTooltip().setText(tip);
-        zoom.setAccessibleText(spoken(tip));
+        Icons.relabel(zoom, zoomCommand());
         zoom.setDisable(!imageShowing);
         zoomMenu.setDisable(!imageShowing);
         if (!imageShowing) fade(false);
@@ -178,23 +192,6 @@ final class OnScreenControls {
         pill.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         pill.setPickOnBounds(false);
         return pill;
-    }
-
-    /** A tooltip's words without the key in brackets after them: "Next Image (→)" is "Next Image". */
-    static String spoken(String tooltip) {
-        int bracket = tooltip.lastIndexOf(" (");
-        return bracket > 0 && tooltip.endsWith(")") ? tooltip.substring(0, bracket) : tooltip;
-    }
-
-    private static Button button(String icon, String tip) {
-        Button button = new Button();
-        button.setGraphic(Icons.of(icon));
-        button.setTooltip(new Tooltip(tip));
-        // What a screen reader says: the tooltip without its key.
-        button.setAccessibleText(spoken(tip));
-        button.getStyleClass().addAll("osd-button", "flat");
-        button.setFocusTraversable(false);
-        return button;
     }
 
     private static MenuItem item(Command command, Consumer<Command> run) {

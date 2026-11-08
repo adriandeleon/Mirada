@@ -88,6 +88,13 @@ The Linux AppImage starts with the AppImage runtime, which mounts the rest:
   makes it are in that repository, release 20251108. It is replaced by
   extracting the AppImage (--appimage-extract) and running the tree inside.
 
+Inter — https://github.com/rsms/inter
+Copyright (c) 2016 The Inter Project Authors. Licensed under the SIL Open Font
+License 1.1 (OFL-1.1). The interface's typeface: its Regular, Bold, Italic and
+Bold Italic faces, redistributed unmodified under
+src/main/resources/com/mirada/fonts/inter/ (com/mirada/fonts/inter/ in the
+application), with the licence beside them in OFL.txt.
+
 OpenJFX (JavaFX) — https://openjdk.org/projects/openjfx/
 Copyright Oracle and/or its affiliates.
 Licensed under the GNU General Public License, version 2, with the Classpath

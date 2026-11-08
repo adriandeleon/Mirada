@@ -24,7 +24,9 @@ import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.css.PseudoClass;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Cursor;
@@ -292,8 +294,8 @@ public final class ViewerWindow {
         PaletteChords.use(settings.paletteKeys());
         settings.addListener(() -> {
             if (!PaletteChords.use(settings.paletteKeys())) return;
-            MenuBar bar = macMenus;
-            if (bar != null) MacMenus.refreshAccelerators(bar);
+            // The Mac menus write their chords as they open; the buttons' tooltips are written now.
+            relabelButtons();
             ShortcutsWindow shortcuts = shortcutsWindow;
             if (shortcuts != null) shortcuts.refresh();
         });
@@ -327,11 +329,12 @@ public final class ViewerWindow {
         scene.getStylesheets().add(stylesheet());
         scene.addEventFilter(KeyEvent.KEY_PRESSED, this::onKey);
         Popups.closeOnPressOutside(stage, scene);
+        Popups.menusByKey(scene);
         scene.setOnDragOver(this::onDragOver);
         scene.setOnDragDropped(this::onDragDropped);
         viewport.setOnSwipe(step -> run(step > 0 ? Command.NEXT : Command.PREVIOUS));
         viewport.setOnDragOut(() -> folder.current());
-        viewport.setOnContextMenuRequested(e -> contextMenu().show(viewport, e.getScreenX(), e.getScreenY()));
+        viewport.setOnContextMenuRequested(e -> Popups.show(contextMenu(), viewport, e.getScreenX(), e.getScreenY()));
 
         stage.setScene(scene);
         stage.setMinWidth(480);
@@ -344,6 +347,7 @@ public final class ViewerWindow {
         stage.setFullScreenExitHint("");
         stage.fullScreenProperty().addListener((obs, was, now) -> {
             titleBar.fullScreen(root, now);
+            Icons.setFullScreen(now);
             OnScreenControls built = controls;
             if (built != null) built.setFullScreen(now);
             root.pseudoClassStateChanged(FULL_SCREEN, now);
@@ -432,7 +436,7 @@ public final class ViewerWindow {
     private InfoPanel infoPanel() {
         InfoPanel panel = info;
         if (panel == null) {
-            panel = new InfoPanel(folder -> openLink.accept(folder.toUri().toString()), this::run);
+            panel = new InfoPanel(this::run);
             info = panel;
         }
         return panel;
@@ -479,13 +483,14 @@ public final class ViewerWindow {
         Command.setVertical(vertical);
         OnScreenControls built = controls;
         if (built != null) built.setVertical(vertical);
+        relabelButtons();
         ShortcutsWindow shortcuts = shortcutsWindow;
         if (shortcuts != null) shortcuts.refresh();
     }
 
     /** The strip's own menu: closing it, and where it stands and what it shows. */
     private ContextMenu stripMenu() {
-        MenuItem hide = new MenuItem("Hide Thumbnails", Icons.of(Icons.CLOSE));
+        MenuItem hide = new MenuItem("Hide Thumbnails", Icons.menu(Command.THUMBNAILS));
         hide.setOnAction(e -> run(Command.THUMBNAILS));
         MenuChord.on(hide, Command.THUMBNAILS);
         ContextMenu menu = new ContextMenu(
@@ -767,9 +772,46 @@ public final class ViewerWindow {
             }
             return;
         }
+        // The keyboard's right-click: the image's menu, as a right-click on it opens (MENU-09).
+        if (Popups.isMenuKey(e)) {
+            showMenuFromKeyboard();
+            e.consume();
+            return;
+        }
         if (command == null) return;
         run(command);
         e.consume();
+    }
+
+    /**
+     * Every icon button's tooltip again, from the chords now (TBAR-03): the user's keys changed, or
+     * the strip's axis, which turns the stepping keys.
+     */
+    private void relabelButtons() {
+        titleBar.relabel();
+        OnScreenControls built = controls;
+        if (built != null) built.relabel();
+        MarksBadge badge = marksBadge;
+        if (badge != null) badge.relabel();
+    }
+
+    /**
+     * The image's menu, opened by the Menu key or Shift+F10: under the image's thumbnail while the
+     * strip shows it, the selected row there, and in the middle of the image otherwise.
+     */
+    private void showMenuFromKeyboard() {
+        ThumbnailStrip shown = strip;
+        if (shown != null && thumbnailsShowing.get()) {
+            Bounds row = Popups.selectedRow(shown.node());
+            if (row != null) {
+                Point2D at = Popups.under(row);
+                Popups.show(contextMenu(), shown.node(), at.getX(), at.getY());
+                return;
+            }
+        }
+        Bounds image = viewport.localToScreen(viewport.getBoundsInLocal());
+        if (image == null) return;
+        Popups.show(contextMenu(), viewport, image.getCenterX(), image.getCenterY());
     }
 
     private void run(Command command) {
@@ -1536,9 +1578,7 @@ public final class ViewerWindow {
     private Button openButton(Command command) {
         Button button = new Button(command.label(), Icons.menu(command));
         button.getStyleClass().add("open-button");
-        KeyCombination chord = command.chord();
-        if (chord != KeyCombination.NO_MATCH)
-            button.setTooltip(new Tooltip(command.label() + " (" + chord.getDisplayText() + ")"));
+        button.setTooltip(new Tooltip(Icons.tooltip(command)));
         button.setOnAction(e -> run(command));
         return button;
     }

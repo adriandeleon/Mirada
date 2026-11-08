@@ -21,6 +21,8 @@ import javafx.scene.image.PixelBuffer;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -88,8 +90,9 @@ final class Editor {
     private Raster uprightPreview = new Raster(1, 1, new int[] {0});
     private Edit edit = Edit.NONE;
     private final History<Step> history = new History<>(new Step(Edit.NONE, AspectRatio.FREE));
-    private final Button undoButton = tool("Undo", "Ctrl+Z", this::undo);
-    private final Button redoButton = tool("Redo", "Ctrl+Shift+Z", this::redo);
+    private final Button undoButton = tool("Undo", chord(KeyCode.Z, KeyCombination.SHORTCUT_DOWN), this::undo);
+    private final Button redoButton =
+            tool("Redo", chord(KeyCode.Z, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN), this::redo);
     /** True while the editor sets the shape itself, so the shape's listener records no step. */
     private boolean quiet;
 
@@ -141,20 +144,20 @@ final class Editor {
             shapeChanged();
             record();
         });
-        shape.setTooltip(new Tooltip("The crop's shape (A)"));
+        shape.setTooltip(new Tooltip(Icons.tooltip("The crop's shape", chord(KeyCode.A))));
         HBox bottom = new HBox(
                 8,
                 new Label("Crop"),
                 shape,
                 spacer(),
-                tool("Rotate Left", "Shift+R", () -> turn(-1)),
-                tool("Rotate Right", "R", () -> turn(1)),
-                tool("Flip Horizontally", "H", () -> apply(edit.flippedHorizontally())),
-                tool("Flip Vertically", "V", () -> apply(edit.flippedVertically())),
+                tool("Rotate Left", chord(KeyCode.R, KeyCombination.SHIFT_DOWN), () -> turn(-1)),
+                tool("Rotate Right", chord(KeyCode.R), () -> turn(1)),
+                tool("Flip Horizontally", chord(KeyCode.H), () -> apply(edit.flippedHorizontally())),
+                tool("Flip Vertically", chord(KeyCode.V), () -> apply(edit.flippedVertically())),
                 spacer(),
                 undoButton,
                 redoButton,
-                tool("Reset", "Backspace", this::reset));
+                tool("Reset", chord(KeyCode.BACK_SPACE), this::reset));
         bottom.setAlignment(Pos.CENTER);
         bottom.setPadding(new Insets(10, 14, 10, 14));
         bottom.getStyleClass().add("editor-bar");
@@ -420,9 +423,14 @@ final class Editor {
                 raster.width(), raster.height(), IntBuffer.wrap(raster.pixels()), PixelFormat.getIntArgbPreInstance()));
     }
 
-    private static Button tool(String label, String key, Runnable action) {
+    /** A key of the editor's own ({@link #onKey}), for a tooltip to name, never typed into it. */
+    private static KeyCombination chord(KeyCode code, KeyCombination.Modifier... modifiers) {
+        return new KeyCodeCombination(code, modifiers);
+    }
+
+    private static Button tool(String label, KeyCombination chord, Runnable action) {
         Button button = new Button(label);
-        button.setTooltip(new Tooltip(label + " (" + key + ")"));
+        button.setTooltip(new Tooltip(Icons.tooltip(label, chord)));
         button.setOnAction(e -> action.run());
         button.setFocusTraversable(false);
         return button;
