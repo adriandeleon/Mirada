@@ -55,6 +55,11 @@ The jlink image's numbers, before the native image and libjpeg-turbo, are kept i
 
 ## Things that will bite you when packaging
 
+- **Installing winget on a runner calls GitHub's API.** `Repair-WinGetPackageManager` finds its
+  release there, and without a token a hosted runner shares 60 calls an hour with every job on its
+  address: the `winget` workflow failed on that limit, not on the manifests. Its install step gets
+  the job's token as `GITHUB_TOKEN`.
+
 - **The deb's dependencies are a hand-kept list.** jpackage adds a package for every library the
   image reaches, as the build host's dpkg names it: for a native image that is the whole GTK
   closure under Debian 13's names (`libgtk-3-0t64`), which Debian 12 and Ubuntu 22.04 cannot

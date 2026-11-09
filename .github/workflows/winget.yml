@@ -60,9 +60,13 @@ jobs:
           bash scripts/winget-manifests.sh "$VERSION" release/Mirada-*-windows-x64.msi winget
           echo "MANIFEST=$(cygpath -w "winget/manifests/a/AdrianDeLeon/Mirada/$VERSION")" >> "$GITHUB_ENV"
 
-      # GitHub's Windows images do not carry winget; its PowerShell module installs it.
+      # GitHub's Windows images do not carry winget; its PowerShell module installs it. It finds the
+      # release on GitHub's API, which unauthenticated allows a runner's shared address 60 calls an
+      # hour: the job's own token, read from GITHUB_TOKEN, gets it the job's limit instead.
       - name: Install winget
         shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
           Install-Module Microsoft.WinGet.Client -Force -Scope CurrentUser -Repository PSGallery
