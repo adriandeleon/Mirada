@@ -47,9 +47,11 @@ prefix. Regenerate it, never edit it by hand.
   `-Dcodecs.skip` so the download does not overwrite it.
 
 - Command line: `mirada --help`; `--config-dir <dir>` or `--dev` (`~/.mirada-dev`) keep settings
-  and bookmarks apart from your own.
+  and bookmarks apart from your own. One Mirada runs per config folder: a run on yours while
+  your own Mirada is open hands it the file and exits; use `--dev` or `--new-instance`.
 
-Run Maven from the project root, on JDK 25 (the enforcer refuses others). CI
+Run Maven from the project root, on JDK 25 or newer (the enforcer's floor); on 26 and later the
+format check is skipped, so run `spotless:apply` on a 25. CI
 (`.github/workflows/ci.yml`) runs `verify` on Linux, macOS and Windows for every push to `main`.
 
 ## How to work

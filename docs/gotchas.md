@@ -281,6 +281,28 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
 
 ## Platforms
 
+- **One Mirada per config folder, and the check is one file test.** `App.main` asks
+  `SingleInstance.handOff` before anything decodes: with no `instance.sock` in the config folder
+  (or, for a folder whose path is too long for a socket, in the temp folder) it returns at once and
+  loads no networking classes. Becoming the one that listens (`claimInBackground`) runs on a thread
+  of its own: the folder's `instance.lock` (`InstanceLock`, byte 0 exclusive for the primary, byte 1
+  shared by every other) decides who binds the socket, so two launches in one instant never take it
+  from each other, and a crash leaves a socket nobody answers, which the next primary removes.
+  Measured headless, interleaved with the commit before, under load: 650 against 660 ms to the first
+  paint, within noise. **A thread waiting in `accept()` held the JVM's exit back by about 300 ms**;
+  a shutdown hook closes the socket first. A measured start (`MIRADA_PERF`) or a tour (AOT training,
+  the smoke tests) never hands off, so a Mirada you have open cannot swallow a training run; a dev run
+  on your own config folder does, so use `--dev` or `--new-instance` beside your own Mirada. macOS's
+  Finder and `open` never make a second process: their Apple Event reaches the running app
+  (`MacOpenFiles`). `scripts/headless-run.sh` uses a throwaway config folder, so it is always alone,
+  and `dev-run.sh` now hands Mirada's own options to the app, not the JVM.
+- **The programs Mirada starts get the login shell's `PATH` after its own** (`ToolPath`, CLI-10): the
+  shell (`$SHELL -l -i`) is asked once, the first time a program starts, never at start-up. Its own
+  comes first so a launcher's or the headless runs' stubs still win; Java looks a program up on its
+  own `PATH`, not the child's, so `ToolPath` resolves it to a full path too. Windows keeps its own.
+- **`--help` and `--version` must `System.exit`.** Started as an `Application` (the jlink image, dev
+  runs), the JDK's launcher starts the toolkit before `main`, whose thread keeps the process alive.
+  The native image starts from `Launcher`, a plain class, and starts no toolkit for them.
 - **`java.awt.headless` is decided in `App.main`, as the first statement**, before `HeadStart` can
   touch ImageIO: headless everywhere but macOS, where Move to Trash is AWT's `Desktop`
   (`Trash.headless`); AWT itself loads only when a file is first trashed. ImageIO and `BufferedImage` are `java.desktop` and need no display; tests are

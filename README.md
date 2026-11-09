@@ -103,9 +103,16 @@ Opens an image with its folder behind it, or a folder at its first image.
 Options:
   --config-dir <dir>  keep settings and bookmarks in <dir>
   --dev               keep them in ~/.mirada-dev, apart from your own
+  --new-instance      start a window of its own, even when Mirada is running
+  --report            write a redacted problem report beside the settings, open
+                      a prefilled GitHub issue with it, and exit; for when
+                      Mirada will not start
   --version           print the version, build, commit and Pauta edition, and exit
   --help              print this, and exit
   --                  what follows is a file, even if it starts with --
+
+One Mirada runs per config folder: a second launch hands its file to the
+running one, which opens it and comes to the front, and exits.
 
 MIRADA_CONFIG_DIR names the config folder too; an option wins over it.
 ```
@@ -124,6 +131,8 @@ Mirada keeps two plain files, meant to be readable and mendable by hand:
   the palette's keys, the window's place and the recent folders. Every value is checked as it is
   read, so a bad edit cannot stop Mirada starting.
 - `bookmarks.properties` — your bookmarks and notes, by path.
+- `instance.lock` and, while Mirada runs, `instance.sock`: how a second launch finds the running
+  one and hands it its file. Neither holds anything to read.
 
 A file that will not read is kept beside it as `<name>.corrupt.bak`, and Mirada starts with the
 defaults. `--config-dir`, `--dev` or `MIRADA_CONFIG_DIR` point Mirada at another folder, to try
@@ -131,7 +140,8 @@ something without touching your own settings.
 
 ## Building it
 
-JDK 25 is required (the build refuses others); Oracle GraalVM 25.4 for the native image that ships.
+JDK 25 or newer is required (on 26 and later the format check is skipped); Oracle GraalVM 25.4 for
+the native image that ships.
 The Maven wrapper fetches everything else, including the native codec bundle for your platform from
 the project's `codecs-N` release.
 

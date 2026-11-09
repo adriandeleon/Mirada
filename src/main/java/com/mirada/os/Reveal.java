@@ -24,7 +24,7 @@ public final class Reveal {
         IOException failure = null;
         for (List<String> command : commands(os, file)) {
             try {
-                Process process = new ProcessBuilder(command)
+                Process process = ToolPath.process(command)
                         .redirectErrorStream(true)
                         .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                         .start();

@@ -55,11 +55,15 @@ esac
 jvm=()
 app=()
 steps=0
+value=0
 for arg in "$@"; do
     # After -- (scripts/headless-run.sh's steps) everything is the program's.
-    if [ "$steps" = 1 ]; then app+=("$arg"); continue; fi
+    if [ "$steps" = 1 ] || [ "$value" = 1 ]; then app+=("$arg"); value=0; continue; fi
     case "$arg" in
         --) steps=1; app+=("$arg") ;;
+        # Mirada's own options (Launch.USAGE); every other dash argument is the JVM's.
+        --config-dir) value=1; app+=("$arg") ;;
+        --config-dir=*|--dev|--new-instance|--report|--version|--help) app+=("$arg") ;;
         -*) jvm+=("$arg") ;;
         *) app+=("$arg") ;;
     esac

@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
+import com.mirada.os.ToolPath;
+
 /**
  * Opens a link in the default browser without JavaFX or AWT, for {@code mirada --report}, which must
  * work when the app itself cannot start. Inside the app, {@code HostServices.showDocument} does this.
@@ -23,7 +25,7 @@ public final class Browser {
     /** Starts the browser; false when it could not be started. */
     public static boolean open(String url) {
         try {
-            new ProcessBuilder(command(System.getProperty("os.name", ""), url))
+            ToolPath.process(command(System.getProperty("os.name", ""), url))
                     .redirectErrorStream(true)
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .start();

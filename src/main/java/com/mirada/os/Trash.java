@@ -21,6 +21,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
@@ -197,7 +198,8 @@ public final class Trash {
     private static void gioTrash(Path file) throws IOException {
         Process gio;
         try {
-            gio = new ProcessBuilder("gio", "trash", "--", file.toAbsolutePath().toString())
+            gio = ToolPath.process(
+                            List.of("gio", "trash", "--", file.toAbsolutePath().toString()))
                     .redirectErrorStream(true)
                     .start();
         } catch (IOException noGio) {

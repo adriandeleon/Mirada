@@ -1,7 +1,9 @@
 # Pauta audit
 
 Mirada at `10329e6`, audited against [Pauta 4.0.1](https://pauta-project.dev/4.0.1/) on 2026-11-08.
-Scope: every rule (351). Rules from https://pauta-project.dev/4.0.1/rules.json.
+Scope: every rule (351). Rules from https://pauta-project.dev/4.0.1/rules.json. The command-line
+rules (CLI-01 to CLI-10) and PLAT-01 were judged again after the single instance and the open JDK
+range, on 2026-11-08.
 
 Regenerated rather than edited: each rule was judged by its check (code, test or by hand) as the
 edition's [audit procedure](https://pauta-project.dev/4.0.1/coding-agents/) says. A rule met only in
@@ -10,8 +12,8 @@ never because Mirada lacks a part another rule requires.
 
 |        | Pass | Fail | Manual | N.a. |
 |--------|-----:|-----:|-------:|-----:|
-| MUST   | 117 | 21 | 4 | 20 |
-| SHOULD | 58 | 50 | 15 | 57 |
+| MUST   | 119 | 19 | 4 | 20 |
+| SHOULD | 61 | 47 | 15 | 57 |
 | MAY    | 1 | 2 | 0 | 6 |
 
 A failed MUST blocks a release.
@@ -20,7 +22,6 @@ A failed MUST blocks a release.
 
 | ID | Level | Result | Evidence |
 |----|-------|--------|----------|
-| [PLAT-01](https://pauta-project.dev/4.0.1/platform/#plat-01) | MUST | fail | `pom.xml:202`: release 25, but the enforcer's range is [25,26), a ceiling (the formatter broke on 27) |
 | [DOCS-01](https://pauta-project.dev/4.0.1/documentation/#docs-01) | MUST | fail | mirada-website/src/content/docs has getting started, features, keyboard, settings, FAQ, but no screenshots in the pages |
 | [DOCS-05](https://pauta-project.dev/4.0.1/documentation/#docs-05) | MUST | fail | `src/main/java/com/mirada/ui/AboutWindow.java:79`: About opens `AppInfo.releaseNotesUrl()` (the GitHub release, the changelog for a snapshot; Mirada has no Welcome page); but mirada-website does not generate its What's new from CHANGELOG.md (its scripts/ has GenCommands only) |
 | [QUAL-12](https://pauta-project.dev/4.0.1/quality/#qual-12) | MUST | fail | no message catalogs, so no parity test (descriptions are checked: CommandTest:189) |
@@ -36,7 +37,6 @@ A failed MUST blocks a release.
 | [SET-09](https://pauta-project.dev/4.0.1/settings/#set-09) | MUST | fail | `src/main/java/com/mirada/settings/Settings.java`: no SCHEMA_VERSION or migration in settings or bookmarks |
 | [SET-10](https://pauta-project.dev/4.0.1/settings/#set-10) | MUST | fail | no version, so no too-new backup <name>.v<n>.bak |
 | [SET-12](https://pauta-project.dev/4.0.1/settings/#set-12) | MUST | fail | no Export or Import of the config folder |
-| [CLI-07](https://pauta-project.dev/4.0.1/command-line/#cli-07) | MUST | fail | `src/main/java/com/mirada/App.java:68`: macOS Apple Events reach the running app, but no single instance per config folder |
 | [INTL-01](https://pauta-project.dev/4.0.1/i18n/#intl-01) | MUST | fail | no messages*.properties; every string is an English literal |
 | [INTL-08](https://pauta-project.dev/4.0.1/i18n/#intl-08) | MUST | fail | no catalogs, no parity test |
 | [PAL-02](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-02) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:519`: the palette lists every command, Escape, Command Palette and the Pan commands included, greyed with a reason where they cannot run (`CommandTest.thePaletteListsEveryCommandWhereverItOpens`); but titles and descriptions are not yet from `command.<id>` and `command.<id>.desc` (no catalogs: KBD-03) |
@@ -77,9 +77,6 @@ A failed MUST blocks a release.
 | [SET-08](https://pauta-project.dev/4.0.1/settings/#set-08) | SHOULD | fail | `src/main/java/com/mirada/settings/Settings.java:99`: names are constants, but .properties, with window place and recent folders in the preferences file |
 | [SET-17](https://pauta-project.dev/4.0.1/settings/#set-17) | SHOULD | fail | no Settings Sync |
 | [DIAG-07](https://pauta-project.dev/4.0.1/diagnostics/#diag-07) | SHOULD | fail | no Doctor page (a row per codec library would fit) |
-| [CLI-03](https://pauta-project.dev/4.0.1/command-line/#cli-03) | SHOULD | fail | no --new-instance (every launch is a new process today) |
-| [CLI-08](https://pauta-project.dev/4.0.1/command-line/#cli-08) | SHOULD | fail | no advisory lock on the config folder |
-| [CLI-10](https://pauta-project.dev/4.0.1/command-line/#cli-10) | SHOULD | fail | `src/main/java/com/mirada/os/Reveal.java:27`: gio, xdg-open, gdbus started without the login shell's PATH (all OS tools today) |
 | [INTL-02](https://pauta-project.dev/4.0.1/i18n/#intl-02) | SHOULD | fail | no language list or picker |
 | [INTL-07](https://pauta-project.dev/4.0.1/i18n/#intl-07) | SHOULD | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:40`: raw English literals passed to controls |
 | [PAL-05](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-05) | SHOULD | fail | `src/main/java/com/mirada/ui/CommandPalette.java:368`: selects the first enabled row, but no test with a disabled top match |
@@ -116,8 +113,8 @@ A failed MUST blocks a release.
 | [MENU-08](https://pauta-project.dev/4.0.1/menus/#menu-08) | MUST | manual | `src/main/java/com/mirada/ui/Popups.java:48`: hide-on-escape on; focus stays |
 | [MENU-10](https://pauta-project.dev/4.0.1/menus/#menu-10) | SHOULD | manual | `src/main/java/com/mirada/ui/BookmarksWindow.java:413`: bookmark rows select first; the strip's menu is strip-wide |
 | [DIAG-03](https://pauta-project.dev/4.0.1/diagnostics/#diag-03) | MUST | manual | `src/main/java/com/mirada/ui/DebugLogWindow.java:29`: an unowned, modeless Stage with Refresh, Copy, Clear, Export…, Report a Problem…; open it from Help and keep working in the main window |
-| [CLI-04](https://pauta-project.dev/4.0.1/command-line/#cli-04) | SHOULD | manual | `src/main/java/com/mirada/App.java:64`: no session is restored, but --no-session is opened as a path |
-| [CLI-06](https://pauta-project.dev/4.0.1/command-line/#cli-06) | SHOULD | manual | `src/main/java/com/mirada/App.java:64`: only the first argument opens |
+| [CLI-04](https://pauta-project.dev/4.0.1/command-line/#cli-04) | SHOULD | manual | `src/main/java/com/mirada/Launch.java:84`: Mirada restores no session, so a launch shows only what it names; `--no-session` itself is refused as an unknown option (exit 2) |
+| [CLI-06](https://pauta-project.dev/4.0.1/command-line/#cli-06) | SHOULD | manual | `src/main/java/com/mirada/App.java:180`: only the first argument opens, the rest are ignored; a handed-off launch likewise (`App.java:201`) |
 | [INTL-04](https://pauta-project.dev/4.0.1/i18n/#intl-04) | SHOULD | manual | English only; Settings rows wrap (src/main/java/com/mirada/ui/SettingsWindow.java:276) |
 | [WELC-02](https://pauta-project.dev/4.0.1/templates/welcome/#welc-02) | SHOULD | manual | `src/main/java/com/mirada/ui/ViewerWindow.java:99`: empty state offers Open Image and Open Folder; chords only in tooltips, no Open Recent or palette |
 | [ABOUT-07](https://pauta-project.dev/4.0.1/templates/about/#about-07) | MUST | manual | this audit; 4.0.1 is honest only once its failed MUSTs pass |
@@ -127,6 +124,7 @@ A failed MUST blocks a release.
 
 | ID | Level | Result | Evidence |
 |----|-------|--------|----------|
+| [PLAT-01](https://pauta-project.dev/4.0.1/platform/#plat-01) | MUST | pass | `pom.xml:233`: maven.compiler.release 25 (`pom.xml:17`), enforcer requireJavaVersion `[25,)`; on 26+ the formatter-needs-jdk25 profile skips only the format check |
 | [PLAT-02](https://pauta-project.dev/4.0.1/platform/#plat-02) | MUST | pass | `pom.xml:388`: dist profile: jpackage app image with jLinkOptions; the native image replaces the runtime on four targets |
 | [PLAT-03](https://pauta-project.dev/4.0.1/platform/#plat-03) | MUST | pass | `pom.xml:28`: javafx.version 27 |
 | [PLAT-04](https://pauta-project.dev/4.0.1/platform/#plat-04) | MUST | pass | `src/main/java/module-info.java:1`: module com.mirada, no opens |
@@ -292,10 +290,14 @@ A failed MUST blocks a release.
 | [DIAG-05](https://pauta-project.dev/4.0.1/diagnostics/#diag-05) | MUST | pass | `src/test/java/com/mirada/update/UpdateCoordinatorTest.java:79`: after the delay, once a run, not off or not due; scheduled after the first paint (`ViewerWindow.java:356`); Check for Updates (:872), Settings switch |
 | [DIAG-06](https://pauta-project.dev/4.0.1/diagnostics/#diag-06) | MUST | pass | `src/test/java/com/mirada/report/RedactorTest.java:15`: home, user, e-mail, URL credentials, tokens; `ProblemReportTest.java:44`: short in the link, long by paste; `ReportProblemWindow` |
 | [DIAG-08](https://pauta-project.dev/4.0.1/diagnostics/#diag-08) | SHOULD | n/a | no user documents |
-| [CLI-01](https://pauta-project.dev/4.0.1/command-line/#cli-01) | MUST | pass | `src/main/java/com/mirada/App.java:47`: --help and --version print fixed English (Launch.USAGE, AppInfo.versionText) and return before launch; LaunchTest |
-| [CLI-02](https://pauta-project.dev/4.0.1/command-line/#cli-02) | MUST | pass | `src/main/java/com/mirada/Launch.java:63`: --config-dir and --dev parsed in main, before Settings.defaultFile reads anything; LaunchTest |
-| [CLI-05](https://pauta-project.dev/4.0.1/command-line/#cli-05) | MUST | pass | `src/test/java/com/mirada/report/ReportCommandTest.java:28`: `--report` writes the redacted problem-report.txt and opens the issue, no GUI (`App.java:62`) |
-| [CLI-09](https://pauta-project.dev/4.0.1/command-line/#cli-09) | SHOULD | pass | `src/main/java/com/mirada/App.java:30`: java.awt.headless set as main's first statement |
+| [CLI-01](https://pauta-project.dev/4.0.1/command-line/#cli-01) | MUST | pass | `src/main/java/com/mirada/App.java:63`: `printed` writes fixed English (Launch.USAGE, AppInfo.versionText) and main exits before `launch`; AppTest.versionAndHelpPrintWithoutAWindow |
+| [CLI-02](https://pauta-project.dev/4.0.1/command-line/#cli-02) | MUST | pass | `src/main/java/com/mirada/Launch.java:78`: --config-dir and --dev parsed first; `App.java:84` resolves the settings file from them before anything reads it; LaunchTest |
+| [CLI-03](https://pauta-project.dev/4.0.1/command-line/#cli-03) | SHOULD | pass | `src/main/java/com/mirada/Launch.java:77`: --new-instance sets `newInstance`, and `handsOff()` false skips the hand-off (`App.java:90`); LaunchTest.aLaunchHandsOffToTheRunningMiradaUnlessToldToStartItsOwn |
+| [CLI-05](https://pauta-project.dev/4.0.1/command-line/#cli-05) | MUST | pass | `src/test/java/com/mirada/report/ReportCommandTest.java:28`: `--report` writes the redacted problem-report.txt and opens the issue, no GUI (`App.java:66`) |
+| [CLI-07](https://pauta-project.dev/4.0.1/command-line/#cli-07) | MUST | pass | `src/test/java/com/mirada/os/SingleInstanceTest.java:24`: the first claim is primary and listens, a second launch's files reach it; `AppTest.java:105` shows the handed file in the window; Apple Events via `MacOpenFiles` |
+| [CLI-08](https://pauta-project.dev/4.0.1/command-line/#cli-08) | SHOULD | pass | `src/test/java/com/mirada/os/InstanceLockTest.java:63`: the lock taken from this JVM and a second process (InstanceLockProbe): primary, secondary, presence seen and gone |
+| [CLI-09](https://pauta-project.dev/4.0.1/command-line/#cli-09) | SHOULD | pass | `src/main/java/com/mirada/App.java:56`: java.awt.headless set as main's first statement (headless but on macOS, where Trash is AWT's Desktop) |
+| [CLI-10](https://pauta-project.dev/4.0.1/command-line/#cli-10) | SHOULD | pass | `src/main/java/com/mirada/os/ToolPath.java:50`: Reveal, Trash's gio and Browser start through `ToolPath.process`: own PATH, then the login shell's, program resolved on it; ToolPathTest |
 | [INTL-03](https://pauta-project.dev/4.0.1/i18n/#intl-03) | SHOULD | n/a | no catalogs |
 | [INTL-05](https://pauta-project.dev/4.0.1/i18n/#intl-05) | SHOULD | n/a | no CJK catalog |
 | [INTL-06](https://pauta-project.dev/4.0.1/i18n/#intl-06) | SHOULD | n/a | no right-to-left catalog |
