@@ -81,6 +81,10 @@ final class Icons {
     static final String MESSAGES = "M4 5 H20 V16 H10 L6 20 V16 H4 Z M8 9 H16 M8 12 H13";
     static final String LOG = "M6 3 H18 V21 H6 Z M9 8 H15 M9 12 H15 M9 16 H13";
     static final String DOWNLOAD = "M12 4 V15 M7 10 L12 15 L17 10 M5 20 H19";
+    static final String UPLOAD = "M12 15 V4 M7 9 L12 4 L17 9 M5 20 H19";
+    /** A circle half filled: light and dark. */
+    static final String THEME = "M12 3 A9 9 0 1 1 11.99 3 Z M12 3 V21 M12 7 H15 M12 11 H17 M12 15 H16";
+
     static final String WARNING = "M12 3.5 L21.5 20 H2.5 Z M12 9.5 V14 M12 17 V17.1";
     static final String UPDATE = "M12 3 A9 9 0 1 1 11.99 3 Z M12 16.5 V8 M8.5 11.5 L12 8 L15.5 11.5";
 
@@ -140,6 +144,16 @@ final class Icons {
             case THUMBNAIL_NAMES -> LIST;
             case THUMBNAIL_CAPTIONS -> CAPTION;
             case SETTINGS -> SLIDERS;
+            case THEME -> THEME;
+            case KEYMAP -> KEYBOARD;
+            case THUMBNAILS_AT_START -> STRIP;
+            case PROPERTIES_AT_START -> INFO;
+            case HIDE_CONTROLS_AFTER -> CLOCK;
+            case SLIDESHOW_SPEED -> PLAY;
+            case PALETTE_KEYS -> PROMPT;
+            case CHECK_DAILY -> UPDATE;
+            case EXPORT_CONFIG -> UPLOAD;
+            case IMPORT_CONFIG -> DOWNLOAD;
             case SHORTCUTS -> KEYBOARD;
             case OPEN -> PICTURE;
             case OPEN_FOLDER -> FOLDER_OPEN;

@@ -175,6 +175,60 @@ enum Command {
             "Settings",
             "Theme, what opens at start, and how long the floating controls stay.",
             "preferences options configure"),
+    // One command for each setting that has no other (SET-06, Pauta 4.0.1): it flips the setting, or
+    // asks for its value in the palette.
+    THEME(
+            "settings.theme",
+            "Theme…",
+            "Chooses light or dark controls and backgrounds, or the system's.",
+            "appearance dark light mode colour color look"),
+    KEYMAP(
+            "settings.keymap",
+            "Keymap…",
+            "Chooses the keys Mirada starts from: its own, or Emacs's. Your own keys stay on top.",
+            "keys shortcuts bindings emacs cua"),
+    THUMBNAILS_AT_START(
+            "settings.thumbnailsAtStart",
+            "Thumbnails at Start",
+            "Turns on or off opening the thumbnail strip when Mirada starts.",
+            "startup launch filmstrip strip open"),
+    PROPERTIES_AT_START(
+            "settings.propertiesAtStart",
+            "Properties at Start",
+            "Turns on or off opening the properties sidebar when Mirada starts.",
+            "startup launch info details sidebar open"),
+    HIDE_CONTROLS_AFTER(
+            "settings.hideControlsAfter",
+            "Hide Controls After…",
+            "Chooses how many seconds the floating controls stay once the pointer stops.",
+            "delay fade timeout overlay buttons seconds"),
+    SLIDESHOW_SPEED(
+            "settings.slideshowSpeed",
+            "Slideshow Speed…",
+            "Chooses how many seconds each image shows in a slideshow.",
+            "interval delay seconds play pace"),
+    PALETTE_KEYS(
+            "settings.paletteKeys",
+            "Command Palette Keys…",
+            "Opens Settings waiting for a key: pressed, it opens the palette from then on; one already listed is taken off.",
+            "shortcut keys bindings palette"),
+    CHECK_DAILY(
+            "settings.checkForUpdatesDaily",
+            "Check for Updates Daily",
+            "Turns on or off asking GitHub, once a day, whether a newer Mirada is out.",
+            "automatic update version network release"),
+    /** Export Configuration (SET-12): the config folder as a timestamped zip. */
+    EXPORT_CONFIG(
+            "config.export",
+            "Export Configuration…",
+            "Saves the settings, keys, bookmarks and notes to a zip, to keep or to take to another computer.",
+            "settings preferences backup save zip copy move"),
+    /** Import Configuration (SET-12): the parts of an exported zip the user ticks. */
+    IMPORT_CONFIG(
+            "config.import",
+            "Import Configuration…",
+            "Replaces the settings, the keys, or the bookmarks and notes with an exported zip's, after asking which.",
+            "settings preferences restore backup load zip"),
     SHORTCUTS("help.keyboardShortcuts", "Keyboard Shortcuts", "Lists every key Mirada answers to.", "keys help"),
     ABOUT(
             "help.about",
@@ -560,6 +614,16 @@ enum Command {
                     OPEN_RELEASE,
                     COPY_DETAILS -> "Help";
             case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, OPEN_FOLDER, OPEN_RECENT, CLOSE, PALETTE -> "Mirada";
+            case THEME,
+                    KEYMAP,
+                    THUMBNAILS_AT_START,
+                    PROPERTIES_AT_START,
+                    HIDE_CONTROLS_AFTER,
+                    SLIDESHOW_SPEED,
+                    PALETTE_KEYS,
+                    CHECK_DAILY,
+                    EXPORT_CONFIG,
+                    IMPORT_CONFIG -> "Settings";
             case DOCUMENTATION -> "Help";
             case EDITOR_ROTATE_LEFT,
                     EDITOR_ROTATE_RIGHT,

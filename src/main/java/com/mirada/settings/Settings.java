@@ -67,6 +67,12 @@ public final class Settings {
     static final String CHECK_FOR_UPDATES = "updates.check";
     static final String LAST_UPDATE_CHECK = "updates.lastCheck";
 
+    /**
+     * The version of {@code settings.properties} this build writes ({@code schemaVersion}, SET-09):
+     * 1 for the unversioned files of 0.1 to 0.3, 2 since. A bump needs a step in {@link Migrations}.
+     */
+    public static final int SCHEMA_VERSION = 2;
+
     public static final int MIN_HIDE_SECONDS = 1;
     public static final int MAX_HIDE_SECONDS = 10;
     public static final int MIN_SLIDESHOW_SECONDS = 1;
@@ -168,15 +174,31 @@ public final class Settings {
     /** False after a read that failed on a file that is there: it is not written over this run. */
     private boolean writable = true;
 
+    /** Where the last load kept a file it could not use (broken, or a newer Mirada's), or null. */
+    private @Nullable Path setAside;
+
+    /** The file as this run last read or wrote it: its time and size, and what it held. */
+    private ConfigFile.Stamp stamp = ConfigFile.Stamp.NONE;
+
+    private Properties saved = new Properties();
+
     /**
      * Reads the file; a missing or unreadable one leaves the defaults. One that will not decode is
-     * kept as {@code settings.properties.corrupt.bak} ({@link ConfigFile}); one that cannot be read
-     * is not written over this run.
+     * kept as {@code settings.properties.corrupt.bak}, one a newer Mirada wrote as {@code
+     * settings.properties.v<n>.bak}, and an older one is brought forward ({@link ConfigFile},
+     * {@link Migrations}); one that cannot be read is not written over this run.
      */
     public void load() {
-        ConfigFile.Result read = ConfigFile.read(file);
+        ConfigFile.Result read = ConfigFile.read(file, Migrations.SETTINGS);
         writable = read.writable();
-        Properties properties = read.properties();
+        setAside = read.backup();
+        apply(read.properties());
+        stamp = ConfigFile.Stamp.of(file);
+        saved = properties();
+    }
+
+    /** Sets every field from {@code properties}, each clamped or defaulted as it is read. */
+    private void apply(Properties properties) {
         theme = themeOf(properties.getProperty(THEME));
         startWithThumbnails = Boolean.parseBoolean(
                 properties.getProperty(START_WITH_THUMBNAILS, "false").trim());
@@ -216,6 +238,24 @@ public final class Settings {
         checkForUpdates = Boolean.parseBoolean(
                 properties.getProperty(CHECK_FOR_UPDATES, "true").trim());
         lastUpdateCheck = millisOf(properties.getProperty(LAST_UPDATE_CHECK));
+    }
+
+    /**
+     * Reads the file again and tells every listener, as after a change: after an import replaced it
+     * ({@link ConfigImport}).
+     */
+    public void reload() {
+        load();
+        for (Runnable listener : List.copyOf(listeners)) listener.run();
+    }
+
+    /**
+     * Where the last {@link #load} kept a file it could not use, so the window can say so: {@code
+     * .corrupt.bak} for one that would not decode, {@code .v<n>.bak} for a newer Mirada's. Null when
+     * the file was used.
+     */
+    public @Nullable Path setAside() {
+        return setAside;
     }
 
     /** A time in milliseconds since the epoch, or 0 for none or anything that is not one. */
@@ -529,6 +569,7 @@ public final class Settings {
     }
 
     private void changed() {
+        adoptOutsideChanges();
         save();
         for (Runnable listener : List.copyOf(listeners)) listener.run();
     }
@@ -539,7 +580,30 @@ public final class Settings {
      */
     void save() {
         if (!writable) return;
+        Properties properties = properties();
+        try {
+            Path folder = file.toAbsolutePath().getParent();
+            if (folder != null) Files.createDirectories(folder);
+            Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
+            try (Writer out = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) {
+                properties.store(out, "Mirada settings. Edit freely; bad values fall back to defaults.");
+            }
+            try {
+                Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
+            }
+            stamp = ConfigFile.Stamp.of(file);
+            saved = properties;
+        } catch (IOException e) {
+            // Unwritable home: the change still applies until Mirada closes.
+        }
+    }
+
+    /** The settings as the file holds them, at {@link #SCHEMA_VERSION}. */
+    private Properties properties() {
         Properties properties = new Properties();
+        properties.setProperty(Migrations.VERSION_KEY, Integer.toString(SCHEMA_VERSION));
         properties.setProperty(THEME, theme.name().toLowerCase(Locale.ROOT));
         properties.setProperty(START_WITH_THUMBNAILS, Boolean.toString(startWithThumbnails));
         properties.setProperty(START_WITH_INFO, Boolean.toString(startWithInfo));
@@ -567,20 +631,30 @@ public final class Settings {
         properties.setProperty(STATUS_BAR, Boolean.toString(statusBar));
         properties.setProperty(CHECK_FOR_UPDATES, Boolean.toString(checkForUpdates));
         if (lastUpdateCheck > 0) properties.setProperty(LAST_UPDATE_CHECK, Long.toString(lastUpdateCheck));
-        try {
-            Path folder = file.toAbsolutePath().getParent();
-            if (folder != null) Files.createDirectories(folder);
-            Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
-            try (Writer out = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) {
-                properties.store(out, "Mirada settings. Edit freely; bad values fall back to defaults.");
-            }
-            try {
-                Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            } catch (AtomicMoveNotSupportedException e) {
-                Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
-            }
-        } catch (IOException e) {
-            // Unwritable home: the change still applies until Mirada closes.
-        }
+        return properties;
+    }
+
+    /**
+     * Before a change is written: if another Mirada (another process: each has its own Settings)
+     * wrote the file since this one read or wrote it, takes its settings, with this change on top
+     * ({@link ConfigFile#merged}), so neither loses the other's (SET-05). One stat when nothing
+     * changed.
+     */
+    private void adoptOutsideChanges() {
+        if (!writable || ConfigFile.Stamp.of(file).equals(stamp)) return;
+        ConfigFile.Result read = ConfigFile.read(file, Migrations.SETTINGS);
+        if (read.outcome() != ConfigFile.Outcome.READ) return;
+        apply(ConfigFile.merged(saved, properties(), read.properties()));
+    }
+
+    /**
+     * Reads the file again, and tells every listener, if another Mirada changed it since this one
+     * last read or wrote it: called as a window comes to the front, so a change made in another
+     * window shows there (SET-05). One stat when nothing changed. Returns whether it read.
+     */
+    public boolean reloadIfChanged() {
+        if (!writable || ConfigFile.Stamp.of(file).equals(stamp)) return false;
+        reload();
+        return true;
     }
 }

@@ -67,6 +67,13 @@ public final class Bookmarks {
     }
 
     static final String FILE_NAME = "bookmarks.properties";
+
+    /**
+     * The version of {@code bookmarks.properties} this build writes ({@code schemaVersion}, SET-09):
+     * 1 for the unversioned files of 0.3, 2 since. A bump needs a step in {@link Migrations}.
+     */
+    public static final int SCHEMA_VERSION = 2;
+
     private static final Pattern PATH_KEY = Pattern.compile("mark\\.(\\d+)\\.path");
 
     private final Path file;
@@ -92,6 +99,14 @@ public final class Bookmarks {
     /** False after a read that failed on a file that is there: it is not written over. */
     private boolean writable = true;
 
+    /** Where the last load kept a file it could not use (broken, or a newer Mirada's), or null. */
+    private @Nullable Path setAside;
+
+    /** Where the last {@link #load} kept a file it could not use, or null when it was used. */
+    public @Nullable Path setAside() {
+        return setAside;
+    }
+
     /** The path as marks are kept by: absolute, without {@code .} or {@code ..}. */
     public static Path key(Path path) {
         return path.toAbsolutePath().normalize();
@@ -109,14 +124,17 @@ public final class Bookmarks {
 
     /**
      * Reads the file again, dropping what was read before. A file that will not decode is kept as
-     * {@code bookmarks.properties.corrupt.bak} and is no marks; one that cannot be read is no marks
-     * and is not written over, or the next bookmark would replace every mark it holds (SET-11).
+     * {@code bookmarks.properties.corrupt.bak} and is no marks, one a newer Mirada wrote is kept as
+     * {@code bookmarks.properties.v<n>.bak} and is no marks (SET-10), an older one is brought
+     * forward ({@link Migrations}); one that cannot be read is no marks and is not written over, or
+     * the next bookmark would replace every mark it holds (SET-11).
      */
     public void load() {
         loaded = true;
         marks.clear();
-        ConfigFile.Result read = ConfigFile.read(file);
+        ConfigFile.Result read = ConfigFile.read(file, Migrations.BOOKMARKS);
         writable = read.writable();
+        setAside = read.backup();
         for (Mark mark : marksOf(read.properties())) {
             marks.remove(mark.path()); // a hand-made copy: the later one, in its place
             marks.put(mark.path(), mark);
@@ -265,6 +283,12 @@ public final class Bookmarks {
         listeners.add(listener);
     }
 
+    /** Reads the file again and tells every listener: after an import replaced it ({@link ConfigImport}). */
+    public void reload() {
+        load();
+        for (Runnable listener : List.copyOf(listeners)) listener.run();
+    }
+
     private void changed() {
         save();
         for (Runnable listener : List.copyOf(listeners)) listener.run();
@@ -291,6 +315,7 @@ public final class Bookmarks {
     private void save() {
         if (!writable) return;
         Properties properties = propertiesOf(List.copyOf(marks.values()));
+        properties.setProperty(Migrations.VERSION_KEY, Integer.toString(SCHEMA_VERSION));
         try {
             Path folder = file.toAbsolutePath().getParent();
             if (folder != null) Files.createDirectories(folder);

@@ -155,6 +155,30 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   opened (after the first paint: writing the settings is not start-up's), and every change runs every
   settings listener. `Theme.apply` returns at once unless the theme itself changed, as restyling
   every window costs tens of milliseconds.
+- **A config file's version is a step, and a newer file is kept, not read.** `settings.properties`
+  and `bookmarks.properties` say `schemaVersion=2` (a file without one is 1, as 0.1 to 0.3 wrote
+  them). Changing what a file holds means bumping its `SCHEMA_VERSION` and adding the step from the
+  old version to `Migrations`, the identity for a purely additive key; `MigrationsTest` fails on a
+  gap. A file of a newer version is copied to `<name>.v<n>.bak` and the defaults load
+  (`ConfigFile.read`); it is left in place until the first change writes over it, so a newer
+  Mirada started again before then still finds it. A migrated file is not written back at start:
+  the next change writes it at the current version, as writing the settings is not start-up's.
+- **Each Mirada process has its own `Settings`, and they meet in the file** (SET-05). `Settings`
+  keeps the file's time and size and what it held as it last read or wrote it
+  (`ConfigFile.Stamp`); a window coming to the front calls `reloadIfChanged`, and every change
+  first takes another process's file with this change on top (`ConfigFile.merged`), so the last
+  writer no longer wins whole. One stat each time; nothing is watched in the background.
+- **Import replaces whole parts, never single keys.** `ConfigImport` sorts every key of
+  `settings.properties` into Preferences, Keys (`keymap`, `palette.keys`, `keys.*`) or this
+  computer's own (the window's place, `recent.*`, the last update check, the version), which are
+  never imported. A ticked part is taken whole from the zip, so a `keys.<id>` the zip lacks goes;
+  an unticked one stays as it is. The live `Settings` and `Bookmarks` are then `reload()`ed, which
+  runs every listener as a change would. A new setting is a Preference unless it is listed there.
+- **Every setting has a palette command, and every row of the Settings window names it**
+  (`SettingsPages.ROWS`, SET-06): `SettingsPagesTest` fails for a command in the `Settings` group
+  without a row. A new setting needs its row there (page, card, words), its control in
+  `SettingsWindow`, its line in the window's settings listener, and its command, which flips it or
+  asks in the palette (`SettingsCommands.choose`).
 - **Copy puts the picture as it stands on screen and the file.** `ViewerWindow.copy` turns the
   full image upright by the file's orientation and the user's turns (`Edit.upright`, then
   `Raster.turned`, off the FX thread) and puts it on the clipboard with the file, so an app that

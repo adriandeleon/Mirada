@@ -46,13 +46,14 @@ class SettingsWindowTest {
     private Settings settings = new Settings(Path.of("unset"));
     private SettingsWindow window = null;
     private Stage stage = null;
+    private final List<Command> ran = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     @BeforeEach
     void open() throws Exception {
         FxTestSupport.start();
         settings = new Settings(dir.resolve("settings.properties"));
         settings.load();
-        window = call(() -> new SettingsWindow(settings, ViewerWindow.stylesheet()));
+        window = call(() -> new SettingsWindow(settings, ViewerWindow.stylesheet(), ran::add));
         Stage owner = call(Stage::new);
         fx(() -> {
             owner.setX(0);
@@ -226,7 +227,7 @@ class SettingsWindowTest {
         assertEquals(was.paletteKeys(), again.paletteKeys());
 
         settings = again;
-        SettingsWindow reopened = call(() -> new SettingsWindow(again, ViewerWindow.stylesheet()));
+        SettingsWindow reopened = call(() -> new SettingsWindow(again, ViewerWindow.stylesheet(), ran::add));
         fx(() -> reopened.show(stage));
         stage = reopened.stage();
         assertEquals(
@@ -253,6 +254,74 @@ class SettingsWindowTest {
         fx(() -> window.show(owner));
         fx(() -> window.show(owner));
         assertTrue(call(stage::isShowing));
+    }
+
+    /** SET-02 and SET-03: the search hides what does not match and opens the best page. */
+    @Test
+    void searchHidesWhatDoesNotMatchAndOpensTheBestPage() throws Exception {
+        assertEquals(SettingsPages.Page.GENERAL, call(window::page));
+        assertEquals(
+                SettingsPages.Page.values().length,
+                call(() -> window.sidebar().getItems().size()));
+        HBox slideshow = call(() -> (HBox) this.<Node>control("Slideshow speed").getParent());
+        HBox theme = call(() -> (HBox) this.<Node>control("Theme").getParent());
+        assertFalse(call(() -> showing(slideshow)), "on another page: the Folder page is not showing");
+
+        fx(() -> window.search().setText("slideshow"));
+        assertEquals(SettingsPages.Page.FOLDER, call(window::page));
+        assertTrue(call(
+                () -> slideshow.isVisible() && slideshow.getParent().getParent().isVisible()));
+        assertFalse(call(theme::isVisible));
+        HBox reverse = call(() -> (HBox) this.<Node>control("Reverse order").getParent());
+        assertFalse(call(reverse::isVisible), "the row that does not match is hidden");
+        assertFalse(call(() -> reverse.getParent().getParent().isVisible()), "and its card with it");
+        assertTrue(call(() -> window.greyed(SettingsPages.Page.GENERAL)));
+        assertFalse(call(() -> window.greyed(SettingsPages.Page.FOLDER)));
+
+        press(KeyCode.ESCAPE);
+        assertEquals("", call(() -> window.search().getText()), "Escape empties the search first");
+        assertTrue(call(stage::isShowing));
+        assertTrue(call(reverse::isVisible));
+        assertFalse(call(() -> window.greyed(SettingsPages.Page.GENERAL)));
+
+        fx(() -> window.sidebar().getSelectionModel().select(SettingsPages.Page.KEYS));
+        assertTrue(call(() -> showing(this.<Node>control("Keymap"))));
+    }
+
+    /** Whether {@code node} and every parent it has are visible: on the page showing, not hidden. */
+    private static boolean showing(Node node) {
+        for (Node at = node; at != null; at = at.getParent()) if (!at.isVisible()) return false;
+        return true;
+    }
+
+    @Test
+    void theBackupPageRunsExportAndImport() throws Exception {
+        javafx.scene.layout.VBox backup = control("Export and import");
+        HBox buttons = (HBox) backup.getChildren().get(1);
+        fx(() -> ((Button) buttons.getChildren().get(0)).fire());
+        fx(() -> ((Button) buttons.getChildren().get(1)).fire());
+        assertEquals(List.of(Command.EXPORT_CONFIG, Command.IMPORT_CONFIG), ran);
+        Label folder = (Label) backup.getChildren().get(0);
+        assertEquals(String.valueOf(dir.toAbsolutePath()), call(folder::getText));
+    }
+
+    @Test
+    void aSettingChangedByItsCommandShowsInTheWindow() throws Exception {
+        fx(() -> settings.setTheme(Settings.ThemeChoice.LIGHT));
+        assertEquals(
+                Settings.ThemeChoice.LIGHT,
+                call(() ->
+                        this.<ChoiceBox<Settings.ThemeChoice>>control("Theme").getValue()));
+        fx(() -> settings.setControlsHideSeconds(9));
+        assertEquals(
+                9,
+                call(() -> this.<Spinner<Integer>>control("Hide controls after").getValue()));
+        fx(() -> settings.setSlideshowSeconds(30));
+        assertEquals(
+                30, call(() -> this.<Spinner<Integer>>control("Slideshow speed").getValue()));
+        fx(() -> settings.setStartWithInfo(true));
+        assertTrue(call(() -> this.<CheckBox>control("Properties at start").isSelected()));
+        fx(() -> settings.setTheme(Settings.ThemeChoice.SYSTEM));
     }
 
     private void press(KeyCode code) throws Exception {
