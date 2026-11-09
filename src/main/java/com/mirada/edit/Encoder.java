@@ -32,6 +32,8 @@ import javax.imageio.stream.MemoryCacheImageOutputStream;
 
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * Writes an edited image, in the format its file name says, through the JDK's own ImageIO writers:
  * JPEG (at quality {@value #JPEG_QUALITY}), PNG, TIFF and BMP. WebP, HEIC, AVIF, JPEG XL and PSD
@@ -102,7 +104,7 @@ public final class Encoder {
             Raster image, Path file, byte @Nullable [] exif, byte @Nullable [] profile, byte @Nullable [] xmp)
             throws IOException {
         String format = formatFor(file);
-        if (format == null) throw new IOException("Mirada can write JPEG, PNG, TIFF and BMP");
+        if (format == null) throw new IOException(tr("edit.cannotWriteFormat"));
         // Beside the target, created as any new file is (createTempFile would make it owner-only).
         Path temporary = file.resolveSibling(".mirada-" + Long.toHexString(System.nanoTime()) + ".tmp");
         try {
@@ -237,7 +239,7 @@ public final class Encoder {
         }
         long ifdAt = at;
         int count = entries.size() + carried.size();
-        if (ifdAt + 2 + 12L * count + 4 > 0xFFFFFFFFL) throw new IOException("too large for a TIFF");
+        if (ifdAt + 2 + 12L * count + 4 > 0xFFFFFFFFL) throw new IOException(tr("edit.tooLargeForTiff"));
         // StripOffsets was laid out with the rest, so its own values are already final.
 
         ByteBuffer.wrap(head, 4, 4).order(order).putInt((int) ifdAt);
@@ -327,7 +329,7 @@ public final class Encoder {
 
     private static void encode(BufferedImage image, String format, ImageOutputStream stream) throws IOException {
         Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName(format);
-        if (!writers.hasNext()) throw new IOException("no " + format + " writer");
+        if (!writers.hasNext()) throw new IOException(tr("edit.noWriter", format));
         ImageWriter writer = writers.next();
         try {
             writer.setOutput(stream);

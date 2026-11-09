@@ -22,6 +22,15 @@ record ArgbPixels(int width, int height, int[] pixels) {
         }
     }
 
+    /**
+     * The array for a {@code width} × {@code height} image, once {@link DecodeGuard} has said it fits
+     * the heap: every decoder's pixels are made here, so none outgrows the memory left (PERF-12).
+     */
+    static int[] allocate(int width, int height) throws java.io.IOException {
+        DecodeGuard.check(width, height);
+        return new int[Math.multiplyExact(width, height)];
+    }
+
     /** The pixels as a JavaFX image, sharing this array. Needs the toolkit; any thread. */
     WritableImage toImage() {
         PixelBuffer<IntBuffer> buffer =

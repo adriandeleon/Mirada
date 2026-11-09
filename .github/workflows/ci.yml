@@ -1,14 +1,18 @@
-# Build and test on all three platforms.
+# Build and test on all three platforms (Pauta REL-19).
 #
 # Mirada is meant to be cross-platform, and only Linux has ever run it. This is where Windows and
-# macOS compile and test it on every push.
+# macOS compile and test it on every push to main and every pull request, into any branch.
+#
+# Format and Build & Test are the checks main's branch protection requires: "Format",
+# "Build & Test (ubuntu-latest)", "Build & Test (macos-latest)" and "Build & Test (windows-latest)".
+# Renaming a job renames its check, and main then waits for one that never comes: change the rule
+# with it. workflow_dispatch is how the release's bump job runs them on its pull request's branch.
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 defaults:
@@ -20,15 +24,38 @@ permissions:
   contents: read
 
 concurrency:
-  # A newer push supersedes an older one on the same branch; nothing is learned from finishing a run
-  # against code that has already been replaced.
+  # A newer push to a pull request supersedes the older one; nothing is learned from finishing a run
+  # against code that has already been replaced. Runs on main always finish (REL-26, Pauta 4.0.1):
+  # each one is the record of a commit that landed.
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Formatting on its own, so a check that fails says which thing is wrong.
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      # Palantir, as `./mvnw spotless:apply` writes it.
+      - name: Check formatting
+        run: ./mvnw -B --no-transfer-progress spotless:check
+
   test:
-    name: Test (${{ matrix.os }})
+    name: Build & Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       # One platform failing must not cancel the others: which platforms are affected is usually
       # the most useful thing about the failure.
@@ -37,31 +64,59 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
 
-      # Tests, NullAway (in the main compile) and the formatter check. The decoder tests make images
-      # on JavaFX's headless platform, so no display is needed. The build downloads the codec
-      # bundle (pom.xml, codecs-*), and its tests must run rather than skip, on every platform.
+      # Tests and NullAway (in the main compile); the formatter is the Format job's. The decoder
+      # tests make images on JavaFX's headless platform, so no display is needed. The build
+      # downloads the codec bundle (pom.xml, codecs-*), and its tests must run rather than skip, on
+      # every platform.
       - name: Verify
         env:
           MIRADA_REQUIRE_CODECS: '1'
-        run: ./mvnw -B --no-transfer-progress verify
+        run: ./mvnw -B --no-transfer-progress -Dspotless.check.skip=true verify
 
       - name: Upload test reports
-        # Only the failures matter here, and only then.
-        if: failure()
-        uses: actions/upload-artifact@v4
+        # Always, pass or fail (REL-27): a passing run's reports say what ran and how long it took.
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: surefire-${{ matrix.os }}
           path: target/surefire-reports/
           retention-days: 7
+
+      # Verify's coverage gate (PLAT-12) reads target/jacoco.exec; the report is written after the
+      # tests, so it is there to keep and to sum up even when the floors failed the build.
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: jacoco-${{ matrix.os }}
+          path: target/site/jacoco/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Summarise coverage
+        if: always()
+        run: |
+          csv=target/site/jacoco/jacoco.csv
+          if [ ! -f "$csv" ]; then
+            echo "### Coverage (${{ matrix.os }}): no report (the tests did not run)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          awk -F, 'NR > 1 { lm += $8; lc += $9; mm += $12; mc += $13; bm += $6; bc += $7 }
+            END {
+              print "### Coverage (" os ")"
+              printf "Lines %.1f%% · methods %.1f%% · branches %.1f%%\n", 100 * lc / (lc + lm), 100 * mc / (mc + mm), 100 * bc / (bc + bm)
+            }' os="${{ matrix.os }}" "$csv" >> "$GITHUB_STEP_SUMMARY"
 
   # What ships: the native image (GraalVM + StaticFX, docs/native-image.md) in jpackage's app image
   # wherever GraalVM builds one, and the jlink image with its AOT cache on Intel macOS, which
@@ -72,6 +127,7 @@ jobs:
   package:
     name: Package (${{ matrix.target }}, ${{ matrix.build }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     needs: test
     strategy:
       fail-fast: false
@@ -84,13 +140,15 @@ jobs:
           - { os: macos-15-intel, target: macos-x64,   build: jlink }
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
       # Oracle GraalVM, the distribution StaticFX is confirmed with. 25.4, not the 25.0 LTS: 25.0
       # has no AWT on macOS, so ImageIO (WebP, TIFF, PSD) fails there.
       - name: Set up Oracle GraalVM 25.4
         if: matrix.build == 'native'
-        uses: graalvm/setup-graalvm@v1
+        uses: graalvm/setup-graalvm@f70bc8032f90a104502824a54bcb94b6f01715bc # v1.6.8
         with:
           distribution: graalvm
           version: '25.4'
@@ -99,7 +157,7 @@ jobs:
 
       - name: Set up JDK 25
         if: matrix.build == 'jlink'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
           java-version: '25'
@@ -184,7 +242,7 @@ jobs:
       # A week's worth of the app as built, to try on a machine CI does not have.
       - name: Upload the app image
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: mirada-${{ matrix.target }}
           path: target/dist/

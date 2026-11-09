@@ -16,11 +16,13 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -31,6 +33,8 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
 import org.jspecify.annotations.Nullable;
+
+import static com.mirada.i18n.Messages.tr;
 
 /**
  * The window's top row, GNOME Image Viewer's: the file name in the middle, rotate, info and the main
@@ -132,12 +136,13 @@ final class TitleBar {
     private final Heading heading = new Heading(folder, slash, title);
     private @Nullable Tooltip folderTip;
     private @Nullable Path folderShown;
-    private final Button rotate = button(Icons.ROTATE);
+    private final Button rotate;
     private final Consumer<Command> run;
     private final BooleanProperty infoShowing;
     private final BooleanProperty thumbnailsShowing;
     private final ToggleButton info = new ToggleButton();
     private final MenuButton menu = new MenuButton();
+    private final BooleanProperty statusBarOn;
     private final Region row;
     private final boolean extended;
 
@@ -145,12 +150,19 @@ final class TitleBar {
      * @param run runs a command, the same as its key would
      * @param infoShowing the sidebar's state, which the info button shows and toggles
      * @param thumbnailsShowing the strip's state, which the menu ticks and toggles
+     * @param statusBarOn whether the status bar is switched on, which the menu ticks and toggles
      */
-    TitleBar(Stage stage, Consumer<Command> run, BooleanProperty infoShowing, BooleanProperty thumbnailsShowing) {
+    TitleBar(
+            Stage stage,
+            Consumer<Command> run,
+            BooleanProperty infoShowing,
+            BooleanProperty thumbnailsShowing,
+            BooleanProperty statusBarOn) {
         this.stage = stage;
         this.run = run;
         this.infoShowing = infoShowing;
         this.thumbnailsShowing = thumbnailsShowing;
+        this.statusBarOn = statusBarOn;
         this.extended = Platform.isSupported(ConditionalFeature.EXTENDED_WINDOW);
 
         title.getStyleClass().add("header-title");
@@ -167,21 +179,21 @@ final class TitleBar {
         // A shift-click turns the other way. An ActionEvent carries no modifiers, so the press that
         // leads to it records them.
         boolean[] shift = {false};
-        rotate.addEventFilter(MouseEvent.MOUSE_PRESSED, e -> shift[0] = e.isShiftDown());
-        rotate.setOnAction(e -> {
+        rotate = Icons.button(Command.ROTATE_CLOCKWISE, "header-button", () -> {
             run.accept(shift[0] ? Command.ROTATE_COUNTERCLOCKWISE : Command.ROTATE_CLOCKWISE);
             shift[0] = false;
         });
-        info.setGraphic(Icons.of(Icons.INFO));
+        rotate.addEventFilter(MouseEvent.MOUSE_PRESSED, e -> shift[0] = e.isShiftDown());
+        info.setGraphic(Icons.menu(Command.INFO));
         info.getStyleClass().addAll("header-button", "flat");
         info.selectedProperty().bindBidirectional(infoShowing);
         menu.setGraphic(Icons.of(Icons.MENU));
         menu.getStyleClass().addAll("header-button", "flat", "no-arrow");
-        for (Node node : new Node[] {rotate, info, menu}) node.setFocusTraversable(false);
-        // Icons only: these are what a screen reader says for them (VoiceOver, Narrator, Orca).
-        rotate.setAccessibleText(Command.ROTATE_CLOCKWISE.label());
-        info.setAccessibleText(Command.INFO.label());
-        menu.setAccessibleText("Main Menu");
+        for (Node node : new Node[] {info, menu}) node.setFocusTraversable(false);
+        // Icons only: their names are what a screen reader says (VoiceOver, Narrator, Orca).
+        Icons.name(info, Command.INFO);
+        // The ☰ button's name: it runs no command, it opens the menu of them.
+        Icons.name(menu, tr("titleBar.mainMenu"), KeyCombination.NO_MATCH);
 
         HBox right = new HBox(4, rotate, info, menu);
         right.setAlignment(Pos.CENTER_RIGHT);
@@ -210,16 +222,14 @@ final class TitleBar {
     }
 
     /**
-     * The tooltips and the menu's items, added after the first image is on screen: neither is seen
-     * before then, and building them first measurably delayed that image (ViewerWindow.afterFirstPaint).
+     * The folder's tooltip and the menu's items, added after the first image is on screen: neither is
+     * seen before then, and building them first measurably delayed that image
+     * (ViewerWindow.afterFirstPaint). The buttons are named as they are built ({@link Icons#button}).
      */
     void finish() {
         Tooltip tip = new Tooltip(folderShown == null ? "" : folderShown.toString());
         folderTip = tip;
         folder.setTooltip(tip);
-        rotate.setTooltip(new Tooltip("Rotate Right (R); Shift-click rotates left"));
-        info.setTooltip(new Tooltip("Image Properties (I)"));
-        menu.setTooltip(new Tooltip("Main Menu"));
         menu.getItems()
                 .addAll(
                         item(Command.OPEN, run),
@@ -227,9 +237,11 @@ final class TitleBar {
                         item(Command.OPEN_RECENT, run),
                         new SeparatorMenuItem(),
                         item(Command.PALETTE, run),
+                        item(Command.DOCUMENTATION, run),
                         new SeparatorMenuItem(),
                         panel(Command.THUMBNAILS, thumbnailsShowing),
                         panel(Command.INFO, infoShowing),
+                        panel(Command.STATUS_BAR, statusBarOn),
                         item(Command.BOOKMARKS, run),
                         new SeparatorMenuItem(),
                         item(Command.EDIT, run),
@@ -239,11 +251,28 @@ final class TitleBar {
                         new SeparatorMenuItem(),
                         item(Command.SETTINGS, run),
                         item(Command.SHORTCUTS, run),
+                        help(run),
                         item(Command.ABOUT, run),
                         new SeparatorMenuItem(),
+                        item(Command.PREVIOUS, run),
+                        item(Command.NEXT, run),
+                        new SeparatorMenuItem(),
                         item(Command.CLOSE, run));
-        // The palette's keys may have changed since.
-        menu.setOnShowing(e -> MenuChord.refresh(menu.getItems()));
+        // The palette's keys, and the stepping keys with the strip's axis, may have changed since;
+        // so may Previous and Next's arrows.
+        menu.setOnShowing(e -> {
+            MenuChord.refresh(menu.getItems());
+            for (MenuItem item : menu.getItems()) {
+                if (item.getUserData() instanceof Command command && Icons.forCommand(command) != null)
+                    item.setGraphic(Icons.menu(command));
+            }
+        });
+    }
+
+    /** The buttons' names again, from the commands' chords now: the user's keys changed (TBAR-03). */
+    void relabel() {
+        Icons.relabel(rotate, Command.ROTATE_CLOCKWISE);
+        Icons.name(info, Command.INFO);
     }
 
     Region node() {
@@ -284,19 +313,25 @@ final class TitleBar {
         if (extended) HeaderBar.setSystemButtonHeight(stage, full ? 0 : HeaderBar.USE_DEFAULT_SIZE);
     }
 
-    private static Button button(String icon) {
-        Button button = new Button();
-        button.setGraphic(Icons.of(icon));
-        button.getStyleClass().addAll("header-button", "flat");
-        return button;
-    }
-
     /** A panel the menu ticks while it is open, and opens or closes as the key does. */
     private static MenuItem panel(Command command, BooleanProperty showing) {
         CheckMenuItem item = new CheckMenuItem(command.label(), Icons.menu(command));
         item.selectedProperty().bindBidirectional(showing);
         item.setUserData(command);
         return MenuChord.on(item, command);
+    }
+
+    /** Help: the logs, reporting a problem and the update check (DIAG-03, DIAG-05, DIAG-06). */
+    private static Menu help(Consumer<Command> run) {
+        Menu help = new Menu(tr("titleBar.help"), Icons.of(Icons.HELP));
+        help.getItems()
+                .addAll(
+                        item(Command.MESSAGE_LOG, run),
+                        item(Command.DEBUG_LOG, run),
+                        new SeparatorMenuItem(),
+                        item(Command.REPORT_PROBLEM, run),
+                        item(Command.CHECK_FOR_UPDATES, run));
+        return help;
     }
 
     private static MenuItem item(Command command, Consumer<Command> run) {

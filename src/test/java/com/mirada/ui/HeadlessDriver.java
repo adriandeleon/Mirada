@@ -10,12 +10,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 
 import javafx.application.Platform;
-import javafx.collections.ListChangeListener;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.image.PixelReader;
@@ -25,11 +26,9 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseButton;
 import javafx.scene.robot.Robot;
-import javafx.stage.PopupWindow;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import javafx.stage.WindowEvent;
 
 import com.mirada.App;
 import org.jspecify.annotations.Nullable;
@@ -78,17 +77,21 @@ public final class HeadlessDriver {
         fx(() -> {
             fit(stage(), 1000, 760);
             // Menus and popups too: one opened near the bottom would hang past it.
-            Window.getWindows().forEach(HeadlessDriver::keepOnScreen);
-            Window.getWindows().addListener((ListChangeListener<Window>) change -> {
-                while (change.next()) change.getAddedSubList().forEach(HeadlessDriver::keepOnScreen);
-            });
+            FxTestSupport.keepWindowsOnScreen();
         });
         // The first image is painted on a pulse after the window shows.
         Thread.sleep(500);
         Robot robot = call(Robot::new);
         for (String step : steps) {
             System.out.println("[drive] " + step);
-            run(robot, step.trim());
+            try {
+                run(robot, step.trim());
+            } catch (Exception e) {
+                // Said here: App.main gave uncaught exceptions to the Debug Log, which prints nothing.
+                Throwable cause = e instanceof ExecutionException && e.getCause() != null ? e.getCause() : e;
+                System.err.println("[drive] failed: " + step + ": " + cause);
+                System.exit(1);
+            }
             Thread.sleep(SETTLE_MS);
         }
         Platform.exit();
@@ -101,13 +104,13 @@ public final class HeadlessDriver {
         String rest = word.length > 1 ? word[1] : "";
         switch (word[0]) {
             case "wait" -> Thread.sleep(Long.parseLong(rest));
-            case "key" -> fx(() -> press(robot, rest));
-            case "type" -> fx(() -> type(robot, rest));
-            case "move" -> fx(() -> move(robot, rest));
-            case "click" -> fx(() -> click(robot, rest, MouseButton.PRIMARY, 1));
-            case "dclick" -> fx(() -> click(robot, rest, MouseButton.PRIMARY, 2));
-            case "rclick" -> fx(() -> click(robot, rest, MouseButton.SECONDARY, 1));
-            case "wheel" -> fx(() -> robot.mouseWheel(Integer.parseInt(rest)));
+            case "key" -> input(() -> press(robot, rest));
+            case "type" -> input(() -> type(robot, rest));
+            case "move" -> input(() -> move(robot, rest));
+            case "click" -> input(() -> click(robot, rest, MouseButton.PRIMARY, 1));
+            case "dclick" -> input(() -> click(robot, rest, MouseButton.PRIMARY, 2));
+            case "rclick" -> input(() -> click(robot, rest, MouseButton.SECONDARY, 1));
+            case "wheel" -> input(() -> robot.mouseWheel(Integer.parseInt(rest)));
             case "size" ->
                 fx(() -> {
                     String[] wh = rest.split("\\s+");
@@ -140,26 +143,6 @@ public final class HeadlessDriver {
         stage.setY(screen.getMinY());
         stage.setWidth(Math.min(width, screen.getWidth()));
         stage.setHeight(Math.min(height, screen.getHeight()));
-    }
-
-    /**
-     * Moves a window back inside the screen as it shows, before its first frame is drawn. A popup's
-     * own fix keeps its content inside but not its shadow, and would undo ours, so it is turned off.
-     */
-    private static void keepOnScreen(Window window) {
-        if (window instanceof PopupWindow popup) popup.setAutoFix(false);
-        window.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> moveOnScreen(window));
-        moveOnScreen(window);
-    }
-
-    private static void moveOnScreen(Window window) {
-        // A stage placed before it shows has no size yet: wait for WINDOW_SHOWN.
-        if (Double.isNaN(window.getWidth()) || Double.isNaN(window.getHeight())) return;
-        Rectangle2D screen = Screen.getPrimary().getBounds();
-        double x = Math.max(screen.getMinX(), Math.min(window.getX(), screen.getMaxX() - window.getWidth()));
-        double y = Math.max(screen.getMinY(), Math.min(window.getY(), screen.getMaxY() - window.getHeight()));
-        if (x != window.getX()) window.setX(x);
-        if (y != window.getY()) window.setY(y);
     }
 
     private static void press(Robot robot, String token) {
@@ -268,6 +251,28 @@ public final class HeadlessDriver {
     private static Stage stage() {
         for (Window w : Window.getWindows()) if (w instanceof Stage s && s.isShowing()) return s;
         throw new IllegalStateException("no window");
+    }
+
+    /**
+     * Sends input on the FX thread. A press that opens a modal dialog does not return until the
+     * dialog closes ({@code showAndWait} runs a nested event loop), so after a moment the next steps
+     * go on inside that loop, where they reach the dialog.
+     */
+    private static void input(Runnable action) throws Exception {
+        CompletableFuture<@Nullable Void> done = new CompletableFuture<>();
+        Platform.runLater(() -> {
+            try {
+                action.run();
+                done.complete(null);
+            } catch (Throwable t) {
+                done.completeExceptionally(t);
+            }
+        });
+        try {
+            done.get(2, TimeUnit.SECONDS);
+        } catch (TimeoutException modal) {
+            System.out.println("[drive] (still held: a modal dialog is up)");
+        }
     }
 
     private static void fx(Runnable action) throws Exception {

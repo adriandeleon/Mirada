@@ -19,6 +19,7 @@ import javafx.scene.image.WritableImage;
 
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static java.lang.foreign.ValueLayout.JAVA_INT;
 import static java.lang.foreign.ValueLayout.JAVA_LONG;
@@ -114,7 +115,7 @@ final class JxlDecoder {
     /** The image, or an animation's first frame, decoded without the JavaFX toolkit. */
     static ArgbPixels pixels(Path file) throws IOException {
         ArgbPixels first = decode(file, false).first();
-        if (first == null) throw new IOException("the file holds no image");
+        if (first == null) throw new IOException(tr("decode.noImage"));
         return first;
     }
 
@@ -127,7 +128,7 @@ final class JxlDecoder {
     private record Result(@Nullable ArgbPixels first, Animation.@Nullable Frames frames) {}
 
     private static Result decode(Path file, boolean allFrames) throws IOException {
-        Library jxl = Library.INSTANCE.orElseThrow(() -> new IOException("JPEG XL needs libjxl, which was not found"));
+        Library jxl = Library.INSTANCE.orElseThrow(() -> new IOException(tr("decode.jxlNeedsLibrary")));
         try (Arena arena = Arena.ofConfined();
                 FileChannel channel = FileChannel.open(file, StandardOpenOption.READ)) {
             MemorySegment data = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size(), arena);
@@ -177,16 +178,18 @@ final class JxlDecoder {
         while (true) {
             int status = (int) jxl.processInput.invoke(decoder);
             switch (status) {
-                case ERROR -> throw new IOException("not a valid JPEG XL file");
-                case NEED_MORE_INPUT -> throw new IOException("the file is truncated");
+                case ERROR -> throw new IOException(tr("decode.notJxl"));
+                case NEED_MORE_INPUT -> throw new IOException(tr("decode.truncated"));
                 case SUCCESS -> {
-                    if (first == null) throw new IOException("the file holds no image");
+                    if (first == null) throw new IOException(tr("decode.noImage"));
                     return new Result(first, allFrames ? collector.frames() : null);
                 }
                 case BASIC_INFO -> {
                     expect(SUCCESS, (int) jxl.getBasicInfo.invoke(decoder, info));
                     width = info.get(JAVA_INT, INFO_XSIZE);
                     height = info.get(JAVA_INT, INFO_YSIZE);
+                    // From the header, before a pixel is decoded: refused if it will not fit (PERF-12).
+                    DecodeGuard.check(width, height);
                     channels = info.get(JAVA_INT, INFO_ALPHA_BITS) > 0 ? 4 : 3;
                     format.set(JAVA_INT, 0, channels);
                     format.set(JAVA_INT, 4, TYPE_UINT8);

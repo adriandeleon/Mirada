@@ -3,8 +3,10 @@ package com.mirada.ui;
 import java.io.File;
 import java.io.IOException;
 import java.nio.IntBuffer;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import javafx.application.Platform;
@@ -22,6 +24,7 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -29,6 +32,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import javafx.util.StringConverter;
 
+import com.mirada.diagnostics.MessageLog;
 import com.mirada.edit.AspectRatio;
 import com.mirada.edit.CropBox;
 import com.mirada.edit.Edit;
@@ -43,6 +47,8 @@ import com.mirada.image.Orientation;
 import com.mirada.image.Shrink;
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The editor, GNOME Image Viewer's: crop (free, or held to a shape), turn, flip, reset; Cancel or
  * Save. It takes the window's content area, below the header, and works on a preview of at most
@@ -55,9 +61,11 @@ import org.jspecify.annotations.Nullable;
  * ({@link ExifBlock}), and its colour profile ({@link IccProfile}) when the pixels are still in its
  * colours.
  *
- * <p>Keys: Enter or Ctrl+S saves, Escape cancels, R and Shift+R turn, H and V flip, A steps through
- * the shapes, Backspace resets, Ctrl+Z undoes and Ctrl+Shift+Z or Ctrl+Y redoes, the arrows move the
- * box (Shift: further) and Ctrl+arrows resize it.
+ * <p>Every tool is a command ({@link Command.Context#EDITOR}): its buttons, its keys and the palette
+ * all run it ({@link #run}). The keys are the keymap's, by default Enter or Ctrl+S saves, Escape
+ * cancels, R and Shift+R turn, H and V flip, A steps through the shapes, Backspace resets, Ctrl+Z
+ * undoes and Ctrl+Shift+Z or Ctrl+Y redoes. The arrows, the editor's own keys ({@link #onKey}), move
+ * the box (Shift: further) and Ctrl+arrows resize it.
  */
 final class Editor {
 
@@ -77,8 +85,8 @@ final class Editor {
     private final BorderPane node = new BorderPane();
     private final CropView crop = new CropView(this::cropped, this::record);
     private final ChoiceBox<AspectRatio> shape = new ChoiceBox<>();
-    private final Label title = new Label("Edit");
-    private final Consumer<String> say;
+    private final Label title = new Label(tr("editor.titleBare"));
+    private final BiConsumer<String, MessageLog.Severity> say;
 
     private @Nullable Image full;
     private Orientation orientation = Orientation.NORMAL;
@@ -87,8 +95,8 @@ final class Editor {
     private Raster uprightPreview = new Raster(1, 1, new int[] {0});
     private Edit edit = Edit.NONE;
     private final History<Step> history = new History<>(new Step(Edit.NONE, AspectRatio.FREE));
-    private final Button undoButton = tool("Undo", "Ctrl+Z", this::undo);
-    private final Button redoButton = tool("Redo", "Ctrl+Shift+Z", this::redo);
+    private final Button undoButton = tool(tr("editor.undo"), Command.EDITOR_UNDO);
+    private final Button redoButton = tool(tr("editor.redo"), Command.EDITOR_REDO);
     /** True while the editor sets the shape itself, so the shape's listener records no step. */
     private boolean quiet;
 
@@ -99,19 +107,19 @@ final class Editor {
      * @param viewer what that centre holds otherwise, put back when the editor closes
      * @param say shows a short message over the window, as the viewer does
      */
-    Editor(BorderPane window, Node viewer, Consumer<String> say) {
+    Editor(BorderPane window, Node viewer, BiConsumer<String, MessageLog.Severity> say) {
         this.window = window;
         this.viewer = viewer;
         this.say = say;
         node.getStyleClass().add("editor");
 
-        Button cancel = new Button("Cancel");
+        Button cancel = new Button(tr("editor.cancel"));
         cancel.setCancelButton(true);
-        cancel.setOnAction(e -> close());
-        Button save = new Button("Save…");
+        cancel.setOnAction(e -> run(Command.EDITOR_CANCEL));
+        Button save = new Button(tr("editor.save"));
         save.getStyleClass().add("accent");
         save.setDefaultButton(true);
-        save.setOnAction(e -> save());
+        save.setOnAction(e -> run(Command.EDITOR_SAVE));
         title.getStyleClass().add("editor-title");
         Region left = new Region();
         Region right = new Region();
@@ -140,20 +148,16 @@ final class Editor {
             shapeChanged();
             record();
         });
-        shape.setTooltip(new Tooltip("The crop's shape (A)"));
-        HBox bottom = new HBox(
-                8,
-                new Label("Crop"),
-                shape,
-                spacer(),
-                tool("Rotate Left", "Shift+R", () -> turn(-1)),
-                tool("Rotate Right", "R", () -> turn(1)),
-                tool("Flip Horizontally", "H", () -> apply(edit.flippedHorizontally())),
-                tool("Flip Vertically", "V", () -> apply(edit.flippedVertically())),
-                spacer(),
-                undoButton,
-                redoButton,
-                tool("Reset", "Backspace", this::reset));
+        shape.setTooltip(new Tooltip(Icons.tooltip(tr("editor.shapeTooltip"), Command.EDITOR_NEXT_SHAPE.chord())));
+        // Three groups that wrap to a second row rather than cut a word, in any language (INTL-04).
+        HBox shapeGroup = group(new Label(tr("editor.crop")), shape);
+        HBox turnGroup = group(
+                tool(tr("editor.rotateLeft"), Command.EDITOR_ROTATE_LEFT),
+                tool(tr("editor.rotateRight"), Command.EDITOR_ROTATE_RIGHT),
+                tool(tr("editor.flipHorizontally"), Command.EDITOR_FLIP_HORIZONTALLY),
+                tool(tr("editor.flipVertically"), Command.EDITOR_FLIP_VERTICALLY));
+        HBox historyGroup = group(undoButton, redoButton, tool(tr("editor.reset"), Command.EDITOR_RESET));
+        FlowPane bottom = new FlowPane(28, 8, shapeGroup, turnGroup, historyGroup);
         bottom.setAlignment(Pos.CENTER);
         bottom.setPadding(new Insets(10, 14, 10, 14));
         bottom.getStyleClass().add("editor-bar");
@@ -183,7 +187,7 @@ final class Editor {
         quiet = false;
         history.reset(new Step(Edit.NONE, AspectRatio.FREE));
         updateUndo();
-        title.setText("Edit " + name(file));
+        title.setText(tr("editor.title", name(file)));
         showArranged();
         if (!isShowing()) window.setCenter(node);
         node.requestFocus();
@@ -194,33 +198,67 @@ final class Editor {
         full = null;
     }
 
-    /** The editor's keys, while it shows; true when one was used. */
+    /** Cancel and Escape: closes, after asking when there is an edit to lose (CONF-01). */
+    private void cancel() {
+        if (mayDiscard()) close();
+    }
+
+    /**
+     * Whether the editor may go without saving: true when it is closed or has nothing to lose, or
+     * when the user answers Discard. The window asks it before closing.
+     */
+    boolean mayDiscard() {
+        Path file = source;
+        if (!isShowing() || edit.isNone() || file == null) return true;
+        return Confirm.ask(Confirm.discardEdit(name(file)), owner());
+    }
+
+    private @Nullable Window owner() {
+        return node.getScene() == null ? null : node.getScene().getWindow();
+    }
+
+    /**
+     * Runs one of the editor's tools, from its button, its key or the palette. Only while it shows;
+     * the others are not the editor's.
+     */
+    void run(Command command) {
+        if (!isShowing()) return;
+        switch (command) {
+            case EDITOR_ROTATE_LEFT -> turn(-1);
+            case EDITOR_ROTATE_RIGHT -> turn(1);
+            case EDITOR_FLIP_HORIZONTALLY -> apply(edit.flippedHorizontally());
+            case EDITOR_FLIP_VERTICALLY -> apply(edit.flippedVertically());
+            case EDITOR_NEXT_SHAPE -> shape.setValue(shape.getValue().next());
+            case EDITOR_RESET -> reset();
+            case EDITOR_UNDO -> undo();
+            case EDITOR_REDO -> redo();
+            case EDITOR_SAVE -> save();
+            case EDITOR_CANCEL -> cancel();
+            default -> {}
+        }
+    }
+
+    /** Why one of the editor's tools cannot run now, or null when it can; the palette greys it. */
+    @Nullable
+    String unavailable(Command command) {
+        return switch (command) {
+            case EDITOR_UNDO -> history.canUndo() ? null : tr("editor.nothingToUndo");
+            case EDITOR_REDO -> history.canRedo() ? null : tr("editor.nothingToRedo");
+            case EDITOR_SAVE -> saving ? tr("editor.alreadySaving") : null;
+            default -> null;
+        };
+    }
+
+    /**
+     * The editor's own keys, while it shows, those no command has: the arrows move the crop box
+     * (Shift: further) and the shortcut with them resizes it. True when one was used.
+     */
     boolean onKey(KeyEvent e) {
         KeyCode code = e.getCode();
         double step = e.isShiftDown() ? 0.1 : 0.01;
         double dx = step * crop.pictureWidth();
         double dy = step * crop.pictureHeight();
         switch (code) {
-            case ESCAPE -> close();
-            case ENTER -> save();
-            case S -> {
-                if (!e.isShortcutDown()) return false;
-                save();
-            }
-            case Z -> {
-                if (!e.isShortcutDown()) return false;
-                if (e.isShiftDown()) redo();
-                else undo();
-            }
-            case Y -> {
-                if (!e.isShortcutDown()) return false;
-                redo();
-            }
-            case R -> turn(e.isShiftDown() ? -1 : 1);
-            case H -> apply(edit.flippedHorizontally());
-            case V -> apply(edit.flippedVertically());
-            case A -> shape.setValue(shape.getValue().next());
-            case BACK_SPACE -> reset();
             case LEFT, RIGHT ->
                 nudge(e.isShortcutDown() ? CropBox.Handle.E : CropBox.Handle.MOVE, code == KeyCode.LEFT ? -dx : dx, 0);
             case UP, DOWN ->
@@ -328,30 +366,49 @@ final class Editor {
         Path file = source;
         if (image == null || file == null || saving) return;
         if (edit.isNone()) {
-            say.accept("Nothing to save: crop, turn or flip first");
+            say.accept(tr("editor.nothingToSave"), MessageLog.Severity.INFO);
             return;
         }
         Path folder = file.toAbsolutePath().getParent();
         String stem = name(file).replaceFirst("\\.[^.]+$", "");
         String extension = Encoder.extensionFor(file, true);
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Save Edited Image");
+        chooser.setTitle(tr("editor.saveDialogTitle"));
         if (folder != null) chooser.setInitialDirectory(folder.toFile());
-        chooser.setInitialFileName(stem + " (edited)." + extension);
+        chooser.setInitialFileName(tr("editor.editedFileName", stem, extension));
         chooser.getExtensionFilters()
                 .addAll(
                         new FileChooser.ExtensionFilter("JPEG", "*.jpg", "*.jpeg"),
                         new FileChooser.ExtensionFilter("PNG", "*.png"),
                         new FileChooser.ExtensionFilter("TIFF", "*.tif", "*.tiff"),
                         new FileChooser.ExtensionFilter("BMP", "*.bmp"));
-        Window owner = node.getScene() == null ? null : node.getScene().getWindow();
-        File chosen = chooser.showSaveDialog(owner);
+        File chosen = FileDialogs.save(chooser, owner());
         if (chosen == null) return;
         Path target = withExtension(chosen.toPath(), extension);
         Edit applied = edit;
         Orientation turnedBy = orientation;
         saving = true;
-        say.accept("Saving " + name(target) + "…");
+        if (target.equals(chosen.toPath())) {
+            write(image, file, target, applied, turnedBy);
+            return;
+        }
+        // The dialog asked about the name typed, not the one an added extension made (CONF-01);
+        // whether that one is there is asked off the FX thread (PERF-01).
+        Thread.ofVirtual().name("save-check").start(() -> {
+            boolean there = Files.exists(target);
+            Platform.runLater(() -> {
+                if (there && !Confirm.ask(Confirm.replaceFile(name(target)), owner())) {
+                    saving = false;
+                    return;
+                }
+                write(image, file, target, applied, turnedBy);
+            });
+        });
+    }
+
+    /** Applies {@code applied} to the full image and writes it to {@code target}, off the FX thread. */
+    private void write(Image image, Path file, Path target, Edit applied, Orientation turnedBy) {
+        say.accept(tr("editor.saving", name(target)), MessageLog.Severity.INFO);
         Thread.ofPlatform().daemon().name("save").start(() -> {
             try {
                 Raster result = applied.apply(Edit.upright(raster(image), turnedBy));
@@ -369,7 +426,7 @@ final class Editor {
             } catch (IOException | RuntimeException | OutOfMemoryError e) {
                 Platform.runLater(() -> {
                     saving = false;
-                    say.accept("Couldn't save " + name(target) + ": " + e.getMessage());
+                    say.accept(tr("editor.couldNotSave", name(target), e.getMessage()), MessageLog.Severity.ERROR);
                 });
             }
         });
@@ -397,18 +454,21 @@ final class Editor {
                 raster.width(), raster.height(), IntBuffer.wrap(raster.pixels()), PixelFormat.getIntArgbPreInstance()));
     }
 
-    private static Button tool(String label, String key, Runnable action) {
+    /** A tool's button, running its command; the tooltip names the key the keymap gives it. */
+    private Button tool(String label, Command command) {
         Button button = new Button(label);
-        button.setTooltip(new Tooltip(label + " (" + key + ")"));
-        button.setOnAction(e -> action.run());
+        button.setTooltip(new Tooltip(Icons.tooltip(label, command.chord())));
+        button.setOnAction(e -> run(command));
         button.setFocusTraversable(false);
         return button;
     }
 
-    private static Region spacer() {
-        Region region = new Region();
-        HBox.setHgrow(region, Priority.ALWAYS);
-        return region;
+    /** Controls side by side, none narrower than its text. */
+    private static HBox group(Node... controls) {
+        for (Node control : controls) if (control instanceof Region region) region.setMinWidth(Region.USE_PREF_SIZE);
+        HBox group = new HBox(8, controls);
+        group.setAlignment(Pos.CENTER_LEFT);
+        return group;
     }
 
     private static String name(Path file) {

@@ -8,7 +8,8 @@
 #   scripts/headless-run.sh ~/Pictures -- 'key C-S-p' 'type rotate' 'shot /tmp/palette.png' 'key Escape'
 #
 # Software rendering, a headless clipboard, and a throwaway settings folder (MIRADA_CONFIG_DIR, unless
-# set), so neither the user's settings, bookmarks nor clipboard are touched. Nothing it starts can
+# set), so neither the user's settings, bookmarks nor clipboard are touched. The update check is off and
+# Check for Updates asks a closed local port, so no run reaches GitHub. Nothing it starts can
 # reach the desktop either: xdg-open, gdbus and dbus-send (Show in Folder, the About window's links)
 # are stubs that list what they were asked once it ends, and DISPLAY, WAYLAND_DISPLAY and the session
 # bus are unset. Commands that change files (Delete, Rename, saving an edit) still change them: drive
@@ -39,4 +40,5 @@ PATH="$work/bin:$PATH" \
 MIRADA_MAIN=com.mirada/com.mirada.ui.HeadlessDriver \
 MIRADA_PATCH=target/test-classes \
     env -u DISPLAY -u WAYLAND_DISPLAY -u DBUS_SESSION_BUS_ADDRESS \
-    scripts/dev-run.sh -Dglass.platform=Headless -Dprism.order=sw "$@"
+    scripts/dev-run.sh -Dglass.platform=Headless -Dprism.order=sw -Dmirada.updateCheck=off \
+        -Dmirada.updateUrl=http://127.0.0.1:9/releases/latest "$@"

@@ -5,17 +5,24 @@ import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javafx.application.Platform;
 import javafx.scene.image.Image;
 
 import com.mirada.folder.ImageFormats;
 import org.jspecify.annotations.Nullable;
+
+import static com.mirada.i18n.Messages.tr;
 
 /**
  * The last few images, decoded, so stepping back and forth and stepping onto a prefetched
@@ -37,6 +44,11 @@ import org.jspecify.annotations.Nullable;
  * <p>FX thread only.
  */
 public final class ImageCache {
+
+    /** Asked for when something is logged: starting the logging system is no part of start-up. */
+    private static Logger log() {
+        return Logger.getLogger(ImageCache.class.getName());
+    }
 
     /** Longer side of a preview, in pixels. */
     static final int PREVIEW_SIZE = 1280;
@@ -84,7 +96,8 @@ public final class ImageCache {
     public ImageCache(int capacity) {
         this(
                 capacity,
-                Executors.newVirtualThreadPerTaskExecutor(),
+                Executors.newThreadPerTaskExecutor(
+                        Thread.ofVirtual().name("metadata-", 0).factory()),
                 Executors.newFixedThreadPool(
                         2, Thread.ofPlatform().daemon().name("decoder-", 0).factory()),
                 Platform::runLater);
@@ -95,6 +108,18 @@ public final class ImageCache {
         this.metadataReader = metadataReader;
         this.imageDecoder = imageDecoder;
         this.fxThread = fxThread;
+    }
+
+    /**
+     * Stops the decoder, metadata and preview threads, for a window that has closed (PERF-13): what is
+     * still loading is dropped.
+     */
+    public void close() {
+        for (Executor executor : List.of(metadataReader, imageDecoder, previewMaker)) {
+            if (executor instanceof ExecutorService service) service.shutdownNow();
+        }
+        entries.clear();
+        previews.clear();
     }
 
     /** The entry for {@code file}, starting its load if it is not cached; marks it most recently used. */
@@ -140,7 +165,7 @@ public final class ImageCache {
                     Throwable cause = innermost(error);
                     // A broken file is an IOException and says so in the window. Anything else is a
                     // bug, or a native image missing metadata, and its trace is what finds it.
-                    if (!(cause instanceof IOException)) cause.printStackTrace();
+                    if (!(cause instanceof IOException)) log().log(Level.WARNING, "Could not decode " + file, cause);
                     return Decoded.failed(message(error));
                 });
         return new Entry(file, ready, cancel, previews.get(file));
@@ -192,14 +217,26 @@ public final class ImageCache {
         CompletableFuture<Image> pixels;
         Runnable cancel;
         if (decoder == null || decoder == ImageFormats.Decoder.JAVAFX) {
-            Image image = new Image(file.toUri().toString(), true);
-            // JavaFX's decoders miss variants ImageIO's readers handle (a 32-bit BMP with alpha
-            // throws inside JavaFX): when JavaFX gives up, ImageIO gets a turn before it is an error.
-            pixels = whenLoaded(image)
-                    .exceptionallyCompose(javafxFailed -> CompletableFuture.supplyAsync(
-                            () -> decodeOffThread(ImageFormats.Decoder.IMAGEIO, file), imageDecoder));
+            // JavaFX allocates the whole picture before anyone can ask its size: the header is read
+            // first, off the FX thread, and a picture that will not fit is refused (PERF-12).
+            AtomicReference<@Nullable Image> started = new AtomicReference<>();
+            pixels = CompletableFuture.runAsync(() -> checkHeader(file), metadataReader)
+                    .thenComposeAsync(
+                            fits -> {
+                                Image image = new Image(file.toUri().toString(), true);
+                                started.set(image);
+                                // JavaFX's decoders miss variants ImageIO's readers handle (a 32-bit BMP
+                                // with alpha throws inside JavaFX): when JavaFX gives up, ImageIO gets a
+                                // turn before it is an error.
+                                return whenLoaded(image)
+                                        .exceptionallyCompose(javafxFailed -> CompletableFuture.supplyAsync(
+                                                () -> decodeOffThread(ImageFormats.Decoder.IMAGEIO, file),
+                                                imageDecoder));
+                            },
+                            fxThread);
             cancel = () -> {
-                if (image.getProgress() < 1) image.cancel();
+                Image image = started.get();
+                if (image != null && image.getProgress() < 1) image.cancel();
             };
         } else {
             pixels = CompletableFuture.supplyAsync(() -> decodeOffThread(decoder, file), imageDecoder);
@@ -220,6 +257,21 @@ public final class ImageCache {
             decoder = ImageFormats.Decoder.IMAGEIO;
         }
         return decoder != null && decoder.keepsColours();
+    }
+
+    /**
+     * Refuses a PNG, GIF or BMP whose header gives a size that will not fit the heap ({@link
+     * DecodeGuard}); one whose header cannot be read is left to the decoder to say what is wrong.
+     */
+    static void checkHeader(Path file) {
+        try {
+            ImageHeader.Size size = ImageHeader.read(file);
+            if (size != null) DecodeGuard.check(size.width(), size.height());
+        } catch (DecodeGuard.TooLarge e) {
+            throw new UncheckedIOException(e);
+        } catch (IOException e) {
+            // Unreadable here: JavaFX's decoder will say so.
+        }
     }
 
     static Image decodeOffThread(ImageFormats.Decoder decoder, Path file) {
@@ -243,7 +295,7 @@ public final class ImageCache {
         Runnable settle = () -> {
             if (image.isError()) {
                 Exception cause = image.getException();
-                done.completeExceptionally(cause != null ? cause : new IOException("could not be decoded"));
+                done.completeExceptionally(cause != null ? cause : new IOException(tr("decode.failed")));
             } else if (image.getProgress() >= 1) {
                 done.complete(image);
             }

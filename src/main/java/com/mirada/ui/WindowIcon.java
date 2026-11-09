@@ -1,6 +1,7 @@
 package com.mirada.ui;
 
 import java.io.InputStream;
+import java.util.concurrent.Executor;
 
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
@@ -15,7 +16,19 @@ final class WindowIcon {
 
     private WindowIcon() {}
 
-    static @Nullable Image image() {
+    /**
+     * Reads and decodes the icon on {@code io}, then runs {@code then} on {@code fx}: the first window's
+     * icon, after its first paint, without a resource read on the FX thread (PERF-01).
+     */
+    static void load(Executor io, Executor fx, Runnable then) {
+        io.execute(() -> {
+            image();
+            fx.execute(then);
+        });
+    }
+
+    /** The icon, read the first time it is asked for. Any thread. */
+    static synchronized @Nullable Image image() {
         if (!loaded) {
             loaded = true;
             try (InputStream in = WindowIcon.class.getResourceAsStream("/com/mirada/icon.png")) {

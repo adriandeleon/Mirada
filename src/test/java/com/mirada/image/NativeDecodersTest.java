@@ -12,7 +12,9 @@ import javafx.scene.image.WritableImage;
 import com.mirada.edit.ExifBlock;
 import com.mirada.edit.IccProfile;
 import com.mirada.folder.ImageFormats;
+import com.mirada.ui.FxTestSupport;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -30,11 +32,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * stopped loading fails the build instead of quietly skipping. The fixtures are left half red, right half
  * blue; HEIC and AVIF are lossy, so their colours are compared loosely.
  */
+@Tag("fx")
 class NativeDecodersTest {
 
     @BeforeAll
-    static void toolkit() throws InterruptedException {
-        FxToolkit.start();
+    static void toolkit() throws Exception {
+        FxTestSupport.start();
     }
 
     private static Path fixture(String name) throws URISyntaxException {

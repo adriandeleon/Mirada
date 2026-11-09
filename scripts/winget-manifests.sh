@@ -103,7 +103,7 @@ PackageName: Mirada
 PackageUrl: $repo
 License: MIT
 LicenseUrl: $repo/blob/main/LICENSE
-Copyright: Copyright (c) 2026 Adrian De Leon
+Copyright: Copyright (c) 2026 Adrián Arturo De León Saldivar
 CopyrightUrl: $repo/blob/main/LICENSE
 ShortDescription: A fast, folder-oriented image viewer
 Description: |-

@@ -21,6 +21,14 @@ public record Animation(List<Image> frames, int[] millis) {
      */
     static final long MAX_PIXELS = 64L * 1024 * 1024;
 
+    /**
+     * Whether {@code frames} frames of {@code width} × {@code height} stay within {@link #MAX_PIXELS}:
+     * asked before the second frame is decoded, where the format says how many there are (WebP).
+     */
+    static boolean fits(int width, int height, int frames) {
+        return (long) width * height * Math.max(0, frames) <= MAX_PIXELS;
+    }
+
     /** Frames shorter than this are shown for {@link #DEFAULT_MILLIS}, as browsers do. */
     static final int SHORTEST_MILLIS = 20;
 

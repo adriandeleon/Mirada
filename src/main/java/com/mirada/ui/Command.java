@@ -1,196 +1,130 @@
 package com.mirada.ui;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
-import javafx.scene.input.KeyCharacterCombination;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 
+import com.mirada.i18n.Messages;
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
- * Everything Mirada can do: which keys do it, and how the command palette names and describes it.
- * The key filter, the palette and the context menu all read from here, so a command has one name
- * and one chord wherever it appears.
+ * Everything Mirada can do, the registry (KBD-01): each command's id, how the command palette names
+ * and describes it, and where its keys work. The key filter, the palette, the menus and the
+ * buttons all run commands from here, so a command has one name wherever it appears. Its keys are
+ * the keymap's ({@link Keymap}, {@code keymaps/*.json}) with the user's own on top ({@link
+ * Keybindings}).
  */
 enum Command {
-    NEXT("Next Image", "Shows the next image in the folder.", "go navigate forward", key(KeyCode.RIGHT)),
-    PREVIOUS("Previous Image", "Shows the previous image in the folder.", "go navigate back", key(KeyCode.LEFT)),
-    FIRST("First Image", "Jumps to the first image in the folder.", "go navigate start", key(KeyCode.HOME)),
-    LAST("Last Image", "Jumps to the last image in the folder.", "go navigate end", key(KeyCode.END)),
-    GO_TO_IMAGE(
-            "Go to Image…",
-            "Finds an image in the folder by its name, and shows it.",
-            "find search name jump navigate",
-            shortcut(KeyCode.P)),
-    SLIDESHOW(
-            "Slideshow",
-            "Shows the folder's images one after another, full screen. Escape stops it.",
-            "play presentation",
-            key(KeyCode.F5)),
-    ZOOM_IN("Zoom In", "Zooms to the next step, about the centre of the window.", "view magnify", text("+")),
-    ZOOM_OUT("Zoom Out", "Zooms to the previous step, about the centre of the window.", "view", text("-")),
-    FIT("Zoom to Fit", "Shows the whole image, fitted to the window.", "view", key(KeyCode.DIGIT0)),
-    KEEP_ZOOM(
-            "Keep Zoom When Stepping",
-            "Turns on or off keeping the zoom and position when moving to another image.",
-            "lock fit compare",
-            key(KeyCode.Z)),
-    PAN_LEFT("Pan Left", "Moves the view of a zoomed-in image left.", "scroll", shift(KeyCode.LEFT)),
-    PAN_RIGHT("Pan Right", "Moves the view of a zoomed-in image right.", "scroll", shift(KeyCode.RIGHT)),
-    PAN_UP("Pan Up", "Moves the view of a zoomed-in image up.", "scroll", key(KeyCode.UP)),
-    PAN_DOWN("Pan Down", "Moves the view of a zoomed-in image down.", "scroll", key(KeyCode.DOWN)),
-    ACTUAL_SIZE(
-            "Actual Size",
-            "Shows the image at 100 %: one image pixel per screen pixel.",
-            "view zoom 100",
-            key(KeyCode.DIGIT1)),
-    ROTATE_CLOCKWISE(
-            "Rotate Right", "Turns the image a quarter clockwise. The file is not changed.", "turn", key(KeyCode.R)),
-    ROTATE_COUNTERCLOCKWISE(
-            "Rotate Left",
-            "Turns the image a quarter counterclockwise. The file is not changed.",
-            "turn",
-            new KeyCodeCombination(KeyCode.R, KeyCombination.SHIFT_DOWN)),
-    FULL_SCREEN("Full Screen", "Fills the screen with the image. Escape leaves.", "view", key(KeyCode.F)),
-    EDIT(
-            "Edit…",
-            "Crops, turns and flips the image, and saves the result as a new file.",
-            "crop rotate flip edit save",
-            key(KeyCode.E)),
-    RENAME("Rename…", "Renames the image's file.", "file name", key(KeyCode.F2)),
-    UNDO_TRASH(
-            "Undo Move to Trash",
-            "Puts the image last moved to the Trash back where it was.",
-            "restore put back undelete recover",
-            shortcut(KeyCode.Z)),
-    COPY(
-            "Copy",
-            "Copies the image, as it stands on screen, and its file, to paste into another app or a folder.",
-            "clipboard",
-            shortcut(KeyCode.C)),
-    SHOW_IN_FOLDER(
-            "Show in Folder",
-            "Opens the image's folder in the file manager, with the image selected.",
-            "reveal finder explorer files locate open containing",
-            none()),
-    MOVE_TO_TRASH(
-            "Move to Trash",
-            "Moves the image to the Trash, from where it can be put back, and shows the next.",
-            "delete remove bin recycle trash",
-            key(KeyCode.DELETE)),
-    BOOKMARK(
-            "Bookmark Image",
-            "Marks the image, to find again with Go to Bookmark or step to in its folder. Again takes the mark off.",
-            "favourite favorite star flag mark pick keep",
-            key(KeyCode.B)),
-    BOOKMARK_FOLDER(
-            "Bookmark Folder",
-            "Marks the image's folder, to open again with Go to Bookmark. Again takes the mark off.",
-            "favourite favorite star flag mark directory",
-            shift(KeyCode.B)),
-    NOTE(
-            "Note on Image…",
-            "Writes a note of your own on the image. Mirada keeps it; the file is not changed.",
-            "comment annotate memo personal caption text",
-            key(KeyCode.N)),
-    FOLDER_NOTE(
-            "Note on Folder…",
-            "Writes a note of your own on the image's folder. Mirada keeps it; the folder is not changed.",
-            "comment annotate memo personal directory text",
-            shift(KeyCode.N)),
-    NEXT_BOOKMARK(
-            "Next Bookmarked Image",
-            "Steps to the next bookmarked image in the folder.",
-            "go forward mark favourite",
-            key(KeyCode.CLOSE_BRACKET)),
-    PREVIOUS_BOOKMARK(
-            "Previous Bookmarked Image",
-            "Steps to the previous bookmarked image in the folder.",
-            "go back mark favourite",
-            key(KeyCode.OPEN_BRACKET)),
-    GO_TO_BOOKMARK(
-            "Go to Bookmark…",
-            "Finds a bookmarked image or folder, or one with a note, by its name or its note, and opens it.",
-            "bookmarks notes find search jump favourites favorites",
-            shortcut(KeyCode.B)),
-    BOOKMARKS(
-            "Bookmarks and Notes",
-            "Lists every bookmark and note, by folder, with each image's thumbnail and note, to find, open,"
-                    + " edit or remove.",
-            "bookmarks notes list all manage window panel favourites favorites organise organize",
-            new KeyCodeCombination(KeyCode.B, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN)),
-    SORT_BY_NAME("Sort by Name", "Orders the folder by file name, as a person counts.", "order", none()),
-    SORT_BY_DATE(
-            "Sort by Date", "Orders the folder by when each file was last changed.", "order modified time", none()),
-    SORT_BY_SIZE("Sort by Size", "Orders the folder by file size.", "order", none()),
-    REVERSE_ORDER(
-            "Reverse Order", "Turns the folder's order the other way round.", "sort descending ascending", none()),
-    INFO(
-            "Image Properties",
-            "Shows the folder, size, format, file dates and camera beside the image.",
-            "info details exif metadata sidebar",
-            key(KeyCode.I)),
-    THUMBNAILS(
-            "Thumbnails",
-            "Shows the folder's images in a strip along the bottom.",
-            "filmstrip strip gallery browse folder",
-            key(KeyCode.T)),
-    THUMBNAILS_AT_SIDE(
-            "Thumbnails at the Side",
-            "Stands the thumbnails in a column down the left instead of a row along the bottom.",
-            "vertical column filmstrip strip left layout",
-            none()),
-    THUMBNAIL_NAMES(
-            "Names Instead of Thumbnails",
-            "Lists the folder by file name in the strip, instead of pictures.",
-            "names list text filmstrip strip filenames",
-            none()),
-    THUMBNAIL_CAPTIONS(
-            "Names Under Thumbnails",
-            "Writes each image's file name under its thumbnail in the strip.",
-            "captions labels titles filmstrip strip filenames",
-            none()),
+    NEXT("go.next", "go navigate forward"),
+    PREVIOUS("go.previous", "go navigate back"),
+    FIRST("go.first", "go navigate start"),
+    LAST("go.last", "go navigate end"),
+    GO_TO_IMAGE("go.toImage", "find search name jump navigate"),
+    SLIDESHOW("view.slideshow", "play presentation"),
+    ZOOM_IN("view.zoomIn", "view magnify"),
+    ZOOM_OUT("view.zoomOut", "view"),
+    FIT("view.zoomToFit", "view"),
+    KEEP_ZOOM("view.keepZoom", "lock fit compare"),
+    PAN_LEFT("view.panLeft", "scroll"),
+    PAN_RIGHT("view.panRight", "scroll"),
+    PAN_UP("view.panUp", "scroll"),
+    PAN_DOWN("view.panDown", "scroll"),
+    ACTUAL_SIZE("view.actualSize", "view zoom 100"),
+    ROTATE_CLOCKWISE("image.rotateRight", "turn"),
+    ROTATE_COUNTERCLOCKWISE("image.rotateLeft", "turn"),
+    FULL_SCREEN("view.fullScreen", "view"),
+    EDIT("image.edit", "crop rotate flip edit save"),
+    RENAME("file.rename", "file name"),
+    UNDO_TRASH("file.undoMoveToTrash", "restore put back undelete recover"),
+    COPY("image.copy", "clipboard"),
+    SHOW_IN_FOLDER("file.showInFolder", "reveal finder explorer files locate open containing"),
+    MOVE_TO_TRASH("file.moveToTrash", "delete remove bin recycle trash"),
+    BOOKMARK("bookmark.image", "favourite favorite star flag mark pick keep"),
+    BOOKMARK_FOLDER("bookmark.folder", "favourite favorite star flag mark directory"),
+    NOTE("bookmark.noteOnImage", "comment annotate memo personal caption text"),
+    FOLDER_NOTE("bookmark.noteOnFolder", "comment annotate memo personal directory text"),
+    NEXT_BOOKMARK("bookmark.next", "go forward mark favourite"),
+    PREVIOUS_BOOKMARK("bookmark.previous", "go back mark favourite"),
+    GO_TO_BOOKMARK("bookmark.goTo", "bookmarks notes find search jump favourites favorites"),
+    BOOKMARKS("bookmark.list", "bookmarks notes list all manage window panel favourites favorites organise organize"),
+    SORT_BY_NAME("folder.sortByName", "order"),
+    SORT_BY_DATE("folder.sortByDate", "order modified time"),
+    SORT_BY_SIZE("folder.sortBySize", "order"),
+    REVERSE_ORDER("folder.reverseOrder", "sort descending ascending"),
+    INFO("view.properties", "info details exif metadata sidebar"),
+    THUMBNAILS("view.thumbnails", "filmstrip strip gallery browse folder"),
+    THUMBNAILS_AT_SIDE("view.thumbnailsAtSide", "vertical column filmstrip strip left layout"),
+    THUMBNAIL_NAMES("view.thumbnailNames", "names list text filmstrip strip filenames"),
+    THUMBNAIL_CAPTIONS("view.thumbnailCaptions", "captions labels titles filmstrip strip filenames"),
     /** Leaves full screen, or on Linux closes the window: look, then go ({@link #escapeCloses}). */
-    ESCAPE(
-            "Escape",
-            "Stops the slideshow or leaves full screen; on Linux, otherwise closes the window.",
-            "",
-            key(KeyCode.ESCAPE)),
-    SETTINGS(
-            "Settings",
-            "Theme, what opens at start, and how long the floating controls stay.",
-            "preferences options configure",
-            shortcut(KeyCode.COMMA)),
-    SHORTCUTS(
-            "Keyboard Shortcuts",
-            "Lists every key Mirada answers to.",
-            "keys help",
-            new KeyCharacterCombination("?", KeyCombination.SHORTCUT_DOWN)),
-    ABOUT(
-            "About Mirada",
-            "Version, licence, and the runtime and codec versions.",
-            "version help credits",
-            key(KeyCode.F12)),
-    OPEN("Open Image…", "Opens an image, with the rest of its folder.", "file", shortcut(KeyCode.O)),
-    OPEN_FOLDER(
-            "Open Folder…",
-            "Opens a folder at its first image.",
-            "directory browse",
-            new KeyCodeCombination(KeyCode.F, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN)),
-    OPEN_RECENT(
-            "Open Recent…",
-            "Finds a folder opened lately by its name, and opens it.",
-            "recent history folders previous last",
-            new KeyCodeCombination(KeyCode.O, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN)),
-    CLOSE("Close Window", "Closes Mirada.", "quit exit", shortcut(KeyCode.W)),
-    /** Its keys are the user's ({@link PaletteChords}), so {@link #forKey} never answers it. */
-    PALETTE("Command Palette", "Finds and runs any command by name.", "", none());
+    ESCAPE("window.escape", ""),
+    SETTINGS("app.settings", "preferences options configure"),
+    // One command for each setting that has no other (SET-06, Pauta 4.0.1): it flips the setting, or
+    // asks for its value in the palette.
+    THEME("settings.theme", "appearance dark light mode colour color look"),
+    LANGUAGE("settings.language", "locale translation english español português français italiano deutsch"),
+    KEYMAP("settings.keymap", "keys shortcuts bindings emacs cua"),
+    THUMBNAILS_AT_START("settings.thumbnailsAtStart", "startup launch filmstrip strip open"),
+    PROPERTIES_AT_START("settings.propertiesAtStart", "startup launch info details sidebar open"),
+    HIDE_CONTROLS_AFTER("settings.hideControlsAfter", "delay fade timeout overlay buttons seconds"),
+    SLIDESHOW_SPEED("settings.slideshowSpeed", "interval delay seconds play pace"),
+    PALETTE_KEYS("settings.paletteKeys", "shortcut keys bindings palette"),
+    CHECK_DAILY("settings.checkForUpdatesDaily", "automatic update version network release"),
+    /** Export Configuration (SET-12): the config folder as a timestamped zip. */
+    EXPORT_CONFIG("config.export", "settings preferences backup save zip copy move"),
+    /** Import Configuration (SET-12): the parts of an exported zip the user ticks. */
+    IMPORT_CONFIG("config.import", "settings preferences restore backup load zip"),
+    SHORTCUTS("help.keyboardShortcuts", "keys help"),
+    ABOUT("help.about", "version help credits"),
+    STATUS_BAR("view.statusBar", "echo messages bottom bar footer"),
+    MESSAGE_LOG("view.messageLog", "messages history echo status notifications errors"),
+    COPY_MESSAGES("messages.copy", "message log clipboard"),
+    CLEAR_MESSAGES("messages.clear", "message log empty"),
+    DEBUG_LOG("help.debugLog", "diagnostics logging errors exceptions trace console problems"),
+    COPY_DEBUG_LOG("help.copyDebugLog", "diagnostics clipboard logging"),
+    EXPORT_DEBUG_LOG("help.exportDebugLog", "diagnostics save file logging"),
+    CLEAR_DEBUG_LOG("help.clearDebugLog", "diagnostics logging empty"),
+    REPORT_PROBLEM("help.reportProblem", "bug issue feedback support crash help"),
+    CHECK_FOR_UPDATES("help.checkForUpdates", "update version release new upgrade"),
+    OPEN_RELEASE("help.openRelease", "update download upgrade version"),
+    OPEN("file.open", "file"),
+    OPEN_FOLDER("file.openFolder", "directory browse"),
+    OPEN_RECENT("file.openRecent", "recent history folders previous last"),
+    CLOSE("window.close", "quit exit"),
+    /** Its keys are the user's ({@code palette.keys}, {@link PaletteChords}), on top of the keymap's. */
+    PALETTE("palette.show", ""),
+    /** Help → Documentation (DOCS-06, Pauta 4.0.1): the user guide on the website, in the browser. */
+    DOCUMENTATION("help.documentation", "help manual guide docs website"),
+    /** About's Copy details, which needs no About window: what a bug report needs (ABOUT-03). */
+    COPY_DETAILS("help.copyDetails", "about version clipboard bug report environment"),
+    // The editor's tools: they run while the editor is open (Command.Context.EDITOR).
+    EDITOR_ROTATE_LEFT("editor.rotateLeft", "turn crop"),
+    EDITOR_ROTATE_RIGHT("editor.rotateRight", "turn crop"),
+    EDITOR_FLIP_HORIZONTALLY("editor.flipHorizontally", "mirror"),
+    EDITOR_FLIP_VERTICALLY("editor.flipVertically", "mirror upside down"),
+    EDITOR_NEXT_SHAPE("editor.nextShape", "aspect ratio crop square"),
+    EDITOR_RESET("editor.reset", "revert original clear"),
+    EDITOR_UNDO("editor.undo", "revert"),
+    EDITOR_REDO("editor.redo", "repeat"),
+    EDITOR_SAVE("editor.save", "write export"),
+    EDITOR_CANCEL("editor.cancel", "close discard quit"),
+    // The Bookmarks and Notes window's row actions: they run on its selected row while it is up.
+    BOOKMARKS_OPEN("bookmarks.open", "show go"),
+    BOOKMARKS_EDIT_NOTE("bookmarks.editNote", "comment annotate"),
+    BOOKMARKS_TOGGLE("bookmarks.toggleBookmark", "mark favourite favorite star"),
+    BOOKMARKS_SHOW_IN_FOLDER("bookmarks.showInFolder", "reveal finder explorer files locate"),
+    BOOKMARKS_REMOVE("bookmarks.remove", "delete forget"),
+    BOOKMARKS_LIST_ALL("bookmarks.listAll", "filter show everything"),
+    BOOKMARKS_LIST_BOOKMARKED("bookmarks.listBookmarked", "filter show marked"),
+    BOOKMARKS_LIST_NOTES("bookmarks.listNotes", "filter show comments");
 
-    /** Whether this is macOS, read once: its keys differ ({@link #forKey}, {@link #chord(boolean)}). */
+    /** Whether this is macOS, read once: its keymap is the {@code .mac.json} one ({@link Keymap#load}). */
     static final boolean MAC = isMac(System.getProperty("os.name", ""));
 
     /** Whether this is Windows, read once: its trash is the Recycle Bin ({@link #label(boolean, boolean)}). */
@@ -198,22 +132,83 @@ enum Command {
             System.getProperty("os.name", "").toLowerCase(Locale.ROOT).startsWith("windows");
 
     /**
+     * Where a command's keys work: the viewer, the editor while it is open, or the Bookmarks and
+     * Notes window. One key can mean a different command in each (R turns the image in the viewer
+     * and the picture being edited in the editor); the palette lists every command in all of them.
+     */
+    enum Context {
+        VIEWER,
+        EDITOR,
+        BOOKMARKS
+    }
+
+    /** Every command by its id, built once when first asked. */
+    private static final class ById {
+        static final Map<String, Command> MAP = byId();
+
+        private static Map<String, Command> byId() {
+            Map<String, Command> map = new HashMap<>();
+            for (Command command : values()) map.put(command.id, command);
+            return Map.copyOf(map);
+        }
+    }
+
+    /**
      * Whether the thumbnails stand down the side, so the folder steps along Up and Down and the
-     * arrows across pan ({@link #forKey}, {@link #chord(boolean, boolean)}). The window sets it as
-     * the strip moves or closes; on the FX thread, like everything that reads it.
+     * arrows across pan (the keymap's {@code vertical} bindings, {@link Keybindings#current}). The
+     * window sets it as the strip moves or closes; on the FX thread, like everything that reads it.
      */
     private static boolean vertical;
 
-    private final String label;
-    private final String description;
+    private final String id;
     private final String keywords;
-    private final KeyCombination chord;
 
-    Command(String label, String description, String keywords, KeyCombination chord) {
-        this.label = label;
-        this.description = description;
+    /**
+     * @param id the command's id; its title is {@code command.<id>} and its palette line {@code
+     *     command.<id>.desc} in the message catalogs (KBD-03, PAL-02)
+     * @param keywords English words the palette also finds it by, whatever the language
+     */
+    Command(String id, String keywords) {
+        this.id = id;
         this.keywords = keywords;
-        this.chord = chord;
+    }
+
+    /**
+     * The command's id, {@code <area>.<camelCaseName>} (KBD-02): what the keymaps bind keys to, what
+     * {@code keys.<id>} in the settings rebinds, and what translations will key its strings by.
+     */
+    String id() {
+        return id;
+    }
+
+    /** The command with this id, or null for one that is not Mirada's. */
+    static @Nullable Command byId(String id) {
+        return ById.MAP.get(id);
+    }
+
+    /** Where this command's keys work: the editor's tools in the editor, the Bookmarks window's there. */
+    Context context() {
+        return switch (this) {
+            case EDITOR_ROTATE_LEFT,
+                    EDITOR_ROTATE_RIGHT,
+                    EDITOR_FLIP_HORIZONTALLY,
+                    EDITOR_FLIP_VERTICALLY,
+                    EDITOR_NEXT_SHAPE,
+                    EDITOR_RESET,
+                    EDITOR_UNDO,
+                    EDITOR_REDO,
+                    EDITOR_SAVE,
+                    EDITOR_CANCEL -> Context.EDITOR;
+            case BOOKMARKS_OPEN,
+                    BOOKMARKS_EDIT_NOTE,
+                    BOOKMARKS_TOGGLE,
+                    BOOKMARKS_SHOW_IN_FOLDER,
+                    BOOKMARKS_REMOVE,
+                    BOOKMARKS_LIST_ALL,
+                    BOOKMARKS_LIST_BOOKMARKED,
+                    BOOKMARKS_LIST_NOTES -> Context.BOOKMARKS;
+            default -> Context.VIEWER;
+        };
     }
 
     String label() {
@@ -225,35 +220,48 @@ enum Command {
      * manager is named where it has one name. Testable.
      */
     String label(boolean mac, boolean windows) {
-        return switch (this) {
-            case MOVE_TO_TRASH -> "Move to " + trash(windows);
-            case UNDO_TRASH -> "Undo Move to " + trash(windows);
-            case SHOW_IN_FOLDER -> mac ? "Show in Finder" : windows ? "Show in File Explorer" : label;
-            default -> label;
-        };
+        return tr(platformKey("command." + id, mac, windows));
+    }
+
+    /**
+     * {@code key}, or its {@code .mac} or {@code .windows} form where the catalog has one: Windows
+     * calls its trash the Recycle Bin, and the file manager is named where it has one name. Those
+     * forms live under {@code commandOn.}, so a {@code command.} key is always a title or its
+     * {@code .desc}.
+     */
+    private static String platformKey(String key, boolean mac, boolean windows) {
+        String platform = mac ? ".mac" : windows ? ".windows" : null;
+        if (platform == null) return key;
+        String variant = "commandOn" + key.substring("command".length()) + platform;
+        return Messages.has(variant) ? variant : key;
     }
 
     /** What the desktop calls the place a deleted file can be put back from. */
     static String trash(boolean windows) {
-        return windows ? "Recycle Bin" : "Trash";
+        return tr(windows ? "trash.recycleBin" : "trash.trash");
     }
 
     /** One line, shown under the palette's list for the highlighted command. */
     String description() {
-        return this == MOVE_TO_TRASH ? description.replace("Trash", trash(WINDOWS)) : description;
-    }
-
-    /** Words the palette also finds the command by, besides its label. */
-    String keywords() {
-        return keywords;
+        return tr(platformKey("command." + id + ".desc", MAC, WINDOWS));
     }
 
     /**
-     * The chord shown beside the command: its main key, one of those {@link #forKey} accepts, or for
-     * the palette the first of the user's ({@link PaletteChords}).
+     * Words the palette also finds the command by, besides its label: English ones, and in another
+     * language the English title's words too, so a name read in a guide or known from before is found.
+     */
+    String keywords() {
+        if (Messages.current().equals("en")) return keywords;
+        String english = Messages.english("command." + id).replace("…", "").replace(":", "");
+        return (keywords + " " + english).strip();
+    }
+
+    /**
+     * The chord shown beside the command: the first of its keys in the keymap in use, with the
+     * user's own on top ({@link Keybindings#current}), or {@link KeyCombination#NO_MATCH} for none.
      */
     KeyCombination chord() {
-        return chord(MAC, vertical);
+        return Keybindings.current().chord(this);
     }
 
     /** Whether the folder steps along Up and Down: the thumbnails stand down the side. */
@@ -265,50 +273,17 @@ enum Command {
         vertical = value;
     }
 
-    /** The chord on macOS or elsewhere with the thumbnails along the bottom, or closed. */
-    KeyCombination chord(boolean mac) {
-        return chord(mac, false);
-    }
-
-    /**
-     * The chord shown on macOS or elsewhere. A Mac keyboard has no forward Delete, and F2 is a
-     * brightness key there, so trashing and renaming show Finder's keys instead: Cmd-Backspace and
-     * Return. With the thumbnails down the side ({@code vertical}) the folder steps by Up and Down,
-     * and the arrows across pan. Package-visible so both platforms and both axes are testable.
-     */
-    KeyCombination chord(boolean mac, boolean vertical) {
-        if (this == PALETTE) return PaletteChords.current().getFirst();
-        @Nullable
-        KeyCombination alongSide = vertical
-                ? switch (this) {
-                    case NEXT -> key(KeyCode.DOWN);
-                    case PREVIOUS -> key(KeyCode.UP);
-                    case PAN_LEFT -> key(KeyCode.LEFT);
-                    case PAN_RIGHT -> key(KeyCode.RIGHT);
-                    case PAN_UP -> shift(KeyCode.UP);
-                    case PAN_DOWN -> shift(KeyCode.DOWN);
-                    default -> null;
-                }
-                : null;
-        if (alongSide != null) return alongSide;
-        if (!mac) return chord;
-        return switch (this) {
-            case MOVE_TO_TRASH -> shortcut(KeyCode.BACK_SPACE);
-            case RENAME -> key(KeyCode.ENTER);
-            default -> chord;
-        };
-    }
-
     /**
      * Why this command cannot run right now, or null when it can: stepping needs somewhere to step
      * to, and zooming or turning needs an image on screen. Shown as the greyed row's tooltip in the
-     * palette.
+     * palette. The editor's and the Bookmarks window's are the window's to say ({@code
+     * ViewerWindow.unavailable}).
      */
     @Nullable
     String unavailable(int index, int size, boolean imageShowing) {
         return switch (this) {
-            case NEXT, LAST -> size == 0 ? "No folder is open." : index >= size - 1 ? "This is the last image." : null;
-            case PREVIOUS, FIRST -> size == 0 ? "No folder is open." : index <= 0 ? "This is the first image." : null;
+            case NEXT, LAST -> size == 0 ? tr("reason.noFolder") : index >= size - 1 ? tr("reason.lastImage") : null;
+            case PREVIOUS, FIRST -> size == 0 ? tr("reason.noFolder") : index <= 0 ? tr("reason.firstImage") : null;
             case ZOOM_IN,
                     ZOOM_OUT,
                     FIT,
@@ -323,35 +298,36 @@ enum Command {
                     RENAME,
                     MOVE_TO_TRASH,
                     COPY,
-                    SHOW_IN_FOLDER -> imageShowing ? null : "No image is showing.";
+                    SHOW_IN_FOLDER -> imageShowing ? null : tr("reason.noImage");
             case BOOKMARK, BOOKMARK_FOLDER, NOTE, FOLDER_NOTE, NEXT_BOOKMARK, PREVIOUS_BOOKMARK ->
-                size == 0 ? "No folder is open." : null;
+                size == 0 ? tr("reason.noFolder") : null;
             case SLIDESHOW -> size < 2 ? "A slideshow needs a folder with more than one image." : null;
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER, GO_TO_IMAGE ->
-                size == 0 ? "No folder is open." : null;
+                size == 0 ? tr("reason.noFolder") : null;
             default -> null;
         };
     }
 
-    /** The commands the palette lists, in the order it lists them before anything is typed. */
-    static List<Command> inPalette() {
-        return Arrays.stream(values()).filter(Command::listed).toList();
-    }
-
-    /** Escape, the palette itself and the panning keys: things nobody looks up by name. */
-    private boolean listed() {
-        return switch (this) {
-            case ESCAPE, PALETTE, PAN_LEFT, PAN_RIGHT, PAN_UP, PAN_DOWN -> false;
-            default -> true;
-        };
+    /**
+     * Every command, as the palette lists them before anything is typed (PAL-02): those whose keys
+     * work in {@code where} first, so the editor's tools lead while it is open and the Bookmarks
+     * window's row actions in that window; then the rest in their order here. Nothing is left out:
+     * one that cannot run is greyed, never hidden.
+     */
+    static List<Command> inPalette(Context where) {
+        List<Command> first = new ArrayList<>();
+        List<Command> rest = new ArrayList<>();
+        for (Command command : values()) (command.context() == where ? first : rest).add(command);
+        first.addAll(rest);
+        return List.copyOf(first);
     }
 
     /** The heading this command comes under in the shortcuts window. */
     String group() {
         return switch (this) {
-            case NEXT, PREVIOUS, FIRST, LAST, GO_TO_IMAGE, SLIDESHOW -> "Folder";
+            case NEXT, PREVIOUS, FIRST, LAST, GO_TO_IMAGE, SLIDESHOW -> tr("group.folder");
             case ZOOM_IN, ZOOM_OUT, FIT, ACTUAL_SIZE, KEEP_ZOOM, PAN_LEFT, PAN_RIGHT, PAN_UP, PAN_DOWN, FULL_SCREEN ->
-                "View";
+                tr("group.view");
             case ROTATE_CLOCKWISE,
                     ROTATE_COUNTERCLOCKWISE,
                     EDIT,
@@ -359,7 +335,7 @@ enum Command {
                     MOVE_TO_TRASH,
                     UNDO_TRASH,
                     COPY,
-                    SHOW_IN_FOLDER -> "Image";
+                    SHOW_IN_FOLDER -> tr("group.image");
             case BOOKMARK,
                     BOOKMARK_FOLDER,
                     NOTE,
@@ -367,89 +343,53 @@ enum Command {
                     NEXT_BOOKMARK,
                     PREVIOUS_BOOKMARK,
                     GO_TO_BOOKMARK,
-                    BOOKMARKS -> "Bookmarks";
-            case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER -> "Order";
-            case INFO, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES, THUMBNAIL_CAPTIONS -> "Panels";
-            case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, OPEN_FOLDER, OPEN_RECENT, CLOSE, PALETTE -> "Mirada";
-        };
-    }
-
-    /**
-     * The command for a key press, or null when the key is not one of Mirada's. {@code shortcut}
-     * is Ctrl, or Cmd on macOS; {@code control} is the Ctrl key itself, the same as {@code shortcut}
-     * except on a Mac. Navigation and zoom take bare keys: there is no text to type into.
-     *
-     * <p>macOS adds Preview's and Finder's keys, because its laptops' function keys are media keys
-     * and its keyboards' Delete is Backspace: Cmd-Backspace trashes (Backspace alone still steps
-     * back, so it never deletes anything), Return renames, Cmd-I shows the properties, Cmd-L turns
-     * left and Ctrl-Cmd-F is full screen. Ctrl-R and Ctrl-Shift-R turn on every platform, as in
-     * GNOME's viewer and Windows' Photos.
-     */
-    static @Nullable Command forKey(KeyCode code, boolean shift, boolean shortcut, boolean control, boolean mac) {
-        return forKey(code, shift, shortcut, control, mac, false);
-    }
-
-    /**
-     * {@link #forKey} along either axis. The folder steps along the strip: Left and Right with it
-     * along the bottom, Up and Down with it down the side ({@code vertical}). The other pair pans,
-     * and so does the stepping pair with Shift.
-     */
-    static @Nullable Command forKey(
-            KeyCode code, boolean shift, boolean shortcut, boolean control, boolean mac, boolean vertical) {
-        if (mac && shortcut && control) return code == KeyCode.F ? FULL_SCREEN : null;
-        if (shortcut) {
-            return switch (code) {
-                case O -> shift ? OPEN_RECENT : OPEN;
-                case F -> shift ? OPEN_FOLDER : null;
-                case C -> shift ? null : COPY;
-                case Z -> shift ? null : UNDO_TRASH;
-                case W, Q -> CLOSE;
-                case P -> shift ? null : GO_TO_IMAGE;
-                case B -> shift ? BOOKMARKS : GO_TO_BOOKMARK;
-                case R -> shift ? ROTATE_COUNTERCLOCKWISE : ROTATE_CLOCKWISE;
-                case L -> mac && !shift ? ROTATE_COUNTERCLOCKWISE : null;
-                case I -> mac && !shift ? INFO : null;
-                case BACK_SPACE, DELETE -> mac && !shift ? MOVE_TO_TRASH : null;
-                case COMMA -> SETTINGS;
-                case SLASH -> SHORTCUTS;
-                case EQUALS, PLUS, ADD -> ZOOM_IN;
-                case MINUS, SUBTRACT -> ZOOM_OUT;
-                case DIGIT0, NUMPAD0 -> FIT;
-                case DIGIT1, NUMPAD1 -> ACTUAL_SIZE;
-                default -> null;
-            };
-        }
-        return switch (code) {
-            case RIGHT -> shift || vertical ? PAN_RIGHT : NEXT;
-            case LEFT -> shift || vertical ? PAN_LEFT : PREVIOUS;
-            case UP -> vertical && !shift ? PREVIOUS : PAN_UP;
-            case DOWN -> vertical && !shift ? NEXT : PAN_DOWN;
-            case PAGE_DOWN -> NEXT;
-            case PAGE_UP, BACK_SPACE -> PREVIOUS;
-            case SPACE -> shift ? PREVIOUS : NEXT;
-            case HOME -> FIRST;
-            case END -> LAST;
-            case EQUALS, PLUS, ADD -> ZOOM_IN;
-            case MINUS, SUBTRACT -> ZOOM_OUT;
-            case DIGIT0, NUMPAD0 -> FIT;
-            case DIGIT1, NUMPAD1 -> ACTUAL_SIZE;
-            case R -> shift ? ROTATE_COUNTERCLOCKWISE : ROTATE_CLOCKWISE;
-            case F, F11 -> FULL_SCREEN;
-            case I -> INFO;
-            case T -> THUMBNAILS;
-            case F2 -> RENAME;
-            case ENTER -> mac && !shift ? RENAME : null;
-            case F5 -> SLIDESHOW;
-            case Z -> KEEP_ZOOM;
-            case E -> EDIT;
-            case B -> shift ? BOOKMARK_FOLDER : BOOKMARK;
-            case N -> shift ? FOLDER_NOTE : NOTE;
-            case CLOSE_BRACKET -> NEXT_BOOKMARK;
-            case OPEN_BRACKET -> PREVIOUS_BOOKMARK;
-            case DELETE -> MOVE_TO_TRASH;
-            case F12 -> ABOUT;
-            case ESCAPE -> ESCAPE;
-            default -> null;
+                    BOOKMARKS -> tr("group.bookmarks");
+            case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER -> tr("group.order");
+            case INFO, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES, THUMBNAIL_CAPTIONS, STATUS_BAR ->
+                tr("group.panels");
+            case MESSAGE_LOG,
+                    COPY_MESSAGES,
+                    CLEAR_MESSAGES,
+                    DEBUG_LOG,
+                    COPY_DEBUG_LOG,
+                    EXPORT_DEBUG_LOG,
+                    CLEAR_DEBUG_LOG,
+                    REPORT_PROBLEM,
+                    CHECK_FOR_UPDATES,
+                    OPEN_RELEASE,
+                    COPY_DETAILS -> tr("group.help");
+            case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, OPEN_FOLDER, OPEN_RECENT, CLOSE, PALETTE ->
+                tr("group.mirada");
+            case THEME,
+                    LANGUAGE,
+                    KEYMAP,
+                    THUMBNAILS_AT_START,
+                    PROPERTIES_AT_START,
+                    HIDE_CONTROLS_AFTER,
+                    SLIDESHOW_SPEED,
+                    PALETTE_KEYS,
+                    CHECK_DAILY,
+                    EXPORT_CONFIG,
+                    IMPORT_CONFIG -> tr("group.settings");
+            case DOCUMENTATION -> tr("group.help");
+            case EDITOR_ROTATE_LEFT,
+                    EDITOR_ROTATE_RIGHT,
+                    EDITOR_FLIP_HORIZONTALLY,
+                    EDITOR_FLIP_VERTICALLY,
+                    EDITOR_NEXT_SHAPE,
+                    EDITOR_RESET,
+                    EDITOR_UNDO,
+                    EDITOR_REDO,
+                    EDITOR_SAVE,
+                    EDITOR_CANCEL -> tr("group.editor");
+            case BOOKMARKS_OPEN,
+                    BOOKMARKS_EDIT_NOTE,
+                    BOOKMARKS_TOGGLE,
+                    BOOKMARKS_SHOW_IN_FOLDER,
+                    BOOKMARKS_REMOVE,
+                    BOOKMARKS_LIST_ALL,
+                    BOOKMARKS_LIST_BOOKMARKED,
+                    BOOKMARKS_LIST_NOTES -> tr("group.bookmarksWindow");
         };
     }
 
@@ -464,27 +404,5 @@ enum Command {
 
     static boolean isMac(String osName) {
         return osName.toLowerCase(Locale.ROOT).startsWith("mac");
-    }
-
-    private static KeyCombination key(KeyCode code) {
-        return new KeyCodeCombination(code);
-    }
-
-    private static KeyCombination shift(KeyCode code) {
-        return new KeyCodeCombination(code, KeyCombination.SHIFT_DOWN);
-    }
-
-    /** No key: found through the palette and the context menu. */
-    private static KeyCombination none() {
-        return KeyCombination.NO_MATCH;
-    }
-
-    private static KeyCombination shortcut(KeyCode code) {
-        return new KeyCodeCombination(code, KeyCombination.SHORTCUT_DOWN);
-    }
-
-    /** For keys named by the character they type, whose key code differs by keyboard layout. */
-    private static KeyCombination text(String character) {
-        return new KeyCharacterCombination(character);
     }
 }

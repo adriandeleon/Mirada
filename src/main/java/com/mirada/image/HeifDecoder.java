@@ -19,6 +19,7 @@ import javafx.scene.image.WritableImage;
 
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static java.lang.foreign.ValueLayout.JAVA_INT;
 import static java.lang.foreign.ValueLayout.JAVA_LONG;
@@ -58,8 +59,7 @@ final class HeifDecoder {
 
     /** The image, decoded without the JavaFX toolkit. */
     static ArgbPixels pixels(Path file) throws IOException {
-        Library heif =
-                Library.INSTANCE.orElseThrow(() -> new IOException("HEIC and AVIF need libheif, which was not found"));
+        Library heif = Library.INSTANCE.orElseThrow(() -> new IOException(tr("decode.heifNeedsLibrary")));
         try (Arena arena = Arena.ofConfined();
                 FileChannel channel = FileChannel.open(file, StandardOpenOption.READ)) {
             MemorySegment data = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size(), arena);
@@ -238,7 +238,7 @@ final class HeifDecoder {
      * libheif without sequences, or for one too large to hold.
      */
     static Animation.@Nullable Frames frames(Path file) throws IOException {
-        Library heif = Library.INSTANCE.orElseThrow(() -> new IOException("libheif was not found"));
+        Library heif = Library.INSTANCE.orElseThrow(() -> new IOException(tr("decode.heifNeedsLibrary")));
         Sequences sequences = heif.sequences;
         if (sequences == null) return null;
         try (Arena arena = Arena.ofConfined();

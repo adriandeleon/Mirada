@@ -4,47 +4,90 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
-import javafx.scene.input.KeyCodeCombination;
+import javafx.application.Platform;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
 import javafx.scene.input.KeyCombination;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MacMenusTest {
 
-    /** Every command the palette lists is in a menu once, but About and Settings: the app menu's. */
+    /**
+     * Every viewer command is in a menu once, but About and Settings (the app menu's), Copy Details
+     * (About's button), each setting's own (the Settings window's), and Escape and panning, which
+     * are keys. The editor's tools and the Bookmarks
+     * window's are their own windows'.
+     */
     @Test
-    void theMenusHoldThePalettesCommandsOnce() {
+    void theMenusHoldTheViewersCommandsOnce() {
         List<Command> inMenus = new ArrayList<>();
         for (MacMenus.Heading heading : MacMenus.HEADINGS) heading.groups().forEach(inMenus::addAll);
-        Set<Command> expected = new HashSet<>(Command.inPalette());
-        expected.remove(Command.ABOUT);
-        expected.remove(Command.SETTINGS);
-        expected.add(Command.PALETTE);
+        Set<Command> expected = new HashSet<>();
+        for (Command command : Command.values()) {
+            if (command.context() == Command.Context.VIEWER) expected.add(command);
+        }
+        expected.removeAll(Set.of(
+                Command.ABOUT,
+                Command.SETTINGS,
+                Command.COPY_DETAILS,
+                Command.ESCAPE,
+                Command.PAN_LEFT,
+                Command.PAN_RIGHT,
+                Command.PAN_UP,
+                Command.PAN_DOWN));
+        // The settings' own commands are the Settings window's rows, in the palette (SET-06).
+        expected.removeIf(command -> command.group().equals("Settings")
+                && command != Command.EXPORT_CONFIG
+                && command != Command.IMPORT_CONFIG);
         assertEquals(expected, new HashSet<>(inMenus));
         assertEquals(inMenus.size(), new HashSet<>(inMenus).size(), "a command in two menus");
     }
 
-    /** A chord a menu shows must run its command on a Mac, as the keyboard would. */
+    /** A row's title ends in its command's chord, written there as the native menu draws text only. */
     @Test
-    void everyMenuChordRunsItsCommandOnAMac() {
-        for (Command command : Command.values()) {
-            if (command == Command.PALETTE) continue; // the user's keys: PaletteChordsTest
-            if (!(MacMenus.accelerator(command) instanceof KeyCodeCombination chord)) continue;
-            assertEquals(KeyCombination.ModifierValue.DOWN, chord.getShortcut(), command.name());
-            boolean shift = chord.getShift() == KeyCombination.ModifierValue.DOWN;
-            boolean control = chord.getControl() == KeyCombination.ModifierValue.DOWN;
-            assertEquals(command, Command.forKey(chord.getCode(), shift, true, control, true), command.name());
-        }
+    void aRowsChordIsInItsTitle() {
+        assertEquals(
+                "Rotate Right   " + Command.ROTATE_CLOCKWISE.chord().getDisplayText(),
+                MacMenus.title("Rotate Right", Command.ROTATE_CLOCKWISE));
+        assertEquals("Sort by Name", MacMenus.title("Sort by Name", Command.SORT_BY_NAME));
     }
 
+    /** No key equivalents (MENU-02), no icons, and every bound command's chord shown (MENU-15). */
     @Test
-    void bareKeysAreNotKeyEquivalents() {
-        assertNull(MacMenus.accelerator(Command.NEXT));
-        assertNull(MacMenus.accelerator(Command.RENAME));
-        assertNull(MacMenus.accelerator(Command.EDIT));
+    @Tag("fx")
+    void theBarHasNoAcceleratorsAndShowsEveryChord() throws Exception {
+        FxTestSupport.start();
+        CompletableFuture<MenuBar> built = new CompletableFuture<>();
+        Platform.runLater(() -> built.complete(MacMenus.build(c -> {}, c -> null, c -> false, Command::label)));
+        MenuBar bar = built.get(10, TimeUnit.SECONDS);
+        for (Menu menu : bar.getMenus()) {
+            for (MenuItem item : menu.getItems()) {
+                if (!(item.getUserData() instanceof Command command)) continue;
+                assertNull(item.getAccelerator(), command.name());
+                assertNull(item.getGraphic(), command.name());
+                KeyCombination chord = command.chord();
+                if (chord != KeyCombination.NO_MATCH)
+                    assertTrue(item.getText().endsWith(chord.getDisplayText()), item.getText());
+            }
+        }
+    }
+    /** Help opens with the palette, then the documentation (DOCS-06, DOCS-07, Pauta 4.0.1). */
+    @Test
+    void helpPutsTheDocumentationRightAfterThePalette() {
+        MacMenus.Heading help = MacMenus.HEADINGS.getLast();
+        assertEquals("Help", help.title());
+        assertEquals(
+                List.of(Command.PALETTE, Command.DOCUMENTATION),
+                help.groups().getFirst().subList(0, 2));
     }
 }

@@ -47,9 +47,10 @@ public record Sorting(By by, boolean reversed) {
 
     /**
      * {@code images} sorted. Dates and sizes are read once each, before sorting, not once per
-     * comparison; a file that cannot be read sorts as the oldest and smallest.
+     * comparison; a file that cannot be read sorts as the oldest and smallest. By date or size that is
+     * a stat for every image: never on the FX thread.
      */
-    List<Path> sort(List<Path> images) {
+    public List<Path> sort(List<Path> images) {
         Comparator<Path> names = FolderImages.BY_NAME;
         Comparator<Path> order =
                 switch (by) {

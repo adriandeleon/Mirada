@@ -1,5 +1,65 @@
 /* On top of AtlantaFX's Cupertino theme: its looked-up colours keep light and dark in step. */
 
+/*
+ * Every colour this sheet uses is named here, once, and the rules below use the names (Pauta
+ * PLAT-06, ICON-07, ICON-08): no rule after this block holds a fixed colour. A colour that differs
+ * between the light and the dark theme is a ladder() of the ground, -color-bg-default, as Editora's
+ * -state-key is: the dark value up to 49 % brightness, the light one from 50 %.
+ */
+.root {
+    /*
+     * Cupertino's tinted text and emphasis fills, moved the least they need to read (ICON-10,
+     * ICON-11): tinted text at 4.5:1 on the window's grounds and on its own subtle fill, white ink at
+     * 4.5:1 on an emphasis fill, and the accent's fill, which is also the focus ring, at 3:1 on every
+     * ground. Cupertino Light's #007aff is 4.0:1 under white. The accent's are what Accent makes of
+     * Cupertino's blue; on macOS and Windows Accent puts the system's accent in their place, by the
+     * same rules. StyleContrastTest holds all of them.
+     */
+    -color-accent-fg: ladder(-color-bg-default, #49a4ff 49%, #0069db 50%);
+    -color-accent-emphasis: ladder(-color-bg-default, #0975e3 49%, #0072ee 50%);
+    -color-warning-fg: ladder(-color-bg-default, #ff9f0a 49%, #9e5c00 50%);
+    -color-warning-emphasis: ladder(-color-bg-default, #a66707 49%, #ab6400 50%);
+    -color-success-fg: ladder(-color-bg-default, #32d74b 49%, #147e24 50%);
+    -color-success-emphasis: ladder(-color-bg-default, #20872f 49%, #158726 50%);
+    -color-danger-fg: ladder(-color-bg-default, #ff7971 49%, #c22d24 50%);
+    -color-danger-emphasis: ladder(-color-bg-default, #d73a31 49%, #db3329 50%);
+
+    /*
+     * The keyboard's periwinkle, Editora's -state-key: a deep ink on a light ground, a pale one on a
+     * dark ground, picked by the brightness of -color-bg-default. Same ladder as Editora's app.css.
+     */
+    -state-key: ladder(-color-bg-default, #b0b6e0 0%, #b8bee5 10%, #cdd1f1 20%, #e3e6f9 30%, #ecedfb 49%, #3c4380 50%);
+
+    /* The one keyboard focus ring (ICON-12), drawn by the :focus-visible block at the end. */
+    -focus-ring: -color-accent-emphasis;
+
+    /*
+     * Over the photo, not the window: the floating controls, the marks badge and the toasts are the
+     * same dark translucent pills with pale ink in both themes, and the editor's crop is drawn in
+     * white over a dimmed outside, as GNOME Image Viewer draws it.
+     */
+    -osd-bg: rgba(30, 32, 40, 0.78);
+    -osd-fg: #f2f2f2;
+    -osd-fg-disabled: rgba(242, 242, 242, 0.35);
+    -osd-hover: rgba(255, 255, 255, 0.12);
+    -toast-bg: rgba(0, 0, 0, 0.72);
+    -crop-ground: #1e1e1e;
+    -crop-shade: rgba(0, 0, 0, 0.55);
+    -crop-third: rgba(255, 255, 255, 0.45);
+    -crop-handle-edge: rgba(0, 0, 0, 0.5);
+
+    /* What dims the window under the palette, and the cards' shadows. */
+    -scrim: rgba(0, 0, 0, 0.32);
+    -shadow-card: rgba(0, 0, 0, 0.45);
+    -shadow-log: rgba(0, 0, 0, 0.35);
+
+    /*
+     * JavaFX's own window buttons (Linux, extended windows), unfocused in the dark style: its grey
+     * (#777) all but vanishes on the dark header.
+     */
+    -window-button-dark: #a8a8a8;
+}
+
 .mirada .canvas,
 .mirada .viewport {
     -fx-background-color: -color-bg-inset;
@@ -7,7 +67,7 @@
 
 .mirada:full-screen .canvas,
 .mirada:full-screen .viewport {
-    -fx-background-color: black;
+    -fx-background-color: -color-dark;
 }
 
 .mirada .placeholder {
@@ -27,6 +87,11 @@
     -fx-padding: 8 16 8 16;
 }
 
+/* Help → Documentation, under the open buttons. */
+.mirada .empty-docs {
+    -fx-padding: 12 0 0 0;
+}
+
 /*
  * The header bar, GNOME Image Viewer's: flat icon buttons around the file name. HeaderBar ships with
  * no style class; TitleBar adds header-bar. The window buttons are drawn by the platform (or by
@@ -40,14 +105,14 @@
 }
 
 /*
- * JavaFX's own window buttons (Linux, extended windows), unfocused in the dark style: its grey
- * (#777) all but vanishes on the dark header. A scene's stylesheet reaches them; this rule outranks
- * the unfocused one by a style class and is outranked by the focused one (":active", white).
+ * JavaFX's own window buttons (Linux, extended windows), unfocused in the dark style (the .root
+ * block says why). A scene's stylesheet reaches them; this rule outranks the unfocused one by a
+ * style class and is outranked by the focused one (":active", white).
  */
 .-FX-INTERNAL-iconify-button.dark > .-FX-INTERNAL-glyph,
 .-FX-INTERNAL-maximize-button.dark > .-FX-INTERNAL-glyph,
 .-FX-INTERNAL-close-button.dark > .-FX-INTERNAL-glyph {
-    -fx-background-color: #a8a8a8;
+    -fx-background-color: -window-button-dark;
 }
 
 /* "folder / name.jpg", on one line. */
@@ -122,14 +187,6 @@
 }
 
 /*
- * The keyboard's periwinkle, Editora's -state-key: a deep ink on a light ground, a pale one on a dark
- * ground, picked by the brightness of -color-bg-default. Same ladder as Editora's app.css.
- */
-.root {
-    -state-key: ladder(-color-bg-default, #b0b6e0 0%, #b8bee5 10%, #cdd1f1 20%, #e3e6f9 30%, #ecedfb 49%, #3c4380 50%);
-}
-
-/*
  * A menu row's key (MenuChord), as Editora's menus show it (.menu-item-chord): 11px, in the keyboard's
  * periwinkle. On the highlighted row it takes the row's text colour, as the periwinkle is lost on the
  * Cupertino accent; greyed, the row's grey.
@@ -152,22 +209,22 @@
  * because they sit on the photo, not on the window.
  */
 .osd {
-    -fx-background-color: rgba(30, 32, 40, 0.78);
+    -fx-background-color: -osd-bg;
     -fx-background-radius: 14;
     -fx-padding: 6;
 }
 
 .osd .icon {
-    -fx-stroke: #f2f2f2;
+    -fx-stroke: -osd-fg;
 }
 
 .osd .button:disabled .icon,
 .osd .menu-button:disabled .icon {
-    -fx-stroke: rgba(242, 242, 242, 0.35);
+    -fx-stroke: -osd-fg-disabled;
 }
 
 .osd-button:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-background-color: -osd-hover;
 }
 
 /* The info sidebar: cards of label-over-value rows on the window's background. */
@@ -328,6 +385,51 @@
     -fx-font-size: 0.92em;
 }
 
+/* Settings: the search along the top, the pages down the left, a page greyed when a search finds nothing on it. */
+.settings-top {
+    -fx-border-color: -color-border-muted;
+    -fx-border-width: 0 0 1 0;
+}
+
+.settings-sidebar,
+.settings-sidebar > .virtual-flow > .clipped-container > .sheet > .list-cell {
+    -fx-background-color: -color-bg-subtle;
+}
+
+.settings-sidebar {
+    -fx-border-color: -color-border-muted;
+    -fx-border-width: 0 1 0 0;
+}
+
+.settings-sidebar > .virtual-flow > .clipped-container > .sheet > .list-cell {
+    -fx-padding: 7 12 7 12;
+    -fx-graphic-text-gap: 10;
+    -fx-text-fill: -color-fg-default;
+}
+
+.settings-sidebar > .virtual-flow > .clipped-container > .sheet > .list-cell:selected {
+    -fx-background-color: -color-accent-subtle;
+}
+
+.settings-sidebar > .virtual-flow > .clipped-container > .sheet > .list-cell.no-match {
+    -fx-text-fill: -color-fg-subtle;
+}
+
+.settings-sidebar .no-match .icon {
+    -fx-stroke: -color-fg-subtle;
+}
+
+.settings-scroll,
+.settings-scroll > .viewport {
+    -fx-background-color: -color-bg-default;
+}
+
+.settings-page-title {
+    -fx-font-size: 1.4em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-default;
+}
+
 .settings-group,
 .shortcuts-group {
     -fx-font-weight: bold;
@@ -353,7 +455,7 @@
  * description line and a legend. One surface, no internal rules.
  */
 .palette-backdrop {
-    -fx-background-color: rgba(0, 0, 0, 0.32);
+    -fx-background-color: -scrim;
 }
 
 .command-palette {
@@ -365,7 +467,7 @@
     -fx-padding: 6;
     /* The kit layers a tight contact shadow and a wide ambient one; JavaFX takes a single
        dropshadow, so this is the wide one with a short offset, and the 1px border is the edge. */
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 44, 0.16, 0, 18);
+    -fx-effect: dropshadow(gaussian, -shadow-card, 44, 0.16, 0, 18);
     /* Near the top, over the image's least-looked-at part rather than its centre. */
     -fx-translate-y: 48;
 }
@@ -464,11 +566,143 @@
 
 /* What a toggle or a file operation just did, over the bottom of the image; gone after two seconds. */
 .toast {
-    -fx-background-color: rgba(0, 0, 0, 0.72);
+    -fx-background-color: -toast-bg;
     -fx-background-radius: 999;
-    -fx-text-fill: white;
+    -fx-text-fill: -osd-fg;
     -fx-padding: 8 16 8 16;
     -fx-font-size: 1.0em;
+}
+
+.toast:error {
+    -fx-text-fill: -color-danger-3;
+}
+
+.toast:warning {
+    -fx-text-fill: -color-warning-3;
+}
+
+/* The status bar (WIN-01): the echo area on the left, errors red and warnings amber, then the count
+   of unread errors; a newer release's notice on the right. */
+.status-bar {
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: -color-border-muted transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 0 10 0 10;
+}
+
+.status-bar .status-echo {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+}
+
+.status-echo-error,
+.status-bar .status-echo.status-echo-error {
+    -fx-text-fill: -color-danger-fg;
+}
+
+.status-echo-warn,
+.status-bar .status-echo.status-echo-warn {
+    -fx-text-fill: -color-warning-fg;
+}
+
+.status-bar .status-unread {
+    -fx-background-color: -color-danger-emphasis;
+    -fx-text-fill: -color-fg-emphasis;
+    -fx-background-radius: 999;
+    -fx-padding: 0 6 0 6;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.status-bar .status-update {
+    -fx-font-size: 12px;
+    -fx-padding: 0;
+    -fx-border-width: 0;
+}
+
+/* The Message Log (MLOG-01): a card like the palette's, just above the status bar. The backdrop
+   only catches a press outside; the image stays as it is. */
+.message-log-backdrop {
+    -fx-background-color: transparent;
+}
+
+.message-log {
+    -fx-background-color: -color-bg-overlay;
+    -fx-background-radius: 12;
+    -fx-border-color: -color-border-default;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-padding: 10 12 10 12;
+    -fx-effect: dropshadow(gaussian, -shadow-log, 32, 0.12, 0, 10);
+}
+
+.message-log .message-log-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-default;
+}
+
+.message-log .list-view {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+}
+
+.message-log .list-cell {
+    -fx-padding: 2 4 2 4;
+    -fx-background-color: transparent;
+    -fx-background-radius: 5;
+    -fx-font-size: 12.5px;
+}
+
+.message-log .list-cell:filled:selected {
+    -fx-background-color: -color-accent-subtle;
+}
+
+.message-log .list-cell .label {
+    -fx-text-fill: -color-fg-default;
+}
+
+.message-log .list-cell .message-log-time {
+    -fx-font-family: monospace;
+    -fx-font-size: 11px;
+    -fx-text-fill: -color-fg-muted;
+}
+
+.message-log .list-cell .label.status-echo-error {
+    -fx-text-fill: -color-danger-fg;
+}
+
+.message-log .list-cell .label.status-echo-warn {
+    -fx-text-fill: -color-warning-fg;
+}
+
+.message-log .message-log-hint {
+    -fx-font-size: 11px;
+    -fx-text-fill: -color-fg-muted;
+}
+
+/* The Debug Log: the log as written, in a fixed-width face. */
+.debug-log .debug-log-text {
+    -fx-font-family: monospace;
+    -fx-font-size: 12px;
+}
+
+.debug-log .debug-log-file {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 11px;
+}
+
+.report-problem .report-text {
+    -fx-font-family: monospace;
+    -fx-font-size: 12px;
+}
+
+.about .about-update {
+    -fx-text-fill: -color-fg-muted;
 }
 
 /* The editor: the window's own surfaces for its bars, a dark canvas for the picture, and the crop
@@ -487,28 +721,28 @@
 }
 
 .crop-view {
-    -fx-background-color: #1e1e1e;
+    -fx-background-color: -crop-ground;
 }
 
 .crop-shade {
-    -fx-fill: rgba(0, 0, 0, 0.55);
+    -fx-fill: -crop-shade;
 }
 
 .crop-border {
     -fx-fill: transparent;
-    -fx-stroke: white;
+    -fx-stroke: -color-light;
     -fx-stroke-width: 1.5;
     -fx-stroke-type: inside;
 }
 
 .crop-third {
-    -fx-stroke: rgba(255, 255, 255, 0.45);
+    -fx-stroke: -crop-third;
     -fx-stroke-width: 1;
 }
 
 .crop-handle {
-    -fx-fill: white;
-    -fx-stroke: rgba(0, 0, 0, 0.5);
+    -fx-fill: -color-light;
+    -fx-stroke: -crop-handle-edge;
     -fx-arc-width: 3;
     -fx-arc-height: 3;
 }
@@ -524,15 +758,15 @@
 }
 
 .thumbnail-strip .thumbnail .thumbnail-mark .icon {
-    -fx-stroke: white;
+    -fx-stroke: -color-light;
 }
 
 .marks-badge .icon {
-    -fx-stroke: #f2f2f2;
+    -fx-stroke: -osd-fg;
 }
 
 .marks-badge .mark-bookmark .icon {
-    -fx-fill: #f2f2f2;
+    -fx-fill: -osd-fg;
 }
 
 .note-dialog .text-area {
@@ -597,4 +831,49 @@
 
 .bookmarks-cell:missing .bookmarks-name {
     -fx-strikethrough: true;
+}
+
+/* ---- Keyboard focus (one layer for every control; ICON-12, KBD-16) --------------------------------
+   Editora's ring. AtlantaFX marks focus by recolouring a control's 1px border layer, which the flat
+   buttons here erase, and has no focus rule at all for check boxes, radio buttons or hyperlinks, so
+   the indicator is drawn here, once, in -focus-ring (the .root block at the top).
+
+   :focus-visible is set only when focus arrives from the keyboard, so a click never leaves a ring
+   behind. The ring is a 2px border with negative insets: it sits just outside the control with a 1px
+   gap, and a border outside the bounds adds nothing to the control's insets, so focusing never moves
+   anything. The header's and the floating controls' buttons never take focus (TBAR-02).
+
+   Keep this block last: equal-specificity rules are decided by order. */
+.button:focus-visible,
+.toggle-button:focus-visible,
+.menu-button:focus-visible,
+.split-menu-button:focus-visible,
+.hyperlink:focus-visible,
+.combo-box-base:focus-visible,
+.choice-box:focus-visible,
+.spinner:focus-visible,
+.check-box:focus-visible > .box,
+.radio-button:focus-visible > .radio,
+.titled-pane:focus-visible > .title {
+    -fx-border-color: -focus-ring;
+    -fx-border-width: 2;
+    -fx-border-insets: -3;
+    -fx-border-radius: 10;
+    -fx-border-style: solid;
+}
+
+.check-box:focus-visible > .box {
+    -fx-border-radius: 6;
+}
+
+.radio-button:focus-visible > .radio {
+    -fx-border-radius: 999;
+}
+
+/* A text field already gets the theme's accent border on focus; from the keyboard it is thickened to
+   the same 2px weight by widening that border layer, which keeps the ring inside the field. */
+.text-field:focus-visible,
+.text-area:focus-visible,
+.password-field:focus-visible {
+    -fx-background-insets: 0, 2px;
 }

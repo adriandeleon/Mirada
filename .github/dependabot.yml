@@ -1,0 +1,12 @@
+# Weekly updates for the workflows' pinned actions and the pom's dependencies (REL-23, Pauta 4.0.1).
+# Dependabot keeps the SHA pins and their version comments in step.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly

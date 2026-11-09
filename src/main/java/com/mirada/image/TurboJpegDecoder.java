@@ -139,10 +139,11 @@ final class TurboJpegDecoder {
                     height = (height + denominator - 1) / denominator;
                 }
                 if (width <= 0 || height <= 0) throw new IOException("the file holds no image");
+                // From the header, before a byte is decoded: refused if it will not fit (PERF-12).
+                int[] argb = ArgbPixels.allocate(width, height);
                 int pitch = Math.multiplyExact(width, 4);
                 MemorySegment bgra = arena.allocate((long) pitch * height);
                 check(tj, handle, (int) tj.decompress8.invoke(handle, data, data.byteSize(), bgra, pitch, TJPF_BGRA));
-                int[] argb = new int[Math.multiplyExact(width, height)];
                 MemorySegment.copy(bgra, LITTLE_ENDIAN_INT, 0, argb, 0, argb.length);
                 return new ArgbPixels(width, height, argb);
             } finally {

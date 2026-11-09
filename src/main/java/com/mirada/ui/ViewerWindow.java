@@ -2,6 +2,7 @@ package com.mirada.ui;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,17 +13,20 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.css.PseudoClass;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Cursor;
@@ -30,6 +34,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -55,9 +60,12 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import javafx.util.Duration;
 
 import com.mirada.AppInfo;
+import com.mirada.diagnostics.DebugLog;
+import com.mirada.diagnostics.MessageLog;
 import com.mirada.edit.Edit;
 import com.mirada.edit.Raster;
 import com.mirada.folder.FolderImages;
@@ -71,9 +79,15 @@ import com.mirada.os.Reveal;
 import com.mirada.os.Trash;
 import com.mirada.perf.Startup;
 import com.mirada.perf.Tour;
+import com.mirada.report.Redactor;
 import com.mirada.settings.Bookmarks;
+import com.mirada.settings.FileWrites;
 import com.mirada.settings.Settings;
+import com.mirada.update.UpdateCoordinator;
+import com.mirada.update.UpdateService;
 import org.jspecify.annotations.Nullable;
+
+import static com.mirada.i18n.Messages.tr;
 
 /**
  * The one window, laid out as GNOME Image Viewer's: a header bar with the file name ({@link
@@ -88,16 +102,21 @@ import org.jspecify.annotations.Nullable;
 public final class ViewerWindow {
 
     private static final PseudoClass FULL_SCREEN = PseudoClass.getPseudoClass("full-screen");
-    /** Reads the sidebar's details; a virtual thread per read, as the metadata reads in ImageCache. */
-    private static final Executor DETAILS_READER = Executors.newVirtualThreadPerTaskExecutor();
+    /**
+     * Where the window's file work runs, never on the FX thread (PERF-01): listing a folder, the stats
+     * a sort by date or size reads, the sidebar's details, whether a bookmark's file is still there. A
+     * named virtual thread per task, as the metadata reads in ImageCache.
+     */
+    static final Executor FILES = Executors.newThreadPerTaskExecutor(
+            Thread.ofVirtual().name("window-files-", 0).factory());
 
     /** Whether Escape closes the window once there is nothing to leave: Linux's habit, not the others'. */
     private static final boolean ESCAPE_CLOSES = Command.escapeCloses(System.getProperty("os.name", ""));
 
     private final Stage stage;
     private final ImageViewport viewport = new ImageViewport();
-    private final Label placeholder =
-            new Label("Open an image with " + Command.OPEN.chord().getDisplayText() + ", or drop one here");
+    /** Says how to open an image, or why the one asked for is not showing; its first words wait for {@link #offerToOpen}. */
+    private final Label placeholder = new Label();
     /** The placeholder, with Open Image and Open Folder under it while no folder is open. */
     private final VBox emptyState = new VBox(placeholder);
     /** Those two buttons, built the first time the window has no folder to show. */
@@ -124,6 +143,8 @@ public final class ViewerWindow {
     private @Nullable AboutWindow about;
 
     private @Nullable SettingsWindow settingsWindow;
+    /** The settings' own commands and Export and Import (SET-06, SET-12), made when first run. */
+    private @Nullable SettingsCommands settingsCommands;
     /** The Mac's menu bar, once it is built after the first paint; its palette key follows the setting. */
     private @Nullable MenuBar macMenus;
 
@@ -131,7 +152,27 @@ public final class ViewerWindow {
     /** Built the first time it is asked for. */
     private @Nullable BookmarksWindow bookmarksWindow;
 
-    /** A line over the image saying what a toggle or a file operation did; fades on its own. */
+    /** Asked for when something is logged: starting the logging system is no part of start-up. */
+    private static Logger log() {
+        return Logger.getLogger(ViewerWindow.class.getName());
+    }
+
+    /** Everything the status bar has said this session (DIAG-01). */
+    private final MessageLog messages = new MessageLog();
+    /** The update check, once this run (DIAG-05). */
+    private final UpdateCoordinator updates;
+    /** Along the bottom, under the strip when that is there too (WIN-01). */
+    private final StatusBar statusBar;
+    /** The strip, when it runs along the bottom, then the status bar. */
+    private final VBox bottom = new VBox();
+
+    private @Nullable MessageLogView messageLog;
+    private @Nullable DebugLogWindow debugLog;
+
+    /**
+     * What the status bar would say, over the image instead while the bar is away (full screen, a
+     * slideshow, or switched off); fades on its own.
+     */
     private final Label toast = new Label();
 
     private final PauseTransition toastTimer = new PauseTransition(Duration.seconds(2));
@@ -181,7 +222,19 @@ public final class ViewerWindow {
     /** What Move to Trash can put back, the latest first; only Linux's trash says where a file went. */
     private final Deque<Trash.Trashed> trashed = new ArrayDeque<>();
 
-    private static final int UNDO_DEPTH = 20;
+    static final int UNDO_DEPTH = 20;
+
+    /** Lists the folder being opened; a later open drops an earlier one's listing (PERF-03). */
+    private final LatestOnly listing = new LatestOnly(FILES, Platform::runLater);
+    /** Sorts the open folder by date or size, reading every file's stats; the latest order only. */
+    private final LatestOnly sorting = new LatestOnly(FILES, Platform::runLater);
+    /** Reads the sidebar's details of the image on screen; only the latest read is shown. */
+    private final LatestOnly details = new LatestOnly(FILES, Platform::runLater);
+    /** Finds which bookmarks or recent folders are still there, for the palette; the latest only. */
+    private final LatestOnly lists = new LatestOnly(FILES, Platform::runLater);
+
+    /** The tool windows this window has opened: About, Settings and the rest, closed with it. */
+    private final List<Stage> toolWindows = new ArrayList<>();
     /** The image whose preview the viewport shows until its full resolution arrives; else null. */
     private @Nullable Path previewing;
 
@@ -192,11 +245,32 @@ public final class ViewerWindow {
         this.openLink = openLink;
         this.tour = Tour.start(() -> go(folder.step(1)), this::copy);
         this.sortedBy = settings.sorting();
-        this.bookmarks = new Bookmarks(Bookmarks.fileBeside(settings.file()));
+        // Read and written where the settings are, off the FX thread in the application.
+        FileWrites writes = settings.writes();
+        this.bookmarks = new Bookmarks(
+                Bookmarks.fileBeside(settings.file()), writes, writes.isDirect() ? Runnable::run : Platform::runLater);
         bookmarks.addListener(() -> {
             showMarks();
             refreshInfo();
+            // A bookmarks file this read could not use was kept aside: say where (SET-10, SET-11).
+            String marksKept = SettingsCommands.setAside("bookmarks", bookmarks.takeSetAside());
+            if (marksKept != null) say(marksKept, MessageLog.Severity.WARNING);
         });
+
+        updates = new UpdateCoordinator(
+                settings,
+                // Made when it is first asked: HttpClient is nothing start-up should load.
+                version -> new UpdateService().check(version),
+                (delay, task) -> {
+                    PauseTransition wait = new PauseTransition(Duration.millis(delay.toMillis()));
+                    wait.setOnFinished(e -> task.run());
+                    wait.play();
+                },
+                task -> Thread.ofVirtual().name("update-check").start(task),
+                Platform::runLater,
+                this::say,
+                System::currentTimeMillis);
+        statusBar = new StatusBar(messages, updates, this::run);
 
         placeholder.getStyleClass().add("placeholder");
         placeholder.setWrapText(true);
@@ -220,13 +294,21 @@ public final class ViewerWindow {
             // From the menu, the palette or the settings window: the open folder follows.
             if (!settings.sorting().equals(sortedBy)) {
                 sortedBy = settings.sorting();
-                folder = folder.sorted(sortedBy);
-                refreshStrip();
+                sortFolder();
             }
+        });
+        // Another Mirada may have changed the settings: they show as this window comes forward (SET-05).
+        stage.focusedProperty().addListener((o, was, focused) -> {
+            if (focused) settings.reloadIfChanged();
+        });
+        // The window's own close button: an edit not yet saved asks first (CONF-01).
+        stage.setOnCloseRequest(e -> {
+            if (!mayClose()) e.consume();
         });
         stage.setOnHidden(e -> {
             slideshow.stop();
             rememberPlace();
+            release();
         });
         canvas = new StackPane(viewport, emptyState, toast);
         canvas.getStyleClass().add("canvas");
@@ -242,19 +324,24 @@ public final class ViewerWindow {
             OnScreenControls built = controls;
             if (built != null) built.setIdle(settings.controlsHideSeconds());
         });
-        PaletteChords.use(settings.paletteKeys());
-        settings.addListener(() -> {
-            if (!PaletteChords.use(settings.paletteKeys())) return;
-            MenuBar bar = macMenus;
-            if (bar != null) MacMenus.refreshAccelerators(bar);
-            ShortcutsWindow shortcuts = shortcutsWindow;
-            if (shortcuts != null) shortcuts.refresh();
-        });
+        // Nothing is read here: the keymap is parsed when a key is first pressed or a chord first shown.
+        Keybindings.use(settings.keymap(), settings.keys(), settings.paletteKeys());
+        settings.addListener(this::followKeys);
         viewport.fittedProperty().addListener((o, was, now) -> updateControls());
 
         root = new BorderPane(canvas);
         root.getStyleClass().add("mirada");
-        titleBar = new TitleBar(stage, this::run, infoShowing, thumbnailsShowing);
+        bottom.getChildren().add(statusBar.node());
+        root.setBottom(bottom);
+        showStatusBar();
+        settings.addListener(this::showStatusBar);
+        // The menu's tick and the setting, kept in step both ways.
+        BooleanProperty statusBarOn = new SimpleBooleanProperty(this, "statusBarOn", settings.statusBar());
+        statusBarOn.addListener((o, was, now) -> {
+            if (now != settings.statusBar()) settings.setStatusBar(now);
+        });
+        settings.addListener(() -> statusBarOn.set(settings.statusBar()));
+        titleBar = new TitleBar(stage, this::run, infoShowing, thumbnailsShowing, statusBarOn);
         root.setTop(titleBar.node());
         infoShowing.addListener((o, was, now) -> {
             root.setRight(now ? infoPanel().node() : null);
@@ -270,11 +357,12 @@ public final class ViewerWindow {
         scene.getStylesheets().add(stylesheet());
         scene.addEventFilter(KeyEvent.KEY_PRESSED, this::onKey);
         Popups.closeOnPressOutside(stage, scene);
+        Popups.menusByKey(scene);
         scene.setOnDragOver(this::onDragOver);
         scene.setOnDragDropped(this::onDragDropped);
         viewport.setOnSwipe(step -> run(step > 0 ? Command.NEXT : Command.PREVIOUS));
         viewport.setOnDragOut(() -> folder.current());
-        viewport.setOnContextMenuRequested(e -> contextMenu().show(viewport, e.getScreenX(), e.getScreenY()));
+        viewport.setOnContextMenuRequested(e -> Popups.show(contextMenu(), viewport, e.getScreenX(), e.getScreenY()));
 
         stage.setScene(scene);
         stage.setMinWidth(480);
@@ -287,19 +375,36 @@ public final class ViewerWindow {
         stage.setFullScreenExitHint("");
         stage.fullScreenProperty().addListener((obs, was, now) -> {
             titleBar.fullScreen(root, now);
+            Icons.setFullScreen(now);
             OnScreenControls built = controls;
             if (built != null) built.setFullScreen(now);
             root.pseudoClassStateChanged(FULL_SCREEN, now);
+            showStatusBar();
             showPointer();
         });
         updateControls();
         afterFirstPaint(titleBar::finish);
-        afterFirstPaint(() -> WindowIcon.applyTo(stage));
+        afterFirstPaint(statusBar::finish);
+        // A few seconds after the image, never on the way to it; not on a timing or training tour.
+        if (tour == null) afterFirstPaint(updates::scheduleStartupCheck);
+        afterFirstPaint(() -> WindowIcon.load(FILES, Platform::runLater, () -> WindowIcon.applyTo(stage)));
+        // What a first key press, About or Copy Details would read: read now, off the FX thread.
+        afterFirstPaint(() -> {
+            String keymap = settings.keymap();
+            FILES.execute(() -> {
+                Keybindings.preload(keymap);
+                AppInfo.runtime();
+            });
+        });
         // The marks are not start-up's: read once the image is up, then shown on it.
         afterFirstPaint(() -> {
             bookmarks.ensureLoaded();
             showMarks();
             refreshInfo();
+            // A settings file this start could not use was kept aside: say where (SET-10, SET-11). The
+            // bookmarks' is said as they arrive, read on the files' thread.
+            String settingsKept = SettingsCommands.setAside("settings", settings.setAside());
+            if (settingsKept != null) say(settingsKept, MessageLog.Severity.WARNING);
         });
         if (Command.MAC) afterFirstPaint(() -> installMacMenus(overlay));
         // A window opened without an image has no first paint to wait for.
@@ -331,8 +436,23 @@ public final class ViewerWindow {
         overlay.getChildren().add(bar);
         macMenus = bar;
         String appMenu = MacAppMenu.install(
-                Command.ABOUT.label(), () -> run(Command.ABOUT), "Settings…", () -> run(Command.SETTINGS));
+                Command.ABOUT.label(),
+                () -> run(Command.ABOUT),
+                tr("viewer.settingsMenu"),
+                () -> run(Command.SETTINGS));
         if (Startup.enabled()) System.out.println("[perf] application menu: " + appMenu);
+    }
+
+    /** Follows the settings' keys: the keymap, the user's, the palette's; what shows them reads them again. */
+    private void followKeys() {
+        if (!Keybindings.use(settings.keymap(), settings.keys(), settings.paletteKeys())) return;
+        palette.refreshKeys();
+        BookmarksWindow marks = bookmarksWindow;
+        if (marks != null) marks.refreshKeys();
+        // The Mac menus write their chords as they open; the buttons' tooltips are written now.
+        relabelButtons();
+        ShortcutsWindow shortcuts = shortcutsWindow;
+        if (shortcuts != null) shortcuts.refresh();
     }
 
     private void afterFirstPaint(Runnable task) {
@@ -371,7 +491,7 @@ public final class ViewerWindow {
     private InfoPanel infoPanel() {
         InfoPanel panel = info;
         if (panel == null) {
-            panel = new InfoPanel(folder -> openLink.accept(folder.toUri().toString()), this::run);
+            panel = new InfoPanel(this::run);
             info = panel;
         }
         return panel;
@@ -397,7 +517,7 @@ public final class ViewerWindow {
         ThumbnailStrip built = strip;
         if (!thumbnailsShowing.get()) {
             if (built != null) {
-                if (root.getBottom() == built.node()) root.setBottom(null);
+                bottom.getChildren().remove(built.node());
                 if (root.getLeft() == built.node()) root.setLeft(null);
             }
             return;
@@ -405,7 +525,7 @@ public final class ViewerWindow {
         ThumbnailStrip shown = thumbnailStrip();
         boolean side = settings.thumbnailsAtSide();
         shown.setLayout(side, settings.thumbnailNames(), settings.thumbnailCaptions());
-        ThumbnailStrip.place(root, shown.node(), side);
+        ThumbnailStrip.place(root, bottom, shown.node(), side);
         refreshStrip();
     }
 
@@ -418,13 +538,14 @@ public final class ViewerWindow {
         Command.setVertical(vertical);
         OnScreenControls built = controls;
         if (built != null) built.setVertical(vertical);
+        relabelButtons();
         ShortcutsWindow shortcuts = shortcutsWindow;
         if (shortcuts != null) shortcuts.refresh();
     }
 
     /** The strip's own menu: closing it, and where it stands and what it shows. */
     private ContextMenu stripMenu() {
-        MenuItem hide = new MenuItem("Hide Thumbnails", Icons.of(Icons.CLOSE));
+        MenuItem hide = new MenuItem(tr("viewer.hideThumbnails"), Icons.menu(Command.THUMBNAILS));
         hide.setOnAction(e -> run(Command.THUMBNAILS));
         MenuChord.on(hide, Command.THUMBNAILS);
         ContextMenu menu = new ContextMenu(
@@ -435,6 +556,22 @@ public final class ViewerWindow {
                 item(Command.THUMBNAIL_NAMES));
         Popups.closedByWindow(menu);
         return menu;
+    }
+
+    /**
+     * The open folder in {@link #sortedBy}'s order: sorted off the FX thread, as a sort by date or size
+     * reads every file's stats, then applied to the folder as it is by then ({@link
+     * FolderImages#reordered}), on the image showing.
+     */
+    private void sortFolder() {
+        List<Path> images = folder.images();
+        Sorting order = sortedBy;
+        sorting.submit(() -> order.sort(images), sorted -> {
+            folder = folder.reordered(sorted);
+            refreshStrip();
+            updateControls();
+            refreshInfo();
+        });
     }
 
     /** The strip, when it is open, on the folder's current image. */
@@ -452,6 +589,7 @@ public final class ViewerWindow {
         if (panel == null || !infoShowing.get()) return;
         Path file = folder.current();
         if (file == null || placeholder.isVisible()) {
+            details.cancel();
             panel.show(null, InfoPanel.Marks.NONE);
             return;
         }
@@ -460,12 +598,11 @@ public final class ViewerWindow {
         int count = folder.size();
         double width = viewport.contentWidth();
         double height = viewport.contentHeight();
-        CompletableFuture.supplyAsync(() -> ImageDetails.read(file, index, count, width, height), DETAILS_READER)
-                .thenAcceptAsync(
-                        details -> {
-                            if (file.equals(wanted) && infoShowing.get()) panel.show(details, marks);
-                        },
-                        Platform::runLater);
+        // Only the latest read is shown: an earlier one for this image, turned since, or for the
+        // image before, is dropped however late it comes (PERF-03).
+        details.submit(() -> ImageDetails.read(file, index, count, width, height), read -> {
+            if (file.equals(wanted) && infoShowing.get()) panel.show(read, marks);
+        });
     }
 
     /** What the user keeps on {@code file} and its folder, for the sidebar; none until they are read. */
@@ -552,6 +689,29 @@ public final class ViewerWindow {
         }
     }
 
+    /**
+     * Lets go of what this window started, as it closes (PERF-13): its tool windows, which are not
+     * owned by it and would otherwise keep the app running; its timers; the decoder and thumbnail
+     * threads.
+     */
+    private void release() {
+        released = true;
+        for (Stage tool : List.copyOf(toolWindows)) tool.close();
+        toolWindows.clear();
+        for (LatestOnly work : List.of(listing, sorting, details, lists)) work.cancel();
+        toastTimer.stop();
+        frameTimer.stop();
+        pointerIdle.stop();
+        cache.close();
+        ThumbnailStrip built = strip;
+        if (built != null) built.close();
+        BookmarksWindow marks = bookmarksWindow;
+        if (marks != null) marks.close();
+    }
+
+    /** Closed: a result that comes after is dropped, as the decoders it would start have stopped. */
+    private boolean released;
+
     /** Saves where the window is, for the next start: once, as it closes or the app quits. */
     public void rememberPlace() {
         Rectangle2D place = normalPlace;
@@ -561,18 +721,44 @@ public final class ViewerWindow {
                 place.getMinX(), place.getMinY(), place.getWidth(), place.getHeight(), stage.isMaximized()));
     }
 
-    /** Opens a file with its folder behind it, or a folder at its first image. */
+    /**
+     * Opens a file with its folder behind it, or a folder at its first image. The folder is listed,
+     * and sorted, off the FX thread; a later open drops this one's listing.
+     */
     public void open(Path path) {
-        try {
-            sortedBy = settings.sorting();
-            folder = FolderImages.open(path, sortedBy);
-        } catch (IOException e) {
-            folder = FolderImages.EMPTY;
-            showMessage("Couldn't read " + path + ": " + e.getMessage());
+        Sorting order = settings.sorting();
+        listing.submit(() -> Listed.of(path, order), listed -> opened(path, listed));
+    }
+
+    /** A folder listed off the FX thread, or why it could not be. */
+    record Listed(
+            FolderImages images, Sorting order, @Nullable String error) {
+
+        static Listed of(Path path, Sorting order) {
+            try {
+                return new Listed(FolderImages.open(path, order), order, null);
+            } catch (IOException | UncheckedIOException e) {
+                return new Listed(FolderImages.EMPTY, order, e.getMessage());
+            }
+        }
+    }
+
+    private void opened(Path path, Listed listed) {
+        // A sort asked for while listing was for the folder before.
+        sorting.cancel();
+        sortedBy = listed.order();
+        folder = listed.images();
+        if (listed.error() != null) {
+            showMessage(tr("viewer.couldNotRead", path, listed.error()));
             return;
         }
+        // The order changed while it was listed: sorted again, the image found showing meanwhile.
+        if (!settings.sorting().equals(sortedBy)) {
+            sortedBy = settings.sorting();
+            sortFolder();
+        }
         if (folder.isEmpty()) {
-            showMessage("No images in " + path);
+            showMessage(tr("viewer.noImagesIn", path));
             return;
         }
         showCurrent();
@@ -584,9 +770,9 @@ public final class ViewerWindow {
 
     private void showCurrent() {
         Path file = folder.current();
-        if (file == null) return;
+        if (file == null || released) return;
         wanted = file;
-        stage.setTitle(fileName(file) + " — " + AppInfo.NAME);
+        stage.setTitle(tr("viewer.windowTitle", fileName(file), AppInfo.NAME));
         titleBar.setTitle(fileName(file));
         titleBar.setFolder(file.toAbsolutePath().getParent());
         refreshStrip();
@@ -596,8 +782,8 @@ public final class ViewerWindow {
             String extension = ImageFormats.extension(file).toUpperCase(Locale.ROOT);
             showMessage(
                     extension.isEmpty()
-                            ? "Mirada can't open " + fileName(file)
-                            : "Mirada can't open " + extension + " files yet");
+                            ? tr("viewer.cannotOpenFile", fileName(file))
+                            : tr("viewer.cannotOpenFormat", extension));
             return;
         }
         ImageCache.Entry entry = cache.get(file);
@@ -616,22 +802,25 @@ public final class ViewerWindow {
                 .exceptionally(error -> {
                     // ready() completes normally even for a broken file; landing here means something
                     // unforeseen went wrong on the way, and silence would leave the old image up.
-                    System.err.println("[mirada] could not show " + file + ": " + error);
-                    error.printStackTrace();
+                    log().log(Level.WARNING, "Could not show " + file, error);
                     Platform.runLater(() -> {
-                        if (file.equals(wanted)) showMessage("Couldn't open " + fileName(file) + ": " + error);
+                        if (file.equals(wanted)) {
+                            showMessage(tr("viewer.couldNotOpen", fileName(file), error));
+                            say(tr("viewer.couldNotOpen", fileName(file), error), MessageLog.Severity.ERROR);
+                        }
                     });
                     return null;
                 });
     }
 
     private void display(Path file, ImageCache.Decoded decoded) {
-        if (!file.equals(wanted)) return;
+        if (!file.equals(wanted) || released) return;
         Image image = decoded.image();
         if (image == null) {
-            // On stderr too: the window says it to the user, this is for whoever has to find out why.
-            System.err.println("[mirada] could not open " + file + ": " + decoded.error());
-            showMessage("Couldn't open " + fileName(file) + ": " + decoded.error());
+            // In the Debug Log too: the window says it to the user, this is for whoever has to find out why.
+            log().warning("Could not open " + file + ": " + decoded.error());
+            showMessage(tr("viewer.couldNotOpen", fileName(file), decoded.error()));
+            say(tr("viewer.couldNotOpen", fileName(file), decoded.error()), MessageLog.Severity.ERROR);
             if (tour != null) tour.failed(file, decoded.error(), folder.index() == folder.size() - 1);
             return;
         }
@@ -674,23 +863,11 @@ public final class ViewerWindow {
     }
 
     private void onKey(KeyEvent e) {
-        // The editor's keys are its own while it is open; the viewer's wait.
-        Editor open = editor;
-        if (open != null && open.isShowing()) {
-            if (open.onKey(e)) e.consume();
-            return;
-        }
-        // The palette's keys are the user's, and win over a key's built-in command.
+        // The Message Log's keys are its own while it is open: Escape closes it, not the window.
+        MessageLogView log = messageLog;
+        if (log != null && log.isShowing()) return;
+        // The palette's keys are the user's, and win over every other key, the editor's too.
         boolean paletteKey = PaletteChords.opens(e);
-        Command command = paletteKey
-                ? Command.PALETTE
-                : Command.forKey(
-                        e.getCode(),
-                        e.isShiftDown(),
-                        e.isShortcutDown(),
-                        e.isControlDown(),
-                        Command.MAC,
-                        Command.vertical());
         // While the palette is up, keys are its own (typing "r" must not rotate the image); only its
         // chord reaches here, to close it again — unless the palette moves by that key (C-p).
         if (palette.isShowing()) {
@@ -700,16 +877,71 @@ public final class ViewerWindow {
             }
             return;
         }
-        if (command == null) return;
-        run(command);
-        e.consume();
+        if (paletteKey) {
+            run(Command.PALETTE);
+            e.consume();
+            return;
+        }
+        // The editor's keys are its own while it is open; the viewer's wait.
+        Editor open = editor;
+        boolean editing = open != null && open.isShowing();
+        // The keyboard's right-click: the image's menu, as a right-click on it opens (MENU-09).
+        if (!editing && Popups.isMenuKey(e)) {
+            showMenuFromKeyboard();
+            e.consume();
+            return;
+        }
+        Command command = Keybindings.current().commandFor(context(), e);
+        if (command != null) {
+            run(command);
+            e.consume();
+        } else if (open != null && editing && open.onKey(e)) {
+            e.consume();
+        }
+    }
+
+    /** Where the keys go now: the editor's tools while it is open, else the viewer's. */
+    private Command.Context context() {
+        Editor open = editor;
+        return open != null && open.isShowing() ? Command.Context.EDITOR : Command.Context.VIEWER;
+    }
+
+    /**
+     * Every icon button's tooltip again, from the chords now (TBAR-03): the user's keys changed, or
+     * the strip's axis, which turns the stepping keys.
+     */
+    private void relabelButtons() {
+        titleBar.relabel();
+        OnScreenControls built = controls;
+        if (built != null) built.relabel();
+        MarksBadge badge = marksBadge;
+        if (badge != null) badge.relabel();
+    }
+
+    /**
+     * The image's menu, opened by the Menu key or Shift+F10: under the image's thumbnail while the
+     * strip shows it, the selected row there, and in the middle of the image otherwise.
+     */
+    private void showMenuFromKeyboard() {
+        ThumbnailStrip shown = strip;
+        if (shown != null && thumbnailsShowing.get()) {
+            Bounds row = Popups.selectedRow(shown.node());
+            if (row != null) {
+                Point2D at = Popups.under(row);
+                Popups.show(contextMenu(), shown.node(), at.getX(), at.getY());
+                return;
+            }
+        }
+        Bounds image = viewport.localToScreen(viewport.getBoundsInLocal());
+        if (image == null) return;
+        Popups.show(contextMenu(), viewport, image.getCenterX(), image.getCenterY());
     }
 
     private void run(Command command) {
         // From the header's menu while the editor is open: what would change the image under it waits.
         Editor open = editor;
         if (open != null && open.isShowing() && !duringEdit(command)) {
-            say("Finish editing first: Save or Cancel");
+            say(tr("viewer.finishEditing"), MessageLog.Severity.WARNING);
             return;
         }
         switch (command) {
@@ -729,14 +961,16 @@ public final class ViewerWindow {
                     stopSlideshow();
                 } else if (stage.isFullScreen()) {
                     stage.setFullScreen(false);
-                } else if (ESCAPE_CLOSES) {
+                } else if (ESCAPE_CLOSES && mayClose()) {
                     stage.close();
                 }
             }
             case OPEN -> chooseFile();
             case OPEN_FOLDER -> chooseFolder();
-            case CLOSE -> stage.close();
-            case PALETTE -> palette.show(Command.inPalette(), this::unavailable);
+            case CLOSE -> {
+                if (mayClose()) stage.close();
+            }
+            case PALETTE -> palette.show(Command.inPalette(context()), this::unavailable);
             case GO_TO_IMAGE -> goToImage();
             case OPEN_RECENT -> openRecent();
             case INFO -> infoShowing.set(!infoShowing.get());
@@ -754,15 +988,27 @@ public final class ViewerWindow {
                 thumbnailsShowing.set(true);
             }
             case SETTINGS -> settingsWindow().show(stage);
+            case THEME,
+                    LANGUAGE,
+                    KEYMAP,
+                    THUMBNAILS_AT_START,
+                    PROPERTIES_AT_START,
+                    HIDE_CONTROLS_AFTER,
+                    SLIDESHOW_SPEED,
+                    PALETTE_KEYS,
+                    CHECK_DAILY,
+                    EXPORT_CONFIG,
+                    IMPORT_CONFIG -> settingsCommands().run(command);
             case ABOUT -> aboutWindow().show(stage);
             case SHORTCUTS -> shortcutsWindow().show(stage);
+            case DOCUMENTATION -> openLink.accept(AppInfo.DOCS_URL);
             case PAN_LEFT -> viewport.pan(-PAN_STEP, 0);
             case PAN_RIGHT -> viewport.pan(PAN_STEP, 0);
             case PAN_UP -> viewport.pan(0, -PAN_STEP);
             case PAN_DOWN -> viewport.pan(0, PAN_STEP);
             case KEEP_ZOOM -> {
                 settings.setKeepZoom(!settings.keepZoom());
-                say(settings.keepZoom() ? "Keeping the zoom when stepping" : "Fitting each image");
+                say(settings.keepZoom() ? tr("viewer.keepingZoom") : tr("viewer.fittingEachImage"));
             }
             case SLIDESHOW -> {
                 if (slideshowRunning) stopSlideshow();
@@ -786,24 +1032,105 @@ public final class ViewerWindow {
             case PREVIOUS_BOOKMARK -> stepToBookmark(-1);
             case GO_TO_BOOKMARK -> goToBookmark();
             case BOOKMARKS -> bookmarksWindow().show(stage);
+            case STATUS_BAR -> settings.setStatusBar(!settings.statusBar());
+            case MESSAGE_LOG -> messageLog().show(statusBar.isShowing() ? StatusBar.HEIGHT : 0);
+            case COPY_MESSAGES -> copyText(MessageLogView.asText(messageLog().listed()), tr("viewer.copiedMessages"));
+            case CLEAR_MESSAGES -> messages.clear();
+            case DEBUG_LOG -> debugLog().show(stage);
+            case COPY_DEBUG_LOG -> copyText(DebugLog.text(), tr("viewer.copiedDebugLog"));
+            case CLEAR_DEBUG_LOG -> {
+                DebugLog.clear();
+                DebugLogWindow window = debugLog;
+                if (window != null) window.refresh();
+            }
+            case EXPORT_DEBUG_LOG -> exportDebugLog();
+            case REPORT_PROBLEM -> {
+                ReportProblemWindow report =
+                        new ReportProblemWindow(settings, Redactor.forThisMachine(), openLink, this::say, stylesheet());
+                Stage reportStage = report.stage();
+                toolWindows.add(reportStage);
+                reportStage.addEventHandler(WindowEvent.WINDOW_HIDDEN, e -> toolWindows.remove(reportStage));
+                report.show(stage);
+            }
+            case CHECK_FOR_UPDATES -> updates.checkNow(true);
+            case OPEN_RELEASE -> {
+                String page = updates.releasePage();
+                if (page != null) openLink.accept(page);
+            }
+            case COPY_DETAILS ->
+                copyText(AppInfo.environment(AppInfo.runtime(), settings.file()), tr("viewer.copiedDetails"));
+            case EDITOR_ROTATE_LEFT,
+                    EDITOR_ROTATE_RIGHT,
+                    EDITOR_FLIP_HORIZONTALLY,
+                    EDITOR_FLIP_VERTICALLY,
+                    EDITOR_NEXT_SHAPE,
+                    EDITOR_RESET,
+                    EDITOR_UNDO,
+                    EDITOR_REDO,
+                    EDITOR_SAVE,
+                    EDITOR_CANCEL -> {
+                if (open != null && open.isShowing()) open.run(command);
+            }
+            case BOOKMARKS_OPEN,
+                    BOOKMARKS_EDIT_NOTE,
+                    BOOKMARKS_TOGGLE,
+                    BOOKMARKS_SHOW_IN_FOLDER,
+                    BOOKMARKS_REMOVE,
+                    BOOKMARKS_LIST_ALL,
+                    BOOKMARKS_LIST_BOOKMARKED,
+                    BOOKMARKS_LIST_NOTES -> {
+                BookmarksWindow window = bookmarksWindow;
+                if (window != null && window.isShowing()) window.run(command);
+            }
         }
     }
 
-    /** The commands that leave the image alone, so they can run while the editor is open. */
+    /** Whether the window may close: an edit in progress is discarded only when the user says so. */
+    private boolean mayClose() {
+        Editor open = editor;
+        return open == null || open.mayDiscard();
+    }
+
+    /** The commands that leave the image alone, so they can run while the editor is open: its own too. */
     private static boolean duringEdit(Command command) {
+        if (command.context() != Command.Context.VIEWER) return true;
         return switch (command) {
-            case FULL_SCREEN,
+            case PALETTE,
+                    COPY_DETAILS,
+                    FULL_SCREEN,
                     INFO,
                     THUMBNAILS,
                     SETTINGS,
                     SHORTCUTS,
+                    DOCUMENTATION,
                     ABOUT,
                     CLOSE,
                     BOOKMARK,
                     BOOKMARK_FOLDER,
                     NOTE,
                     FOLDER_NOTE,
-                    BOOKMARKS -> true;
+                    BOOKMARKS,
+                    STATUS_BAR,
+                    MESSAGE_LOG,
+                    COPY_MESSAGES,
+                    CLEAR_MESSAGES,
+                    DEBUG_LOG,
+                    COPY_DEBUG_LOG,
+                    EXPORT_DEBUG_LOG,
+                    CLEAR_DEBUG_LOG,
+                    REPORT_PROBLEM,
+                    CHECK_FOR_UPDATES,
+                    OPEN_RELEASE,
+                    THEME,
+                    LANGUAGE,
+                    KEYMAP,
+                    THUMBNAILS_AT_START,
+                    PROPERTIES_AT_START,
+                    HIDE_CONTROLS_AFTER,
+                    SLIDESHOW_SPEED,
+                    PALETTE_KEYS,
+                    CHECK_DAILY,
+                    EXPORT_CONFIG -> true;
             default -> false;
         };
     }
@@ -811,11 +1138,99 @@ public final class ViewerWindow {
     /** How far one press of a panning key moves the view: a tenth of the window. */
     private static final double PAN_STEP = 0.1;
 
-    /** Shows {@code message} over the image for two seconds. */
+    /** {@link #say}, from any thread: how an error no code caught reaches the user (DIAG-04). */
+    public void sayLater(String message, MessageLog.Severity severity) {
+        if (Platform.isFxApplicationThread()) say(message, severity);
+        else Platform.runLater(() -> say(message, severity));
+    }
+
+    /** {@link #say} information: an error or a warning says so where it is raised. */
     private void say(String message) {
+        say(message, MessageLog.Severity.INFO);
+    }
+
+    /**
+     * Says {@code message} in the status bar's echo area and keeps it in the Message Log; while the
+     * bar is away (full screen, a slideshow, switched off), over the image for two seconds instead.
+     */
+    private void say(String message, MessageLog.Severity severity) {
+        messages.add(message, severity, java.time.LocalTime.now());
+        if (statusBarShows()) {
+            toast.setVisible(false);
+            return;
+        }
         toast.setText(message);
+        toast.pseudoClassStateChanged(TOAST_ERROR, severity == MessageLog.Severity.ERROR);
+        toast.pseudoClassStateChanged(TOAST_WARNING, severity == MessageLog.Severity.WARNING);
         toast.setVisible(true);
         toastTimer.playFromStart();
+    }
+
+    private static final PseudoClass TOAST_ERROR = PseudoClass.getPseudoClass("error");
+    private static final PseudoClass TOAST_WARNING = PseudoClass.getPseudoClass("warning");
+
+    /** Whether the status bar is on screen: switched on, and not full screen or a slideshow. */
+    private boolean statusBarShows() {
+        return statusBarWanted(settings.statusBar(), stage.isFullScreen(), slideshowRunning);
+    }
+
+    /** Whether the status bar shows: when switched on, but never over a full-screen image or a slideshow. */
+    static boolean statusBarWanted(boolean switchedOn, boolean fullScreen, boolean slideshow) {
+        return switchedOn && !fullScreen && !slideshow;
+    }
+
+    private void showStatusBar() {
+        statusBar.setShowing(statusBarShows());
+    }
+
+    private MessageLogView messageLog() {
+        MessageLogView made = messageLog;
+        if (made == null) {
+            made = new MessageLogView(
+                    (StackPane) Objects.requireNonNull(stage.getScene()).getRoot(), messages, this::run);
+            messageLog = made;
+        }
+        return made;
+    }
+
+    private DebugLogWindow debugLog() {
+        DebugLogWindow made = debugLog;
+        if (made == null) {
+            made = new DebugLogWindow(this::run, stylesheet());
+            debugLog = made;
+            toolWindows.add(made.stage());
+        }
+        return made;
+    }
+
+    /** Puts {@code text} on the clipboard and says {@code said}. */
+    private void copyText(String text, String said) {
+        ClipboardContent content = new ClipboardContent();
+        content.putString(text);
+        Clipboard.getSystemClipboard().setContent(content);
+        say(said);
+    }
+
+    /** Saves the Debug Log where the user chooses. */
+    private void exportDebugLog() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle(tr("dialogs.exportDebugLog"));
+        chooser.setInitialFileName("mirada-debug-log.txt");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(tr("dialogs.textFiles"), "*.txt", "*.log"));
+        DebugLogWindow window = debugLog;
+        File chosen = FileDialogs.save(chooser, window != null && window.isShowing() ? window.stage() : stage);
+        if (chosen == null) return;
+        String text = DebugLog.text() + System.lineSeparator();
+        Thread.ofVirtual().name("export-debug-log").start(() -> {
+            try {
+                Files.writeString(chosen.toPath(), text, java.nio.charset.StandardCharsets.UTF_8);
+                Platform.runLater(() -> say(tr("viewer.savedDebugLog", chosen.getName())));
+            } catch (IOException e) {
+                log().log(Level.WARNING, "Could not export the Debug Log", e);
+                Platform.runLater(
+                        () -> say(tr("viewer.couldNotSaveDebugLog", e.getMessage()), MessageLog.Severity.ERROR));
+            }
+        });
     }
 
     /**
@@ -836,7 +1251,7 @@ public final class ViewerWindow {
         if (folder.size() < 2) return;
         slideshowRunning = true;
         stage.setFullScreen(true);
-        say("Slideshow: every " + settings.slideshowSeconds() + " s. Escape stops it.");
+        say(tr("viewer.slideshowStarted", settings.slideshowSeconds()));
         showMarks();
         restartSlideshowTimer();
     }
@@ -845,7 +1260,7 @@ public final class ViewerWindow {
         slideshowRunning = false;
         slideshow.stop();
         stage.setFullScreen(false);
-        say("Slideshow stopped");
+        say(tr("viewer.slideshowStopped"));
         showMarks();
     }
 
@@ -864,13 +1279,13 @@ public final class ViewerWindow {
 
     private void sort(Sorting sorting) {
         settings.setSorting(sorting); // the settings listener re-sorts the folder
-        String by =
+        boolean reversed = sorting.reversed();
+        say(
                 switch (sorting.by()) {
-                    case NAME -> "name";
-                    case DATE -> "date";
-                    case SIZE -> "size";
-                };
-        say("Sorted by " + by + (sorting.reversed() ? ", reversed" : ""));
+                    case NAME -> reversed ? tr("viewer.sortedByNameReversed") : tr("viewer.sortedByName");
+                    case DATE -> reversed ? tr("viewer.sortedByDateReversed") : tr("viewer.sortedByDate");
+                    case SIZE -> reversed ? tr("viewer.sortedBySizeReversed") : tr("viewer.sortedBySize");
+                });
     }
 
     /**
@@ -883,9 +1298,9 @@ public final class ViewerWindow {
         String old = fileName(file);
         TextInputDialog dialog = new TextInputDialog(old);
         dialog.initOwner(stage);
-        dialog.setTitle("Rename");
-        dialog.setHeaderText("Rename " + old);
-        dialog.setContentText("New name:");
+        dialog.setTitle(tr("rename.title"));
+        dialog.setHeaderText(tr("rename.header", old));
+        dialog.setContentText(tr("rename.newName"));
         dialog.getDialogPane().getStylesheets().add(stylesheet());
         // The name without its extension selected, ready to be typed over.
         Platform.runLater(() -> dialog.getEditor().selectRange(0, Renaming.stemLength(old)));
@@ -895,24 +1310,39 @@ public final class ViewerWindow {
         try {
             name = Renaming.validName(old, answer.get());
         } catch (IllegalArgumentException e) {
-            say("Not renamed: " + e.getMessage());
+            say(tr("rename.notRenamed", e.getMessage()), MessageLog.Severity.WARNING);
             return;
         }
         if (name.equals(old)) return;
         Path target = file.resolveSibling(name);
-        try {
-            Files.move(file, target);
-        } catch (FileAlreadyExistsException e) {
-            say("Not renamed: " + name + " already exists");
-            return;
-        } catch (IOException e) {
-            say("Not renamed: " + e.getMessage());
-            return;
-        }
-        folder = folder.renamed(file, target, settings.sorting());
+        // The move, and the sort that puts the new name in its place, off the FX thread (PERF-01).
+        List<Path> images = folder.renamed(file, target).images();
+        Sorting order = sortedBy;
+        Thread.ofVirtual().name("rename").start(() -> {
+            String failed;
+            try {
+                Files.move(file, target);
+                List<Path> sorted = order.sort(images);
+                Platform.runLater(() -> renamed(file, target, sorted));
+                return;
+            } catch (FileAlreadyExistsException e) {
+                failed = tr("rename.alreadyExists", name);
+            } catch (IOException | RuntimeException e) {
+                failed = tr("rename.notRenamed", e.getMessage());
+            }
+            String said = failed;
+            Platform.runLater(() -> say(said, MessageLog.Severity.WARNING));
+        });
+    }
+
+    /** {@code file} is {@code target} now: in the folder, in its place by {@code sorted}, and in the marks. */
+    private void renamed(Path file, Path target, List<Path> sorted) {
+        boolean showing = file.equals(folder.current());
+        folder = folder.renamed(file, target).reordered(sorted);
         bookmarks.moved(file, target);
-        showCurrent();
-        say("Renamed to " + name);
+        if (showing) showCurrent();
+        else refreshStrip();
+        say(tr("rename.renamedTo", fileName(target)));
     }
 
     /** The folder of the image on screen, absolute, or null when there is none. */
@@ -926,8 +1356,9 @@ public final class ViewerWindow {
         Path target = ofFolder ? shownFolder() : folder.current();
         if (target == null) return;
         boolean now = bookmarks.toggle(target, ofFolder);
-        String what = ofFolder ? "the folder " + fileName(target) : fileName(target);
-        say(now ? "Bookmarked " + what : "Took the bookmark off " + what);
+        String name = fileName(target);
+        if (ofFolder) say(now ? tr("viewer.bookmarkedFolder", name) : tr("viewer.bookmarkOffFolder", name));
+        else say(now ? tr("viewer.bookmarkedImage", name) : tr("viewer.bookmarkOffImage", name));
     }
 
     /** Asks for the note on the image on screen or its folder ({@link NoteDialog}); emptied, it goes. */
@@ -935,13 +1366,16 @@ public final class ViewerWindow {
         Path target = ofFolder ? shownFolder() : folder.current();
         if (target == null) return;
         String was = bookmarks.note(target);
-        String what = ofFolder ? "the folder " + fileName(target) : fileName(target);
-        Optional<String> answer = NoteDialog.ask(stage, ofFolder ? "Folder Note" : "Note", what, was, stylesheet());
+        String name = fileName(target);
+        String what = ofFolder ? tr("viewer.theFolder", name) : name;
+        Optional<String> answer = NoteDialog.ask(
+                stage, ofFolder ? tr("viewer.folderNoteTitle") : tr("viewer.noteTitle"), what, was, stylesheet());
         if (answer.isEmpty()) return;
         bookmarks.setNote(target, ofFolder, answer.get());
         String now = bookmarks.note(target);
         if (now.equals(was)) return;
-        say(now.isEmpty() ? "Took the note off " + what : "Kept the note on " + what);
+        if (ofFolder) say(now.isEmpty() ? tr("viewer.noteOffFolder", name) : tr("viewer.noteKeptFolder", name));
+        else say(now.isEmpty() ? tr("viewer.noteOffImage", name) : tr("viewer.noteKeptImage", name));
     }
 
     /** The next bookmarked image of the folder that way, or -1 when there is none. */
@@ -952,7 +1386,7 @@ public final class ViewerWindow {
     private void stepToBookmark(int direction) {
         int index = bookmarkFrom(direction);
         if (index < 0) {
-            say("No bookmarked image " + (direction > 0 ? "after" : "before") + " this one");
+            say(direction > 0 ? tr("viewer.noBookmarkAfter") : tr("viewer.noBookmarkBefore"));
             return;
         }
         go(folder.jump(index));
@@ -964,12 +1398,23 @@ public final class ViewerWindow {
      * screen is stepped to; any other opens with its folder.
      */
     private void goToBookmark() {
-        List<Bookmarks.Mark> marks = new ArrayList<>();
-        for (Bookmarks.Mark mark : bookmarks.all()) {
-            if (mark.folder() ? Files.isDirectory(mark.path()) : Files.isRegularFile(mark.path())) marks.add(mark);
+        List<Bookmarks.Mark> all = bookmarks.all();
+        // Whether each is still there is a stat apiece: asked off the FX thread (PERF-01).
+        lists.submit(() -> stillThere(all), this::goToBookmark);
+    }
+
+    /** The marks whose file or folder is there now. Reads the disk: never on the FX thread. */
+    static List<Bookmarks.Mark> stillThere(List<Bookmarks.Mark> marks) {
+        List<Bookmarks.Mark> there = new ArrayList<>();
+        for (Bookmarks.Mark mark : marks) {
+            if (mark.folder() ? Files.isDirectory(mark.path()) : Files.isRegularFile(mark.path())) there.add(mark);
         }
+        return there;
+    }
+
+    private void goToBookmark(List<Bookmarks.Mark> marks) {
         if (marks.isEmpty()) {
-            say("Nothing is bookmarked or noted yet");
+            say(tr("viewer.nothingBookmarked"));
             return;
         }
         List<String> names = new ArrayList<>(marks.size());
@@ -977,9 +1422,9 @@ public final class ViewerWindow {
         palette.showChoices(
                 new CommandPalette.Choices(
                         Command.GO_TO_BOOKMARK,
-                        "Go to bookmark…",
-                        "No matching bookmarks or notes",
-                        "open",
+                        tr("viewer.goToBookmarkPrompt"),
+                        tr("viewer.noMatchingBookmarks"),
+                        tr("viewer.verbOpen"),
                         names,
                         0,
                         index -> marks.get(index).path().toString(),
@@ -1005,10 +1450,9 @@ public final class ViewerWindow {
 
     /** What stands on the right of a mark's row: the image's folder, or that it is a folder. */
     static String bookmarkDetail(Bookmarks.Mark mark) {
-        String kind = mark.bookmarked() ? "" : "Note · ";
-        if (mark.folder()) return kind + "Folder";
         Path parent = mark.path().getParent();
-        return kind + (parent == null ? "" : fileName(parent));
+        String where = mark.folder() ? tr("viewer.markFolder") : parent == null ? "" : fileName(parent);
+        return mark.bookmarked() ? where : tr("viewer.markNoteOn", where);
     }
 
     private void openMark(Bookmarks.Mark mark) {
@@ -1051,7 +1495,7 @@ public final class ViewerWindow {
         Image image = shownImage;
         Path file = folder.current();
         if (image == null || file == null) {
-            say("The image is still loading");
+            say(tr("viewer.stillLoading"));
             return;
         }
         Editor made = editor;
@@ -1061,7 +1505,7 @@ public final class ViewerWindow {
         }
         made.open(image, shownOrientation, file, saved -> {
             open(saved);
-            say("Saved " + fileName(saved));
+            say(tr("viewer.saved", fileName(saved)));
         });
     }
 
@@ -1075,19 +1519,23 @@ public final class ViewerWindow {
                 Platform.runLater(() -> {
                     FolderImages rest = folder.without(file);
                     folder = rest;
-                    String said = "Moved " + fileName(file) + " to the " + Command.trash(Command.WINDOWS);
+                    String trash = Command.trash(Command.WINDOWS);
+                    String said = tr("viewer.movedToTrash", fileName(file), trash);
                     if (moved.restorable()) {
                         trashed.push(moved);
                         while (trashed.size() > UNDO_DEPTH) trashed.removeLast();
-                        said += ". " + Command.UNDO_TRASH.chord().getDisplayText() + " puts it back";
+                        String undo = Command.UNDO_TRASH.chord().getDisplayText();
+                        said = tr("viewer.movedToTrashUndo", fileName(file), trash, undo);
                     }
                     say(said);
-                    if (rest.isEmpty()) showMessage("No images left in this folder");
+                    if (rest.isEmpty()) showMessage(tr("viewer.noImagesLeft"));
                     else showCurrent();
                 });
             } catch (IOException | RuntimeException e) {
-                Platform.runLater(() -> say("Couldn't move " + fileName(file) + " to the "
-                        + Command.trash(Command.WINDOWS) + ": " + e.getMessage()));
+                String trash = Command.trash(Command.WINDOWS);
+                Platform.runLater(() -> say(
+                        tr("viewer.couldNotMoveToTrash", fileName(file), trash, e.getMessage()),
+                        MessageLog.Severity.ERROR));
             }
         });
     }
@@ -1102,7 +1550,7 @@ public final class ViewerWindow {
         Image image = shownImage;
         Path file = folder.current();
         if (image == null || file == null) {
-            say("The image is still loading");
+            say(tr("viewer.stillLoading"));
             return;
         }
         Orientation orientation = shownOrientation;
@@ -1116,7 +1564,8 @@ public final class ViewerWindow {
                 Raster upright = Edit.upright(Editor.raster(image), orientation).turned(turns);
                 Platform.runLater(() -> putOnClipboard(Editor.image(upright), file));
             } catch (RuntimeException | OutOfMemoryError e) {
-                Platform.runLater(() -> say("Couldn't copy " + fileName(file) + ": " + e.getMessage()));
+                Platform.runLater(() ->
+                        say(tr("viewer.couldNotCopy", fileName(file), e.getMessage()), MessageLog.Severity.ERROR));
             }
         });
     }
@@ -1129,7 +1578,7 @@ public final class ViewerWindow {
             // image format"): those go as premultiplied ARGB.
             putOnClipboard(Editor.image(Editor.raster(image)), file.toFile());
         }
-        say("Copied " + fileName(file));
+        say(tr("viewer.copied", fileName(file)));
     }
 
     private static void putOnClipboard(Image image, File file) {
@@ -1157,12 +1606,23 @@ public final class ViewerWindow {
     private void openRecent() {
         Path shown = folder.current();
         Path here = shown == null ? null : shown.toAbsolutePath().getParent();
+        List<Path> recent = settings.recent();
+        // A stat apiece, off the FX thread (PERF-01).
+        lists.submit(() -> recentFolders(recent, here), this::openRecent);
+    }
+
+    /** The folders of {@code recent} that are there now, but {@code here}. Reads the disk: never on the FX thread. */
+    static List<Path> recentFolders(List<Path> recent, @Nullable Path here) {
         List<Path> folders = new ArrayList<>();
-        for (Path recent : settings.recent()) {
-            if (!recent.equals(here) && Files.isDirectory(recent)) folders.add(recent);
+        for (Path folder : recent) {
+            if (!folder.equals(here) && Files.isDirectory(folder)) folders.add(folder);
         }
+        return folders;
+    }
+
+    private void openRecent(List<Path> folders) {
         if (folders.isEmpty()) {
-            say("No other folder has been opened lately");
+            say(tr("viewer.noOtherRecentFolder"));
             return;
         }
         List<String> names = new ArrayList<>(folders.size());
@@ -1170,9 +1630,9 @@ public final class ViewerWindow {
         palette.showChoices(
                 new CommandPalette.Choices(
                         Command.OPEN_RECENT,
-                        "Open recent folder…",
-                        "No matching folders",
-                        "open",
+                        tr("viewer.openRecentPrompt"),
+                        tr("viewer.noMatchingFolders"),
+                        tr("viewer.verbOpen"),
                         names,
                         0,
                         index -> folders.get(index).toString(),
@@ -1192,7 +1652,8 @@ public final class ViewerWindow {
             try {
                 Reveal.show(file);
             } catch (IOException e) {
-                Platform.runLater(() -> say("Couldn't show " + fileName(file) + ": " + e.getMessage()));
+                Platform.runLater(() ->
+                        say(tr("viewer.couldNotShow", fileName(file), e.getMessage()), MessageLog.Severity.ERROR));
             }
         });
     }
@@ -1212,10 +1673,11 @@ public final class ViewerWindow {
                     Path shown = folder.current();
                     Path here = shown == null ? null : shown.getParent();
                     if (here == null || here.equals(file.getParent())) open(file);
-                    say("Put back " + fileName(file));
+                    say(tr("viewer.putBack", fileName(file)));
                 });
             } catch (IOException | RuntimeException e) {
-                Platform.runLater(() -> say("Couldn't put back " + fileName(file) + ": " + e.getMessage()));
+                Platform.runLater(() ->
+                        say(tr("viewer.couldNotPutBack", fileName(file), e.getMessage()), MessageLog.Severity.ERROR));
             }
         });
     }
@@ -1223,8 +1685,10 @@ public final class ViewerWindow {
     private BookmarksWindow bookmarksWindow() {
         BookmarksWindow made = bookmarksWindow;
         if (made == null) {
-            made = new BookmarksWindow(bookmarks, this::openFromBookmarks, this::reveal, stylesheet());
+            made = new BookmarksWindow(
+                    bookmarks, this::openFromBookmarks, this::reveal, this::run, this::unavailable, stylesheet());
             bookmarksWindow = made;
+            toolWindows.add(made.stage());
         }
         return made;
     }
@@ -1236,7 +1700,7 @@ public final class ViewerWindow {
     private void openFromBookmarks(Path path, boolean isFolder) {
         Editor open = editor;
         if (open != null && open.isShowing()) {
-            say("Finish editing first: Save or Cancel");
+            say(tr("viewer.finishEditing"), MessageLog.Severity.WARNING);
             stage.toFront();
             return;
         }
@@ -1250,6 +1714,16 @@ public final class ViewerWindow {
         if (made == null) {
             made = new ShortcutsWindow(stylesheet());
             shortcutsWindow = made;
+            toolWindows.add(made.stage());
+        }
+        return made;
+    }
+
+    private SettingsCommands settingsCommands() {
+        SettingsCommands made = settingsCommands;
+        if (made == null) {
+            made = new SettingsCommands(settings, bookmarks, palette, this::settingsWindow, stage, this::say);
+            settingsCommands = made;
         }
         return made;
     }
@@ -1257,8 +1731,9 @@ public final class ViewerWindow {
     private SettingsWindow settingsWindow() {
         SettingsWindow made = settingsWindow;
         if (made == null) {
-            made = new SettingsWindow(settings, stylesheet());
+            made = new SettingsWindow(settings, stylesheet(), this::run);
             settingsWindow = made;
+            toolWindows.add(made.stage());
         }
         return made;
     }
@@ -1266,27 +1741,50 @@ public final class ViewerWindow {
     private AboutWindow aboutWindow() {
         AboutWindow made = about;
         if (made == null) {
-            made = new AboutWindow(settings.file(), openLink, stylesheet());
+            made = new AboutWindow(settings.file(), openLink, updates, () -> run(Command.COPY_DETAILS), stylesheet());
             about = made;
+            toolWindows.add(made.stage());
         }
         return made;
     }
 
-    /** Why {@code command} cannot run right now, or null when it can. */
+    /**
+     * Why {@code command} cannot run right now, or null when it can: the palette greys it with this
+     * as its reason, the menus disable it. The editor's tools need the editor, the Bookmarks
+     * window's row actions that window; while the editor is open, what would change the image
+     * under it waits.
+     */
     private @Nullable String unavailable(Command command) {
-        if (command == Command.OPEN_RECENT && settings.recent().isEmpty()) return "No folder has been opened yet.";
-        if (command == Command.GO_TO_BOOKMARK && bookmarks.all().isEmpty())
-            return "Nothing is bookmarked or noted yet.";
+        Editor open = editor;
+        boolean editing = open != null && open.isShowing();
+        if (command.context() == Command.Context.EDITOR) {
+            return open != null && editing ? open.unavailable(command) : tr("viewer.editorNotOpen");
+        }
+        if (command.context() == Command.Context.BOOKMARKS) {
+            BookmarksWindow window = bookmarksWindow;
+            return window != null && window.isShowing()
+                    ? window.unavailable(command)
+                    : tr("viewer.bookmarksWindowNotOpen");
+        }
+        if (editing && !duringEdit(command)) return tr("viewer.finishEditingReason");
+        if (command == Command.OPEN_RECENT && settings.recent().isEmpty()) return tr("viewer.noRecentFolder");
+        if (command == Command.GO_TO_BOOKMARK && bookmarks.all().isEmpty()) return tr("viewer.nothingBookmarkedReason");
         String folderReason = command.unavailable(folder.index(), folder.size(), !placeholder.isVisible());
         if (folderReason == null && command == Command.NEXT_BOOKMARK && bookmarkFrom(1) < 0)
-            return "No bookmarked image after this one.";
+            return tr("viewer.noBookmarkAfterReason");
         if (folderReason == null && command == Command.PREVIOUS_BOOKMARK && bookmarkFrom(-1) < 0)
-            return "No bookmarked image before this one.";
+            return tr("viewer.noBookmarkBeforeReason");
+        if (command == Command.OPEN_RELEASE && updates.releasePage() == null)
+            return updates.state() == UpdateCoordinator.State.NOT_CHECKED
+                    ? tr("viewer.noReleaseKnown")
+                    : tr("viewer.noNewerRelease");
+        if (command == Command.CHECK_FOR_UPDATES && updates.state() == UpdateCoordinator.State.CHECKING)
+            return tr("viewer.alreadyChecking");
+        if (command == Command.COPY_DEBUG_LOG && DebugLog.text().isEmpty()) return tr("viewer.nothingLogged");
+        if (command == Command.COPY_MESSAGES && messages.entries().isEmpty()) return tr("viewer.nothingSaid");
         if (command == Command.UNDO_TRASH && trashed.isEmpty()) {
             String trash = Command.trash(Command.WINDOWS);
-            return Trash.restores()
-                    ? "Nothing has been moved to the " + trash + " yet."
-                    : "Put it back from the " + trash + " itself.";
+            return Trash.restores() ? tr("viewer.nothingTrashed", trash) : tr("viewer.putBackFromTrash", trash);
         }
         return folderReason;
     }
@@ -1305,23 +1803,34 @@ public final class ViewerWindow {
     }
 
     /**
-     * Shows Open Image and Open Folder under the placeholder while no folder is open (at start, or
+     * Shows Open Image and Open Folder, and a link to the documentation, under the placeholder while
+     * no folder is open (at start, or
      * when one turned out to have no images), and hides them once one is: within a folder the
      * arrows go on to the next image. Built on first need, never on a start with an image.
      */
     private void offerToOpen() {
+        // A folder on its way is not an empty window: its listing says what to show.
+        if (listing.pending()) return;
         HBox buttons = openButtons;
         if (!folder.isEmpty()) {
             if (buttons != null) buttons.setVisible(false);
             return;
         }
+        if (placeholder.getText().isEmpty())
+            placeholder.setText(tr("viewer.emptyHint", Command.OPEN.chord().getDisplayText()));
         if (buttons == null) {
             buttons = new HBox(openButton(Command.OPEN), openButton(Command.OPEN_FOLDER));
             buttons.getStyleClass().add("open-buttons");
             buttons.setAlignment(Pos.CENTER);
             buttons.managedProperty().bind(buttons.visibleProperty());
             openButtons = buttons;
-            emptyState.getChildren().add(buttons);
+            // Help → Documentation, offered where a first-time user starts (DOCS-06).
+            Hyperlink docs = new Hyperlink(Command.DOCUMENTATION.label());
+            docs.getStyleClass().add("empty-docs");
+            docs.setOnAction(e -> run(Command.DOCUMENTATION));
+            docs.visibleProperty().bind(buttons.visibleProperty());
+            docs.managedProperty().bind(buttons.visibleProperty());
+            emptyState.getChildren().addAll(buttons, docs);
         }
         buttons.setVisible(true);
     }
@@ -1329,35 +1838,33 @@ public final class ViewerWindow {
     private Button openButton(Command command) {
         Button button = new Button(command.label(), Icons.menu(command));
         button.getStyleClass().add("open-button");
-        KeyCombination chord = command.chord();
-        if (chord != KeyCombination.NO_MATCH)
-            button.setTooltip(new Tooltip(command.label() + " (" + chord.getDisplayText() + ")"));
+        button.setTooltip(new Tooltip(Icons.tooltip(command)));
         button.setOnAction(e -> run(command));
         return button;
     }
 
     private void chooseFolder() {
         DirectoryChooser chooser = new DirectoryChooser();
-        chooser.setTitle("Open Folder");
+        chooser.setTitle(tr("dialogs.openFolder"));
         Path current = folder.current();
         Path parent = current == null ? null : current.toAbsolutePath().getParent();
         if (parent != null) chooser.setInitialDirectory(parent.toFile());
-        File chosen = chooser.showDialog(stage);
+        File chosen = FileDialogs.folder(chooser, stage);
         if (chosen != null) open(chosen.toPath());
     }
 
     private void chooseFile() {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Open Image");
+        chooser.setTitle(tr("dialogs.openImage"));
         List<String> patterns = ImageFormats.EXTENSIONS.stream()
                 .sorted()
                 .map(extension -> "*." + extension)
                 .toList();
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Images", patterns));
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(tr("dialogs.images"), patterns));
         Path current = folder.current();
         Path parent = current == null ? null : current.getParent();
         if (parent != null) chooser.setInitialDirectory(parent.toFile());
-        File chosen = chooser.showOpenDialog(stage);
+        File chosen = FileDialogs.open(chooser, stage);
         if (chosen != null) open(chosen.toPath());
     }
 
@@ -1416,7 +1923,7 @@ public final class ViewerWindow {
     private Menu sortMenu() {
         Sorting sorting = settings.sorting();
         ToggleGroup group = new ToggleGroup();
-        Menu menu = new Menu("Sort", Icons.of(Icons.SORT));
+        Menu menu = new Menu(tr("viewer.sortMenu"), Icons.of(Icons.SORT));
         for (Command command : List.of(Command.SORT_BY_NAME, Command.SORT_BY_DATE, Command.SORT_BY_SIZE)) {
             RadioMenuItem item = new RadioMenuItem(command.label());
             item.setToggleGroup(group);
@@ -1456,7 +1963,7 @@ public final class ViewerWindow {
 
     /** What a menu calls {@code command} now: its label, but for full screen while in it. */
     private String label(Command command) {
-        return command == Command.FULL_SCREEN && stage.isFullScreen() ? "Leave Full Screen" : command.label();
+        return command == Command.FULL_SCREEN && stage.isFullScreen() ? tr("viewer.leaveFullScreen") : command.label();
     }
 
     /** Whether a setting or panel the Mac menus tick ({@link MacMenus#TICKED}) is on. */
@@ -1473,6 +1980,7 @@ public final class ViewerWindow {
                 yield shown != null && bookmarks.isBookmarked(shown);
             }
             case INFO -> infoShowing.get();
+            case STATUS_BAR -> settings.statusBar();
             case THUMBNAILS -> thumbnailsShowing.get();
             case THUMBNAILS_AT_SIDE -> settings.thumbnailsAtSide();
             case THUMBNAIL_NAMES -> settings.thumbnailNames();

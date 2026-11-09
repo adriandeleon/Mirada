@@ -1,12 +1,89 @@
 # Changelog
 
-Notable changes, newest first. Versions follow [semantic versioning](https://semver.org); until
-1.0.0 the minor number moves for anything user-visible.
+All notable changes to Mirada are documented in this file, newest first.
 
-## 0.4.0 — unreleased
+The format is based on [Keep a Changelog 1.1](https://keepachangelog.com/en/1.1.0/), and this project
+adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html); until 1.0.0 the minor number
+moves for anything user-visible. Each entry opens with a bold one-line summary written for users.
+
+## [Unreleased]
 
 ### Added
 
+- **Mirada speaks Spanish, Portuguese, French, Italian and German.** It follows the system's
+  language, or the one chosen in Settings › General › Language (or **Language…** in the command
+  palette), from its next start. Every window, menu, message and command name is translated, and
+  the palette still finds a command by its English name.
+- **Settings has pages and a search.** A sidebar of pages (General, Viewer, Thumbnails, Folder,
+  Keys, Backup) with the page beside it, and a search field on top that finds a setting by its
+  name, its description or a word for it, opens its page and hides the rest; Escape empties it,
+  Ctrl+F returns to it. The window now fits a small screen and scrolls.
+- **Every setting is in the command palette.** Theme…, Keymap…, Hide Controls After… and Slideshow
+  Speed… ask for the value in the palette with the one in use ticked; Thumbnails at Start,
+  Properties at Start and Check for Updates Daily turn on and off; Command Palette Keys… opens
+  Settings waiting for the key to add.
+- **Export Configuration… and Import Configuration…** save the settings, keys, bookmarks and notes
+  in a `mirada-config-<date>-<time>.zip`, and put them back from one, after asking which of the
+  three to replace. The window's place and the recent folders stay this computer's. They are in the
+  palette, the Settings window's Backup page and the Mac's File menu.
+- **Two Mirada windows keep each other's settings.** A setting changed in one shows in the other
+  as it comes to the front, and a change made in either no longer puts back what the other changed.
+- **Settings and bookmarks written by a newer Mirada are kept, not overwritten.** The files now
+  carry a `schemaVersion`; one from a newer version is copied to `settings.properties.v<n>.bak` (or
+  `bookmarks.properties.v<n>.bak`) and this version starts from the defaults, and says so in the
+  status bar, as it now also does for a file that could not be read.
+- **One Mirada per config folder.** Opening an image while Mirada is running, from a file
+  manager or a terminal, shows it in the running window, which comes to the front, instead of
+  starting a second Mirada; a launch with nothing to open just brings the window forward. `--dev`
+  and each `--config-dir` are Mirada's apart. **`--new-instance`** starts a window of its own all
+  the same. On a Mac, Finder already sent files to the running app. **`--no-session`** is taken
+  too, for scripts written for the other adl apps; Mirada restores no session, so it changes nothing.
+- **Programs Mirada starts are found on your login shell's `PATH` too** (Show in Folder, Move to
+  Trash on another drive, `--report`'s browser), so a Mirada started from a menu or Finder finds what
+  your shell would.
+- **Keymaps: Mirada's own keys or Emacs's, and your own on top.** Settings › Keys › Keymap picks
+  one; in Emacs's, N and P step, M-< and M-> go to the first and last image, C-f, C-b, C-n and C-p
+  pan, M-w copies and C-g leaves. Any command can be given keys of your own with
+  `keys.<command id>` in the settings file (`keys.go.next=n space`; blank takes its keys away), and
+  they win over the keymap's. Every command now has an id, such as `go.next` or `editor.save`.
+- **The editor's tools and the Bookmarks and Notes window's actions are in the command palette.**
+  The palette's keys open it while the editor is up, its tools listed first; the Bookmarks window has
+  a palette of its own, for Open, Edit Note, Bookmark, Show in Folder, Remove and the three lists.
+  **Copy Details**, About's button, is a command too. The palette now lists every command, Escape
+  and the Pan commands included, greyed with the reason where one cannot run.
+- **The Menu key and Shift+F10 open the right-click menu** of what is selected: the image's, under
+  its thumbnail or in the middle of the image, and in Bookmarks and Notes the selected row's.
+- **Previous Image and Next Image are in the header's menu**, so the floating arrows are not the
+  only way to them with the mouse.
+- **Help → Documentation opens the user guide** at
+  [mirada-project.dev/docs](https://mirada-project.dev/docs/) in your browser: in the palette, in the
+  header's menu and the Mac's Help menu right after Command Palette, and as a link in an empty
+  window. **About links this version's release notes** (the changelog, for a development build).
+- **A status bar along the bottom of the window** says what the last command did, errors in red
+  and warnings in amber, with a count of errors not yet seen. Click it for the **Message Log**:
+  everything said this session, newest first, with the time, to filter, copy or clear (Escape
+  closes it). What used to fade over the image now waits there; over a full-screen image or a
+  slideshow it still shows over the image. Status Bar, in the menus, the palette and Settings, turns
+  it off.
+- **Help › Debug Log** shows what Mirada has logged this session, errors with their details, in a
+  window of its own beside the viewer, with Refresh, Copy, Clear, Export… and Report a Problem…. It
+  is also written to `mirada-session.log` beside the settings, and the session before is kept as
+  `mirada-session.prev.log`, so a crash can still be read after it.
+- **Help › Report a Problem…** writes a report (version, runtime, codecs, OS, settings and the end
+  of the Debug Log) with home folders, user and host names, e-mail addresses and tokens taken out,
+  for you to read and edit, then copies it and opens a GitHub issue with it filled in. Nothing is
+  sent by itself. **`mirada --report`** does the same from the command line, for when Mirada will
+  not start.
+- **Mirada says when a newer release is out.** Once a day, a few seconds after start, it asks
+  GitHub for the latest release; a newer one shows in the status bar and in About, whose link opens
+  its page. **Help › Check for Updates** asks now. Nothing is ever downloaded or installed, and
+  Settings › Updates turns the check off. About says "not checked" until a check has answered.
+- **`mirada --help` and `mirada --version`** print and exit without opening a window; `--version`
+  names the build, the commit and the Pauta edition. `--config-dir <folder>` keeps settings and
+  bookmarks in another folder, and `--dev` in `~/.mirada-dev`, apart from your own.
+- **About names the commit and the [Pauta](https://pauta-project.dev/4.0.1/) edition Mirada is
+  built to (4.0.1), with Copy details**, which copies the version, runtime, codecs and OS for a bug
+  report.
 - **The menus show each command's key**, right-aligned beside it in Editora's small periwinkle: the
   header's menu, the right-click menus over the image and the thumbnail strip, and the zoom menu.
   The palette's is whichever key Settings gives it. They only name the keys: pressing one runs it as
@@ -40,6 +117,38 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 
 ### Changed
 
+- **Opening a folder, sorting it, renaming, and saving settings and bookmarks no longer hold up the
+  window.** Listing a folder, the dates and sizes a sort reads, renaming a file, finding which
+  bookmarks and recent folders are still there, writing the settings and the bookmarks file, and
+  reading the window icon, the keymap and the codec versions all happen off the interface thread, so
+  a large folder or a slow drive never freezes the window while it works.
+- **The Bookmarks and Notes window's filter keeps up with fast typing:** the list is made again at
+  most every 150 ms while keys keep coming, and whether each mark's file is still there is looked up
+  in the background, once, not on every key.
+- **Stepping in a folder of thousands of images costs the same as in a small one:** the thumbnail
+  strip no longer compares the whole folder on every step.
+
+- **Mirada builds on JDK 25 or newer**, not on 25 alone. On 26 and later the build skips the
+  format check, with a warning, as the formatter runs only on 25.
+- **Keyboard Shortcuts lists each command's first few keys** (Right, Page Down, Space for Next
+  Image), from the keymap in use, in place of a paragraph of the second ways. A key with Shift no
+  longer does what it does without (Shift+F was full screen, Alt+Right the next image), except
+  where Shift is part of the key: Shift+Space still steps back.
+- **Mirada draws its interface in Inter** on every platform, bundled with it, instead of the
+  system's default face; every menu is Inter at one size, its keys smaller beside it, whatever it
+  was opened from.
+- **Tooltips name the command and its key, as the key is now**: "Rotate Right (R)", Next Image's
+  the Down key while the thumbnails stand down the side, and the editor's say Cmd on a Mac. The
+  floating zoom button wears the icon of what it will do, as the zoom menu does, and the sidebar's
+  folder button now shows the image in its folder (Show in Folder). Bookmarks and Notes, About,
+  Hide Thumbnails and a bookmark's Remove have icons of their own.
+- **The macOS menu bar shows every command's key** beside its name, the bare ones too, and no
+  longer takes keys itself: every key goes to the window, as in the palette.
+- **Leaving the editor with an edit not yet saved asks first**: Cancel, Escape, Close Window and the
+  window's close button offer Discard or Cancel. Saving under a name that only the added extension
+  makes into an existing file asks before replacing it.
+- **Removing a note asks with a Remove button**, and says the note cannot be brought back.
+
 - **Full screen is a floating button over the image's top left**, with the previous/next and zoom
   controls, in place of the header's button; in full screen it leaves it, so the mouse has a way
   back with the header gone. A Mac has it too. An image's bookmark and note badge stands beside it.
@@ -52,9 +161,41 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   become the edit's.
 - **A saved TIFF keeps the EXIF and the colour profile**, as JPEG and PNG already did: the camera,
   the date, the exposure, the location, and the colours of a wide-gamut photo.
+- **The macOS download is notarized by Apple, and every release is signed**: the dmg opens without
+  **Open Anyway**, and a release is no longer published without its signatures. The checksums are
+  now `checksums_sha256.txt`, signed as `checksums_sha256.txt.asc` (they were `SHA256SUMS` and
+  `SHA256SUMS.asc`); the deb also carries a debsigs origin signature, which `debsig-verify` checks;
+  each Linux file keeps its `.asc`, and the signing key stays `mirada-signing-key.asc`.
 
 ### Fixed
 
+- **An image too large for the memory left is refused with a message** naming its size, how much
+  memory it needs and how much is free, read from its header before it is decoded, instead of
+  running out of memory and leaving the window stuck; an animation too long to hold shows as a still,
+  decided before its frames are decoded where the file says how many there are.
+- **The sidebar never shows the details of an image you have moved on from:** a read that comes
+  back late is dropped, even for the same image turned since.
+
+- **`mirada --help` and `--version` exit** on the JVM build (Intel Macs, development runs); they
+  printed and then waited.
+- **Coloured text and highlighted rows read better.** Accent, warning, success and error text,
+  and the white text on a highlighted menu row or selection, now reach 4.5:1 against what they
+  stand on in the light and dark themes (the light theme's blue was 4.0:1), and the system accent
+  on macOS and Windows is adjusted by the same rule. Pressing Tab shows one focus ring, in the
+  accent, around the control it reached.
+- **A click that closes a menu is no longer lost.** Clicking elsewhere in the window while a menu
+  is open closes it and also does what the click does: a click on a thumbnail shows that image,
+  and a right-click opens its own menu at once. Only one right-click menu shows at a time.
+- **Closing the viewer closes its other windows** (About, Settings, Keyboard Shortcuts, Bookmarks
+  and Notes, Debug Log, Report a Problem): one left open used to keep Mirada running with no viewer.
+  The viewer's decoding and thumbnail threads now stop with it too.
+- **The Bookmarks and Notes window opens when only a folder is marked.** A folder bookmarked or
+  noted with no image marked in it made the window fail to list anything.
+- **A settings or bookmarks file that will not read is no longer lost.** One that will not decode is
+  kept beside it as `….corrupt.bak`, and Mirada starts from the defaults; one that cannot be read at
+  all is left alone, where before the next bookmark could replace every mark in it.
+- **An error no code caught is said over the window** and written to standard error, instead of
+  passing unseen.
 - **A click anywhere outside a menu closes it.** On Linux a click on the image could leave the
   right-click menu open, and each further right-click opened another beside it. Any press in the
   window now closes its open menus, the right-click menus and the header's and zoom menus alike.
@@ -62,7 +203,7 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   them by the system's light or dark setting, not Mirada's theme, so a dark theme over a light
   setting left them dark grey on the dark header bar; they now follow the theme.
 
-## 0.3.0 — 2026-11-05
+## [0.3.0] - 2026-11-05
 
 ### Added
 
@@ -87,7 +228,7 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 - **Copy works on a greyscale PNG**: it did nothing, as the clipboard takes only colour pixels; it
   now goes as colour.
 
-## 0.2.2 — 2026-11-05
+## [0.2.2] - 2026-11-05
 
 ### Fixed
 
@@ -95,7 +236,7 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   built on Ubuntu 26.04 and needed its glibc 2.43 ("version `GLIBC_2.43' not found"). The arm64
   packages were not affected.
 
-## 0.2.1 — 2026-11-05
+## [0.2.1] - 2026-11-05
 
 ### Fixed
 
@@ -104,7 +245,7 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
   removal script did not parse. Installing this version over either works (dpkg warns about the old
   script once).
 
-## 0.2.0 — 2026-11-05
+## [0.2.0] - 2026-11-05
 
 ### Added
 
@@ -171,7 +312,7 @@ Notable changes, newest first. Versions follow [semantic versioning](https://sem
 - **macOS and Windows: Escape no longer closes the window**; it stops the slideshow and leaves full
   screen. Linux keeps GNOME's habit.
 
-## 0.1.0 — 2026-11-01
+## [0.1.0] - 2026-11-01
 
 The first version: open a photo, look, arrow through its folder, close.
 

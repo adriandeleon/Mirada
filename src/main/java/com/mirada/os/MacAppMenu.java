@@ -1,5 +1,8 @@
 package com.mirada.os;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import javafx.application.Platform;
 
 import com.sun.glass.ui.Application;
@@ -21,6 +24,11 @@ import com.sun.glass.ui.MenuItem;
  */
 public final class MacAppMenu {
 
+    /** Asked for when something is logged: starting the logging system is no part of start-up. */
+    private static Logger log() {
+        return Logger.getLogger(MacAppMenu.class.getName());
+    }
+
     /** Glass's {@code KeyEvent.MODIFIER_COMMAND}; its package is not exported to Mirada. */
     private static final int COMMAND = 1 << 4;
 
@@ -35,7 +43,7 @@ public final class MacAppMenu {
         Module ours = MacAppMenu.class.getModule();
         Module javafx = Platform.class.getModule();
         if (!javafx.isExported("com.sun.glass.ui", ours) || !javafx.isExported("com.sun.glass.ui.mac", ours)) {
-            System.err.println("[mirada] no application menu items: com.sun.glass.ui.mac is not exported to Mirada");
+            log().warning("No application menu items: com.sun.glass.ui.mac is not exported to Mirada");
             return "none (com.sun.glass.ui.mac not exported)";
         }
         return Glass.install(aboutTitle, about, settingsTitle, settings);
@@ -53,7 +61,7 @@ public final class MacAppMenu {
             try {
                 found = glass.getClass().getMethod("getAppleMenu").invoke(glass);
             } catch (ReflectiveOperationException | RuntimeException e) {
-                System.err.println("[mirada] no application menu items: " + e);
+                log().log(Level.WARNING, "No application menu items", e);
                 return "none (" + e + ")";
             }
             if (!(found instanceof Menu menu)) return "none (no application menu)";

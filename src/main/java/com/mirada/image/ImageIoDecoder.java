@@ -4,9 +4,14 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Iterator;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 
 import javafx.scene.image.WritableImage;
+
+import static com.mirada.i18n.Messages.tr;
 
 /**
  * Decodes the formats JavaFX cannot — WebP, TIFF, PSD — through ImageIO, into {@link ArgbPixels}.
@@ -32,9 +37,38 @@ final class ImageIoDecoder {
 
     /** The image, decoded without the JavaFX toolkit. */
     static ArgbPixels pixels(Path file) throws IOException {
-        BufferedImage decoded = ImageIO.read(file.toFile());
-        if (decoded == null) throw new IOException("no decoder accepts this file");
-        return toArgb(decoded);
+        // ImageIO.read's own steps, with the size read from the header and checked between them
+        // (PERF-12): ImageIO.read would allocate the whole picture before anyone could ask.
+        try (ImageInputStream in = ImageIO.createImageInputStream(file.toFile())) {
+            if (in == null) throw new IOException(tr("decode.unreadable"));
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
+            if (!readers.hasNext()) throw new IOException(tr("decode.noDecoder"));
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(in, true, true);
+                int width;
+                int height;
+                try {
+                    width = reader.getWidth(0);
+                    height = reader.getHeight(0);
+                } catch (RuntimeException e) {
+                    // A reader that cannot find the first image's header throws what it likes.
+                    throw new IOException(tr("decode.damaged"), e);
+                }
+                DecodeGuard.check(width, height);
+                BufferedImage decoded;
+                try {
+                    decoded = reader.read(0, reader.getDefaultReadParam());
+                } catch (RuntimeException e) {
+                    // TwelveMonkeys' TIFF reader, on a JPEG-in-TIFF cut short, throws a ClassCastException.
+                    throw new IOException(tr("decode.damaged"), e);
+                }
+                if (decoded == null) throw new IOException(tr("decode.noDecoder"));
+                return toArgb(decoded);
+            } finally {
+                reader.dispose();
+            }
+        }
     }
 
     /** Fast for plain 8-bit RGB and grey; through {@code getRGB}, a row at a time, for the rest. */

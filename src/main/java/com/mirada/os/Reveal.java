@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * Shows a file in the desktop's file manager, selected in its folder: Finder through {@code open
  * -R}, File Explorer through {@code explorer /select,}, and on Linux the freedesktop.org
@@ -24,22 +26,22 @@ public final class Reveal {
         IOException failure = null;
         for (List<String> command : commands(os, file)) {
             try {
-                Process process = new ProcessBuilder(command)
+                Process process = ToolPath.process(command)
                         .redirectErrorStream(true)
                         .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                         .start();
                 // explorer.exe exits with 1 when it has done what it was asked; there is no telling.
                 if (os.toLowerCase(Locale.ROOT).startsWith("windows")) return;
                 if (process.waitFor(5, TimeUnit.SECONDS) && process.exitValue() == 0) return;
-                failure = new IOException(command.getFirst() + " did not show it");
+                failure = new IOException(tr("reveal.didNotShow", command.getFirst()));
             } catch (IOException e) {
                 failure = e;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new IOException("interrupted", e);
+                throw new IOException(tr("reveal.interrupted"), e);
             }
         }
-        throw failure != null ? failure : new IOException("there is no file manager to ask");
+        throw failure != null ? failure : new IOException(tr("reveal.noFileManager"));
     }
 
     /** The commands that show {@code file} on {@code osName}, in the order they are tried. */

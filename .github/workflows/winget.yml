@@ -33,8 +33,11 @@ jobs:
   manifests:
     name: Manifests
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
       - name: Download the release's msi
         shell: bash
@@ -57,9 +60,13 @@ jobs:
           bash scripts/winget-manifests.sh "$VERSION" release/Mirada-*-windows-x64.msi winget
           echo "MANIFEST=$(cygpath -w "winget/manifests/a/AdrianDeLeon/Mirada/$VERSION")" >> "$GITHUB_ENV"
 
-      # GitHub's Windows images do not carry winget; its PowerShell module installs it.
+      # GitHub's Windows images do not carry winget; its PowerShell module installs it. It finds the
+      # release on GitHub's API, which unauthenticated allows a runner's shared address 60 calls an
+      # hour: the job's own token, read from GITHUB_TOKEN, gets it the job's limit instead.
       - name: Install winget
         shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
           Install-Module Microsoft.WinGet.Client -Force -Scope CurrentUser -Repository PSGallery
@@ -99,7 +106,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "winget uninstall exited with $LASTEXITCODE" }
           if (Test-Path (Join-Path $env:LOCALAPPDATA 'Mirada\Mirada.exe')) { throw 'still installed' }
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: winget-manifests-${{ env.VERSION }}
           path: winget/manifests

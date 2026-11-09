@@ -21,11 +21,13 @@ import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static java.lang.foreign.ValueLayout.JAVA_INT;
 import static java.lang.foreign.ValueLayout.JAVA_SHORT;
@@ -89,9 +91,9 @@ public final class Trash {
             return Trashed.gone(file);
         } else if (os.startsWith("mac")) {
             if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.MOVE_TO_TRASH)) {
-                throw new IOException("the Trash is not available");
+                throw new IOException(tr("trashOs.notAvailable"));
             }
-            if (!Desktop.getDesktop().moveToTrash(file.toFile())) throw new IOException("Finder refused");
+            if (!Desktop.getDesktop().moveToTrash(file.toFile())) throw new IOException(tr("trashOs.finderRefused"));
             return Trashed.gone(file);
         } else {
             return freedesktop(file);
@@ -105,11 +107,10 @@ public final class Trash {
     public static void restore(Trashed trashed) throws IOException {
         Path inTrash = trashed.inTrash();
         Path info = trashed.info();
-        if (inTrash == null || info == null) throw new IOException("it can only be put back from the desktop's trash");
-        if (!Files.exists(inTrash, LinkOption.NOFOLLOW_LINKS)) throw new IOException("it is no longer in the Trash");
+        if (inTrash == null || info == null) throw new IOException(tr("trashOs.onlyFromDesktopTrash"));
+        if (!Files.exists(inTrash, LinkOption.NOFOLLOW_LINKS)) throw new IOException(tr("trashOs.noLongerInTrash"));
         if (Files.exists(trashed.original(), LinkOption.NOFOLLOW_LINKS)) {
-            throw new FileAlreadyExistsException(
-                    trashed.original().toString(), null, "a file of that name is there now");
+            throw new FileAlreadyExistsException(trashed.original().toString(), null, tr("trashOs.nameTaken"));
         }
         Files.move(inTrash, trashed.original(), StandardCopyOption.ATOMIC_MOVE);
         Files.deleteIfExists(info);
@@ -154,7 +155,7 @@ public final class Trash {
                 throw e;
             }
         }
-        throw new IOException("the Trash has too many files named " + base);
+        throw new IOException(tr("trashOs.tooManyNamed", base));
     }
 
     /** {@code $XDG_DATA_HOME/Trash}, or {@code ~/.local/share/Trash} without it. */
@@ -197,24 +198,25 @@ public final class Trash {
     private static void gioTrash(Path file) throws IOException {
         Process gio;
         try {
-            gio = new ProcessBuilder("gio", "trash", "--", file.toAbsolutePath().toString())
+            gio = ToolPath.process(
+                            List.of("gio", "trash", "--", file.toAbsolutePath().toString()))
                     .redirectErrorStream(true)
                     .start();
         } catch (IOException noGio) {
-            throw new IOException("it is on another drive, and there is no gio to find that drive's Trash");
+            throw new IOException(tr("trashOs.noGio"));
         }
         try {
             if (!gio.waitFor(10, TimeUnit.SECONDS)) {
                 gio.destroy();
-                throw new IOException("gio trash did not finish");
+                throw new IOException(tr("trashOs.gioDidNotFinish"));
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IOException("interrupted");
+            throw new IOException(tr("trashOs.interrupted"));
         }
         if (gio.exitValue() != 0) {
             String said = new String(gio.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
-            throw new IOException(said.isEmpty() ? "gio trash failed" : said);
+            throw new IOException(said.isEmpty() ? tr("trashOs.gioFailed") : said);
         }
     }
 
@@ -258,11 +260,11 @@ public final class Trash {
             boolean aborted =
                     op.get(JAVA_INT, FILE_OP.byteOffset(MemoryLayout.PathElement.groupElement("fAnyOperationsAborted")))
                             != 0;
-            if (result != 0 || aborted) throw new IOException("the Recycle Bin refused it (error " + result + ")");
+            if (result != 0 || aborted) throw new IOException(tr("trashOs.recycleBinRefused", result));
         } catch (IOException | RuntimeException | Error e) {
             throw e;
         } catch (Throwable e) {
-            throw new IOException("the Recycle Bin could not be reached", e);
+            throw new IOException(tr("trashOs.recycleBinUnreachable"), e);
         }
     }
 

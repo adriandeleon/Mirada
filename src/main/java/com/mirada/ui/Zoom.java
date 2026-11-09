@@ -1,5 +1,7 @@
 package com.mirada.ui;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The viewport's arithmetic, kept apart from the nodes so it can be tested: fitting, stepping
  * through zoom levels, zooming about a point, and keeping the image on screen while panning.
@@ -65,7 +67,7 @@ final class Zoom {
 
     /** {@code Fit · 23%} while fitting, otherwise {@code 150%}. */
     static String label(double scale, boolean fitted) {
-        String percent = Math.max(1, Math.round(scale * 100)) + "%";
-        return fitted ? "Fit · " + percent : percent;
+        String percent = tr("zoom.percent", Math.max(1, Math.round(scale * 100)));
+        return fitted ? tr("zoom.fit", percent) : percent;
     }
 }

@@ -1,0 +1,30 @@
+/* Inter, the interface's face on every platform (Pauta ICON-01, ICON-02).
+
+   Bundled under com/mirada/fonts/inter/ (all four faces) and registered by Fonts before the first
+   window is styled, so the family always resolves: AtlantaFX neither bundles nor names Inter, and
+   JavaFX does not fall through a font-family list, so without this sheet the whole interface is drawn
+   in JavaFX's logical "System" face.
+
+   A scene stylesheet rather than a rule in mirada.css, put on every window's scene by Fonts: dialogs,
+   the settings and bookmarks windows, menus and tooltips each live in a scene of their own, and a
+   scene sheet is applied again, cleanly, when the theme changes (setUserAgentStylesheet). */
+.root,
+.tooltip {
+    -fx-font-family: "Inter", "System", "sans-serif";
+}
+
+/* Every menu in Inter 14 px, its keys in 11 px (MENU-16), whatever it was opened from. A menu's CSS
+   parent is the node it was shown from, and em would resolve against that node's size: the pixels
+   are absolute on purpose, and every font property an owner might set is pinned. */
+.context-menu,
+.context-menu .menu-item,
+.context-menu .menu-item .label {
+    -fx-font-family: "Inter", "System", "sans-serif";
+    -fx-font-size: 14px;
+    -fx-font-style: normal;
+    -fx-font-weight: normal;
+}
+
+.context-menu .menu-item .accelerator-text {
+    -fx-font-size: 11px;
+}

@@ -1,5 +1,7 @@
 Mirada
-Copyright 2026 Adrian De Leon
+Copyright (c) 2026 Adrián Arturo De León Saldivar
+
+Mirada is licensed under the MIT License; see LICENSE.
 
 This product includes software from the following projects.
 
@@ -7,22 +9,24 @@ This product includes software from the following projects.
 AtlantaFX — https://github.com/mkpaz/atlantafx
 Copyright mkpaz
 Licensed under MIT. Used as an unmodified dependency for the Cupertino control
-themes.
+themes. Maven: io.github.mkpaz:atlantafx-base.
 
 metadata-extractor — https://github.com/drewnoakes/metadata-extractor
 Copyright Drew Noakes and contributors.
 Licensed under Apache-2.0. Used as an unmodified dependency to read EXIF
-orientation and camera details.
+orientation and camera details. Maven: com.drewnoakes:metadata-extractor.
 
 Adobe XMP Core — https://github.com/adobe/XMP-Toolkit-SDK
 Copyright Adobe.
 Licensed under BSD-3-Clause. Unmodified dependency of metadata-extractor.
+Maven: com.adobe.xmp:xmpcore.
 
 TwelveMonkeys ImageIO — https://github.com/haraldk/TwelveMonkeys
 Copyright Harald Kuhr.
 Licensed under BSD-3-Clause. The WebP, TIFF and PSD readers and the libraries
 they need (imageio-core, imageio-metadata, common-lang, common-io,
-common-image), unmodified.
+common-image), unmodified. Maven: com.twelvemonkeys.imageio:imageio-webp,
+com.twelvemonkeys.imageio:imageio-tiff, com.twelvemonkeys.imageio:imageio-psd.
 
 Native codecs, loaded at run time from the system or from the installers'
 bundled folder, unmodified:
@@ -75,7 +79,8 @@ ahead of time into a native executable:
   StaticFX — https://github.com/HebiRobotics/jfx-static-feature
   Copyright HEBI Robotics. Licensed under GPL-2.0, as its repository states.
   The build-time feature and the static JavaFX libraries (jfx-static-libs)
-  that link JavaFX into the executable.
+  that link JavaFX into the executable. Maven: us.hebi.graalvm:jfx-static-feature,
+  us.hebi.graalvm:jfx-static-libs.
 
 The Linux AppImage starts with the AppImage runtime, which mounts the rest:
 
@@ -86,12 +91,20 @@ The Linux AppImage starts with the AppImage runtime, which mounts the rest:
   makes it are in that repository, release 20251108. It is replaced by
   extracting the AppImage (--appimage-extract) and running the tree inside.
 
+Inter — https://github.com/rsms/inter
+Copyright (c) 2016 The Inter Project Authors. Licensed under the SIL Open Font
+License 1.1 (OFL-1.1). The interface's typeface: its Regular, Bold, Italic and
+Bold Italic faces, redistributed unmodified under
+src/main/resources/com/mirada/fonts/inter/ (com/mirada/fonts/inter/ in the
+application), with the licence beside them in OFL.txt.
+
 OpenJFX (JavaFX) — https://openjdk.org/projects/openjfx/
 Copyright Oracle and/or its affiliates.
 Licensed under the GNU General Public License, version 2, with the Classpath
 Exception (GPL-2.0-only WITH Classpath-exception-2.0). The javafx.base,
 javafx.graphics and javafx.controls modules are used unmodified, including
-their native libraries. JavaFX itself contains third-party components (among
-them the Independent JPEG Group's libjpeg) whose notices are published with
-OpenJFX:
+their native libraries (Maven: org.openjfx:javafx-controls, and through it
+org.openjfx:javafx-graphics and org.openjfx:javafx-base). JavaFX itself
+contains third-party components (among them the Independent JPEG Group's
+libjpeg) whose notices are published with OpenJFX:
 https://github.com/openjdk/jfx/tree/master/modules/javafx.graphics/src/main/legal

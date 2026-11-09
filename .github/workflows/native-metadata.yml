@@ -20,6 +20,7 @@ jobs:
   record:
     name: Record (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -30,10 +31,12 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
       - name: Set up Oracle GraalVM 25.4
-        uses: graalvm/setup-graalvm@v1
+        uses: graalvm/setup-graalvm@f70bc8032f90a104502824a54bcb94b6f01715bc # v1.6.8
         with:
           distribution: graalvm
           version: '25.4'
@@ -47,7 +50,7 @@ jobs:
           MIRADA_METADATA_MERGE: '1'
         run: GRAALVM_HOME="$JAVA_HOME" bash scripts/native-metadata.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: metadata-${{ matrix.name }}
           path: src/main/resources/META-INF/native-image/com.mirada/mirada/

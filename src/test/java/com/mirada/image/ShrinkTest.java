@@ -3,18 +3,21 @@ package com.mirada.image;
 import javafx.scene.image.Image;
 import javafx.scene.image.WritableImage;
 
+import com.mirada.ui.FxTestSupport;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+@Tag("fx")
 class ShrinkTest {
 
     @BeforeAll
-    static void toolkit() throws InterruptedException {
-        FxToolkit.start();
+    static void toolkit() throws Exception {
+        FxTestSupport.start();
     }
 
     @Test

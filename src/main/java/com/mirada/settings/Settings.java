@@ -1,7 +1,6 @@
 package com.mirada.settings;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -10,22 +9,28 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
+import java.util.concurrent.Executor;
 
 import com.mirada.folder.Sorting;
 import org.jspecify.annotations.Nullable;
 
 /**
  * Mirada's settings: theme, what opens at start, how long the floating controls stay, the folder's
- * order, whether stepping keeps the zoom, the slideshow's pace, and the keys that open the palette. In {@code settings.properties},
+ * order, whether stepping keeps the zoom, the slideshow's pace, the keys that open the palette, the
+ * keymap and the user's own keys on top of it, the status bar, and the update check. In {@code settings.properties},
  * in the platform's folder for it ({@link #folder}; {@code MIRADA_CONFIG_DIR} moves it, for tests
  * and timing runs), Termina's way: a plain file meant to be hand-edited, every
  * value clamped on read as well as on write, so a bad edit cannot break the next start, and every
  * change written through at once (the settings window has no OK button).
  *
- * <p>FX thread only.
+ * <p>FX thread only; the file itself is written on {@link FileWrites}' thread once {@link #writeOn}
+ * says so.
  */
 public final class Settings {
 
@@ -37,6 +42,9 @@ public final class Settings {
     }
 
     static final String THEME = "theme";
+    /** The interface's language: a bundled code ({@code es}), or blank for the system's (INTL-02). */
+    static final String LANGUAGE = "language";
+
     static final String START_WITH_THUMBNAILS = "start.thumbnails";
     static final String START_WITH_INFO = "start.info";
     static final String CONTROLS_HIDE_SECONDS = "controls.hideSeconds";
@@ -54,6 +62,21 @@ public final class Settings {
     static final String WINDOW_MAXIMIZED = "window.maximized";
     static final String SLIDESHOW_SECONDS = "slideshow.seconds";
     static final String PALETTE_KEYS = "palette.keys";
+    static final String KEYMAP = "keymap";
+    /** {@code keys.<command id>}: the user's keys for a command, over the keymap's; blank for none. */
+    static final String KEYS = "keys.";
+    /** The keymap when the file names none: Mirada's own keys. */
+    public static final String DEFAULT_KEYMAP = "cua";
+
+    static final String STATUS_BAR = "window.statusBar";
+    static final String CHECK_FOR_UPDATES = "updates.check";
+    static final String LAST_UPDATE_CHECK = "updates.lastCheck";
+
+    /**
+     * The version of {@code settings.properties} this build writes ({@code schemaVersion}, SET-09):
+     * 1 for the unversioned files of 0.1 to 0.3, 2 since. A bump needs a step in {@link Migrations}.
+     */
+    public static final int SCHEMA_VERSION = 2;
 
     public static final int MIN_HIDE_SECONDS = 1;
     public static final int MAX_HIDE_SECONDS = 10;
@@ -65,6 +88,7 @@ public final class Settings {
     private final List<Runnable> listeners = new ArrayList<>();
 
     private ThemeChoice theme = ThemeChoice.SYSTEM;
+    private String language = "";
     private boolean startWithThumbnails;
     private boolean startWithInfo;
     private int controlsHideSeconds = 2;
@@ -77,17 +101,24 @@ public final class Settings {
     private List<Path> recent = List.of();
     private int slideshowSeconds = DEFAULT_SLIDESHOW_SECONDS;
     private String paletteKeys = defaultPaletteKeys(isMac(System.getProperty("os.name", "")));
+    private String keymap = DEFAULT_KEYMAP;
+    private Map<String, String> keys = Map.of();
+    private boolean statusBar = true;
+    private boolean checkForUpdates = true;
+    private long lastUpdateCheck;
 
     public Settings(Path file) {
         this.file = file;
     }
 
     /**
-     * The settings file in the platform's folder ({@link #folder}), or under {@code
-     * MIRADA_CONFIG_DIR} when it is set. A file left in {@code ~/.mirada} by 0.1.0 on macOS or
-     * Windows is moved there the first time ({@link #movedFrom}).
+     * The settings file in the folder the command line names ({@code --config-dir}, {@code --dev}),
+     * else under {@code MIRADA_CONFIG_DIR}, else in the platform's folder ({@link #folder}): flag,
+     * then variable, then default (SET-07, Pauta 4.0.1). A file left in {@code ~/.mirada} by 0.1.0 on
+     * macOS or Windows is moved to the default the first time ({@link #movedFrom}).
      */
-    public static Path defaultFile() {
+    public static Path defaultFile(@Nullable Path configDir) {
+        if (configDir != null) return configDir.resolve(FILE_NAME);
         String override = System.getenv("MIRADA_CONFIG_DIR");
         String home = System.getProperty("user.home", ".");
         Path file = folder(override, home, System.getProperty("os.name", ""), System.getenv("APPDATA"))
@@ -146,17 +177,44 @@ public final class Settings {
         return file;
     }
 
-    /** Reads the file; a missing or unreadable one leaves the defaults. */
+    /** False after a read that failed on a file that is there: it is not written over this run. */
+    private boolean writable = true;
+
+    /** Where the last load kept a file it could not use (broken, or a newer Mirada's), or null. */
+    private @Nullable Path setAside;
+
+    /** The file's time and size as this run last read or wrote it. The files' thread's, but for {@link #load}. */
+    private volatile ConfigFile.Stamp stamp = ConfigFile.Stamp.NONE;
+
+    /** What the file held when this run last read or wrote it. The files' thread's, but for {@link #load}. */
+    private volatile Properties written = new Properties();
+
+    /**
+     * The settings of the last change written, as this run had them: what a change is told apart
+     * from, to put just it on top of the file. The files' thread's, but for {@link #load}.
+     */
+    private volatile Properties lastOurs = new Properties();
+
+    /**
+     * Reads the file; a missing or unreadable one leaves the defaults. One that will not decode is
+     * kept as {@code settings.properties.corrupt.bak}, one a newer Mirada wrote as {@code
+     * settings.properties.v<n>.bak}, and an older one is brought forward ({@link ConfigFile},
+     * {@link Migrations}); one that cannot be read is not written over this run.
+     */
     public void load() {
-        Properties properties = new Properties();
-        if (Files.isRegularFile(file)) {
-            try (Reader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-                properties.load(in);
-            } catch (IOException | IllegalArgumentException e) {
-                // A file that will not parse is the defaults, not a failed start.
-            }
-        }
+        ConfigFile.Result read = ConfigFile.read(file, Migrations.SETTINGS);
+        writable = read.writable();
+        setAside = read.backup();
+        apply(read.properties());
+        stamp = ConfigFile.Stamp.of(file);
+        written = properties();
+        lastOurs = written;
+    }
+
+    /** Sets every field from {@code properties}, each clamped or defaulted as it is read. */
+    private void apply(Properties properties) {
         theme = themeOf(properties.getProperty(THEME));
+        language = languageOf(properties.getProperty(LANGUAGE));
         startWithThumbnails = Boolean.parseBoolean(
                 properties.getProperty(START_WITH_THUMBNAILS, "false").trim());
         startWithInfo = Boolean.parseBoolean(
@@ -188,6 +246,79 @@ public final class Settings {
         recent = List.copyOf(folders);
         slideshowSeconds = slideshowSecondsOf(properties.getProperty(SLIDESHOW_SECONDS));
         paletteKeys = paletteKeysOf(properties.getProperty(PALETTE_KEYS), isMac(System.getProperty("os.name", "")));
+        keymap = keymapOf(properties.getProperty(KEYMAP));
+        keys = keysOf(properties);
+        statusBar =
+                Boolean.parseBoolean(properties.getProperty(STATUS_BAR, "true").trim());
+        checkForUpdates = Boolean.parseBoolean(
+                properties.getProperty(CHECK_FOR_UPDATES, "true").trim());
+        lastUpdateCheck = millisOf(properties.getProperty(LAST_UPDATE_CHECK));
+    }
+
+    /**
+     * Reads the file again, on the files' thread, and tells every listener, as after a change: after
+     * an import replaced it ({@link ConfigImport}).
+     */
+    public void reload() {
+        reread(true);
+    }
+
+    /**
+     * Reads the file again, and tells every listener, if another Mirada changed it since this one
+     * last read or wrote it: called as a window comes to the front, so a change made in another
+     * window shows there (SET-05). One stat, on the files' thread, when nothing changed.
+     */
+    public void reloadIfChanged() {
+        if (writable) reread(false);
+    }
+
+    /**
+     * Reads the file on the files' thread ({@code always}, or if its stamp moved) and takes it on the
+     * FX thread, with any change made here since on top. The order of the files' thread keeps a
+     * change asked for later written after this read.
+     */
+    private void reread(boolean always) {
+        Properties ours = properties();
+        writes.execute(() -> {
+            if (!always && ConfigFile.Stamp.of(file).equals(stamp)) return;
+            ConfigFile.Result read = ConfigFile.read(file, Migrations.SETTINGS);
+            stamp = ConfigFile.Stamp.of(file);
+            written = read.properties();
+            lastOurs = read.properties();
+            deliver.execute(() -> {
+                writable = read.writable();
+                if (read.backup() != null) setAside = read.backup();
+                adopt(ours, read.properties());
+            });
+        });
+    }
+
+    /**
+     * Takes {@code theirs}, what the file holds now, on the FX thread: with every setting changed here
+     * since {@code ours} was gathered on top, then tells the listeners.
+     */
+    private void adopt(Properties ours, Properties theirs) {
+        apply(ConfigFile.merged(ours, properties(), theirs));
+        for (Runnable listener : List.copyOf(listeners)) listener.run();
+    }
+
+    /**
+     * Where the last {@link #load} kept a file it could not use, so the window can say so: {@code
+     * .corrupt.bak} for one that would not decode, {@code .v<n>.bak} for a newer Mirada's. Null when
+     * the file was used.
+     */
+    public @Nullable Path setAside() {
+        return setAside;
+    }
+
+    /** A time in milliseconds since the epoch, or 0 for none or anything that is not one. */
+    static long millisOf(@Nullable String value) {
+        if (value == null) return 0;
+        try {
+            return Math.max(0, Long.parseLong(value.trim()));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     /**
@@ -209,6 +340,31 @@ public final class Settings {
                 ? ""
                 : String.join(" ", value.trim().split("[\\s,]+")).trim();
         return keys.isEmpty() ? defaultPaletteKeys(mac) : keys;
+    }
+
+    /**
+     * The keymap's name as written, lower case; the default for none. Whether it names a bundled
+     * keymap is the window's to decide: one that does not is the default there, and is kept here
+     * as written, so a newer Mirada's keymap survives a run of an older one.
+     */
+    static String keymapOf(@Nullable String value) {
+        String name = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+        return name.isEmpty() ? DEFAULT_KEYMAP : name;
+    }
+
+    /**
+     * Every {@code keys.<id>} line, the id after the prefix, its keys collapsed to single spaces;
+     * blank stays blank (no keys). Whether the id is a command and the keys are keys is the
+     * window's to decide. Pure.
+     */
+    static Map<String, String> keysOf(Properties properties) {
+        Map<String, String> out = new TreeMap<>();
+        for (String name : properties.stringPropertyNames()) {
+            if (!name.startsWith(KEYS) || name.length() == KEYS.length()) continue;
+            String value = properties.getProperty(name, "").trim();
+            out.put(name.substring(KEYS.length()), value.isEmpty() ? "" : String.join(" ", value.split("[\\s,]+")));
+        }
+        return Collections.unmodifiableMap(out);
     }
 
     private static boolean isMac(String osName) {
@@ -244,6 +400,28 @@ public final class Settings {
 
     public ThemeChoice theme() {
         return theme;
+    }
+
+    /**
+     * The language chosen for the interface, a code such as {@code es}, or blank to follow the
+     * system's. Whether it is bundled is {@code Messages}' to decide: one that is not is English
+     * there, and is kept here as written, so a newer Mirada's language survives a run of an older one.
+     */
+    public String language() {
+        return language;
+    }
+
+    /** Takes effect at the next start: the interface is built in one language. */
+    public void setLanguage(String value) {
+        String code = languageOf(value);
+        if (code.equals(language)) return;
+        language = code;
+        changed();
+    }
+
+    /** The language code as written, lower case, blank for none. Pure. */
+    static String languageOf(@Nullable String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 
     public boolean startWithThumbnails() {
@@ -375,6 +553,26 @@ public final class Settings {
         changed();
     }
 
+    /** The keymap the keys start from ({@code cua}, {@code emacs}), before the user's own. */
+    public String keymap() {
+        return keymap;
+    }
+
+    public void setKeymap(String value) {
+        String name = keymapOf(value);
+        if (name.equals(keymap)) return;
+        keymap = name;
+        changed();
+    }
+
+    /**
+     * The user's own keys by command id, as chord tokens separated by spaces, blank for none: the
+     * layer over the keymap. Edited in the file; sorted by id.
+     */
+    public Map<String, String> keys() {
+        return keys;
+    }
+
     public void setSorting(Sorting value) {
         sorting = value;
         changed();
@@ -410,6 +608,36 @@ public final class Settings {
         changed();
     }
 
+    /** Whether the status bar shows along the bottom of the window (WIN-01). */
+    public boolean statusBar() {
+        return statusBar;
+    }
+
+    public void setStatusBar(boolean value) {
+        statusBar = value;
+        changed();
+    }
+
+    /** Whether Mirada asks GitHub, once a day, whether a newer release is out (DIAG-05). */
+    public boolean checkForUpdates() {
+        return checkForUpdates;
+    }
+
+    public void setCheckForUpdates(boolean value) {
+        checkForUpdates = value;
+        changed();
+    }
+
+    /** When the update check last had an answer, in milliseconds since the epoch; 0 for never. */
+    public long lastUpdateCheck() {
+        return lastUpdateCheck;
+    }
+
+    public void setLastUpdateCheck(long value) {
+        lastUpdateCheck = Math.max(0, value);
+        changed();
+    }
+
     /** Called after every change, once it is saved, so whatever shows a setting can apply it live. */
     public void addListener(Runnable listener) {
         listeners.add(listener);
@@ -421,12 +649,36 @@ public final class Settings {
     }
 
     /**
-     * Writes the file through a temporary one and a move, so a crash mid-write leaves the old file
-     * rather than half of the new one. A failure is swallowed: the setting still applies to this run.
+     * Writes the change: gathered here, written on the files' thread (PERF-01), where only the latest
+     * of a burst is written. If another Mirada (another process: each has its own Settings) wrote
+     * the file since this one read or wrote it, the change goes on top of its settings
+     * ({@link ConfigFile#merged}), so neither loses the other's (SET-05), and this run takes theirs
+     * too. One stat when nothing changed.
      */
     void save() {
+        if (!writable) return;
+        Properties ours = properties();
+        writes.latest(file, () -> {
+            Properties disk = written;
+            if (!ConfigFile.Stamp.of(file).equals(stamp)) {
+                ConfigFile.Result read = ConfigFile.read(file, Migrations.SETTINGS);
+                if (read.outcome() == ConfigFile.Outcome.READ) disk = read.properties();
+            }
+            Properties merged = ConfigFile.merged(lastOurs, ours, disk);
+            write(file, merged);
+            stamp = ConfigFile.Stamp.of(file);
+            written = merged;
+            lastOurs = ours;
+            if (!merged.equals(ours)) deliver.execute(() -> adopt(ours, merged));
+        });
+    }
+
+    /** The settings as the file holds them, at {@link #SCHEMA_VERSION}. */
+    private Properties properties() {
         Properties properties = new Properties();
+        properties.setProperty(Migrations.VERSION_KEY, Integer.toString(SCHEMA_VERSION));
         properties.setProperty(THEME, theme.name().toLowerCase(Locale.ROOT));
+        if (!language.isEmpty()) properties.setProperty(LANGUAGE, language);
         properties.setProperty(START_WITH_THUMBNAILS, Boolean.toString(startWithThumbnails));
         properties.setProperty(START_WITH_INFO, Boolean.toString(startWithInfo));
         properties.setProperty(CONTROLS_HIDE_SECONDS, Integer.toString(controlsHideSeconds));
@@ -448,6 +700,40 @@ public final class Settings {
         }
         properties.setProperty(SLIDESHOW_SECONDS, Integer.toString(slideshowSeconds));
         properties.setProperty(PALETTE_KEYS, paletteKeys);
+        properties.setProperty(KEYMAP, keymap);
+        keys.forEach((id, chords) -> properties.setProperty(KEYS + id, chords));
+        properties.setProperty(STATUS_BAR, Boolean.toString(statusBar));
+        properties.setProperty(CHECK_FOR_UPDATES, Boolean.toString(checkForUpdates));
+        if (lastUpdateCheck > 0) properties.setProperty(LAST_UPDATE_CHECK, Long.toString(lastUpdateCheck));
+        return properties;
+    }
+
+    /** Where the file is written: on the caller's thread until {@link #writeOn} says otherwise. */
+    private FileWrites writes = FileWrites.direct();
+
+    /** Brings what the files' thread read back to the FX thread: at once until {@link #writeOn}. */
+    private Executor deliver = Runnable::run;
+
+    /** Writes the file from now on with {@code writes}: the application's, off the FX thread. */
+    public void writeOn(FileWrites writes) {
+        writeOn(writes, Runnable::run);
+    }
+
+    /**
+     * Reads and writes the file from now on with {@code writes}, and takes what it read with {@code
+     * deliver}: {@code Platform::runLater} in the application.
+     */
+    public void writeOn(FileWrites writes, Executor deliver) {
+        this.writes = writes;
+        this.deliver = deliver;
+    }
+
+    /** What writes the file: the bookmarks beside it are written the same way. */
+    public FileWrites writes() {
+        return writes;
+    }
+
+    private static void write(Path file, Properties properties) {
         try {
             Path folder = file.toAbsolutePath().getParent();
             if (folder != null) Files.createDirectories(folder);

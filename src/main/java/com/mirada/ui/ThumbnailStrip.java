@@ -102,9 +102,14 @@ final class ThumbnailStrip {
      * What a right-click on the strip opens: closing it, and where it stands and what it shows. Made
      * when asked for, so it ticks what is on now.
      */
+    /** Stops making thumbnails, for a window that has closed. */
+    void close() {
+        thumbnails.close();
+    }
+
     void setMenu(Supplier<ContextMenu> menu) {
         list.setOnContextMenuRequested(e -> {
-            menu.get().show(list, e.getScreenX(), e.getScreenY());
+            Popups.show(menu.get(), list, e.getScreenX(), e.getScreenY());
             e.consume();
         });
     }
@@ -144,18 +149,18 @@ final class ThumbnailStrip {
     }
 
     /**
-     * Stands {@code strip} down {@code root}'s left side or along its bottom, out of the other place
-     * first. Setting a place adds the node to the pane's children, and one it still holds in the
-     * other place is a duplicate: going from the side back to the bottom threw, then emptying the
-     * side took the strip away altogether.
+     * Stands {@code strip} down {@code root}'s left side, or along its bottom above the status bar
+     * ({@code bottom}, the first of its children), out of the other place first. Setting a place adds
+     * the node to the pane's children, and one it still holds in the other place is a duplicate: going
+     * from the side back to the bottom threw, then emptying the side took the strip away altogether.
      */
-    static void place(BorderPane root, Node strip, boolean side) {
+    static void place(BorderPane root, VBox bottom, Node strip, boolean side) {
         if (root.getLeft() == strip) root.setLeft(null);
-        if (root.getBottom() == strip) root.setBottom(null);
+        bottom.getChildren().remove(strip);
         if (side) {
             root.setLeft(strip);
         } else {
-            root.setBottom(strip);
+            bottom.getChildren().addFirst(strip);
         }
     }
 
@@ -190,9 +195,25 @@ final class ThumbnailStrip {
         for (Cell cell : cells) cell.showMark();
     }
 
+    /** The list {@link #show} last put in, compared by identity. */
+    private List<Path> shown = List.of();
+
+    /**
+     * Whether {@code images} is another list than the one {@code shown}: the same object is the same
+     * folder, as {@link com.mirada.folder.FolderImages} keeps its list from step to step, so a step is
+     * one comparison, never one per image (PERF-08). Pure.
+     */
+    static boolean changed(List<Path> shown, List<Path> images) {
+        return shown != images;
+    }
+
     /** Shows {@code images}, the one at {@code index} selected and in view. */
     void show(List<Path> images, int index) {
-        if (!items.equals(images)) items.setAll(images);
+        // A step keeps the folder's list, the same object: only a new list is put in (PERF-08).
+        if (changed(shown, images)) {
+            items.setAll(images);
+            shown = images;
+        }
         if (index < 0 || index >= items.size()) {
             list.getSelectionModel().clearSelection();
             return;

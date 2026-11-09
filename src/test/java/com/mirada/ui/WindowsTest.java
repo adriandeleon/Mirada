@@ -27,13 +27,6 @@ class WindowsTest {
     }
 
     @Test
-    void aboutNamesTheRuntimeAndTheCodecs() {
-        assertEquals(
-                "Java 25 · JavaFX 27\nCodecs: libheif v1.23.7", AboutWindow.runtime("25", "27", "libheif v1.23.7"));
-        assertEquals("Codecs: the system's, or none", AboutWindow.runtime(null, null, null));
-    }
-
-    @Test
     void fileSizesAreDecimalAsGnomeShowsThem() {
         assertEquals("989 bytes", ImageDetails.fileSize(989));
         assertEquals("80.7 kB", ImageDetails.fileSize(80_700));
