@@ -1,7 +1,7 @@
 # Pauta audit
 
 Mirada at `10329e6`, audited against [Pauta 4.0.1](https://pauta-project.dev/4.0.1/) on 2026-11-08.
-Scope: every rule (351). Rules from https://pauta-project.dev/4.0.1/rules.json.
+Scope: every rule (351); the PERF rows re-audited on 2026-11-08 after the performance work. Rules from https://pauta-project.dev/4.0.1/rules.json.
 
 Regenerated rather than edited: each rule was judged by its check (code, test or by hand) as the
 edition's [audit procedure](https://pauta-project.dev/4.0.1/coding-agents/) says. A rule met only in
@@ -10,8 +10,8 @@ never because Mirada lacks a part another rule requires.
 
 |        | Pass | Fail | Manual | N.a. |
 |--------|-----:|-----:|-------:|-----:|
-| MUST   | 117 | 21 | 4 | 20 |
-| SHOULD | 58 | 50 | 15 | 57 |
+| MUST   | 122 | 16 | 4 | 20 |
+| SHOULD | 62 | 46 | 15 | 57 |
 | MAY    | 1 | 2 | 0 | 6 |
 
 A failed MUST blocks a release.
@@ -24,11 +24,6 @@ A failed MUST blocks a release.
 | [DOCS-01](https://pauta-project.dev/4.0.1/documentation/#docs-01) | MUST | fail | mirada-website/src/content/docs has getting started, features, keyboard, settings, FAQ, but no screenshots in the pages |
 | [DOCS-05](https://pauta-project.dev/4.0.1/documentation/#docs-05) | MUST | fail | `src/main/java/com/mirada/ui/AboutWindow.java:79`: About opens `AppInfo.releaseNotesUrl()` (the GitHub release, the changelog for a snapshot; Mirada has no Welcome page); but mirada-website does not generate its What's new from CHANGELOG.md (its scripts/ has GenCommands only) |
 | [QUAL-12](https://pauta-project.dev/4.0.1/quality/#qual-12) | MUST | fail | no message catalogs, so no parity test (descriptions are checked: CommandTest:189) |
-| [PERF-01](https://pauta-project.dev/4.0.1/performance/#perf-01) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:568`: folder listing, sorting stats, settings and bookmark writes, rename and existence checks run on the FX thread |
-| [PERF-03](https://pauta-project.dev/4.0.1/performance/#perf-03) | MUST | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:463`: images guarded by path (wanted), but sidebar reads for the same file have no generation guard |
-| [PERF-06](https://pauta-project.dev/4.0.1/performance/#perf-06) | MUST | fail | `src/main/java/com/mirada/ui/BookmarksWindow.java:101`: the filter refreshes, with a stat per mark, on every keystroke, undebounced |
-| [PERF-08](https://pauta-project.dev/4.0.1/performance/#perf-08) | MUST | fail | `src/main/java/com/mirada/ui/ThumbnailStrip.java:194`: items.equals(images) is O(folder) on every step; lists are virtualized |
-| [PERF-12](https://pauta-project.dev/4.0.1/performance/#perf-12) | MUST | fail | `src/main/java/com/mirada/image/Animation.java:22`: one threshold; no size or heap guard before decoding |
 | [KBD-03](https://pauta-project.dev/4.0.1/keyboard/#kbd-03) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:20`: titles and descriptions are English literals, no catalog |
 | [SET-02](https://pauta-project.dev/4.0.1/settings/#set-02) | MUST | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:179`: one page of cards; no page sidebar, no search field |
 | [SET-03](https://pauta-project.dev/4.0.1/settings/#set-03) | MUST | fail | no Settings search and no ranking test |
@@ -53,11 +48,7 @@ A failed MUST blocks a release.
 | [DOCS-11](https://pauta-project.dev/4.0.1/documentation/#docs-11) | MAY | fail | no Help-for-page links in Settings |
 | [DOCS-15](https://pauta-project.dev/4.0.1/documentation/#docs-15) | SHOULD | fail | no stacked Javadoc today, but no test guards it |
 | [QUAL-14](https://pauta-project.dev/4.0.1/quality/#qual-14) | SHOULD | fail | `src/test/java/com/mirada/ui/AccentTest.java:36`: contrast for the accent only, not the stylesheet's tokens |
-| [PERF-04](https://pauta-project.dev/4.0.1/performance/#perf-04) | SHOULD | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:92`: details and EXIF virtual-thread executors are unnamed |
-| [PERF-16](https://pauta-project.dev/4.0.1/performance/#perf-16) | SHOULD | fail | `src/main/java/com/mirada/App.java:55`: settings read on the FX thread in start() |
-| [PERF-17](https://pauta-project.dev/4.0.1/performance/#perf-17) | SHOULD | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:1494`: AOT cache trained; mirada.css shipped as .css, not .bss |
-| [PERF-20](https://pauta-project.dev/4.0.1/performance/#perf-20) | SHOULD | fail | no FX-thread stack sampler |
-| [PERF-21](https://pauta-project.dev/4.0.1/performance/#perf-21) | SHOULD | fail | only FuzzyMatchTest guards a hot path |
+| [PERF-17](https://pauta-project.dev/4.0.1/performance/#perf-17) | SHOULD | fail | `src/main/java/com/mirada/ui/ViewerWindow.java:1947`: AOT cache trained; mirada.css shipped as .css, not .bss |
 | [KBD-04](https://pauta-project.dev/4.0.1/keyboard/#kbd-04) | SHOULD | fail | `src/main/java/com/mirada/ui/CommandPalette.java:249`: the palette greys with a reason; menus disable without one |
 | [KBD-10](https://pauta-project.dev/4.0.1/keyboard/#kbd-10) | SHOULD | fail | no IntelliJ, VS Code or Sublime keymaps |
 | [KBD-12](https://pauta-project.dev/4.0.1/keyboard/#kbd-12) | SHOULD | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:264`: picks the keymap and edits the palette's keys; other keys only as `keys.<id>` in the file, no editor listing every command |
@@ -172,16 +163,25 @@ A failed MUST blocks a release.
 | [QUAL-11](https://pauta-project.dev/4.0.1/quality/#qual-11) | SHOULD | pass | `src/test/java/com/mirada/ui/CommandSweepTest.java`: every command of the registry run (or found unavailable, with its reason) in an empty window, on an image, turned and zoomed, in the editor and full screen; the context menu greys the same |
 | [QUAL-13](https://pauta-project.dev/4.0.1/quality/#qual-13) | SHOULD | pass | `src/test/java/com/mirada/ui/SettingsWindowTest.java`: everyControlSetInTheWindowSurvivesARestart sets every control, reloads the settings and reads each back in a new window |
 | [QUAL-15](https://pauta-project.dev/4.0.1/quality/#qual-15) | SHOULD | pass | `src/test/java/com/mirada/ReleaseSupplyChainTest.java:259`: fails when a signing, notarization or attestation step moves or goes, or a tag could publish without its secrets |
-| [PERF-02](https://pauta-project.dev/4.0.1/performance/#perf-02) | MUST | pass | `src/main/java/com/mirada/ui/ViewerWindow.java:463`: background results return through Platform.runLater |
-| [PERF-05](https://pauta-project.dev/4.0.1/performance/#perf-05) | MUST | pass | `src/main/java/com/mirada/image/ImageCache.java:126`: every supplyAsync has an executor; no Process subclass |
+| [PERF-01](https://pauta-project.dev/4.0.1/performance/#perf-01) | MUST | pass | `src/main/java/com/mirada/ui/ViewerWindow.java:108`: listing, sort stats, rename, existence checks, details, export, icon, keymap and codec reads on named virtual threads; settings, bookmarks and the session log written on `FileWrites` (`src/main/java/com/mirada/settings/FileWrites.java:22`); only App.start/stop join, as Editora's do |
+| [PERF-02](https://pauta-project.dev/4.0.1/performance/#perf-02) | MUST | pass | `src/main/java/com/mirada/ui/LatestOnly.java:49`: every background result is delivered on Platform::runLater; trash, copy, rename, save and Bookmarks reads likewise |
+| [PERF-03](https://pauta-project.dev/4.0.1/performance/#perf-03) | MUST | pass | `src/main/java/com/mirada/ui/LatestOnly.java:81`: listing, sorting, sidebar details, bookmark and recent-folder checks go through LatestOnly, generation checked again on the FX thread (LatestOnlyTest); Bookmarks.current guards its reads and writes (`src/main/java/com/mirada/settings/Bookmarks.java:172`) |
+| [PERF-04](https://pauta-project.dev/4.0.1/performance/#perf-04) | SHOULD | pass | `src/main/java/com/mirada/ui/ViewerWindow.java:108`: every executor and thread is named and a daemon (window-files-, metadata-, decoder-, previews, config-files, settings-read, fx-sampler); virtual threads named too |
+| [PERF-05](https://pauta-project.dev/4.0.1/performance/#perf-05) | MUST | pass | `src/main/java/com/mirada/image/ImageCache.java:153`: every supplyAsync/runAsync has an executor; no Process subclass |
+| [PERF-06](https://pauta-project.dev/4.0.1/performance/#perf-06) | MUST | pass | `src/main/java/com/mirada/ui/BookmarksWindow.java:128`: text filters go through FxThrottle (Editora's; also MessageLogView), stats left out of the filter; layout passes are JavaFX's, one per pulse; the palette filters per key as Editora's does |
 | [PERF-07](https://pauta-project.dev/4.0.1/performance/#perf-07) | MUST | n/a | nothing streams to the FX thread |
+| [PERF-08](https://pauta-project.dev/4.0.1/performance/#perf-08) | MUST | pass | `src/main/java/com/mirada/ui/ThumbnailStrip.java:206`: a step compares the folder's list by identity, never per image (HotPathsTest); growing lists are ListViews |
 | [PERF-09](https://pauta-project.dev/4.0.1/performance/#perf-09) | SHOULD | pass | `src/main/java/com/mirada/ui/ImageViewport.java:280`: layout allocates nothing |
 | [PERF-10](https://pauta-project.dev/4.0.1/performance/#perf-10) | SHOULD | pass | no applyCss(); pseudo-classes for state |
 | [PERF-11](https://pauta-project.dev/4.0.1/performance/#perf-11) | MUST | pass | filled past the cap, oldest dropped: `src/test/java/com/mirada/image/ImageCacheTest.java` (images and previews), `ThumbnailsTest.pastItsCapTheOldestThumbnailIsDroppedAndTheNewestKept`, `ui/TrashUndoTest.pastItsDepthTheOldestTrashedFileCanNoLongerBePutBack`, `DebugLogTest.pastItsCapTheSessionFileStartsOverWithANoteAndTheNewestLines`, `MessageLogTest`, `HistoryTest` |
+| [PERF-12](https://pauta-project.dev/4.0.1/performance/#perf-12) | MUST | pass | `src/main/java/com/mirada/image/DecodeGuard.java:65`: every decoder weighs the header's size against named thresholds (Animation.MAX_PIXELS, the heap less MARGIN_BYTES, MAX_PIXELS) before decoding; PNG/GIF/BMP by ImageHeader before JavaFX (DecodeGuardTest) |
 | [PERF-13](https://pauta-project.dev/4.0.1/performance/#perf-13) | MUST | pass | `src/test/java/com/mirada/ui/ClosedWindowTest.java:67`: three windows opened, used and closed leave no decoder, preview or thumbnail thread, no non-daemon thread, no timer playing, no tool window, and are collected (fixed: `ViewerWindow.release`) |
 | [PERF-14](https://pauta-project.dev/4.0.1/performance/#perf-14) | MUST | pass | `src/test/java/com/mirada/ui/StartupDeferralTest.java:77`: no panel, tool window, floating controls or badge built before the first paint; those the settings open at start are |
 | [PERF-15](https://pauta-project.dev/4.0.1/performance/#perf-15) | MUST | pass | `src/test/java/com/mirada/ui/StartupDeferralTest.java:77`: the update check, the bookmarks read, Open Recent's write, the window icon and the header's menu and tooltips start only after the first paint |
+| [PERF-16](https://pauta-project.dev/4.0.1/performance/#perf-16) | SHOULD | pass | `src/main/java/com/mirada/App.java:84`: main starts the settings read on settings-read before launch; start takes it |
 | [PERF-19](https://pauta-project.dev/4.0.1/performance/#perf-19) | SHOULD | pass | `scripts/measure-startup.sh`: median of n launches; Startup.mark phases |
+| [PERF-20](https://pauta-project.dev/4.0.1/performance/#perf-20) | SHOULD | pass | `src/main/java/com/mirada/perf/FxSampler.java:21`: MIRADA_PERF_SAMPLE=1 samples the FX thread every 5 ms, prints stalls of 100 ms and a tally at exit |
+| [PERF-21](https://pauta-project.dev/4.0.1/performance/#perf-21) | SHOULD | pass | `src/test/java/com/mirada/ui/HotPathsTest.java:50`: the strip's per-step comparison, headless, fails on the old code (5,000 reads a step) |
 | [KBD-01](https://pauta-project.dev/4.0.1/keyboard/#kbd-01) | MUST | pass | `src/main/java/com/mirada/ui/Command.java:20`: one enum is the registry (id, title, run through ViewerWindow.run); the editor's tools (Editor.java:224), the Bookmarks window's row actions (BookmarksWindow.java:299) and About's Copy details (`help.copyDetails`) are commands, run by their buttons, keys, menus and the palette |
 | [KBD-02](https://pauta-project.dev/4.0.1/keyboard/#kbd-02) | SHOULD | pass | `src/main/java/com/mirada/ui/Command.java:393`: every id is `<area>.<camelCase>` (`go.next`, `editor.save`, `help.copyDetails`); CommandTest.everyIdIsDottedAndGroupedByArea |
 | [KBD-05](https://pauta-project.dev/4.0.1/keyboard/#kbd-05) | MUST | pass | `src/main/java/com/mirada/settings/Settings.java:198`: C-S-p and M-x both open the palette (Cmd-S-p on macOS) |

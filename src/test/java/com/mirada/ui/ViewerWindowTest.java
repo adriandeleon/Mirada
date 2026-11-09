@@ -149,16 +149,20 @@ class ViewerWindowTest {
             assertTrue(call(placeholder::getText).startsWith("Couldn't open broken.png"));
             assertNull(window.shownImage());
 
+            // Listed off the FX thread: what it says comes a moment later.
             fx(() -> window.window.open(dir.resolve("empty")));
-            assertEquals("No images in " + dir.resolve("empty"), call(placeholder::getText));
+            waitUntil("the empty folder", () -> placeholder.getText().equals("No images in " + dir.resolve("empty")));
             assertEquals(AppInfo.NAME, call(window.stage::getTitle), "no folder, no file name");
 
             fx(() -> window.window.open(dir.resolve("not-there")));
-            assertTrue(call(placeholder::getText).contains("not-there"), "said what could not be opened");
+            waitUntil(
+                    "said what could not be opened", () -> placeholder.getText().contains("not-there"));
 
             Path text = Files.writeString(dir.resolve("empty/notes.txt"), "words");
             fx(() -> window.window.open(text));
-            assertEquals("Mirada can't open TXT files yet", call(placeholder::getText), "opened by name, it is named");
+            waitUntil(
+                    "opened by name, it is named",
+                    () -> placeholder.getText().equals("Mirada can't open TXT files yet"));
             // The empty window offers to open something, and Open Image's own dialog answers.
             assertNotNull(window.field("openButtons"));
             FileDialogs.answeredBy(
@@ -343,11 +347,13 @@ class ViewerWindowTest {
             window.run(Command.SORT_BY_NAME);
             window.run(Command.REVERSE_ORDER);
             assertEquals("Sorted by name", window.lastSaid());
-            assertEquals(
-                    List.of("a.png", "b.png", "c.jpg"),
-                    folder(window).images().stream()
+            // Sorted off the FX thread, the stats read there: the order comes a moment later.
+            waitUntil(
+                    "the folder in name order",
+                    () -> window.<FolderImages>field("folder").images().stream()
                             .map(p -> p.getFileName().toString())
-                            .toList());
+                            .toList()
+                            .equals(List.of("a.png", "b.png", "c.jpg")));
         }
     }
 
@@ -530,7 +536,8 @@ class ViewerWindowTest {
             window.waitForImage("c.jpg");
             window.run(Command.GO_TO_BOOKMARK);
             CommandPalette palette = window.field("palette");
-            assertTrue(call(palette::isShowing));
+            // Which marks are still there is asked off the FX thread; the palette follows.
+            waitUntil("the bookmarks' palette", palette::isShowing);
             typeInPalette(window, "pier");
             window.press(KeyCode.ENTER);
             window.waitForImage("a.png");
@@ -587,7 +594,7 @@ class ViewerWindowTest {
                 WindowFixture.press(pane, "OK");
             });
             window.run(Command.RENAME);
-            assertEquals("Renamed to harbour.png", window.lastSaid(), "the extension kept");
+            window.waitToSay("Renamed to harbour.png"); // the extension kept
             window.waitForImage("harbour.png");
             assertTrue(Files.exists(photos.resolve("harbour.png")));
             assertFalse(Files.exists(photos.resolve("a.png")));
@@ -597,7 +604,7 @@ class ViewerWindowTest {
                 WindowFixture.press(pane, "OK");
             });
             window.run(Command.RENAME);
-            assertEquals("Not renamed: b.png already exists", window.lastSaid());
+            window.waitToSay("Not renamed: b.png already exists");
 
             WindowFixture.answerNextDialog(pane -> {
                 WindowFixture.type(pane, "a/b");
@@ -640,11 +647,12 @@ class ViewerWindowTest {
 
             window.waitForFirstPaint();
             window.run(Command.OPEN_RECENT);
-            assertEquals("No other folder has been opened lately", window.lastSaid());
+            window.waitToSay("No other folder has been opened lately");
             Path other = WindowFixture.png(dir.resolve("holiday"), "x.png", 10, 10, Color.CYAN);
             fx(() -> window.window.open(other));
             window.waitForImage("x.png");
             window.run(Command.OPEN_RECENT);
+            waitUntil("the recent folders' palette", palette::isShowing);
             typeInPalette(window, "photos");
             window.press(KeyCode.ENTER);
             window.waitForImage("a.png");

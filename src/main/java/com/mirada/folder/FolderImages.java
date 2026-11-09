@@ -5,7 +5,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.jspecify.annotations.Nullable;
@@ -80,13 +82,36 @@ public record FolderImages(List<Path> images, int index) {
         return new FolderImages(rest, Math.max(0, next));
     }
 
-    /** With {@code from} renamed to {@code to}, re-sorted, and on {@code to} if {@code from} was showing. */
-    public FolderImages renamed(Path from, Path to, Sorting sorting) {
+    /**
+     * With {@code from} renamed to {@code to}, in its place, and on {@code to} if {@code from} was
+     * showing. Not sorted again: that needs the files' dates or sizes, read off the FX thread, then
+     * {@link #reordered}.
+     */
+    public FolderImages renamed(Path from, Path to) {
+        int at = images.indexOf(from);
+        if (at < 0) return this;
+        List<Path> changed = new ArrayList<>(images);
+        changed.set(at, to);
+        return new FolderImages(changed, index);
+    }
+
+    /**
+     * The same images in {@code order}'s order, still on the one showing: a sort made off the FX thread
+     * from what the folder was then. An image {@code order} lacks (come since) goes last, in the order
+     * it had; one only {@code order} has (gone since) is left out. Linear in the folder's size.
+     */
+    public FolderImages reordered(List<Path> order) {
+        Set<Path> here = new HashSet<>(images);
+        List<Path> out = new ArrayList<>(images.size());
+        Set<Path> placed = new HashSet<>();
+        for (Path image : order) {
+            if (here.contains(image) && placed.add(image)) out.add(image);
+        }
+        for (Path image : images) {
+            if (!placed.contains(image)) out.add(image);
+        }
         Path showing = current();
-        List<Path> changed = images.stream().map(p -> p.equals(from) ? to : p).toList();
-        List<Path> sorted = sorting.sort(changed);
-        Path stay = from.equals(showing) ? to : showing;
-        return new FolderImages(sorted, stay == null ? 0 : Math.max(0, sorted.indexOf(stay)));
+        return new FolderImages(out, showing == null ? 0 : Math.max(0, out.indexOf(showing)));
     }
 
     private static List<Path> list(Path folder) throws IOException {

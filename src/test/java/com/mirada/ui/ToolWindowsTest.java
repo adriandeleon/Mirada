@@ -232,14 +232,20 @@ class ToolWindowsTest {
         fx(() -> log.show(0));
         assertEquals(2, call(() -> log.listed().size()));
         javafx.scene.control.TextField filter = FxTestSupport.field(log, "filter");
-        fx(() -> filter.setText("b.png"));
+        fx(() -> {
+            filter.setText("b.png");
+            FxTestSupport.<FxThrottle>field(log, "filtering").flush(); // not the pause a typist leaves
+        });
         assertEquals(1, call(() -> log.listed().size()));
         Parent card = FxTestSupport.field(log, "card");
         fx(() -> named(card, "Copy").fire());
         fx(() -> named(card, "Clear").fire());
         assertEquals(List.of(Command.COPY_MESSAGES, Command.CLEAR_MESSAGES), ran);
         // A message said while it is open joins the list.
-        fx(() -> filter.clear());
+        fx(() -> {
+            filter.clear();
+            FxTestSupport.<FxThrottle>field(log, "filtering").flush();
+        });
         fx(() -> messages.add("Renamed to c.png", MessageLog.Severity.INFO, LocalTime.NOON.plusSeconds(2)));
         assertEquals(3, call(() -> log.listed().size()));
         // From the filter, Down and Return go into the list; there, the shortcut and C copies.

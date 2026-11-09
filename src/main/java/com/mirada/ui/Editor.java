@@ -384,13 +384,29 @@ final class Editor {
         File chosen = FileDialogs.save(chooser, owner());
         if (chosen == null) return;
         Path target = withExtension(chosen.toPath(), extension);
-        // The dialog asked about the name typed, not the one an added extension made (CONF-01).
-        if (!target.equals(chosen.toPath())
-                && Files.exists(target)
-                && !Confirm.ask(Confirm.replaceFile(name(target)), owner())) return;
         Edit applied = edit;
         Orientation turnedBy = orientation;
         saving = true;
+        if (target.equals(chosen.toPath())) {
+            write(image, file, target, applied, turnedBy);
+            return;
+        }
+        // The dialog asked about the name typed, not the one an added extension made (CONF-01);
+        // whether that one is there is asked off the FX thread (PERF-01).
+        Thread.ofVirtual().name("save-check").start(() -> {
+            boolean there = Files.exists(target);
+            Platform.runLater(() -> {
+                if (there && !Confirm.ask(Confirm.replaceFile(name(target)), owner())) {
+                    saving = false;
+                    return;
+                }
+                write(image, file, target, applied, turnedBy);
+            });
+        });
+    }
+
+    /** Applies {@code applied} to the full image and writes it to {@code target}, off the FX thread. */
+    private void write(Image image, Path file, Path target, Edit applied, Orientation turnedBy) {
         say.accept("Saving " + name(target) + "…");
         Thread.ofPlatform().daemon().name("save").start(() -> {
             try {

@@ -28,7 +28,8 @@ import org.jspecify.annotations.Nullable;
  * value clamped on read as well as on write, so a bad edit cannot break the next start, and every
  * change written through at once (the settings window has no OK button).
  *
- * <p>FX thread only.
+ * <p>FX thread only; the file itself is written on {@link FileWrites}' thread once {@link #writeOn}
+ * says so.
  */
 public final class Settings {
 
@@ -567,6 +568,24 @@ public final class Settings {
         properties.setProperty(STATUS_BAR, Boolean.toString(statusBar));
         properties.setProperty(CHECK_FOR_UPDATES, Boolean.toString(checkForUpdates));
         if (lastUpdateCheck > 0) properties.setProperty(LAST_UPDATE_CHECK, Long.toString(lastUpdateCheck));
+        // Gathered here, written on the files' thread (PERF-01): only the latest of a burst is written.
+        writes.latest(file, () -> write(file, properties));
+    }
+
+    /** Where the file is written: on the caller's thread until {@link #writeOn} says otherwise. */
+    private FileWrites writes = FileWrites.direct();
+
+    /** Writes the file from now on with {@code writes}: the application's, off the FX thread. */
+    public void writeOn(FileWrites writes) {
+        this.writes = writes;
+    }
+
+    /** What writes the file: the bookmarks beside it are written the same way. */
+    public FileWrites writes() {
+        return writes;
+    }
+
+    private static void write(Path file, Properties properties) {
         try {
             Path folder = file.toAbsolutePath().getParent();
             if (folder != null) Files.createDirectories(folder);

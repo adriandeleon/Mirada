@@ -103,13 +103,16 @@ final class WebpDecoder {
                 int height = info.get(JAVA_INT, 4);
                 int count = info.get(JAVA_INT, 16);
                 if (width <= 0 || height <= 0) throw new IOException("the file holds no image");
+                // From the header, before a frame is decoded: refused if it will not fit (PERF-12).
+                DecodeGuard.check(width, height);
                 MemorySegment buffer = arena.allocate(ADDRESS);
                 MemorySegment timestamp = arena.allocate(JAVA_INT);
                 if ((int) webp.getNext.invoke(decoder, buffer, timestamp) == 0) {
                     throw new IOException("the image could not be decoded");
                 }
                 ArgbPixels first = copy(buffer, width, height);
-                if (all && count > 1) {
+                // An animation too long to hold is not decoded past its first frame: it shows as a still.
+                if (all && count > 1 && Animation.fits(width, height, count)) {
                     Animation.Collector collector = new Animation.Collector();
                     int previous = timestamp.get(JAVA_INT, 0);
                     boolean room = collector.add(first, previous);
@@ -133,8 +136,8 @@ final class WebpDecoder {
     }
 
     /** The decoder's canvas, valid until its next frame, into a Java array. */
-    private static ArgbPixels copy(MemorySegment bufferPointer, int width, int height) {
-        int[] argb = new int[Math.multiplyExact(width, height)];
+    private static ArgbPixels copy(MemorySegment bufferPointer, int width, int height) throws IOException {
+        int[] argb = ArgbPixels.allocate(width, height);
         MemorySegment canvas = bufferPointer.get(ADDRESS, 0).reinterpret((long) argb.length * 4);
         MemorySegment.copy(canvas, LITTLE_ENDIAN_INT, 0, argb, 0, argb.length);
         return new ArgbPixels(width, height, argb);

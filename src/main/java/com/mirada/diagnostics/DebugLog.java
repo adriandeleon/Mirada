@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -76,6 +77,17 @@ public final class DebugLog {
     private static long fileBytes;
 
     private static volatile @Nullable BiConsumer<Thread, Throwable> onUncaught;
+
+    /** Writes the session file: the caller's thread until {@link #writeOn}, as tests want. */
+    private static volatile Executor writes = Runnable::run;
+
+    /**
+     * Writes each line to the session file on {@code executor} from now on, in order: a line logged on
+     * the FX thread is then never a file write there (PERF-01). The line is in memory at once.
+     */
+    public static void writeOn(Executor executor) {
+        writes = executor;
+    }
 
     private DebugLog() {}
 
@@ -208,7 +220,12 @@ public final class DebugLog {
             ENTRIES.removeFirst();
             dropped++;
         }
-        write(line);
+        Executor writer = writes;
+        writer.execute(() -> {
+            synchronized (DebugLog.class) {
+                write(line);
+            }
+        });
     }
 
     private static void write(String line) {

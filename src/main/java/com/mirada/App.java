@@ -1,7 +1,9 @@
 package com.mirada;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
@@ -11,10 +13,12 @@ import com.mirada.diagnostics.MessageLog;
 import com.mirada.image.HeadStart;
 import com.mirada.os.MacOpenFiles;
 import com.mirada.os.Trash;
+import com.mirada.perf.FxSampler;
 import com.mirada.perf.Startup;
 import com.mirada.report.Browser;
 import com.mirada.report.Redactor;
 import com.mirada.report.ReportCommand;
+import com.mirada.settings.FileWrites;
 import com.mirada.settings.Settings;
 import com.mirada.ui.Fonts;
 import com.mirada.ui.Theme;
@@ -76,6 +80,8 @@ public final class App extends Application {
             case START -> configDir = launch.configDir();
         }
         files = launch.files();
+        // The settings are read on a thread of their own while the toolkit starts (PERF-16).
+        settingsRead = readSettings(configDir);
         // The first image decodes while the toolkit starts, which is most of what comes before the
         // window (HeadStart). After the headless property: ImageIO is AWT.
         HeadStart.begin(files);
@@ -100,6 +106,40 @@ public final class App extends Application {
         }
     }
 
+    /** The settings, being read off the FX thread since {@link #main}; taken once by {@link #start}. */
+    private static @Nullable CompletableFuture<Settings> settingsRead;
+
+    /** Reads the settings on a daemon thread of its own. */
+    static CompletableFuture<Settings> readSettings(@Nullable Path configDir) {
+        CompletableFuture<Settings> read = new CompletableFuture<>();
+        Thread.ofPlatform().daemon().name("settings-read").start(() -> {
+            try {
+                Settings settings = new Settings(Settings.defaultFile(configDir));
+                settings.load();
+                read.complete(settings);
+            } catch (RuntimeException | Error e) {
+                read.completeExceptionally(e);
+            }
+        });
+        return read;
+    }
+
+    /** The settings {@link #main} started reading, or read here if it did not or could not. */
+    private static Settings settings() {
+        CompletableFuture<Settings> read = settingsRead;
+        settingsRead = null;
+        if (read != null) {
+            try {
+                return read.join();
+            } catch (RuntimeException e) {
+                // Read again below, where a failure is the toolkit's to report.
+            }
+        }
+        Settings settings = new Settings(Settings.defaultFile(configDir));
+        settings.load();
+        return settings;
+    }
+
     /** The window, for {@link #stop}; null until it is made. */
     private @Nullable ViewerWindow window;
 
@@ -108,15 +148,21 @@ public final class App extends Application {
     public void stop() {
         ViewerWindow shown = window;
         if (shown != null) shown.rememberPlace();
+        // The files' thread is a daemon: what it has still to write is written before the JVM goes.
+        FileWrites.background().flush(Duration.ofSeconds(2));
     }
 
     @Override
     public void start(Stage stage) {
         Startup.mark("fx-start");
+        // MIRADA_PERF_SAMPLE=1 names what holds the FX thread when it stalls (PERF-20); off otherwise.
+        FxSampler.start(Thread.currentThread());
         // Inter's four faces register on a thread of their own while the window is built (Fonts).
         Fonts.load();
-        Settings settings = new Settings(Settings.defaultFile(configDir));
-        settings.load();
+        Settings settings = settings();
+        // Written on the files' thread from now on, never the FX thread (PERF-01).
+        settings.writeOn(FileWrites.background());
+        DebugLog.writeOn(FileWrites.background());
         // The Debug Log's session file beside the settings, off the FX thread: rotating last
         // session's is a copy, and nothing it holds is needed before the first image (DIAG-02).
         Path folder = settings.file().toAbsolutePath().getParent();
@@ -135,10 +181,11 @@ public final class App extends Application {
         Fonts.ready();
         Startup.mark("fonts-ready");
         if (Startup.enabled()) System.out.println("[perf] fonts: " + Fonts.registered());
+        List<String> args = files;
+        // Listed off the FX thread while the window is shown, which takes the FX thread some 60 ms.
+        if (!args.isEmpty()) window.open(Path.of(args.getFirst()));
         window.show();
         Startup.mark("window-shown");
-        List<String> args = files;
-        if (!args.isEmpty()) window.open(Path.of(args.getFirst()));
         // After the first image is asked for, so a launch with an argument starts decoding first. A
         // macOS launch by double-click has no argument; its file has waited for this.
         if (Startup.enabled()) System.out.println("[perf] open-file handler: " + openFiles);

@@ -36,6 +36,21 @@ class DebugLogTest {
         DebugLog.detachFile();
         DebugLog.clear();
         DebugLog.onUncaught(null);
+        DebugLog.writeOn(Runnable::run);
+    }
+
+    @Test
+    void aLineIsKeptAtOnceAndWrittenToTheFileWhereTheApplicationSays() throws IOException {
+        java.util.List<Runnable> queued = new java.util.ArrayList<>();
+        DebugLog.attachFile(folder);
+        DebugLog.writeOn(queued::add); // the files' thread, held
+        DebugLog.append("logged on the FX thread");
+        assertTrue(DebugLog.text().contains("logged on the FX thread"), "in memory at once");
+        Path file = folder.resolve(DebugLog.FILE);
+        assertFalse(
+                Files.readString(file, StandardCharsets.UTF_8).contains("logged on the FX thread"), "not written here");
+        queued.forEach(Runnable::run);
+        assertTrue(Files.readString(file, StandardCharsets.UTF_8).contains("logged on the FX thread"));
     }
 
     @Test

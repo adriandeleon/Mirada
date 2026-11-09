@@ -37,6 +37,9 @@ final class MessageLogView {
     static final double LIST_HEIGHT = 336;
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss");
 
+    /** Makes the list again as the filter is typed, coalesced as the Bookmarks window's is. */
+    private final FxThrottle filtering = new FxThrottle(BookmarksWindow.FILTER_PAUSE_MS, this::refresh);
+
     private final StackPane host;
     private final MessageLog messages;
     private final Consumer<Command> run;
@@ -64,7 +67,8 @@ final class MessageLogView {
         title.getStyleClass().add("message-log-title");
         filter.setPromptText("Filter messages…");
         filter.getStyleClass().add("message-log-filter");
-        filter.textProperty().addListener((o, was, now) -> refresh());
+        // As the Bookmarks window's filter: the first key at once, then at most one list a pause (PERF-06).
+        filter.textProperty().addListener((o, was, now) -> filtering.request());
         TextInputKeys.install(filter);
 
         list.getStyleClass().add("message-log-list");

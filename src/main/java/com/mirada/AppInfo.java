@@ -134,8 +134,20 @@ public final class AppInfo {
         return out.toString();
     }
 
-    /** The bundle's VERSIONS.txt, joined on one line; null without a bundle. */
+    /** The bundle's VERSIONS.txt, read once; null without a bundle. */
+    private static final class Codecs {
+        static final @Nullable String VERSIONS = readCodecVersions();
+    }
+
+    /**
+     * The bundle's VERSIONS.txt, joined on one line; null without a bundle. Read the first time it is
+     * asked for, which the window does off the FX thread after its first paint.
+     */
     private static @Nullable String codecVersions() {
+        return Codecs.VERSIONS;
+    }
+
+    private static @Nullable String readCodecVersions() {
         Path versions = NativeLibraries.versionsFile();
         if (versions == null) return null;
         try {
