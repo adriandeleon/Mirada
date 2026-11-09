@@ -96,14 +96,4 @@ class MessageLogTest {
         log.clear();
         assertEquals(4, heard[0]);
     }
-
-    @Test
-    void severityByTheMessagesFirstWords() {
-        assertEquals(MessageLog.Severity.ERROR, MessageLog.severityOf("Couldn't move a.jpg to the Trash: denied"));
-        assertEquals(MessageLog.Severity.ERROR, MessageLog.severityOf("Could not save"));
-        assertEquals(MessageLog.Severity.WARNING, MessageLog.severityOf("Not renamed: b.jpg already exists"));
-        assertEquals(MessageLog.Severity.WARNING, MessageLog.severityOf("Finish editing first: Save or Cancel"));
-        assertEquals(MessageLog.Severity.INFO, MessageLog.severityOf("Copied a.jpg"));
-        assertEquals(MessageLog.Severity.INFO, MessageLog.severityOf("Nothing is bookmarked or noted yet"));
-    }
 }

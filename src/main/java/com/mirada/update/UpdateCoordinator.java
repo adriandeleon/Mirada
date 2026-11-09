@@ -14,6 +14,8 @@ import com.mirada.diagnostics.MessageLog;
 import com.mirada.settings.Settings;
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The update check, once per run of Mirada: a few seconds after the first image is up, at most once
  * a day, and only while Settings allows it. A newer release puts a notice in the status bar and a
@@ -153,14 +155,14 @@ public final class UpdateCoordinator {
         String failure = error;
         if (newer != null) {
             state = State.AVAILABLE;
-            say.accept(AppInfo.NAME + " " + newer.version() + " is available", MessageLog.Severity.INFO);
+            say.accept(tr("update.available", newer.version()), MessageLog.Severity.INFO);
         } else if (failure != null) {
             state = State.FAILED;
             log().info("Update check failed: " + failure);
-            if (manual) say.accept("Couldn't check for updates: " + failure, MessageLog.Severity.WARNING);
+            if (manual) say.accept(tr("update.failed", failure), MessageLog.Severity.WARNING);
         } else {
             state = State.UP_TO_DATE;
-            if (manual) say.accept(AppInfo.NAME + " " + AppInfo.VERSION + " is the latest", MessageLog.Severity.INFO);
+            if (manual) say.accept(tr("update.latest", AppInfo.VERSION), MessageLog.Severity.INFO);
         }
         // A failure counts too: GitHub is asked at most once a day, answer or not.
         settings.setLastUpdateCheck(clock.getAsLong());
@@ -176,16 +178,12 @@ public final class UpdateCoordinator {
         String failure = error;
         return switch (state) {
             case NOT_CHECKED ->
-                settings.checkForUpdates()
-                        ? "Updates: not checked yet"
-                        : "Updates: not checked (switched off in Settings)";
-            case CHECKING -> "Updates: checking…";
+                settings.checkForUpdates() ? tr("update.summary.notChecked") : tr("update.summary.switchedOff");
+            case CHECKING -> tr("update.summary.checking");
             case AVAILABLE ->
-                newer == null
-                        ? "Updates: not checked yet"
-                        : "Update: " + AppInfo.NAME + " " + newer.version() + " is available";
-            case UP_TO_DATE -> "Updates: this is the latest release";
-            case FAILED -> "Updates: couldn't check" + (failure == null ? "" : " (" + failure + ")");
+                newer == null ? tr("update.summary.notChecked") : tr("update.summary.available", newer.version());
+            case UP_TO_DATE -> tr("update.summary.latest");
+            case FAILED -> failure == null ? tr("update.summary.failed") : tr("update.summary.failedBecause", failure);
         };
     }
 

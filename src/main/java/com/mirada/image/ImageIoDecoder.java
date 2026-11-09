@@ -11,6 +11,8 @@ import javax.imageio.stream.ImageInputStream;
 
 import javafx.scene.image.WritableImage;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * Decodes the formats JavaFX cannot — WebP, TIFF, PSD — through ImageIO, into {@link ArgbPixels}.
  * Blocking and memory-hungry (the {@code BufferedImage} and the copy exist together for a moment),
@@ -38,9 +40,9 @@ final class ImageIoDecoder {
         // ImageIO.read's own steps, with the size read from the header and checked between them
         // (PERF-12): ImageIO.read would allocate the whole picture before anyone could ask.
         try (ImageInputStream in = ImageIO.createImageInputStream(file.toFile())) {
-            if (in == null) throw new IOException("the file could not be read");
+            if (in == null) throw new IOException(tr("decode.unreadable"));
             Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
-            if (!readers.hasNext()) throw new IOException("no decoder accepts this file");
+            if (!readers.hasNext()) throw new IOException(tr("decode.noDecoder"));
             ImageReader reader = readers.next();
             try {
                 reader.setInput(in, true, true);
@@ -51,7 +53,7 @@ final class ImageIoDecoder {
                     height = reader.getHeight(0);
                 } catch (RuntimeException e) {
                     // A reader that cannot find the first image's header throws what it likes.
-                    throw new IOException("the file is damaged or cut short", e);
+                    throw new IOException(tr("decode.damaged"), e);
                 }
                 DecodeGuard.check(width, height);
                 BufferedImage decoded;
@@ -59,9 +61,9 @@ final class ImageIoDecoder {
                     decoded = reader.read(0, reader.getDefaultReadParam());
                 } catch (RuntimeException e) {
                     // TwelveMonkeys' TIFF reader, on a JPEG-in-TIFF cut short, throws a ClassCastException.
-                    throw new IOException("the file is damaged or cut short", e);
+                    throw new IOException(tr("decode.damaged"), e);
                 }
-                if (decoded == null) throw new IOException("no decoder accepts this file");
+                if (decoded == null) throw new IOException(tr("decode.noDecoder"));
                 return toArgb(decoded);
             } finally {
                 reader.dispose();

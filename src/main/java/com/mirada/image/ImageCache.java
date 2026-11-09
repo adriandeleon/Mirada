@@ -22,6 +22,8 @@ import javafx.scene.image.Image;
 import com.mirada.folder.ImageFormats;
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The last few images, decoded, so stepping back and forth and stepping onto a prefetched
  * neighbour are instant.
@@ -293,7 +295,7 @@ public final class ImageCache {
         Runnable settle = () -> {
             if (image.isError()) {
                 Exception cause = image.getException();
-                done.completeExceptionally(cause != null ? cause : new IOException("could not be decoded"));
+                done.completeExceptionally(cause != null ? cause : new IOException(tr("decode.failed")));
             } else if (image.getProgress() >= 1) {
                 done.complete(image);
             }

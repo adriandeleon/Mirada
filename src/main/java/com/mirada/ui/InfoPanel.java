@@ -18,6 +18,8 @@ import javafx.scene.layout.VBox;
 import com.mirada.image.ExifDetails;
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The image's properties, as GNOME Image Viewer's sidebar shows them: cards of label-over-value
  * rows. The user's own bookmarks and notes on the image and its folder first, when there are any; the folder (with a button that shows the image in it), then the image (size, format, file size), then the
@@ -68,7 +70,7 @@ final class InfoPanel {
         shownMarks = marks;
         cards.getChildren().clear();
         if (details == null) {
-            Label none = new Label("No image");
+            Label none = new Label(tr("info.noImage"));
             none.getStyleClass().add("info-empty");
             cards.getChildren().add(none);
             return;
@@ -81,16 +83,18 @@ final class InfoPanel {
 
         if (marks.any()) cards.getChildren().add(marksCard(marks));
         cards.getChildren()
-                .add(card(row("Folder", details.folderName(), open), row("Position", details.position(), null)));
+                .add(card(
+                        row(tr("info.folder"), details.folderName(), open),
+                        row(tr("info.position"), details.position(), null)));
         cards.getChildren()
                 .add(card(
-                        row("Image Size", details.size(), null),
-                        row("Image Format", details.format(), null),
-                        row("File Size", ImageDetails.fileSize(details.bytes()), null)));
+                        row(tr("info.imageSize"), details.size(), null),
+                        row(tr("info.imageFormat"), details.format(), null),
+                        row(tr("info.fileSize"), ImageDetails.fileSize(details.bytes()), null)));
         cards.getChildren()
                 .add(card(
-                        row("File Created", ImageDetails.date(details.created(), locale, zone), null),
-                        row("File Modified", ImageDetails.date(details.modified(), locale, zone), null)));
+                        row(tr("info.fileCreated"), ImageDetails.date(details.created(), locale, zone), null),
+                        row(tr("info.fileModified"), ImageDetails.date(details.modified(), locale, zone), null)));
         List<ExifDetails.Row> camera = details.exif().camera();
         if (!camera.isEmpty()) {
             cards.getChildren()
@@ -109,12 +113,12 @@ final class InfoPanel {
         List<HBox> rows = new ArrayList<>();
         @Nullable
         String bookmarked = marks.image() && marks.folder()
-                ? "This image and its folder"
-                : marks.image() ? "This image" : marks.folder() ? "Its folder" : null;
-        if (bookmarked != null) rows.add(row("Bookmarked", bookmarked, null));
-        if (!marks.note().isEmpty()) rows.add(row("Note", marks.note(), editButton(Command.NOTE)));
+                ? tr("info.bookmarkedBoth")
+                : marks.image() ? tr("info.bookmarkedImage") : marks.folder() ? tr("info.bookmarkedFolder") : null;
+        if (bookmarked != null) rows.add(row(tr("info.bookmarked"), bookmarked, null));
+        if (!marks.note().isEmpty()) rows.add(row(tr("info.note"), marks.note(), editButton(Command.NOTE)));
         if (!marks.folderNote().isEmpty())
-            rows.add(row("Folder Note", marks.folderNote(), editButton(Command.FOLDER_NOTE)));
+            rows.add(row(tr("info.folderNote"), marks.folderNote(), editButton(Command.FOLDER_NOTE)));
         VBox card = card(rows.toArray(HBox[]::new));
         card.getStyleClass().add("marks-card");
         return card;
@@ -145,7 +149,7 @@ final class InfoPanel {
             }
             sections.getChildren().add(rows);
         }
-        TitledPane pane = new TitledPane("All Metadata", sections);
+        TitledPane pane = new TitledPane(tr("info.allMetadata"), sections);
         pane.getStyleClass().add("metadata-pane");
         pane.setExpanded(false);
         pane.setAnimated(false);

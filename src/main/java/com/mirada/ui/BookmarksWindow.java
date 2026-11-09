@@ -46,6 +46,8 @@ import com.mirada.image.Thumbnails;
 import com.mirada.settings.Bookmarks;
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * Every bookmark and note in one list, Editora's Bookmarks and Personal Notes tool windows moved to
  * pictures: grouped by folder ({@link BookmarkList}), each image with its thumbnail and its note,
@@ -120,10 +122,10 @@ final class BookmarksWindow {
         this.runner = runner;
         this.unavailable = unavailable;
         this.stylesheet = stylesheet;
-        stage.setTitle("Bookmarks and Notes");
+        stage.setTitle(tr("bookmarks.windowTitle"));
         WindowIcon.applyTo(stage);
 
-        filter.setPromptText("Filter by name, folder or note");
+        filter.setPromptText(tr("bookmarks.filterPrompt"));
         filter.getStyleClass().add("bookmarks-filter");
         filter.textProperty().addListener((o, was, now) -> filtering.request());
         HBox.setHgrow(filter, Priority.ALWAYS);
@@ -133,7 +135,7 @@ final class BookmarksWindow {
         BookmarkList.Show[] all = BookmarkList.Show.values();
         for (int i = 0; i < all.length; i++) {
             BookmarkList.Show kind = all[i];
-            ToggleButton button = new ToggleButton(kind.label);
+            ToggleButton button = new ToggleButton(kind.label());
             button.setUserData(kind);
             button.setToggleGroup(showing);
             button.setFocusTraversable(false);
@@ -231,12 +233,11 @@ final class BookmarksWindow {
         int folders = (int) rows.stream()
                 .filter(row -> row instanceof BookmarkList.FolderRow folder && folder.mark() != null)
                 .count();
-        count.setText(counted(images, "image") + (folders == 0 ? "" : ", " + counted(folders, "folder")));
-        empty.setText(
-                marks.isEmpty()
-                        ? "Nothing is bookmarked or noted yet. In the viewer, B bookmarks the image and N writes a"
-                                + " note on it; Shift+B and Shift+N do the same for its folder."
-                        : "Nothing matches.");
+        count.setText(
+                folders == 0
+                        ? counted(images, "image")
+                        : tr("bookmarks.countBoth", counted(images, "image"), counted(folders, "folder")));
+        empty.setText(marks.isEmpty() ? tr("bookmarks.emptyNone") : tr("bookmarks.emptyNoMatch"));
     }
 
     /**
@@ -263,8 +264,9 @@ final class BookmarksWindow {
         return Set.copyOf(gone);
     }
 
+    /** "1 image", "3 folders": {@code n} of {@code what}, which is "image" or "folder". */
     static String counted(int n, String what) {
-        return n + " " + what + (n == 1 ? "" : "s");
+        return what.equals("folder") ? tr("bookmarks.folderCount", n) : tr("bookmarks.imageCount", n);
     }
 
     private void onKey(KeyEvent e) {
@@ -326,8 +328,12 @@ final class BookmarksWindow {
     }
 
     private static String hintText() {
-        return key(Command.BOOKMARKS_OPEN) + " opens · " + key(Command.BOOKMARKS_EDIT_NOTE) + " note · "
-                + key(Command.BOOKMARKS_TOGGLE) + " bookmark · " + key(Command.BOOKMARKS_REMOVE) + " removes";
+        return tr(
+                "bookmarks.hint",
+                key(Command.BOOKMARKS_OPEN),
+                key(Command.BOOKMARKS_EDIT_NOTE),
+                key(Command.BOOKMARKS_TOGGLE),
+                key(Command.BOOKMARKS_REMOVE));
     }
 
     /** Runs one of the window's commands on the selected row, from its key, its menu or a palette. */
@@ -353,13 +359,18 @@ final class BookmarksWindow {
         return switch (command) {
             case BOOKMARKS_OPEN, BOOKMARKS_SHOW_IN_FOLDER ->
                 row == null
-                        ? "Nothing is selected."
+                        ? tr("bookmarks.nothingSelected")
                         : missing.contains(row.path())
-                                ? (row instanceof BookmarkList.FolderRow ? "The folder" : "The file") + " is not there."
+                                ? tr(
+                                        row instanceof BookmarkList.FolderRow
+                                                ? "bookmarks.folderNotThere"
+                                                : "bookmarks.fileNotThere")
                                 : null;
-            case BOOKMARKS_EDIT_NOTE, BOOKMARKS_TOGGLE -> row == null ? "Nothing is selected." : null;
+            case BOOKMARKS_EDIT_NOTE, BOOKMARKS_TOGGLE -> row == null ? tr("bookmarks.nothingSelected") : null;
             case BOOKMARKS_REMOVE ->
-                row == null ? "Nothing is selected." : markOf(row) == null ? "The folder itself has no mark." : null;
+                row == null
+                        ? tr("bookmarks.nothingSelected")
+                        : markOf(row) == null ? tr("bookmarks.folderHasNoMark") : null;
             default -> null;
         };
     }
@@ -410,9 +421,14 @@ final class BookmarksWindow {
     private void editNote(BookmarkList.@Nullable Row row) {
         if (row == null) return;
         boolean folder = row instanceof BookmarkList.FolderRow;
-        String about = folder ? "the folder " + BookmarkList.name(row.path()) : BookmarkList.name(row.path());
-        Optional<String> answer =
-                NoteDialog.ask(stage, folder ? "Folder Note" : "Note", about, bookmarks.note(row.path()), stylesheet);
+        String about =
+                folder ? tr("bookmarks.noteAboutFolder", BookmarkList.name(row.path())) : BookmarkList.name(row.path());
+        Optional<String> answer = NoteDialog.ask(
+                stage,
+                tr(folder ? "bookmarks.folderNoteTitle" : "bookmarks.noteTitle"),
+                about,
+                bookmarks.note(row.path()),
+                stylesheet);
         answer.ifPresent(note -> bookmarks.setNote(row.path(), folder, note));
         filter.requestFocus();
     }
@@ -452,25 +468,31 @@ final class BookmarksWindow {
     private ContextMenu menu(BookmarkList.Row row) {
         Bookmarks.Mark mark = markOf(row);
         boolean folder = row instanceof BookmarkList.FolderRow;
-        MenuItem open =
-                new MenuItem(folder ? "Open Folder" : "Open", Icons.of(folder ? Icons.FOLDER_OPEN : Icons.PICTURE));
+        MenuItem open = new MenuItem(
+                tr(folder ? "bookmarks.menu.openFolder" : "bookmarks.menu.open"),
+                Icons.of(folder ? Icons.FOLDER_OPEN : Icons.PICTURE));
         MenuChord.on(open, Command.BOOKMARKS_OPEN);
         open.setOnAction(e -> open(row));
         open.setDisable(missing.contains(row.path()));
-        MenuItem note = new MenuItem(mark != null && mark.hasNote() ? "Edit Note…" : "Add Note…", Icons.of(Icons.NOTE));
+        MenuItem note = new MenuItem(
+                tr(mark != null && mark.hasNote() ? "bookmarks.menu.editNote" : "bookmarks.menu.addNote"),
+                Icons.of(Icons.NOTE));
         MenuChord.on(note, Command.BOOKMARKS_EDIT_NOTE);
         note.setOnAction(e -> editNote(row));
         boolean bookmarked = mark != null && mark.bookmarked();
         MenuItem bookmark = new MenuItem(
-                bookmarked ? "Take the Bookmark Off" : folder ? "Bookmark Folder" : "Bookmark Image",
+                tr(
+                        bookmarked
+                                ? "bookmarks.menu.takeBookmarkOff"
+                                : folder ? "bookmarks.menu.bookmarkFolder" : "bookmarks.menu.bookmarkImage"),
                 Icons.of(Icons.BOOKMARK));
         MenuChord.on(bookmark, Command.BOOKMARKS_TOGGLE);
         bookmark.setOnAction(e -> toggle(row));
-        MenuItem show = new MenuItem("Show in Folder", Icons.of(Icons.FOLDER));
+        MenuItem show = new MenuItem(tr("bookmarks.menu.showInFolder"), Icons.of(Icons.FOLDER));
         MenuChord.on(show, Command.BOOKMARKS_SHOW_IN_FOLDER);
         show.setOnAction(e -> showInFolder(row));
         show.setDisable(missing.contains(row.path()));
-        MenuItem remove = new MenuItem("Remove", Icons.of(Icons.REMOVE_MARK));
+        MenuItem remove = new MenuItem(tr("bookmarks.menu.remove"), Icons.of(Icons.REMOVE_MARK));
         MenuChord.on(remove, Command.BOOKMARKS_REMOVE);
         remove.setOnAction(e -> remove(row));
         remove.setDisable(mark == null);
@@ -559,8 +581,10 @@ final class BookmarksWindow {
             if (mark != null && mark.bookmarked()) title.getChildren().add(bookmarkIcon);
             String said = mark == null ? "" : mark.note();
             if (gone)
-                said = (item instanceof BookmarkList.FolderRow ? "Folder" : "File")
-                        + " not found: moved, deleted, or on a drive that is not there."
+                said = tr(
+                                item instanceof BookmarkList.FolderRow
+                                        ? "bookmarks.folderNotFound"
+                                        : "bookmarks.fileNotFound")
                         + (said.isEmpty() ? "" : "\n" + said);
             note.setText(said);
             text.getChildren().setAll(title);

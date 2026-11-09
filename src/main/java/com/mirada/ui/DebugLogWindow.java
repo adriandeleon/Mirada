@@ -20,6 +20,8 @@ import javafx.stage.Window;
 import com.mirada.AppInfo;
 import com.mirada.diagnostics.DebugLog;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The Debug Log in a window of its own, beside the viewer: modeless, with Refresh, Copy, Clear,
  * Export and Report a Problem (DIAG-03, Pauta 4.0.1). The only way to read Mirada's log in a packaged
@@ -35,19 +37,19 @@ final class DebugLogWindow {
     private final Label where = new Label();
 
     DebugLogWindow(Consumer<Command> run, String stylesheet) {
-        stage.setTitle("Debug Log — " + AppInfo.NAME);
+        stage.setTitle(tr("debugLog.title"));
         WindowIcon.applyTo(stage);
         text.setEditable(false);
         // A long path or a stack frame wraps, rather than scroll the start of every line out of sight.
         text.setWrapText(true);
         text.getStyleClass().add("debug-log-text");
 
-        Button refresh = new Button("Refresh");
+        Button refresh = new Button(tr("debugLog.refresh"));
         refresh.setOnAction(e -> refresh());
-        Button copy = button("Copy", Command.COPY_DEBUG_LOG, run);
-        Button clear = button("Clear", Command.CLEAR_DEBUG_LOG, run);
-        Button export = button("Export…", Command.EXPORT_DEBUG_LOG, run);
-        Button report = button("Report a Problem…", Command.REPORT_PROBLEM, run);
+        Button copy = button(tr("debugLog.copy"), Command.COPY_DEBUG_LOG, run);
+        Button clear = button(tr("debugLog.clear"), Command.CLEAR_DEBUG_LOG, run);
+        Button export = button(tr("debugLog.export"), Command.EXPORT_DEBUG_LOG, run);
+        Button report = button(tr("debugLog.reportProblem"), Command.REPORT_PROBLEM, run);
         where.getStyleClass().add("debug-log-file");
         where.setMinWidth(0);
         Region spacer = new Region();
@@ -91,7 +93,8 @@ final class DebugLogWindow {
         text.setText(DebugLog.text());
         text.positionCaret(text.getLength());
         Path file = DebugLog.file();
-        where.setText(file == null ? "Not written to a file" : "Also in " + AppInfo.tildeHome(file.toString()));
+        where.setText(
+                file == null ? tr("debugLog.notWritten") : tr("debugLog.alsoIn", AppInfo.tildeHome(file.toString())));
     }
 
     boolean isShowing() {

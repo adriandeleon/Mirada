@@ -25,6 +25,8 @@ import com.mirada.report.ProblemReport;
 import com.mirada.report.Redactor;
 import com.mirada.settings.Settings;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * Help › Report a Problem: a report with private details taken out, for the user to read and edit,
  * then copied to the clipboard and opened as a prefilled GitHub issue (DIAG-06, Pauta 4.0.1). Nothing
@@ -54,20 +56,18 @@ final class ReportProblemWindow {
         report.setPrefRowCount(18);
         report.getStyleClass().add("report-text");
 
-        stage.setTitle("Report a Problem");
+        stage.setTitle(tr("report.title"));
         WindowIcon.applyTo(stage);
-        Label note = new Label("Home folders, user and host names, e-mail addresses and tokens have been taken"
-                + " out. Read the report and change anything you would rather not share: the issue is"
-                + " public. Nothing is sent until you submit it on GitHub.");
+        Label note = new Label(tr("report.note"));
         note.setWrapText(true);
         Label environmentBlock = new Label(environment);
         environmentBlock.getStyleClass().add("about-path");
         environmentBlock.setWrapText(true);
 
-        Button submit = new Button("Copy and Open Issue");
+        Button submit = new Button(tr("report.submit"));
         submit.setDefaultButton(true);
         submit.setOnAction(e -> submit());
-        Button cancel = new Button("Cancel");
+        Button cancel = new Button(tr("report.cancel"));
         cancel.setCancelButton(true);
         cancel.setOnAction(e -> stage.hide());
         Region spacer = new Region();
@@ -103,9 +103,7 @@ final class ReportProblemWindow {
         Clipboard.getSystemClipboard().setContent(content);
         openLink.accept(ProblemReport.issueUrl(environment, text));
         say.accept(
-                ProblemReport.fitsInUrl(environment, text)
-                        ? "Opened a new issue with the report; it is on the clipboard too"
-                        : "Opened a new issue: paste the report from the clipboard, it is too long for the link",
+                ProblemReport.fitsInUrl(environment, text) ? tr("report.opened") : tr("report.openedTooLong"),
                 MessageLog.Severity.INFO);
         stage.hide();
     }

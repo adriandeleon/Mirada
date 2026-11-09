@@ -5,6 +5,8 @@ import java.util.Locale;
 
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * Whether an image of a given size may be decoded into the heap that is left, asked from its header
  * before its pixels are (PERF-12; Editora's {@code LoadHeapGuard} moved to pictures). A decoded image is
@@ -50,11 +52,13 @@ final class DecodeGuard {
         if (width <= 0 || height <= 0) return null; // the decoder says what is wrong with it
         long pixels = Math.multiplyHigh(width, height) != 0 ? Long.MAX_VALUE : width * height;
         if (fits(pixels, maxHeap, usedHeap)) return null;
-        String size = width + " × " + height + " pixels";
-        if (pixels > MAX_PIXELS) return "the image is too large to open (" + size + ")";
-        return "the image is too large to open with the memory left (" + size + " need "
-                + bytes(pixels * BYTES_PER_PIXEL) + ", "
-                + bytes(Math.max(0, maxHeap - usedHeap)) + " is free)";
+        if (pixels > MAX_PIXELS) return tr("decode.tooLarge", width, height);
+        return tr(
+                "decode.tooLargeForMemory",
+                width,
+                height,
+                bytes(pixels * BYTES_PER_PIXEL),
+                bytes(Math.max(0, maxHeap - usedHeap)));
     }
 
     /**

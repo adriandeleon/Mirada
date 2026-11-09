@@ -30,6 +30,8 @@ import javafx.scene.text.TextFlow;
 
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * Every command, findable by typing part of its name — Termina's palette, which is Editora's, in
  * shape and in behaviour, so the three apps' palettes look and rank alike.
@@ -113,7 +115,7 @@ final class CommandPalette {
 
         prefixChip.getStyleClass().add("palette-prefix");
         input.getStyleClass().add("palette-input");
-        input.setPromptText("Run command…");
+        input.setPromptText(tr("palette.runCommandPrompt"));
         input.textProperty().addListener((o, was, now) -> filter(now));
         HBox inputRow = new HBox(9, prefixChip, input);
         inputRow.setAlignment(Pos.CENTER_LEFT);
@@ -122,7 +124,7 @@ final class CommandPalette {
 
         list.setItems(items);
         list.getStyleClass().add("palette-list");
-        list.setPlaceholder(new Label("No matching commands"));
+        list.setPlaceholder(new Label(tr("palette.noMatchingCommands")));
         // A whole number of rows: a fixed pixel height cuts the last row in half.
         list.setFixedCellSize(ROW_HEIGHT);
         list.setPrefHeight(listHeight(0));
@@ -174,7 +176,7 @@ final class CommandPalette {
         if (isShowing()) return;
         this.commands = List.copyOf(commands);
         this.unavailable = unavailable;
-        open(false, Command.PALETTE, "Run command…", "No matching commands");
+        open(false, Command.PALETTE, tr("palette.runCommandPrompt"), tr("palette.noMatchingCommands"));
     }
 
     /**
@@ -186,12 +188,12 @@ final class CommandPalette {
         showChoices(
                 new Choices(
                         Command.GO_TO_IMAGE,
-                        "Go to image…",
-                        "No matching images",
-                        "go",
+                        tr("palette.goToImagePrompt"),
+                        tr("palette.noMatchingImages"),
+                        tr("palette.verbGo"),
                         names,
                         current,
-                        index -> "Image " + (index + 1) + " of " + size,
+                        index -> tr("palette.imageOf", index + 1, size),
                         index -> Integer.toString(index + 1)),
                 goTo);
     }
@@ -226,7 +228,7 @@ final class CommandPalette {
     }
 
     private void open(boolean findingImages, Command openedBy, String prompt, String nothing) {
-        open(findingImages, openedBy, prompt, nothing, "run");
+        open(findingImages, openedBy, prompt, nothing, tr("palette.verbRun"));
     }
 
     private void open(boolean findingImages, Command openedBy, String prompt, String nothing, String verb) {
@@ -362,7 +364,8 @@ final class CommandPalette {
 
     /**
      * The score of {@code command} for a query that did not match its label, through its keywords:
-     * the query has to begin with (the start of) one, and is then matched against "keywords label".
+     * the query has to begin with (the start of) one, and is then matched against "keyword keywords
+     * label", so the rest of the words, the English title's among them, can match too.
      * Always below a label match.
      */
     static int keywordScore(Command command, String query) {
@@ -373,7 +376,7 @@ final class CommandPalette {
             int token = query.indexOf(' ');
             int head = Math.min(token < 0 ? query.length() : token, keyword.length());
             if (head == 0 || !keyword.regionMatches(true, 0, query, 0, head)) continue;
-            int score = FuzzyMatch.scoreOf(keyword + " " + command.label(), query);
+            int score = FuzzyMatch.scoreOf(keyword + " " + keywords + " " + command.label(), query);
             if (score != FuzzyMatch.NO_SCORE) best = Math.max(best, score - KEYWORD_PENALTY);
         }
         return best;

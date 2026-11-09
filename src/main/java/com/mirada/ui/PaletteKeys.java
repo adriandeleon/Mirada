@@ -10,6 +10,8 @@ import javafx.scene.input.KeyEvent;
 
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The one definition of how the command palette is driven from the keyboard, and of the legend that
  * tells the user so.
@@ -174,7 +176,7 @@ final class PaletteKeys {
      * One legend entry: the keys that trigger it, then what they do ("↵ run"), or null when there are none (the entry is then left out of the legend).
      */
     static @Nullable String hint(String what, String keys) {
-        return keys == null || keys.isBlank() ? null : keys + " " + what;
+        return keys == null || keys.isBlank() ? null : tr("keys.hint", keys, what);
     }
 
     /**
@@ -183,11 +185,11 @@ final class PaletteKeys {
      */
     static String legend(@Nullable String... entries) {
         List<String> parts = new ArrayList<>();
-        parts.add(hint("move", "↑↓ / " + KeyChord.display("C-n") + " " + KeyChord.display("C-p")));
+        parts.add(hint(tr("keys.move"), "↑↓ / " + KeyChord.display("C-n") + " " + KeyChord.display("C-p")));
         for (String entry : entries) {
             if (entry != null) parts.add(entry);
         }
-        parts.add(hint("cancel", "Esc / " + KeyChord.display("C-g")));
+        parts.add(hint(tr("keys.cancel"), "Esc / " + KeyChord.display("C-g")));
         return String.join(SEPARATOR, parts);
     }
 }

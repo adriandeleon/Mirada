@@ -11,6 +11,8 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The image's own marks near its top-left corner, in a floating control's pill, right of where the
  * full-screen button floats ({@link OnScreenControls}) so the two never cover each other: a bookmark while it
@@ -20,9 +22,6 @@ import javafx.util.Duration;
  * user who never makes one never pays for it.
  */
 final class MarksBadge {
-
-    /** What a click on the bookmark does. */
-    static final String TAKE_OFF = "Take the Bookmark Off";
 
     private final HBox pill;
     private final Button bookmark;
@@ -58,8 +57,8 @@ final class MarksBadge {
      * does, takes it off; the note's is the note itself, as clicking it edits it.
      */
     void relabel() {
-        Icons.name(bookmark, TAKE_OFF, Command.BOOKMARK.chord());
-        Icons.name(note, "Note: " + noteText, Command.NOTE.chord());
+        Icons.name(bookmark, tr("marks.takeBookmarkOff"), Command.BOOKMARK.chord());
+        Icons.name(note, tr("marks.note", noteText), Command.NOTE.chord());
     }
 
     /** Shows the marks of the image on screen; nothing at all while {@code hidden} (a slideshow). */

@@ -17,6 +17,8 @@ import com.drew.metadata.exif.ExifSubIFDDirectory;
 import com.drew.metadata.exif.GpsDirectory;
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * Everything the info sidebar shows from a file's metadata: the camera card, a handful of rows in
  * the words a photographer uses, and every tag the file carries, by directory, for "All Metadata".
@@ -60,17 +62,17 @@ public record ExifDetails(List<Row> camera, List<Section> all) {
                 null,
                 null,
                 null);
-        add(camera, "Camera", model);
-        add(camera, "Lens", describe(sub, ExifSubIFDDirectory.TAG_LENS_MODEL));
-        add(camera, "Taken", taken(describe(sub, ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL)));
-        add(camera, "Exposure", seconds(describe(sub, ExifSubIFDDirectory.TAG_EXPOSURE_TIME)));
-        add(camera, "Aperture", describe(sub, ExifSubIFDDirectory.TAG_FNUMBER));
+        add(camera, tr("exif.camera"), model);
+        add(camera, tr("exif.lens"), describe(sub, ExifSubIFDDirectory.TAG_LENS_MODEL));
+        add(camera, tr("exif.taken"), taken(describe(sub, ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL)));
+        add(camera, tr("exif.exposure"), seconds(describe(sub, ExifSubIFDDirectory.TAG_EXPOSURE_TIME)));
+        add(camera, tr("exif.aperture"), describe(sub, ExifSubIFDDirectory.TAG_FNUMBER));
         String iso = describe(sub, ExifSubIFDDirectory.TAG_ISO_EQUIVALENT);
-        add(camera, "ISO", iso);
-        add(camera, "Focal Length", describe(sub, ExifSubIFDDirectory.TAG_FOCAL_LENGTH));
-        add(camera, "Flash", describe(sub, ExifSubIFDDirectory.TAG_FLASH));
+        add(camera, tr("exif.iso"), iso);
+        add(camera, tr("exif.focalLength"), describe(sub, ExifSubIFDDirectory.TAG_FOCAL_LENGTH));
+        add(camera, tr("exif.flash"), describe(sub, ExifSubIFDDirectory.TAG_FLASH));
         GeoLocation location = gps == null ? null : gps.getGeoLocation();
-        if (location != null && !location.isZero()) add(camera, "Location", coordinates(location));
+        if (location != null && !location.isZero()) add(camera, tr("exif.location"), coordinates(location));
 
         List<Section> all = new ArrayList<>();
         for (Directory directory : metadata.getDirectories()) {

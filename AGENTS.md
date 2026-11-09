@@ -71,6 +71,9 @@ format check is skipped, so run `spotless:apply` on a 25. CI
 - [ ] Every user action is a `Command` with a dotted id, a name, a description and a group, run
       through `ViewerWindow.run`; menus, buttons and the palette reach it by the same constant, and
       its keys are in the keymaps (`src/main/resources/com/mirada/keymaps/*.json`), never in code.
+- [ ] Every string a user sees comes from `tr("key")` (`com.mirada.i18n.Messages`), its key in
+      `messages.properties` and in each of the five translations (`MessagesTest`); a command's
+      title is `command.<id>` and its palette line `command.<id>.desc`.
 - [ ] A user-visible change has an entry under `## [Unreleased]` in `CHANGELOG.md` (Keep a
       Changelog), opening with a bold one-line summary for users.
 - [ ] A new dependency has an entry in `NOTICE`, with its licence.

@@ -10,6 +10,10 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Added
 
+- **Mirada speaks Spanish, Portuguese, French, Italian and German.** It follows the system's
+  language, or the one chosen in Settings › General › Language (or **Language…** in the command
+  palette), from its next start. Every window, menu, message and command name is translated, and
+  the palette still finds a command by its English name.
 - **Settings has pages and a search.** A sidebar of pages (General, Viewer, Thumbnails, Folder,
   Keys, Backup) with the page beside it, and a search field on top that finds a setting by its
   name, its description or a word for it, opens its page and hides the rest; Escape empties it,

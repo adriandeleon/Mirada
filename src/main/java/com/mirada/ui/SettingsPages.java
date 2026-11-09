@@ -8,6 +8,8 @@ import java.util.Set;
 
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * What the Settings window holds, without the toolkit: its pages in sidebar order, each row's page,
  * card, words and command (SET-02, SET-06, Pauta 4.0.1), and what a search shows (SET-03). The
@@ -16,25 +18,26 @@ import org.jspecify.annotations.Nullable;
  */
 final class SettingsPages {
 
-    /** The pages, in sidebar order, each with its icon. */
+    /** The pages, in sidebar order, each with its title's key and its icon. */
     enum Page {
-        GENERAL("General", Icons.SLIDERS),
-        VIEWER("Viewer", Icons.PICTURE),
-        THUMBNAILS("Thumbnails", Icons.STRIP),
-        FOLDER("Folder", Icons.SORT),
-        KEYS("Keys", Icons.KEYBOARD),
-        BACKUP("Backup", Icons.DOWNLOAD);
+        GENERAL("settings.page.general", Icons.SLIDERS),
+        VIEWER("settings.page.viewer", Icons.PICTURE),
+        THUMBNAILS("settings.page.thumbnails", Icons.STRIP),
+        FOLDER("settings.page.folder", Icons.SORT),
+        KEYS("settings.page.keys", Icons.KEYBOARD),
+        BACKUP("settings.page.backup", Icons.DOWNLOAD);
 
-        private final String title;
+        private final String titleKey;
         private final String icon;
 
-        Page(String title, String icon) {
-            this.title = title;
+        Page(String titleKey, String icon) {
+            this.titleKey = titleKey;
             this.icon = icon;
         }
 
+        /** The page's name, in the interface's language. */
         String title() {
-            return title;
+            return tr(titleKey);
         }
 
         /** The icon's SVG path ({@link Icons#of}). */
@@ -44,14 +47,29 @@ final class SettingsPages {
     }
 
     /**
-     * One row: where it stands, what it says, the words it is also found by, and the palette command
-     * that changes the same setting (SET-06), or opens the same action.
+     * One row: where it stands, the keys of what it says (its card's heading, its title and its
+     * description, translated by {@link #card()}, {@link #title()} and {@link #description()}), the
+     * English words it is also found by, and the palette command that changes the same setting
+     * (SET-06), or opens the same action.
      */
-    record Row(Page page, String card, String title, String description, String keywords, Command command) {
+    record Row(Page page, String cardKey, String titleKey, String descriptionKey, String keywords, Command command) {
 
-        /** What the search finds this row by, with the text its control shows. */
+        /** The heading of the card the row is on, in the interface's language. */
+        String card() {
+            return tr(cardKey);
+        }
+
+        String title() {
+            return tr(titleKey);
+        }
+
+        String description() {
+            return tr(descriptionKey);
+        }
+
+        /** What the search finds this row by, with the text its control shows: the translated words. */
         SettingsSearch.Entry entry(String visibleText) {
-            return new SettingsSearch.Entry(title, description, visibleText, page.title() + " " + card, keywords);
+            return new SettingsSearch.Entry(title(), description(), visibleText, page.title() + " " + card(), keywords);
         }
     }
 
@@ -59,119 +77,121 @@ final class SettingsPages {
     static final List<Row> ROWS = List.of(
             new Row(
                     Page.GENERAL,
-                    "Appearance",
-                    "Theme",
-                    "Light or dark controls and backgrounds.",
+                    "settings.card.appearance",
+                    "settings.theme.title",
+                    "settings.theme.description",
                     "dark light system mode colour color look",
                     Command.THEME),
             new Row(
                     Page.GENERAL,
-                    "At start",
-                    "Thumbnails at start",
-                    "Opens the thumbnail strip when Mirada starts. T toggles it.",
+                    "settings.card.appearance",
+                    "settings.language.title",
+                    "settings.language.description",
+                    "locale translation english español português français italiano deutsch",
+                    Command.LANGUAGE),
+            new Row(
+                    Page.GENERAL,
+                    "settings.card.atStart",
+                    "settings.thumbnailsAtStart.title",
+                    "settings.thumbnailsAtStart.description",
                     "startup launch filmstrip strip",
                     Command.THUMBNAILS_AT_START),
             new Row(
                     Page.GENERAL,
-                    "At start",
-                    "Properties at start",
-                    "Opens the properties sidebar when Mirada starts. I toggles it.",
+                    "settings.card.atStart",
+                    "settings.propertiesAtStart.title",
+                    "settings.propertiesAtStart.description",
                     "startup launch info details exif sidebar",
                     Command.PROPERTIES_AT_START),
             new Row(
                     Page.GENERAL,
-                    "Updates",
-                    "Check for updates",
-                    "Once a day, a few seconds after start, asks GitHub whether a newer Mirada is out, and says so"
-                            + " in the status bar. Nothing is downloaded.",
+                    "settings.card.updates",
+                    "settings.checkForUpdates.title",
+                    "settings.checkForUpdates.description",
                     "version release network automatic",
                     Command.CHECK_DAILY),
             new Row(
                     Page.VIEWER,
-                    "Viewer",
-                    "Status bar",
-                    "A line along the bottom saying what the last command did; a click on it lists every message.",
+                    "settings.card.viewer",
+                    "settings.statusBar.title",
+                    "settings.statusBar.description",
                     "messages echo footer",
                     Command.STATUS_BAR),
             new Row(
                     Page.VIEWER,
-                    "Viewer",
-                    "Hide controls after",
-                    "Seconds without moving the pointer before the floating controls fade.",
+                    "settings.card.viewer",
+                    "settings.hideControlsAfter.title",
+                    "settings.hideControlsAfter.description",
                     "delay fade timeout overlay buttons seconds",
                     Command.HIDE_CONTROLS_AFTER),
             new Row(
                     Page.VIEWER,
-                    "Viewer",
-                    "Keep zoom when stepping",
-                    "Moving to another image keeps the zoom and position, to compare the same detail across shots."
-                            + " Z toggles it.",
+                    "settings.card.viewer",
+                    "settings.keepZoom.title",
+                    "settings.keepZoom.description",
                     "lock fit compare",
                     Command.KEEP_ZOOM),
             new Row(
                     Page.THUMBNAILS,
-                    "Thumbnail strip",
-                    "Thumbnails at the side",
-                    "A column down the left of the window instead of a row along the bottom.",
+                    "settings.card.thumbnailStrip",
+                    "settings.thumbnailsAtSide.title",
+                    "settings.thumbnailsAtSide.description",
                     "vertical column filmstrip layout left",
                     Command.THUMBNAILS_AT_SIDE),
             new Row(
                     Page.THUMBNAILS,
-                    "Thumbnail strip",
-                    "File names under thumbnails",
-                    "Each thumbnail has its file name written under it.",
+                    "settings.card.thumbnailStrip",
+                    "settings.thumbnailCaptions.title",
+                    "settings.thumbnailCaptions.description",
                     "captions labels filmstrip",
                     Command.THUMBNAIL_CAPTIONS),
             new Row(
                     Page.THUMBNAILS,
-                    "Thumbnail strip",
-                    "File names instead of pictures",
-                    "The strip lists the folder by name, and loads no thumbnails.",
+                    "settings.card.thumbnailStrip",
+                    "settings.thumbnailNames.title",
+                    "settings.thumbnailNames.description",
                     "list text filmstrip",
                     Command.THUMBNAIL_NAMES),
             new Row(
                     Page.FOLDER,
-                    "Order",
-                    "Sort by",
-                    "The order images are stepped through.",
+                    "settings.card.order",
+                    "settings.sortBy.title",
+                    "settings.sortBy.description",
                     "name date modified size sorting",
                     Command.SORT_BY_NAME),
             new Row(
                     Page.FOLDER,
-                    "Order",
-                    "Reverse order",
-                    "Last first: newest, largest, or Z to A.",
+                    "settings.card.order",
+                    "settings.reverseOrder.title",
+                    "settings.reverseOrder.description",
                     "descending ascending sorting",
                     Command.REVERSE_ORDER),
             new Row(
                     Page.FOLDER,
-                    "Slideshow",
-                    "Slideshow speed",
-                    "Seconds each image shows in a slideshow. F5 starts it.",
+                    "settings.card.slideshow",
+                    "settings.slideshowSpeed.title",
+                    "settings.slideshowSpeed.description",
                     "interval delay play seconds",
                     Command.SLIDESHOW_SPEED),
             new Row(
                     Page.KEYS,
-                    "Keys",
-                    "Keymap",
-                    "Mirada's own keys, or Emacs's. Your own go on top of it: keys.<command id> in the settings"
-                            + " file.",
+                    "settings.card.keys",
+                    "settings.keymap.title",
+                    "settings.keymap.description",
                     "shortcuts bindings emacs cua",
                     Command.KEYMAP),
             new Row(
                     Page.KEYS,
-                    "Keys",
-                    "Command palette",
-                    "The keys that open the palette. Add a key, then press it; pressing one already listed takes"
-                            + " it off.",
+                    "settings.card.keys",
+                    "settings.paletteKeys.title",
+                    "settings.paletteKeys.description",
                     "shortcuts bindings palette",
                     Command.PALETTE_KEYS),
             new Row(
                     Page.BACKUP,
-                    "Configuration",
-                    "Export and import",
-                    "Export saves the settings, keys, bookmarks and notes in a zip, to keep or to take to another"
-                            + " computer; Import puts back the parts you choose.",
+                    "settings.card.configuration",
+                    "settings.exportImport.title",
+                    "settings.exportImport.description",
                     "backup restore zip move copy settings folder",
                     Command.EXPORT_CONFIG));
 

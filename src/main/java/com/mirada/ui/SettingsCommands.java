@@ -23,11 +23,14 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import com.mirada.diagnostics.MessageLog;
+import com.mirada.i18n.Messages;
 import com.mirada.settings.Bookmarks;
 import com.mirada.settings.ConfigExport;
 import com.mirada.settings.ConfigImport;
 import com.mirada.settings.Settings;
 import org.jspecify.annotations.Nullable;
+
+import static com.mirada.i18n.Messages.tr;
 
 /**
  * The commands that are settings (SET-06) and Export and Import Configuration (SET-12, Pauta 4.0.1):
@@ -64,15 +67,28 @@ final class SettingsCommands {
             case THEME ->
                 choose(
                         command,
-                        "Theme…",
+                        tr("settings.themePrompt"),
                         List.of(Settings.ThemeChoice.values()),
                         SettingsWindow::themeName,
                         settings.theme(),
                         settings::setTheme);
+            case LANGUAGE ->
+                choose(
+                        command,
+                        tr("settings.languagePrompt"),
+                        languages(),
+                        SettingsWindow::languageName,
+                        settings.language().isEmpty() || !Messages.available().containsKey(settings.language())
+                                ? ""
+                                : settings.language(),
+                        code -> {
+                            settings.setLanguage(code);
+                            say(languageAtNextStart(code));
+                        });
             case KEYMAP ->
                 choose(
                         command,
-                        "Keymap…",
+                        tr("keymap.prompt"),
                         Keymap.PRESETS,
                         id -> Keymap.load(id, Command.MAC).name(),
                         Keymap.resolve(settings.keymap()),
@@ -80,7 +96,7 @@ final class SettingsCommands {
             case HIDE_CONTROLS_AFTER ->
                 choose(
                         command,
-                        "Hide the controls after…",
+                        tr("settings.hideControlsPrompt"),
                         range(Settings.MIN_HIDE_SECONDS, Settings.MAX_HIDE_SECONDS),
                         SettingsCommands::seconds,
                         settings.controlsHideSeconds(),
@@ -88,7 +104,7 @@ final class SettingsCommands {
             case SLIDESHOW_SPEED ->
                 choose(
                         command,
-                        "Show each image for…",
+                        tr("settings.slideshowPrompt"),
                         range(Settings.MIN_SLIDESHOW_SECONDS, Settings.MAX_SLIDESHOW_SECONDS),
                         SettingsCommands::seconds,
                         settings.slideshowSeconds(),
@@ -97,22 +113,19 @@ final class SettingsCommands {
                 settings.setStartWithThumbnails(!settings.startWithThumbnails());
                 say(
                         settings.startWithThumbnails()
-                                ? "The thumbnails will open at start"
-                                : "The thumbnails will stay closed at start");
+                                ? tr("settings.thumbnailsOpenAtStart")
+                                : tr("settings.thumbnailsClosedAtStart"));
             }
             case PROPERTIES_AT_START -> {
                 settings.setStartWithInfo(!settings.startWithInfo());
                 say(
                         settings.startWithInfo()
-                                ? "The properties will open at start"
-                                : "The properties will stay closed at start");
+                                ? tr("settings.propertiesOpenAtStart")
+                                : tr("settings.propertiesClosedAtStart"));
             }
             case CHECK_DAILY -> {
                 settings.setCheckForUpdates(!settings.checkForUpdates());
-                say(
-                        settings.checkForUpdates()
-                                ? "Mirada will check for updates once a day"
-                                : "Mirada will not check for updates by itself");
+                say(settings.checkForUpdates() ? tr("settings.checkForUpdatesOn") : tr("settings.checkForUpdatesOff"));
             }
             case PALETTE_KEYS -> settingsWindow.get().recordPaletteKey(stage);
             case EXPORT_CONFIG -> exportConfiguration();
@@ -124,6 +137,19 @@ final class SettingsCommands {
         return true;
     }
 
+    /** The system's, then every bundled language: blank, then the codes. */
+    static List<String> languages() {
+        List<String> out = new ArrayList<>();
+        out.add("");
+        out.addAll(Messages.available().keySet());
+        return out;
+    }
+
+    /** What is said once a language is chosen: it applies from the next start. */
+    static String languageAtNextStart(String code) {
+        return tr("settings.languageAtNextStart", SettingsWindow.languageName(code));
+    }
+
     /** {@code min} to {@code max}, both in. */
     static List<Integer> range(int min, int max) {
         return IntStream.rangeClosed(min, max).boxed().toList();
@@ -131,7 +157,7 @@ final class SettingsCommands {
 
     /** "1 second", "5 seconds". */
     static String seconds(int count) {
-        return count + (count == 1 ? " second" : " seconds");
+        return tr("settings.seconds", count);
     }
 
     /**
@@ -147,24 +173,24 @@ final class SettingsCommands {
                 new CommandPalette.Choices(
                         by,
                         prompt,
-                        "No matching choices",
-                        "choose",
+                        tr("settings.noMatchingChoices"),
+                        tr("settings.chooseVerb"),
                         names,
                         Math.max(0, now),
-                        index -> index == now ? "In use now." : by.description(),
+                        index -> index == now ? tr("settings.inUseNow") : by.description(),
                         index -> index == now ? "✓" : ""),
                 index -> {
                     set.accept(values.get(index));
-                    say(by.label().replace("…", "") + ": " + names.get(index));
+                    say(tr("settings.chosen", by.label().replace("…", ""), names.get(index)));
                 });
     }
 
     /** Asks where, then writes the config folder there as a zip, off the FX thread. */
     private void exportConfiguration() {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Export Configuration");
+        chooser.setTitle(tr("export.title"));
         chooser.setInitialFileName(ConfigExport.defaultName(LocalDateTime.now()));
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Zip", "*.zip"));
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(tr("export.zipFilter"), "*.zip"));
         File chosen = FileDialogs.save(chooser, owner());
         if (chosen == null) return;
         Path zip = chosen.toPath();
@@ -176,15 +202,14 @@ final class SettingsCommands {
                 Platform.runLater(() -> say(exported(zip, files)));
             } catch (IOException e) {
                 log().log(Level.WARNING, "Could not export the configuration", e);
-                Platform.runLater(
-                        () -> say("Couldn't export the configuration: " + e.getMessage(), MessageLog.Severity.ERROR));
+                Platform.runLater(() -> say(tr("export.failed", e.getMessage()), MessageLog.Severity.ERROR));
             }
         });
     }
 
     /** What the status bar says after an export. */
     static String exported(Path zip, int files) {
-        return "Exported " + files + (files == 1 ? " file" : " files") + " of configuration to " + zip.getFileName();
+        return tr("export.exported", files, String.valueOf(zip.getFileName()));
     }
 
     /**
@@ -193,8 +218,8 @@ final class SettingsCommands {
      */
     private void importConfiguration() {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Import Configuration");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Zip", "*.zip"));
+        chooser.setTitle(tr("import.title"));
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(tr("import.zipFilter"), "*.zip"));
         File chosen = FileDialogs.open(chooser, owner());
         if (chosen == null) return;
         Path zip = chosen.toPath();
@@ -205,8 +230,9 @@ final class SettingsCommands {
             } catch (ConfigImport.Refused e) {
                 Platform.runLater(() -> say(e.sentence(), MessageLog.Severity.ERROR));
             } catch (IOException e) {
-                Platform.runLater(() ->
-                        say("Couldn't read " + zip.getFileName() + ": " + e.getMessage(), MessageLog.Severity.ERROR));
+                String name = String.valueOf(zip.getFileName());
+                Platform.runLater(
+                        () -> say(tr("import.couldNotRead", name, e.getMessage()), MessageLog.Severity.ERROR));
             }
         });
     }
@@ -214,7 +240,7 @@ final class SettingsCommands {
     private void askAndImport(Path zip, ConfigImport.Scan scan) {
         Set<ConfigImport.Part> available = scan.available();
         if (available.isEmpty()) {
-            say("That zip has nothing to import", MessageLog.Severity.WARNING);
+            say(tr("import.nothingToImport"), MessageLog.Severity.WARNING);
             return;
         }
         List<CheckBox> boxes = new ArrayList<>();
@@ -242,19 +268,23 @@ final class SettingsCommands {
                 });
             } catch (IOException e) {
                 log().log(Level.WARNING, "Could not import the configuration", e);
-                Platform.runLater(
-                        () -> say("Couldn't import the configuration: " + e.getMessage(), MessageLog.Severity.ERROR));
+                Platform.runLater(() -> say(tr("import.failed", e.getMessage()), MessageLog.Severity.ERROR));
             }
         });
     }
 
-    /** What the status bar says after an import: the parts, as the question named them. */
+    /**
+     * What the status bar says after an import: the parts, as the question named them, each as it
+     * reads in a sentence ("the keys"), listed "a, b and c".
+     */
     static String imported(Set<ConfigImport.Part> parts) {
         List<String> names = new ArrayList<>();
-        for (ConfigImport.Part part : parts) names.add(part.label().toLowerCase(java.util.Locale.ROOT));
-        if (names.isEmpty()) return "Nothing was imported";
-        String last = names.removeLast();
-        return "Imported the " + (names.isEmpty() ? last : String.join(", the ", names) + " and the " + last);
+        for (ConfigImport.Part part : parts) names.add(part.inSentence());
+        if (names.isEmpty()) return tr("import.nothingImported");
+        String list = names.getFirst();
+        for (int i = 1; i < names.size(); i++)
+            list = tr(i == names.size() - 1 ? "import.listLast" : "import.listMore", list, names.get(i));
+        return tr("import.imported", list);
     }
 
     /**
@@ -264,8 +294,15 @@ final class SettingsCommands {
     static @Nullable String setAside(String what, @Nullable Path kept) {
         if (kept == null) return null;
         String name = String.valueOf(kept.getFileName());
-        String why = name.endsWith(".corrupt.bak") ? " could not be read" : " are from a newer Mirada";
-        return "The " + what + why + ": kept as " + name + ", and the defaults are in use";
+        boolean unreadable = name.endsWith(".corrupt.bak");
+        // what is the file's English name, "settings" or "bookmarks": each has a sentence of its own.
+        if (what.equals("bookmarks"))
+            return unreadable
+                    ? tr("settings.setAside.bookmarksUnreadable", name)
+                    : tr("settings.setAside.bookmarksNewer", name);
+        return unreadable
+                ? tr("settings.setAside.settingsUnreadable", name)
+                : tr("settings.setAside.settingsNewer", name);
     }
 
     /** The viewer's window, which the dialogs open over. */
@@ -273,8 +310,9 @@ final class SettingsCommands {
         return stage;
     }
 
+    /** Information: an error or a warning is said with its severity. */
     private void say(String message) {
-        say.accept(message, MessageLog.severityOf(message));
+        say.accept(message, MessageLog.Severity.INFO);
     }
 
     private void say(String message, MessageLog.Severity severity) {

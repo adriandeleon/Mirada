@@ -20,6 +20,8 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The floating controls over the image, GNOME Image Viewer's: previous and next in a pill at the
  * bottom left, zoom and its menu in a pill at the bottom right, and full screen in one of its own at
@@ -56,7 +58,7 @@ final class OnScreenControls {
         zoom = Icons.button(Command.ACTUAL_SIZE, "osd-button", () -> run.accept(zoomCommand()));
         fullScreen = Icons.button(Command.FULL_SCREEN, "osd-button", () -> run.accept(Command.FULL_SCREEN));
         zoomMenu.setGraphic(Icons.of(Icons.CHEVRON_DOWN));
-        Icons.name(zoomMenu, "Zoom", KeyCombination.NO_MATCH);
+        Icons.name(zoomMenu, tr("controls.zoom"), KeyCombination.NO_MATCH);
         zoomMenu.getStyleClass().addAll("osd-button", "flat", "no-arrow");
         zoomMenu.setFocusTraversable(false);
         zoomMenu.getItems()

@@ -11,6 +11,8 @@ import javafx.scene.shape.SVGPath;
 
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The window's symbolic icons, drawn here as stroked paths on a 24-unit grid: two-pixel strokes,
  * round caps, no fill, in the style of GNOME's symbolic icons. Their colour is CSS's ({@code
@@ -84,6 +86,8 @@ final class Icons {
     static final String UPLOAD = "M12 15 V4 M7 9 L12 4 L17 9 M5 20 H19";
     /** A circle half filled: light and dark. */
     static final String THEME = "M12 3 A9 9 0 1 1 11.99 3 Z M12 3 V21 M12 7 H15 M12 11 H17 M12 15 H16";
+    /** A globe: the interface's language. */
+    static final String LANGUAGE = "M12 3 A9 9 0 1 1 11.99 3 Z M3 12 H21 M12 3 Q7.5 12 12 21 M12 3 Q16.5 12 12 21";
 
     static final String WARNING = "M12 3.5 L21.5 20 H2.5 Z M12 9.5 V14 M12 17 V17.1";
     static final String UPDATE = "M12 3 A9 9 0 1 1 11.99 3 Z M12 16.5 V8 M8.5 11.5 L12 8 L15.5 11.5";
@@ -145,6 +149,7 @@ final class Icons {
             case THUMBNAIL_CAPTIONS -> CAPTION;
             case SETTINGS -> SLIDERS;
             case THEME -> THEME;
+            case LANGUAGE -> LANGUAGE;
             case KEYMAP -> KEYBOARD;
             case THUMBNAILS_AT_START -> STRIP;
             case PROPERTIES_AT_START -> INFO;
@@ -224,7 +229,7 @@ final class Icons {
 
     /** "Title (chord)", or the title alone when there is no chord: what a tooltip says (TBAR-03). */
     static String tooltip(String title, KeyCombination chord) {
-        return chord == KeyCombination.NO_MATCH ? title : title + " (" + chord.getDisplayText() + ")";
+        return chord == KeyCombination.NO_MATCH ? title : tr("icons.tooltipWithChord", title, chord.getDisplayText());
     }
 
     /** {@code command}'s tooltip, by its title and chord now. */
@@ -234,7 +239,7 @@ final class Icons {
 
     /** A command's title now, without the "…" a menu row gives one that asks something first. */
     static String title(Command command) {
-        String label = command == Command.FULL_SCREEN && fullScreen ? "Leave Full Screen" : command.label();
+        String label = command == Command.FULL_SCREEN && fullScreen ? tr("icons.leaveFullScreen") : command.label();
         return label.endsWith("…") ? label.substring(0, label.length() - 1) : label;
     }
 

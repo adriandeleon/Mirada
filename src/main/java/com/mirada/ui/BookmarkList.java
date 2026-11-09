@@ -12,6 +12,8 @@ import com.mirada.folder.NaturalOrder;
 import com.mirada.settings.Bookmarks;
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * What the Bookmarks and Notes window lists, and in what order: Editora's Bookmarks and Personal
  * Notes tool windows, which group by file, grouped here by folder. No UI, so the rules are tested.
@@ -26,14 +28,20 @@ final class BookmarkList {
 
     /** Which marks to list. */
     enum Show {
-        ALL("All"),
-        BOOKMARKS("Bookmarks"),
-        NOTES("Notes");
+        ALL("bookmarks.show.all"),
+        BOOKMARKS("bookmarks.show.bookmarks"),
+        NOTES("bookmarks.show.notes");
 
-        final String label;
+        /** The catalog key of its button's text, translated at use. */
+        private final String labelKey;
 
-        Show(String label) {
-            this.label = label;
+        Show(String labelKey) {
+            this.labelKey = labelKey;
+        }
+
+        /** Its button's text: "All", "Bookmarks", "Notes". */
+        String label() {
+            return tr(labelKey);
         }
 
         boolean includes(Bookmarks.Mark mark) {

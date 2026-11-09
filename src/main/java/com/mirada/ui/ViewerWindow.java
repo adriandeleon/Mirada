@@ -87,6 +87,8 @@ import com.mirada.update.UpdateCoordinator;
 import com.mirada.update.UpdateService;
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The one window, laid out as GNOME Image Viewer's: a header bar with the file name ({@link
  * TitleBar}), the image with floating controls over it ({@link OnScreenControls}), and an info
@@ -434,7 +436,10 @@ public final class ViewerWindow {
         overlay.getChildren().add(bar);
         macMenus = bar;
         String appMenu = MacAppMenu.install(
-                Command.ABOUT.label(), () -> run(Command.ABOUT), "Settings…", () -> run(Command.SETTINGS));
+                Command.ABOUT.label(),
+                () -> run(Command.ABOUT),
+                tr("viewer.settingsMenu"),
+                () -> run(Command.SETTINGS));
         if (Startup.enabled()) System.out.println("[perf] application menu: " + appMenu);
     }
 
@@ -540,7 +545,7 @@ public final class ViewerWindow {
 
     /** The strip's own menu: closing it, and where it stands and what it shows. */
     private ContextMenu stripMenu() {
-        MenuItem hide = new MenuItem("Hide Thumbnails", Icons.menu(Command.THUMBNAILS));
+        MenuItem hide = new MenuItem(tr("viewer.hideThumbnails"), Icons.menu(Command.THUMBNAILS));
         hide.setOnAction(e -> run(Command.THUMBNAILS));
         MenuChord.on(hide, Command.THUMBNAILS);
         ContextMenu menu = new ContextMenu(
@@ -744,7 +749,7 @@ public final class ViewerWindow {
         sortedBy = listed.order();
         folder = listed.images();
         if (listed.error() != null) {
-            showMessage("Couldn't read " + path + ": " + listed.error());
+            showMessage(tr("viewer.couldNotRead", path, listed.error()));
             return;
         }
         // The order changed while it was listed: sorted again, the image found showing meanwhile.
@@ -753,7 +758,7 @@ public final class ViewerWindow {
             sortFolder();
         }
         if (folder.isEmpty()) {
-            showMessage("No images in " + path);
+            showMessage(tr("viewer.noImagesIn", path));
             return;
         }
         showCurrent();
@@ -767,7 +772,7 @@ public final class ViewerWindow {
         Path file = folder.current();
         if (file == null || released) return;
         wanted = file;
-        stage.setTitle(fileName(file) + " — " + AppInfo.NAME);
+        stage.setTitle(tr("viewer.windowTitle", fileName(file), AppInfo.NAME));
         titleBar.setTitle(fileName(file));
         titleBar.setFolder(file.toAbsolutePath().getParent());
         refreshStrip();
@@ -777,8 +782,8 @@ public final class ViewerWindow {
             String extension = ImageFormats.extension(file).toUpperCase(Locale.ROOT);
             showMessage(
                     extension.isEmpty()
-                            ? "Mirada can't open " + fileName(file)
-                            : "Mirada can't open " + extension + " files yet");
+                            ? tr("viewer.cannotOpenFile", fileName(file))
+                            : tr("viewer.cannotOpenFormat", extension));
             return;
         }
         ImageCache.Entry entry = cache.get(file);
@@ -800,8 +805,8 @@ public final class ViewerWindow {
                     log().log(Level.WARNING, "Could not show " + file, error);
                     Platform.runLater(() -> {
                         if (file.equals(wanted)) {
-                            showMessage("Couldn't open " + fileName(file) + ": " + error);
-                            say("Couldn't open " + fileName(file) + ": " + error, MessageLog.Severity.ERROR);
+                            showMessage(tr("viewer.couldNotOpen", fileName(file), error));
+                            say(tr("viewer.couldNotOpen", fileName(file), error), MessageLog.Severity.ERROR);
                         }
                     });
                     return null;
@@ -814,8 +819,8 @@ public final class ViewerWindow {
         if (image == null) {
             // In the Debug Log too: the window says it to the user, this is for whoever has to find out why.
             log().warning("Could not open " + file + ": " + decoded.error());
-            showMessage("Couldn't open " + fileName(file) + ": " + decoded.error());
-            say("Couldn't open " + fileName(file) + ": " + decoded.error(), MessageLog.Severity.ERROR);
+            showMessage(tr("viewer.couldNotOpen", fileName(file), decoded.error()));
+            say(tr("viewer.couldNotOpen", fileName(file), decoded.error()), MessageLog.Severity.ERROR);
             if (tour != null) tour.failed(file, decoded.error(), folder.index() == folder.size() - 1);
             return;
         }
@@ -936,7 +941,7 @@ public final class ViewerWindow {
         // From the header's menu while the editor is open: what would change the image under it waits.
         Editor open = editor;
         if (open != null && open.isShowing() && !duringEdit(command)) {
-            say("Finish editing first: Save or Cancel", MessageLog.Severity.WARNING);
+            say(tr("viewer.finishEditing"), MessageLog.Severity.WARNING);
             return;
         }
         switch (command) {
@@ -984,6 +989,7 @@ public final class ViewerWindow {
             }
             case SETTINGS -> settingsWindow().show(stage);
             case THEME,
+                    LANGUAGE,
                     KEYMAP,
                     THUMBNAILS_AT_START,
                     PROPERTIES_AT_START,
@@ -1002,7 +1008,7 @@ public final class ViewerWindow {
             case PAN_DOWN -> viewport.pan(0, PAN_STEP);
             case KEEP_ZOOM -> {
                 settings.setKeepZoom(!settings.keepZoom());
-                say(settings.keepZoom() ? "Keeping the zoom when stepping" : "Fitting each image");
+                say(settings.keepZoom() ? tr("viewer.keepingZoom") : tr("viewer.fittingEachImage"));
             }
             case SLIDESHOW -> {
                 if (slideshowRunning) stopSlideshow();
@@ -1028,10 +1034,10 @@ public final class ViewerWindow {
             case BOOKMARKS -> bookmarksWindow().show(stage);
             case STATUS_BAR -> settings.setStatusBar(!settings.statusBar());
             case MESSAGE_LOG -> messageLog().show(statusBar.isShowing() ? StatusBar.HEIGHT : 0);
-            case COPY_MESSAGES -> copyText(MessageLogView.asText(messageLog().listed()), "Copied the messages");
+            case COPY_MESSAGES -> copyText(MessageLogView.asText(messageLog().listed()), tr("viewer.copiedMessages"));
             case CLEAR_MESSAGES -> messages.clear();
             case DEBUG_LOG -> debugLog().show(stage);
-            case COPY_DEBUG_LOG -> copyText(DebugLog.text(), "Copied the Debug Log");
+            case COPY_DEBUG_LOG -> copyText(DebugLog.text(), tr("viewer.copiedDebugLog"));
             case CLEAR_DEBUG_LOG -> {
                 DebugLog.clear();
                 DebugLogWindow window = debugLog;
@@ -1052,7 +1058,7 @@ public final class ViewerWindow {
                 if (page != null) openLink.accept(page);
             }
             case COPY_DETAILS ->
-                copyText(AppInfo.environment(AppInfo.runtime(), settings.file()), "Copied the details");
+                copyText(AppInfo.environment(AppInfo.runtime(), settings.file()), tr("viewer.copiedDetails"));
             case EDITOR_ROTATE_LEFT,
                     EDITOR_ROTATE_RIGHT,
                     EDITOR_FLIP_HORIZONTALLY,
@@ -1116,6 +1122,7 @@ public final class ViewerWindow {
                     CHECK_FOR_UPDATES,
                     OPEN_RELEASE,
                     THEME,
+                    LANGUAGE,
                     KEYMAP,
                     THUMBNAILS_AT_START,
                     PROPERTIES_AT_START,
@@ -1137,9 +1144,9 @@ public final class ViewerWindow {
         else Platform.runLater(() -> say(message, severity));
     }
 
-    /** {@link #say}, the severity read from the message's first words ({@link MessageLog#severityOf}). */
+    /** {@link #say} information: an error or a warning says so where it is raised. */
     private void say(String message) {
-        say(message, MessageLog.severityOf(message));
+        say(message, MessageLog.Severity.INFO);
     }
 
     /**
@@ -1207,9 +1214,9 @@ public final class ViewerWindow {
     /** Saves the Debug Log where the user chooses. */
     private void exportDebugLog() {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Export Debug Log");
+        chooser.setTitle(tr("dialogs.exportDebugLog"));
         chooser.setInitialFileName("mirada-debug-log.txt");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Text", "*.txt", "*.log"));
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(tr("dialogs.textFiles"), "*.txt", "*.log"));
         DebugLogWindow window = debugLog;
         File chosen = FileDialogs.save(chooser, window != null && window.isShowing() ? window.stage() : stage);
         if (chosen == null) return;
@@ -1217,11 +1224,11 @@ public final class ViewerWindow {
         Thread.ofVirtual().name("export-debug-log").start(() -> {
             try {
                 Files.writeString(chosen.toPath(), text, java.nio.charset.StandardCharsets.UTF_8);
-                Platform.runLater(() -> say("Saved the Debug Log to " + chosen.getName()));
+                Platform.runLater(() -> say(tr("viewer.savedDebugLog", chosen.getName())));
             } catch (IOException e) {
                 log().log(Level.WARNING, "Could not export the Debug Log", e);
                 Platform.runLater(
-                        () -> say("Couldn't save the Debug Log: " + e.getMessage(), MessageLog.Severity.ERROR));
+                        () -> say(tr("viewer.couldNotSaveDebugLog", e.getMessage()), MessageLog.Severity.ERROR));
             }
         });
     }
@@ -1244,7 +1251,7 @@ public final class ViewerWindow {
         if (folder.size() < 2) return;
         slideshowRunning = true;
         stage.setFullScreen(true);
-        say("Slideshow: every " + settings.slideshowSeconds() + " s. Escape stops it.");
+        say(tr("viewer.slideshowStarted", settings.slideshowSeconds()));
         showMarks();
         restartSlideshowTimer();
     }
@@ -1253,7 +1260,7 @@ public final class ViewerWindow {
         slideshowRunning = false;
         slideshow.stop();
         stage.setFullScreen(false);
-        say("Slideshow stopped");
+        say(tr("viewer.slideshowStopped"));
         showMarks();
     }
 
@@ -1272,13 +1279,13 @@ public final class ViewerWindow {
 
     private void sort(Sorting sorting) {
         settings.setSorting(sorting); // the settings listener re-sorts the folder
-        String by =
+        boolean reversed = sorting.reversed();
+        say(
                 switch (sorting.by()) {
-                    case NAME -> "name";
-                    case DATE -> "date";
-                    case SIZE -> "size";
-                };
-        say("Sorted by " + by + (sorting.reversed() ? ", reversed" : ""));
+                    case NAME -> reversed ? tr("viewer.sortedByNameReversed") : tr("viewer.sortedByName");
+                    case DATE -> reversed ? tr("viewer.sortedByDateReversed") : tr("viewer.sortedByDate");
+                    case SIZE -> reversed ? tr("viewer.sortedBySizeReversed") : tr("viewer.sortedBySize");
+                });
     }
 
     /**
@@ -1291,9 +1298,9 @@ public final class ViewerWindow {
         String old = fileName(file);
         TextInputDialog dialog = new TextInputDialog(old);
         dialog.initOwner(stage);
-        dialog.setTitle("Rename");
-        dialog.setHeaderText("Rename " + old);
-        dialog.setContentText("New name:");
+        dialog.setTitle(tr("rename.title"));
+        dialog.setHeaderText(tr("rename.header", old));
+        dialog.setContentText(tr("rename.newName"));
         dialog.getDialogPane().getStylesheets().add(stylesheet());
         // The name without its extension selected, ready to be typed over.
         Platform.runLater(() -> dialog.getEditor().selectRange(0, Renaming.stemLength(old)));
@@ -1303,7 +1310,7 @@ public final class ViewerWindow {
         try {
             name = Renaming.validName(old, answer.get());
         } catch (IllegalArgumentException e) {
-            say("Not renamed: " + e.getMessage());
+            say(tr("rename.notRenamed", e.getMessage()), MessageLog.Severity.WARNING);
             return;
         }
         if (name.equals(old)) return;
@@ -1319,12 +1326,12 @@ public final class ViewerWindow {
                 Platform.runLater(() -> renamed(file, target, sorted));
                 return;
             } catch (FileAlreadyExistsException e) {
-                failed = "Not renamed: " + name + " already exists";
+                failed = tr("rename.alreadyExists", name);
             } catch (IOException | RuntimeException e) {
-                failed = "Not renamed: " + e.getMessage();
+                failed = tr("rename.notRenamed", e.getMessage());
             }
             String said = failed;
-            Platform.runLater(() -> say(said));
+            Platform.runLater(() -> say(said, MessageLog.Severity.WARNING));
         });
     }
 
@@ -1335,7 +1342,7 @@ public final class ViewerWindow {
         bookmarks.moved(file, target);
         if (showing) showCurrent();
         else refreshStrip();
-        say("Renamed to " + fileName(target));
+        say(tr("rename.renamedTo", fileName(target)));
     }
 
     /** The folder of the image on screen, absolute, or null when there is none. */
@@ -1349,8 +1356,9 @@ public final class ViewerWindow {
         Path target = ofFolder ? shownFolder() : folder.current();
         if (target == null) return;
         boolean now = bookmarks.toggle(target, ofFolder);
-        String what = ofFolder ? "the folder " + fileName(target) : fileName(target);
-        say(now ? "Bookmarked " + what : "Took the bookmark off " + what);
+        String name = fileName(target);
+        if (ofFolder) say(now ? tr("viewer.bookmarkedFolder", name) : tr("viewer.bookmarkOffFolder", name));
+        else say(now ? tr("viewer.bookmarkedImage", name) : tr("viewer.bookmarkOffImage", name));
     }
 
     /** Asks for the note on the image on screen or its folder ({@link NoteDialog}); emptied, it goes. */
@@ -1358,13 +1366,16 @@ public final class ViewerWindow {
         Path target = ofFolder ? shownFolder() : folder.current();
         if (target == null) return;
         String was = bookmarks.note(target);
-        String what = ofFolder ? "the folder " + fileName(target) : fileName(target);
-        Optional<String> answer = NoteDialog.ask(stage, ofFolder ? "Folder Note" : "Note", what, was, stylesheet());
+        String name = fileName(target);
+        String what = ofFolder ? tr("viewer.theFolder", name) : name;
+        Optional<String> answer = NoteDialog.ask(
+                stage, ofFolder ? tr("viewer.folderNoteTitle") : tr("viewer.noteTitle"), what, was, stylesheet());
         if (answer.isEmpty()) return;
         bookmarks.setNote(target, ofFolder, answer.get());
         String now = bookmarks.note(target);
         if (now.equals(was)) return;
-        say(now.isEmpty() ? "Took the note off " + what : "Kept the note on " + what);
+        if (ofFolder) say(now.isEmpty() ? tr("viewer.noteOffFolder", name) : tr("viewer.noteKeptFolder", name));
+        else say(now.isEmpty() ? tr("viewer.noteOffImage", name) : tr("viewer.noteKeptImage", name));
     }
 
     /** The next bookmarked image of the folder that way, or -1 when there is none. */
@@ -1375,7 +1386,7 @@ public final class ViewerWindow {
     private void stepToBookmark(int direction) {
         int index = bookmarkFrom(direction);
         if (index < 0) {
-            say("No bookmarked image " + (direction > 0 ? "after" : "before") + " this one");
+            say(direction > 0 ? tr("viewer.noBookmarkAfter") : tr("viewer.noBookmarkBefore"));
             return;
         }
         go(folder.jump(index));
@@ -1403,7 +1414,7 @@ public final class ViewerWindow {
 
     private void goToBookmark(List<Bookmarks.Mark> marks) {
         if (marks.isEmpty()) {
-            say("Nothing is bookmarked or noted yet");
+            say(tr("viewer.nothingBookmarked"));
             return;
         }
         List<String> names = new ArrayList<>(marks.size());
@@ -1411,9 +1422,9 @@ public final class ViewerWindow {
         palette.showChoices(
                 new CommandPalette.Choices(
                         Command.GO_TO_BOOKMARK,
-                        "Go to bookmark…",
-                        "No matching bookmarks or notes",
-                        "open",
+                        tr("viewer.goToBookmarkPrompt"),
+                        tr("viewer.noMatchingBookmarks"),
+                        tr("viewer.verbOpen"),
                         names,
                         0,
                         index -> marks.get(index).path().toString(),
@@ -1439,10 +1450,9 @@ public final class ViewerWindow {
 
     /** What stands on the right of a mark's row: the image's folder, or that it is a folder. */
     static String bookmarkDetail(Bookmarks.Mark mark) {
-        String kind = mark.bookmarked() ? "" : "Note · ";
-        if (mark.folder()) return kind + "Folder";
         Path parent = mark.path().getParent();
-        return kind + (parent == null ? "" : fileName(parent));
+        String where = mark.folder() ? tr("viewer.markFolder") : parent == null ? "" : fileName(parent);
+        return mark.bookmarked() ? where : tr("viewer.markNoteOn", where);
     }
 
     private void openMark(Bookmarks.Mark mark) {
@@ -1485,7 +1495,7 @@ public final class ViewerWindow {
         Image image = shownImage;
         Path file = folder.current();
         if (image == null || file == null) {
-            say("The image is still loading");
+            say(tr("viewer.stillLoading"));
             return;
         }
         Editor made = editor;
@@ -1495,7 +1505,7 @@ public final class ViewerWindow {
         }
         made.open(image, shownOrientation, file, saved -> {
             open(saved);
-            say("Saved " + fileName(saved));
+            say(tr("viewer.saved", fileName(saved)));
         });
     }
 
@@ -1509,19 +1519,23 @@ public final class ViewerWindow {
                 Platform.runLater(() -> {
                     FolderImages rest = folder.without(file);
                     folder = rest;
-                    String said = "Moved " + fileName(file) + " to the " + Command.trash(Command.WINDOWS);
+                    String trash = Command.trash(Command.WINDOWS);
+                    String said = tr("viewer.movedToTrash", fileName(file), trash);
                     if (moved.restorable()) {
                         trashed.push(moved);
                         while (trashed.size() > UNDO_DEPTH) trashed.removeLast();
-                        said += ". " + Command.UNDO_TRASH.chord().getDisplayText() + " puts it back";
+                        String undo = Command.UNDO_TRASH.chord().getDisplayText();
+                        said = tr("viewer.movedToTrashUndo", fileName(file), trash, undo);
                     }
                     say(said);
-                    if (rest.isEmpty()) showMessage("No images left in this folder");
+                    if (rest.isEmpty()) showMessage(tr("viewer.noImagesLeft"));
                     else showCurrent();
                 });
             } catch (IOException | RuntimeException e) {
-                Platform.runLater(() -> say("Couldn't move " + fileName(file) + " to the "
-                        + Command.trash(Command.WINDOWS) + ": " + e.getMessage()));
+                String trash = Command.trash(Command.WINDOWS);
+                Platform.runLater(() -> say(
+                        tr("viewer.couldNotMoveToTrash", fileName(file), trash, e.getMessage()),
+                        MessageLog.Severity.ERROR));
             }
         });
     }
@@ -1536,7 +1550,7 @@ public final class ViewerWindow {
         Image image = shownImage;
         Path file = folder.current();
         if (image == null || file == null) {
-            say("The image is still loading");
+            say(tr("viewer.stillLoading"));
             return;
         }
         Orientation orientation = shownOrientation;
@@ -1550,7 +1564,8 @@ public final class ViewerWindow {
                 Raster upright = Edit.upright(Editor.raster(image), orientation).turned(turns);
                 Platform.runLater(() -> putOnClipboard(Editor.image(upright), file));
             } catch (RuntimeException | OutOfMemoryError e) {
-                Platform.runLater(() -> say("Couldn't copy " + fileName(file) + ": " + e.getMessage()));
+                Platform.runLater(() ->
+                        say(tr("viewer.couldNotCopy", fileName(file), e.getMessage()), MessageLog.Severity.ERROR));
             }
         });
     }
@@ -1563,7 +1578,7 @@ public final class ViewerWindow {
             // image format"): those go as premultiplied ARGB.
             putOnClipboard(Editor.image(Editor.raster(image)), file.toFile());
         }
-        say("Copied " + fileName(file));
+        say(tr("viewer.copied", fileName(file)));
     }
 
     private static void putOnClipboard(Image image, File file) {
@@ -1607,7 +1622,7 @@ public final class ViewerWindow {
 
     private void openRecent(List<Path> folders) {
         if (folders.isEmpty()) {
-            say("No other folder has been opened lately");
+            say(tr("viewer.noOtherRecentFolder"));
             return;
         }
         List<String> names = new ArrayList<>(folders.size());
@@ -1615,9 +1630,9 @@ public final class ViewerWindow {
         palette.showChoices(
                 new CommandPalette.Choices(
                         Command.OPEN_RECENT,
-                        "Open recent folder…",
-                        "No matching folders",
-                        "open",
+                        tr("viewer.openRecentPrompt"),
+                        tr("viewer.noMatchingFolders"),
+                        tr("viewer.verbOpen"),
                         names,
                         0,
                         index -> folders.get(index).toString(),
@@ -1637,7 +1652,8 @@ public final class ViewerWindow {
             try {
                 Reveal.show(file);
             } catch (IOException e) {
-                Platform.runLater(() -> say("Couldn't show " + fileName(file) + ": " + e.getMessage()));
+                Platform.runLater(() ->
+                        say(tr("viewer.couldNotShow", fileName(file), e.getMessage()), MessageLog.Severity.ERROR));
             }
         });
     }
@@ -1657,10 +1673,11 @@ public final class ViewerWindow {
                     Path shown = folder.current();
                     Path here = shown == null ? null : shown.getParent();
                     if (here == null || here.equals(file.getParent())) open(file);
-                    say("Put back " + fileName(file));
+                    say(tr("viewer.putBack", fileName(file)));
                 });
             } catch (IOException | RuntimeException e) {
-                Platform.runLater(() -> say("Couldn't put back " + fileName(file) + ": " + e.getMessage()));
+                Platform.runLater(() ->
+                        say(tr("viewer.couldNotPutBack", fileName(file), e.getMessage()), MessageLog.Severity.ERROR));
             }
         });
     }
@@ -1683,7 +1700,7 @@ public final class ViewerWindow {
     private void openFromBookmarks(Path path, boolean isFolder) {
         Editor open = editor;
         if (open != null && open.isShowing()) {
-            say("Finish editing first: Save or Cancel");
+            say(tr("viewer.finishEditing"), MessageLog.Severity.WARNING);
             stage.toFront();
             return;
         }
@@ -1741,36 +1758,33 @@ public final class ViewerWindow {
         Editor open = editor;
         boolean editing = open != null && open.isShowing();
         if (command.context() == Command.Context.EDITOR) {
-            return open != null && editing ? open.unavailable(command) : "The editor is not open.";
+            return open != null && editing ? open.unavailable(command) : tr("viewer.editorNotOpen");
         }
         if (command.context() == Command.Context.BOOKMARKS) {
             BookmarksWindow window = bookmarksWindow;
             return window != null && window.isShowing()
                     ? window.unavailable(command)
-                    : "The Bookmarks and Notes window is not open.";
+                    : tr("viewer.bookmarksWindowNotOpen");
         }
-        if (editing && !duringEdit(command)) return "Finish editing first: Save or Cancel.";
-        if (command == Command.OPEN_RECENT && settings.recent().isEmpty()) return "No folder has been opened yet.";
-        if (command == Command.GO_TO_BOOKMARK && bookmarks.all().isEmpty())
-            return "Nothing is bookmarked or noted yet.";
+        if (editing && !duringEdit(command)) return tr("viewer.finishEditingReason");
+        if (command == Command.OPEN_RECENT && settings.recent().isEmpty()) return tr("viewer.noRecentFolder");
+        if (command == Command.GO_TO_BOOKMARK && bookmarks.all().isEmpty()) return tr("viewer.nothingBookmarkedReason");
         String folderReason = command.unavailable(folder.index(), folder.size(), !placeholder.isVisible());
         if (folderReason == null && command == Command.NEXT_BOOKMARK && bookmarkFrom(1) < 0)
-            return "No bookmarked image after this one.";
+            return tr("viewer.noBookmarkAfterReason");
         if (folderReason == null && command == Command.PREVIOUS_BOOKMARK && bookmarkFrom(-1) < 0)
-            return "No bookmarked image before this one.";
+            return tr("viewer.noBookmarkBeforeReason");
         if (command == Command.OPEN_RELEASE && updates.releasePage() == null)
             return updates.state() == UpdateCoordinator.State.NOT_CHECKED
-                    ? "No newer release is known: Check for Updates first."
-                    : "No newer release is out.";
+                    ? tr("viewer.noReleaseKnown")
+                    : tr("viewer.noNewerRelease");
         if (command == Command.CHECK_FOR_UPDATES && updates.state() == UpdateCoordinator.State.CHECKING)
-            return "Already checking.";
-        if (command == Command.COPY_DEBUG_LOG && DebugLog.text().isEmpty()) return "Nothing is logged yet.";
-        if (command == Command.COPY_MESSAGES && messages.entries().isEmpty()) return "Nothing has been said yet.";
+            return tr("viewer.alreadyChecking");
+        if (command == Command.COPY_DEBUG_LOG && DebugLog.text().isEmpty()) return tr("viewer.nothingLogged");
+        if (command == Command.COPY_MESSAGES && messages.entries().isEmpty()) return tr("viewer.nothingSaid");
         if (command == Command.UNDO_TRASH && trashed.isEmpty()) {
             String trash = Command.trash(Command.WINDOWS);
-            return Trash.restores()
-                    ? "Nothing has been moved to the " + trash + " yet."
-                    : "Put it back from the " + trash + " itself.";
+            return Trash.restores() ? tr("viewer.nothingTrashed", trash) : tr("viewer.putBackFromTrash", trash);
         }
         return folderReason;
     }
@@ -1803,7 +1817,7 @@ public final class ViewerWindow {
             return;
         }
         if (placeholder.getText().isEmpty())
-            placeholder.setText("Open an image with " + Command.OPEN.chord().getDisplayText() + ", or drop one here");
+            placeholder.setText(tr("viewer.emptyHint", Command.OPEN.chord().getDisplayText()));
         if (buttons == null) {
             buttons = new HBox(openButton(Command.OPEN), openButton(Command.OPEN_FOLDER));
             buttons.getStyleClass().add("open-buttons");
@@ -1831,7 +1845,7 @@ public final class ViewerWindow {
 
     private void chooseFolder() {
         DirectoryChooser chooser = new DirectoryChooser();
-        chooser.setTitle("Open Folder");
+        chooser.setTitle(tr("dialogs.openFolder"));
         Path current = folder.current();
         Path parent = current == null ? null : current.toAbsolutePath().getParent();
         if (parent != null) chooser.setInitialDirectory(parent.toFile());
@@ -1841,12 +1855,12 @@ public final class ViewerWindow {
 
     private void chooseFile() {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Open Image");
+        chooser.setTitle(tr("dialogs.openImage"));
         List<String> patterns = ImageFormats.EXTENSIONS.stream()
                 .sorted()
                 .map(extension -> "*." + extension)
                 .toList();
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Images", patterns));
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(tr("dialogs.images"), patterns));
         Path current = folder.current();
         Path parent = current == null ? null : current.getParent();
         if (parent != null) chooser.setInitialDirectory(parent.toFile());
@@ -1909,7 +1923,7 @@ public final class ViewerWindow {
     private Menu sortMenu() {
         Sorting sorting = settings.sorting();
         ToggleGroup group = new ToggleGroup();
-        Menu menu = new Menu("Sort", Icons.of(Icons.SORT));
+        Menu menu = new Menu(tr("viewer.sortMenu"), Icons.of(Icons.SORT));
         for (Command command : List.of(Command.SORT_BY_NAME, Command.SORT_BY_DATE, Command.SORT_BY_SIZE)) {
             RadioMenuItem item = new RadioMenuItem(command.label());
             item.setToggleGroup(group);
@@ -1949,7 +1963,7 @@ public final class ViewerWindow {
 
     /** What a menu calls {@code command} now: its label, but for full screen while in it. */
     private String label(Command command) {
-        return command == Command.FULL_SCREEN && stage.isFullScreen() ? "Leave Full Screen" : command.label();
+        return command == Command.FULL_SCREEN && stage.isFullScreen() ? tr("viewer.leaveFullScreen") : command.label();
     }
 
     /** Whether a setting or panel the Mac menus tick ({@link MacMenus#TICKED}) is on. */

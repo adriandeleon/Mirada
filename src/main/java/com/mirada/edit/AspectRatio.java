@@ -1,30 +1,35 @@
 package com.mirada.edit;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The shapes a crop can be held to, as GNOME Image Viewer offers them. A fixed ratio follows the
  * image: on a portrait picture 3:2 is taller than wide.
  */
 public enum AspectRatio {
-    FREE("Free", 0, 0),
-    ORIGINAL("Original", 0, 0),
-    SQUARE("Square", 1, 1),
-    FIVE_FOUR("5:4", 5, 4),
-    FOUR_THREE("4:3", 4, 3),
-    THREE_TWO("3:2", 3, 2),
-    SIXTEEN_NINE("16:9", 16, 9);
+    FREE("aspect.free", 0, 0),
+    ORIGINAL("aspect.original", 0, 0),
+    SQUARE("aspect.square", 1, 1),
+    FIVE_FOUR("aspect.fiveFour", 5, 4),
+    FOUR_THREE("aspect.fourThree", 4, 3),
+    THREE_TWO("aspect.threeTwo", 3, 2),
+    SIXTEEN_NINE("aspect.sixteenNine", 16, 9);
 
-    private final String label;
+    /** The catalog key of its name, translated at use. */
+    private final String labelKey;
+
     private final int longSide;
     private final int shortSide;
 
-    AspectRatio(String label, int longSide, int shortSide) {
-        this.label = label;
+    AspectRatio(String labelKey, int longSide, int shortSide) {
+        this.labelKey = labelKey;
         this.longSide = longSide;
         this.shortSide = shortSide;
     }
 
+    /** Its name in the language in use: "Free", "Square", "3:2". */
     public String label() {
-        return label;
+        return tr(labelKey);
     }
 
     /** Width over height for an image of this size, or 0 for no constraint. */

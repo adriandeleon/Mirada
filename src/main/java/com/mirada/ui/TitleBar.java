@@ -34,6 +34,8 @@ import javafx.stage.StageStyle;
 
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The window's top row, GNOME Image Viewer's: the file name in the middle, rotate, info and the main
  * menu on the right, and the window buttons after them. macOS and Windows get their own conventions
@@ -61,9 +63,6 @@ final class TitleBar {
     }
 
     private static final Layout LAYOUT = Layout.of(System.getProperty("os.name", ""));
-
-    /** The ☰ button's name: it runs no command, it opens the menu of them. */
-    static final String MAIN_MENU = "Main Menu";
 
     /**
      * "folder / name" on one line. Short of room, the file name keeps its width and the folder gives
@@ -193,7 +192,8 @@ final class TitleBar {
         for (Node node : new Node[] {info, menu}) node.setFocusTraversable(false);
         // Icons only: their names are what a screen reader says (VoiceOver, Narrator, Orca).
         Icons.name(info, Command.INFO);
-        Icons.name(menu, MAIN_MENU, KeyCombination.NO_MATCH);
+        // The ☰ button's name: it runs no command, it opens the menu of them.
+        Icons.name(menu, tr("titleBar.mainMenu"), KeyCombination.NO_MATCH);
 
         HBox right = new HBox(4, rotate, info, menu);
         right.setAlignment(Pos.CENTER_RIGHT);
@@ -323,7 +323,7 @@ final class TitleBar {
 
     /** Help: the logs, reporting a problem and the update check (DIAG-03, DIAG-05, DIAG-06). */
     private static Menu help(Consumer<Command> run) {
-        Menu help = new Menu("Help", Icons.of(Icons.HELP));
+        Menu help = new Menu(tr("titleBar.help"), Icons.of(Icons.HELP));
         help.getItems()
                 .addAll(
                         item(Command.MESSAGE_LOG, run),

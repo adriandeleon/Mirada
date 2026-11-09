@@ -13,6 +13,8 @@ import java.time.Duration;
 import com.mirada.AppInfo;
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * Asks GitHub's {@code releases/latest} whether there is a newer Mirada. Blocking: callers run it off
  * the FX thread. Sends nothing about the user beyond what any HTTPS request carries, and never
@@ -58,20 +60,20 @@ public final class UpdateService {
             String body;
             try (InputStream in = response.body()) {
                 byte[] bytes = in.readNBytes(MAX_RESPONSE_BYTES + 1);
-                if (bytes.length > MAX_RESPONSE_BYTES) return new Outcome(null, "the answer was too large");
+                if (bytes.length > MAX_RESPONSE_BYTES) return new Outcome(null, tr("update.error.tooLarge"));
                 body = new String(bytes, StandardCharsets.UTF_8);
             }
             // 404: nothing published yet. Nothing newer, not an error.
             if (response.statusCode() == 404) return new Outcome(null, null);
-            if (response.statusCode() != 200) return new Outcome(null, "HTTP " + response.statusCode());
+            if (response.statusCode() != 200) return new Outcome(null, tr("update.error.http", response.statusCode()));
             ReleaseInfo latest = UpdateCheck.parseLatest(body);
-            if (latest == null) return new Outcome(null, "GitHub's answer could not be read");
+            if (latest == null) return new Outcome(null, tr("update.error.unreadable"));
             return new Outcome(UpdateCheck.isNewer(currentVersion, latest.version()) ? latest : null, null);
         } catch (HttpTimeoutException e) {
-            return new Outcome(null, "timed out");
+            return new Outcome(null, tr("update.error.timedOut"));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return new Outcome(null, "interrupted");
+            return new Outcome(null, tr("update.error.interrupted"));
         } catch (IOException | IllegalArgumentException e) {
             return new Outcome(null, e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
         }

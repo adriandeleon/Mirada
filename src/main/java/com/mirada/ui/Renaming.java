@@ -1,5 +1,7 @@
 package com.mirada.ui;
 
+import static com.mirada.i18n.Messages.tr;
+
 /** The rules for a new file name typed into the rename dialog. */
 final class Renaming {
 
@@ -18,11 +20,11 @@ final class Renaming {
      */
     static String validName(String old, String typed) {
         String name = typed.strip();
-        if (name.isEmpty()) throw new IllegalArgumentException("the name is empty");
-        if (name.equals(".") || name.equals("..")) throw new IllegalArgumentException("that is not a file name");
+        if (name.isEmpty()) throw new IllegalArgumentException(tr("rename.empty"));
+        if (name.equals(".") || name.equals("..")) throw new IllegalArgumentException(tr("rename.notAFileName"));
         for (char c : name.toCharArray()) {
             if (c == '/' || c == '\\' || c == '\0') {
-                throw new IllegalArgumentException("a name cannot contain " + (c == '\0' ? "NUL" : String.valueOf(c)));
+                throw new IllegalArgumentException(tr("rename.cannotContain", c == '\0' ? "NUL" : String.valueOf(c)));
             }
         }
         boolean hasExtension = name.lastIndexOf('.') > 0;

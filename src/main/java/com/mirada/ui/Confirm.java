@@ -13,6 +13,8 @@ import javafx.stage.Window;
 
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The one confirm helper (WIN-05, CONF-01 to CONF-04, Pauta 4.0.1): a question before something the
  * user made is removed, discarded or replaced. The question names the thing and what happens to it;
@@ -30,21 +32,20 @@ final class Confirm {
 
     /** Removing a mark that carries a note, which cannot be typed again from memory. */
     static Question removeMark(String name, boolean bookmarked) {
-        String what = bookmarked ? "bookmark and note" : "note";
         return new Question(
-                "Remove",
-                "Remove the " + what + " on " + name + "?",
-                "The note goes with it. This cannot be undone.",
-                "Remove");
+                tr("confirm.removeMark.title"),
+                tr(bookmarked ? "confirm.removeMark.headerBookmarked" : "confirm.removeMark.header", name),
+                tr("confirm.removeMark.message"),
+                tr("confirm.removeMark.action"));
     }
 
     /** Leaving the editor with a crop, turn or flip not yet saved. */
     static Question discardEdit(String name) {
         return new Question(
-                "Discard Edit",
-                "Discard the edit to " + name + "?",
-                "The crop, turns and flips made since it opened are lost; the file itself is unchanged.",
-                "Discard");
+                tr("confirm.discardEdit.title"),
+                tr("confirm.discardEdit.header", name),
+                tr("confirm.discardEdit.message"),
+                tr("confirm.discardEdit.action"));
     }
 
     /**
@@ -53,7 +54,10 @@ final class Confirm {
      */
     static Question replaceFile(String name) {
         return new Question(
-                "Replace File", "Replace " + name + "?", "A file with that name is already there.", "Replace");
+                tr("confirm.replaceFile.title"),
+                tr("confirm.replaceFile.header", name),
+                tr("confirm.replaceFile.message"),
+                tr("confirm.replaceFile.action"));
     }
 
     /**
@@ -62,11 +66,10 @@ final class Confirm {
      */
     static Question importConfiguration(String zip) {
         return new Question(
-                "Import Configuration",
-                "Import " + zip + " over your configuration?",
-                "The parts ticked below replace yours; the rest stay as they are. This cannot be undone,"
-                        + " but Export first keeps a copy.",
-                "Import");
+                tr("confirm.importConfiguration.title"),
+                tr("confirm.importConfiguration.header", zip),
+                tr("confirm.importConfiguration.message"),
+                tr("confirm.importConfiguration.action"));
     }
 
     /** Asks over {@code owner}, styled as it is, and waits; true only for the action button. */
@@ -80,7 +83,7 @@ final class Confirm {
      */
     static boolean ask(Question question, @Nullable Window owner, @Nullable Node extra) {
         ButtonType action = new ButtonType(question.action(), ButtonBar.ButtonData.OK_DONE);
-        ButtonType cancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType cancel = new ButtonType(tr("confirm.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, question.message(), action, cancel);
         alert.setTitle(question.title());
         alert.setHeaderText(question.header());

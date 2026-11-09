@@ -25,6 +25,8 @@ import javafx.scene.layout.VBox;
 import com.mirada.diagnostics.MessageLog;
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The Message Log: this session's status-bar messages, newest first, as a card over the window just
  * above the status bar (DIAG-01, MLOG-01, Pauta 4.0.1). The filter has the keyboard when it opens;
@@ -63,9 +65,9 @@ final class MessageLogView {
             e.consume();
         });
 
-        Label title = new Label("Messages");
+        Label title = new Label(tr("messageLog.title"));
         title.getStyleClass().add("message-log-title");
-        filter.setPromptText("Filter messages…");
+        filter.setPromptText(tr("messageLog.filterPrompt"));
         filter.getStyleClass().add("message-log-filter");
         // As the Bookmarks window's filter: the first key at once, then at most one list a pause (PERF-06).
         filter.textProperty().addListener((o, was, now) -> filtering.request());
@@ -74,17 +76,17 @@ final class MessageLogView {
         list.getStyleClass().add("message-log-list");
         list.setPrefHeight(LIST_HEIGHT);
         list.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        list.setPlaceholder(new Label("No messages yet"));
+        list.setPlaceholder(new Label(tr("messageLog.empty")));
         list.setCellFactory(v -> new EntryCell());
 
-        Button copy = new Button("Copy");
+        Button copy = new Button(tr("messageLog.copy"));
         copy.getStyleClass().add("flat");
         copy.setOnAction(e -> run.accept(Command.COPY_MESSAGES));
-        Button clear = new Button("Clear");
+        Button clear = new Button(tr("messageLog.clear"));
         clear.getStyleClass().add("flat");
         clear.setOnAction(e -> run.accept(Command.CLEAR_MESSAGES));
         cut.getStyleClass().add("message-log-hint");
-        Label hint = new Label("Esc to close");
+        Label hint = new Label(tr("messageLog.escToClose"));
         hint.getStyleClass().add("message-log-hint");
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -155,7 +157,7 @@ final class MessageLogView {
 
     private void refresh() {
         int dropped = messages.dropped();
-        cut.setText(dropped == 0 ? "" : dropped + " older not kept");
+        cut.setText(dropped == 0 ? "" : tr("messageLog.olderNotKept", dropped));
         list.getItems().setAll(matching(messages.entries(), filter.getText()));
     }
 

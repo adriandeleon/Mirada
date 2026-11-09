@@ -331,6 +331,25 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   Ctrl+N to move, Escape, and Delete to remove while the filter is empty. Everything else there is a
   command, so it has a key in the keymap and a row in the palette.
 
+## Translations
+
+- **`tr` is never called while a class loads.** The language is chosen as the settings are read,
+  after some classes may already have loaded, so a `static final String` set from `tr` would be
+  English for good. Constants hold keys; the text is asked for where it is shown
+  (`SettingsPages.Row`, `AspectRatio`).
+- **The language is fixed for the run.** The window is built once, in one language; choosing
+  another in Settings says it applies from the next start. `App` sets the JVM's default locale to
+  it, which is how JavaFX words its own dialog buttons: JavaFX ships `de`, `es`, `fr`, `it` and
+  `pt_BR`, so Portuguese's buttons stay English (`pt` finds no `pt_BR`). Their bundles are listed
+  for the native image beside `com/mirada/i18n/messages*.properties`.
+- **A value with a placeholder is a `MessageFormat` pattern; one without is shown as written.** So
+  an apostrophe is doubled only beside a `{0}` (`l''image {0}`, but `l'image`), and a count is
+  `{0,number,integer}` (grouped, "1,234 images") while an identifier is `{0,number,#}`. Plurals are
+  a choice: `{0,choice,1#1 image|1<{0,number,integer} images}`. `MessagesTest` holds the
+  apostrophes and that each language keeps the base's placeholders.
+- **The palette finds a command by its English words too.** `Command`'s keywords and the settings
+  rows' stay English, so someone who knows the English name, or reads a guide, still finds it.
+
 ## Bookmarks and notes
 
 - **Bookmarks and notes are Mirada's, never the file's** (`Bookmarks`, Editora's bookmarks and

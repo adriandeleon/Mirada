@@ -21,6 +21,8 @@ import java.util.zip.ZipInputStream;
 
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * Import Configuration (SET-12, Pauta 4.0.1): reads a {@code .zip} made by {@link ConfigExport},
  * says which parts it holds, and replaces only the parts the user keeps ticked; the rest of the
@@ -47,21 +49,28 @@ public final class ConfigImport {
     /** What can be imported, in the order the question lists them. */
     public enum Part {
         /** Every setting but the keys: theme, what opens at start, the folder's order, … */
-        PREFERENCES("Preferences"),
+        PREFERENCES("import.part.preferences", "import.part.preferences.inSentence"),
         /** The keymap, the user's own keys and the palette's. */
-        KEYS("Keys"),
+        KEYS("import.part.keys", "import.part.keys.inSentence"),
         /** {@code bookmarks.properties}: every bookmark and note. */
-        BOOKMARKS("Bookmarks and notes");
+        BOOKMARKS("import.part.bookmarks", "import.part.bookmarks.inSentence");
 
-        private final String label;
+        private final String labelKey;
+        private final String inSentenceKey;
 
-        Part(String label) {
-            this.label = label;
+        Part(String labelKey, String inSentenceKey) {
+            this.labelKey = labelKey;
+            this.inSentenceKey = inSentenceKey;
         }
 
-        /** How the question names it. */
+        /** How the question names it, in the interface's language. */
         public String label() {
-            return label;
+            return tr(labelKey);
+        }
+
+        /** How a sentence names it ("the keys"), for what the status bar says after an import. */
+        public String inSentence() {
+            return tr(inSentenceKey);
         }
     }
 
@@ -90,11 +99,11 @@ public final class ConfigImport {
         /** The reason as the status bar says it. */
         public String sentence() {
             return switch (reason) {
-                case NOT_A_ZIP -> "That file is not a zip";
-                case NOT_AN_EXPORT -> "That zip is not a Mirada configuration";
-                case UNSAFE_PATH -> "That zip names a file outside the settings folder";
-                case TOO_LARGE -> "That zip is larger than any Mirada configuration";
-                case NEWER_VERSION -> "That configuration is from a newer Mirada";
+                case NOT_A_ZIP -> tr("import.refused.notAZip");
+                case NOT_AN_EXPORT -> tr("import.refused.notAnExport");
+                case UNSAFE_PATH -> tr("import.refused.unsafePath");
+                case TOO_LARGE -> tr("import.refused.tooLarge");
+                case NEWER_VERSION -> tr("import.refused.newerVersion");
             };
         }
     }

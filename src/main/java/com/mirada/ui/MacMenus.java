@@ -16,6 +16,8 @@ import javafx.scene.input.KeyCombination;
 
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The macOS menu bar: File, Edit, Image, View, Go and Help across the top of the screen, every item a
  * {@link Command}. A Mac app without one looks unfinished, and the Help menu's search finds every
@@ -31,26 +33,35 @@ import org.jspecify.annotations.Nullable;
  */
 final class MacMenus {
 
-    /** One menu: its title, and its items in groups that separators divide. */
-    record Heading(String title, List<List<Command>> groups) {}
+    /**
+     * One menu: the catalog key of its title, and its items in groups that separators divide. Nothing
+     * matches a menu by its title, so the Help menu stays the Help menu in any language.
+     */
+    record Heading(String titleKey, List<List<Command>> groups) {
+
+        /** Its title in the language in use: "File", "Help". */
+        String title() {
+            return tr(titleKey);
+        }
+    }
 
     static final List<Heading> HEADINGS = List.of(
             new Heading(
-                    "File",
+                    "menu.file",
                     List.of(
                             List.of(Command.OPEN, Command.OPEN_FOLDER, Command.OPEN_RECENT),
                             List.of(Command.SHOW_IN_FOLDER),
                             List.of(Command.EXPORT_CONFIG, Command.IMPORT_CONFIG),
                             List.of(Command.CLOSE))),
-            new Heading("Edit", List.of(List.of(Command.UNDO_TRASH), List.of(Command.COPY))),
+            new Heading("menu.edit", List.of(List.of(Command.UNDO_TRASH), List.of(Command.COPY))),
             new Heading(
-                    "Image",
+                    "menu.image",
                     List.of(
                             List.of(Command.EDIT),
                             List.of(Command.ROTATE_CLOCKWISE, Command.ROTATE_COUNTERCLOCKWISE),
                             List.of(Command.RENAME, Command.MOVE_TO_TRASH))),
             new Heading(
-                    "View",
+                    "menu.view",
                     List.of(
                             List.of(Command.ZOOM_IN, Command.ZOOM_OUT, Command.FIT, Command.ACTUAL_SIZE),
                             List.of(Command.KEEP_ZOOM),
@@ -58,7 +69,7 @@ final class MacMenus {
                             List.of(Command.THUMBNAILS_AT_SIDE, Command.THUMBNAIL_CAPTIONS, Command.THUMBNAIL_NAMES),
                             List.of(Command.FULL_SCREEN))),
             new Heading(
-                    "Go",
+                    "menu.go",
                     List.of(
                             List.of(Command.NEXT, Command.PREVIOUS, Command.FIRST, Command.LAST),
                             List.of(Command.GO_TO_IMAGE),
@@ -69,14 +80,14 @@ final class MacMenus {
                                     Command.SORT_BY_SIZE,
                                     Command.REVERSE_ORDER))),
             new Heading(
-                    "Bookmarks",
+                    "menu.bookmarks",
                     List.of(
                             List.of(Command.BOOKMARK, Command.BOOKMARK_FOLDER),
                             List.of(Command.NOTE, Command.FOLDER_NOTE),
                             List.of(Command.NEXT_BOOKMARK, Command.PREVIOUS_BOOKMARK, Command.GO_TO_BOOKMARK),
                             List.of(Command.BOOKMARKS))),
             new Heading(
-                    "Help",
+                    "menu.help",
                     List.of(
                             List.of(Command.PALETTE, Command.DOCUMENTATION, Command.SHORTCUTS),
                             List.of(Command.CHECK_FOR_UPDATES, Command.OPEN_RELEASE),

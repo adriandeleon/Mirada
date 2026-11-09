@@ -15,6 +15,8 @@ import com.mirada.folder.ImageFormats;
 import com.mirada.image.ExifDetails;
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * What the info sidebar shows about the image on screen, and how it words it: GNOME Image
  * Viewer's properties, plus the camera card and every metadata tag the file carries.
@@ -84,8 +86,8 @@ record ImageDetails(
      * {@code 4.2 MB}. Bytes under 1000 are whole.
      */
     static String fileSize(long bytes) {
-        if (bytes < 0) return "Unknown";
-        if (bytes < 1000) return bytes + " bytes";
+        if (bytes < 0) return tr("details.unknown");
+        if (bytes < 1000) return tr("details.bytes", bytes);
         String[] units = {"kB", "MB", "GB", "TB"};
         double value = bytes;
         int unit = -1;
@@ -98,7 +100,7 @@ record ImageDetails(
 
     /** In the user's locale and time zone, at the length GNOME uses. */
     static String date(@Nullable FileTime time, Locale locale, ZoneId zone) {
-        if (time == null || time.toMillis() <= 0) return "Unknown";
+        if (time == null || time.toMillis() <= 0) return tr("details.unknown");
         return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
                 .withLocale(locale)
                 .withZone(zone)
@@ -106,7 +108,7 @@ record ImageDetails(
     }
 
     String size() {
-        return width + " × " + height;
+        return tr("details.size", width, height);
     }
 
     String folderName() {
@@ -117,6 +119,6 @@ record ImageDetails(
 
     /** {@code 3 of 41}: where the image sits in its folder. */
     String position() {
-        return (index + 1) + " of " + count;
+        return tr("details.position", index + 1, count);
     }
 }

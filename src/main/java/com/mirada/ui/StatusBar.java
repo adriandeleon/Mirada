@@ -16,6 +16,8 @@ import com.mirada.update.ReleaseInfo;
 import com.mirada.update.UpdateCoordinator;
 import org.jspecify.annotations.Nullable;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * The status bar along the bottom of the window (WIN-01, Pauta 4.0.1). Its left side is the echo
  * area: one line saying what the last command did, errors in red and warnings in amber; a click on it,
@@ -67,10 +69,10 @@ final class StatusBar {
         echo.setMinWidth(0);
         // A click runs the Message Log command, as its menu item and the palette do (WIN-01, MLOG-02).
         echo.setOnMouseClicked(e -> run.accept(Command.MESSAGE_LOG));
-        echo.setTooltip(new Tooltip("Message Log: everything said this session"));
+        echo.setTooltip(new Tooltip(tr("status.messageLogTip")));
         unread.getStyleClass().add("status-unread");
         unread.setOnMouseClicked(e -> run.accept(Command.MESSAGE_LOG));
-        unread.setTooltip(new Tooltip("Errors since the Message Log was last opened"));
+        unread.setTooltip(new Tooltip(tr("status.unreadTip")));
         update.getStyleClass().add("status-update");
         update.setFocusTraversable(false);
         update.setOnAction(e -> run.accept(Command.OPEN_RELEASE));
@@ -116,7 +118,7 @@ final class StatusBar {
         Hyperlink update = built.update();
         ReleaseInfo latest = updates.latest();
         boolean show = latest != null && updates.state() == UpdateCoordinator.State.AVAILABLE;
-        update.setText(latest == null ? "" : "Mirada " + latest.version() + " is available");
+        update.setText(latest == null ? "" : tr("status.updateAvailable", latest.version()));
         update.setVisible(show);
         update.setManaged(show);
     }

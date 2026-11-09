@@ -4,6 +4,7 @@ import java.io.PrintStream;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
 import javafx.application.Application;
@@ -12,6 +13,7 @@ import javafx.stage.Stage;
 
 import com.mirada.diagnostics.DebugLog;
 import com.mirada.diagnostics.MessageLog;
+import com.mirada.i18n.Messages;
 import com.mirada.image.HeadStart;
 import com.mirada.os.MacOpenFiles;
 import com.mirada.os.SingleInstance;
@@ -28,6 +30,8 @@ import com.mirada.ui.Fonts;
 import com.mirada.ui.Theme;
 import com.mirada.ui.ViewerWindow;
 import org.jspecify.annotations.Nullable;
+
+import static com.mirada.i18n.Messages.tr;
 
 /**
  * Entry point. {@code mirada [file-or-folder]}: a file opens with its folder behind it, a folder
@@ -137,8 +141,7 @@ public final class App extends Application {
         ViewerWindow window = shown;
         if (window != null) {
             String what = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
-            window.sayLater(
-                    "Something went wrong: " + what + ". The Debug Log has the details.", MessageLog.Severity.ERROR);
+            window.sayLater(tr("app.uncaught", what), MessageLog.Severity.ERROR);
         }
     }
 
@@ -152,12 +155,25 @@ public final class App extends Application {
             try {
                 Settings settings = new Settings(file);
                 settings.load();
+                // The catalog is read here too, off the FX thread: the window is built in one language.
+                Messages.init(language(settings));
                 read.complete(settings);
             } catch (RuntimeException | Error e) {
                 read.completeExceptionally(e);
             }
         });
         return read;
+    }
+
+    /**
+     * The interface's language: the one Settings names if it is bundled, else the system's if it is,
+     * else English (INTL-02).
+     */
+    static String language(Settings settings) {
+        return Messages.resolve(
+                settings.language(),
+                Messages.available().keySet(),
+                Locale.getDefault().getLanguage());
     }
 
     /** The settings {@link #main} started reading, or read here if it did not or could not. */
@@ -200,6 +216,10 @@ public final class App extends Application {
         // Inter's four faces register on a thread of their own while the window is built (Fonts).
         Fonts.load();
         Settings settings = settings();
+        String language = language(settings);
+        if (!Messages.initialized() || !Messages.current().equals(language)) Messages.init(language);
+        // JavaFX words its own dialogs' buttons by the default locale: the interface's language.
+        Locale.setDefault(Locale.forLanguageTag(Messages.current()));
         // Written on the files' thread from now on, never the FX thread (PERF-01).
         settings.writeOn(FileWrites.background(), Platform::runLater);
         DebugLog.writeOn(FileWrites.background());

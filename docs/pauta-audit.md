@@ -1,6 +1,6 @@
 # Pauta audit
 
-Mirada at `81850e0`, audited against [Pauta 4.0.1](https://pauta-project.dev/4.0.1/) on 2026-11-08.
+Mirada at `b82eefc` and the translation work on it, audited against [Pauta 4.0.1](https://pauta-project.dev/4.0.1/) on 2026-11-08.
 Scope: every rule (351). Rules from https://pauta-project.dev/4.0.1/rules.json.
 
 Regenerated rather than edited: each rule was judged by its check (code, test or by hand) as the
@@ -10,8 +10,8 @@ never because Mirada lacks a part another rule requires.
 
 |        | Pass | Fail | Manual | N.a. |
 |--------|-----:|-----:|-------:|-----:|
-| MUST   | 130 | 6 | 6 | 20 |
-| SHOULD | 66 | 42 | 15 | 57 |
+| MUST   | 135 | 1 | 6 | 20 |
+| SHOULD | 71 | 40 | 16 | 53 |
 | MAY    | 1 | 2 | 0 | 6 |
 
 A failed MUST blocks a release.
@@ -20,11 +20,6 @@ A failed MUST blocks a release.
 
 | ID | Level | Result | Evidence |
 |----|-------|--------|----------|
-| [QUAL-12](https://pauta-project.dev/4.0.1/quality/#qual-12) | MUST | fail | no message catalogs, so no parity test (descriptions are checked: CommandTest:189) |
-| [KBD-03](https://pauta-project.dev/4.0.1/keyboard/#kbd-03) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:20`: titles and descriptions are English literals, no catalog |
-| [INTL-01](https://pauta-project.dev/4.0.1/i18n/#intl-01) | MUST | fail | no messages*.properties; every string is an English literal |
-| [INTL-08](https://pauta-project.dev/4.0.1/i18n/#intl-08) | MUST | fail | no catalogs, no parity test |
-| [PAL-02](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-02) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:519`: the palette lists every command, Escape, Command Palette and the Pan commands included, greyed with a reason where they cannot run (`CommandTest.thePaletteListsEveryCommandWhereverItOpens`); but titles and descriptions are not yet from `command.<id>` and `command.<id>.desc` (no catalogs: KBD-03) |
 | [REL-19](https://pauta-project.dev/4.0.1/release/#rel-19) | MUST | fail | `.github/workflows/ci.yml:15`: push to main and every pull request; Format (`spotless:check`) and Build & Test (`./mvnw verify`, the JaCoCo gate included) are separate jobs. Missing: the two checks are not required on main yet (branch protection, a repository setting the owner turns on) |
 
 ## Other failures
@@ -57,8 +52,6 @@ A failed MUST blocks a release.
 | [SET-08](https://pauta-project.dev/4.0.1/settings/#set-08) | SHOULD | fail | `src/main/java/com/mirada/settings/Settings.java:124`: file names are constants, but .properties, with the window's place and recent folders (`:52`) in the preferences file, no separate state file |
 | [SET-17](https://pauta-project.dev/4.0.1/settings/#set-17) | SHOULD | fail | no Settings Sync |
 | [DIAG-07](https://pauta-project.dev/4.0.1/diagnostics/#diag-07) | SHOULD | fail | no Doctor page (a row per codec library would fit) |
-| [INTL-02](https://pauta-project.dev/4.0.1/i18n/#intl-02) | SHOULD | fail | no language list or picker |
-| [INTL-07](https://pauta-project.dev/4.0.1/i18n/#intl-07) | SHOULD | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:40`: raw English literals passed to controls |
 | [PAL-05](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-05) | SHOULD | fail | `src/main/java/com/mirada/ui/CommandPalette.java:368`: selects the first enabled row, but no test with a disabled top match |
 | [PAL-07](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-07) | SHOULD | fail | `src/main/java/com/mirada/ui/CommandPalette.java:242`: Esc, C-g and the scrim cancel, but focus is not restored |
 | [PAL-08](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-08) | SHOULD | fail | no per-command docs page; F1 opens the palette |
@@ -67,7 +60,7 @@ A failed MUST blocks a release.
 | [QOPEN-12](https://pauta-project.dev/4.0.1/templates/quick-open/#qopen-12) | SHOULD | fail | `src/main/java/com/mirada/ui/BookmarksWindow.java:221`: the Bookmarks list maps keys by hand, not through PaletteKeys |
 | [CONF-05](https://pauta-project.dev/4.0.1/templates/confirm-dialog/#conf-05) | SHOULD | fail | `src/main/java/com/mirada/ui/Editor.java`: no Save / Discard / Cancel question |
 | [CONF-12](https://pauta-project.dev/4.0.1/templates/confirm-dialog/#conf-12) | SHOULD | fail | `src/test/java/com/mirada/ui/ConfirmTest.java`: the words come from pure builders, tested; no capture hook for UI tests |
-| [MLOG-05](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-05) | SHOULD | fail | `src/test/java/com/mirada/diagnostics/MessageLogTest.java:101`: Mirada has no message keys; severity is given where said or read from the first words (`MessageLog.severityOf`), not from a `status.*` key |
+| [MLOG-05](https://pauta-project.dev/4.0.1/templates/message-log/#mlog-05) | SHOULD | fail | `src/main/java/com/mirada/diagnostics/MessageLog.java:14`: a message's severity is said where it is raised (the direct channel), since its words are translated; keys are not named by severity (`status.*.failed`), so no test classifies them |
 | [SYNC-01](https://pauta-project.dev/4.0.1/templates/settings-sync/#sync-01) | SHOULD | fail | no Settings Sync |
 | [REL-09](https://pauta-project.dev/4.0.1/release/#rel-09) | SHOULD | fail | `scripts/build-appimage.sh:84`: metainfo generated only inside the AppImage; no packaging/linux/io.github.adriandeleon.Mirada.metainfo.xml |
 | [REL-12](https://pauta-project.dev/4.0.1/release/#rel-12) | SHOULD | fail | `.github/workflows/release.yml:15`: no Homebrew cask (needs notarization) |
@@ -97,7 +90,8 @@ A failed MUST blocks a release.
 | [DIAG-03](https://pauta-project.dev/4.0.1/diagnostics/#diag-03) | MUST | manual | `src/main/java/com/mirada/ui/DebugLogWindow.java:29`: an unowned, modeless Stage with Refresh, Copy, Clear, Export…, Report a Problem…; open it from Help and keep working in the main window |
 | [CLI-04](https://pauta-project.dev/4.0.1/command-line/#cli-04) | SHOULD | manual | `src/main/java/com/mirada/Launch.java:84`: Mirada restores no session, so a launch shows only what it names; `--no-session` itself is refused as an unknown option (exit 2) |
 | [CLI-06](https://pauta-project.dev/4.0.1/command-line/#cli-06) | SHOULD | manual | `src/main/java/com/mirada/App.java:180`: only the first argument opens, the rest are ignored; a handed-off launch likewise (`App.java:201`) |
-| [INTL-04](https://pauta-project.dev/4.0.1/i18n/#intl-04) | SHOULD | manual | English only; Settings rows wrap (src/main/java/com/mirada/ui/SettingsWindow.java:276) |
+| [INTL-03](https://pauta-project.dev/4.0.1/i18n/#intl-03) | SHOULD | manual | the five catalogs were translated in full against Editora's terms; a value equal to English is a name or a pattern (Mirada, JPEG, `{0} · {1}`); no test catches an untranslated sentence, so it is checked in review |
+| [INTL-04](https://pauta-project.dev/4.0.1/i18n/#intl-04) | SHOULD | manual | German and Spanish looked at headless at 1000 px: Settings rows wrap (`SettingsWindow.java:276`), the editor's bar wraps its three groups to a second row instead of cutting (`Editor.java:160`); Italian, French and Portuguese not looked at |
 | [WELC-02](https://pauta-project.dev/4.0.1/templates/welcome/#welc-02) | SHOULD | manual | `src/main/java/com/mirada/ui/ViewerWindow.java:99`: empty state offers Open Image and Open Folder; chords only in tooltips, no Open Recent or palette |
 | [ABOUT-07](https://pauta-project.dev/4.0.1/templates/about/#about-07) | MUST | manual | this audit; 4.0.1 is honest only once its failed MUSTs pass |
 | [CONF-07](https://pauta-project.dev/4.0.1/templates/confirm-dialog/#conf-07) | SHOULD | manual | `src/main/java/com/mirada/ui/ViewerWindow.java:1082`: Move to Trash asks nothing and offers Ctrl+Z (Linux only) |
@@ -152,6 +146,7 @@ A failed MUST blocks a release.
 | [QUAL-08](https://pauta-project.dev/4.0.1/quality/#qual-08) | SHOULD | pass | `src/test/java/com/mirada/ui/CommandSweepTest.java`: after every command in every state, Mirada's real settings folders and the desktop's trash are as they were; surefire points the trash at target/ and unsets the display and session bus |
 | [QUAL-09](https://pauta-project.dev/4.0.1/quality/#qual-09) | MUST | pass | `scripts/headless-run.sh`: with HeadlessDriver: the real window, robot keys and clicks |
 | [QUAL-11](https://pauta-project.dev/4.0.1/quality/#qual-11) | SHOULD | pass | `src/test/java/com/mirada/ui/CommandSweepTest.java`: every command of the registry run (or found unavailable, with its reason) in an empty window, on an image, turned and zoomed, in the editor and full screen; the context menu greys the same |
+| [QUAL-12](https://pauta-project.dev/4.0.1/quality/#qual-12) | MUST | pass | `src/test/java/com/mirada/i18n/MessagesTest.java:103`: every language has exactly the base's keys, and `:129` every `command.<id>` has its `.desc`; `src/test/java/com/mirada/ui/CommandCatalogTest.java` holds every Command to both |
 | [QUAL-13](https://pauta-project.dev/4.0.1/quality/#qual-13) | SHOULD | pass | `src/test/java/com/mirada/ui/SettingsWindowTest.java`: everyControlSetInTheWindowSurvivesARestart sets every control, reloads the settings and reads each back in a new window |
 | [QUAL-15](https://pauta-project.dev/4.0.1/quality/#qual-15) | SHOULD | pass | `src/test/java/com/mirada/ReleaseSupplyChainTest.java:259`: fails when a signing, notarization or attestation step moves or goes, or a tag could publish without its secrets |
 | [PERF-01](https://pauta-project.dev/4.0.1/performance/#perf-01) | MUST | pass | `src/main/java/com/mirada/ui/ViewerWindow.java:108`: listing, sort stats, rename, existence checks, details, export, icon, keymap and codec reads on named virtual threads; settings, bookmarks and the session log written on `FileWrites` (`src/main/java/com/mirada/settings/FileWrites.java:22`); only App.start/stop join, as Editora's do |
@@ -175,6 +170,7 @@ A failed MUST blocks a release.
 | [PERF-21](https://pauta-project.dev/4.0.1/performance/#perf-21) | SHOULD | pass | `src/test/java/com/mirada/ui/HotPathsTest.java:50`: the strip's per-step comparison, headless, fails on the old code (5,000 reads a step) |
 | [KBD-01](https://pauta-project.dev/4.0.1/keyboard/#kbd-01) | MUST | pass | `src/main/java/com/mirada/ui/Command.java:20`: one enum is the registry (id, title, run through ViewerWindow.run); the editor's tools (Editor.java:224), the Bookmarks window's row actions (BookmarksWindow.java:299) and About's Copy details (`help.copyDetails`) are commands, run by their buttons, keys, menus and the palette |
 | [KBD-02](https://pauta-project.dev/4.0.1/keyboard/#kbd-02) | SHOULD | pass | `src/main/java/com/mirada/ui/Command.java:393`: every id is `<area>.<camelCase>` (`go.next`, `editor.save`, `help.copyDetails`); CommandTest.everyIdIsDottedAndGroupedByArea |
+| [KBD-03](https://pauta-project.dev/4.0.1/keyboard/#kbd-03) | MUST | pass | `src/main/java/com/mirada/ui/Command.java:222`: a title is `tr("command.<id>")` and `:245` its line `command.<id>.desc` (with `commandOn.<id>.mac`/`.windows` where a platform names a thing its own way); `CommandCatalogTest` fails on a command without either |
 | [KBD-05](https://pauta-project.dev/4.0.1/keyboard/#kbd-05) | MUST | pass | `src/main/java/com/mirada/settings/Settings.java:198`: C-S-p and M-x both open the palette (Cmd-S-p on macOS) |
 | [KBD-06](https://pauta-project.dev/4.0.1/keyboard/#kbd-06) | SHOULD | pass | `src/main/java/com/mirada/ui/CommandPalette.java:335`: fuzzy over title and keywords; rows show chords |
 | [KBD-07](https://pauta-project.dev/4.0.1/keyboard/#kbd-07) | MUST | pass | `src/main/java/com/mirada/ui/CommandPalette.java:238`: in-scene overlay, no Popup |
@@ -296,13 +292,17 @@ A failed MUST blocks a release.
 | [CLI-08](https://pauta-project.dev/4.0.1/command-line/#cli-08) | SHOULD | pass | `src/test/java/com/mirada/os/InstanceLockTest.java:63`: the lock taken from this JVM and a second process (InstanceLockProbe): primary, secondary, presence seen and gone |
 | [CLI-09](https://pauta-project.dev/4.0.1/command-line/#cli-09) | SHOULD | pass | `src/main/java/com/mirada/App.java:56`: java.awt.headless set as main's first statement (headless but on macOS, where Trash is AWT's Desktop) |
 | [CLI-10](https://pauta-project.dev/4.0.1/command-line/#cli-10) | SHOULD | pass | `src/main/java/com/mirada/os/ToolPath.java:50`: Reveal, Trash's gio and Browser start through `ToolPath.process`: own PATH, then the login shell's, program resolved on it; ToolPathTest |
-| [INTL-03](https://pauta-project.dev/4.0.1/i18n/#intl-03) | SHOULD | n/a | no catalogs |
+| [INTL-01](https://pauta-project.dev/4.0.1/i18n/#intl-01) | MUST | pass | `src/main/resources/com/mirada/i18n/`: `messages.properties` (English, the base) and `messages_es`, `_pt`, `_fr`, `_it`, `_de`, 618 keys each |
+| [INTL-02](https://pauta-project.dev/4.0.1/i18n/#intl-02) | SHOULD | pass | `src/main/java/com/mirada/i18n/Messages.java:35`: the six languages, which Settings › General › Language and **Language…** in the palette list (`SettingsPages.java:91`); `MessagesTest.LANGUAGES` walks the same five |
 | [INTL-05](https://pauta-project.dev/4.0.1/i18n/#intl-05) | SHOULD | n/a | no CJK catalog |
 | [INTL-06](https://pauta-project.dev/4.0.1/i18n/#intl-06) | SHOULD | n/a | no right-to-left catalog |
-| [INTL-09](https://pauta-project.dev/4.0.1/i18n/#intl-09) | SHOULD | n/a | no catalogs |
-| [INTL-10](https://pauta-project.dev/4.0.1/i18n/#intl-10) | SHOULD | n/a | no MessageFormat; numbers formatted with Locale.ROOT |
-| [INTL-11](https://pauta-project.dev/4.0.1/i18n/#intl-11) | SHOULD | n/a | nothing translated |
+| [INTL-07](https://pauta-project.dev/4.0.1/i18n/#intl-07) | SHOULD | pass | every string a control shows is `tr("…")` in `com.mirada.i18n.Messages`; `src/test/java/com/mirada/i18n/MessagesTest.java:240` fails on a literal key the base lacks. English on purpose: the `--help`/`--version` text, About's copied environment block and the problem report's body (for maintainers), format and product names |
+| [INTL-08](https://pauta-project.dev/4.0.1/i18n/#intl-08) | MUST | pass | `src/test/java/com/mirada/i18n/MessagesTest.java:103`: missing or extra keys fail, `:119` an empty value; `everyLineIsACommentAKeyOrAContinuation` catches conflict markers |
+| [INTL-09](https://pauta-project.dev/4.0.1/i18n/#intl-09) | SHOULD | pass | `src/test/java/com/mirada/i18n/MessagesTest.java:154`: a lone apostrophe beside a placeholder fails, and `aValueWithoutAPlaceholderNeverDoublesAnApostrophe` a doubled one without |
+| [INTL-10](https://pauta-project.dev/4.0.1/i18n/#intl-10) | SHOULD | pass | `src/test/java/com/mirada/i18n/MessagesTest.java:200`: every `{n,number,#}` of the base (zoom percent, image size, HTTP status, error codes) formats ungrouped in each language |
+| [INTL-11](https://pauta-project.dev/4.0.1/i18n/#intl-11) | SHOULD | pass | `src/main/java/com/mirada/Launch.java:32`: the usage text is a literal; `AppInfo.versionText()` and `--report`'s output stay English, outside the catalogs |
 | [PAL-01](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-01) | MUST | pass | `src/main/java/com/mirada/settings/Settings.java:198`: palette keys C-S-p M-x f1 (Cmd-S-p on macOS); one CommandPalette per window (ViewerWindow.java:267) |
+| [PAL-02](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-02) | MUST | pass | `src/main/java/com/mirada/ui/Command.java:317`: the palette lists every command, greyed with a reason where it cannot run, titled by `command.<id>` and described by `command.<id>.desc` (`:222`, `:245`); `MessagesTest.everyCommandTitleHasItsDescription` |
 | [PAL-03](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-03) | MUST | pass | `src/main/java/com/mirada/ui/CommandPalette.java:238`: card and scrim in the root StackPane; no Popup |
 | [PAL-04](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-04) | SHOULD | pass | `src/main/java/com/mirada/ui/CommandPalette.java:236`: opens empty, listing every command; from chord, header menu, context menu, Mac Help menu |
 | [PAL-06](https://pauta-project.dev/4.0.1/templates/command-palette/#pal-06) | SHOULD | pass | `src/main/java/com/mirada/ui/CommandPalette.java:273`: hides, then runs; disabled rows do nothing |

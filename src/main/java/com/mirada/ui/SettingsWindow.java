@@ -36,10 +36,13 @@ import javafx.stage.Window;
 import javafx.util.StringConverter;
 
 import com.mirada.folder.Sorting;
+import com.mirada.i18n.Messages;
 import com.mirada.settings.Settings;
 import com.mirada.ui.SettingsPages.Page;
 import com.mirada.ui.SettingsPages.Row;
 import org.jspecify.annotations.Nullable;
+
+import static com.mirada.i18n.Messages.tr;
 
 /**
  * Settings (SET-02, SET-03, Pauta 4.0.1): a search field on top, a sidebar of pages with icons on
@@ -73,11 +76,11 @@ final class SettingsWindow {
     private @Nullable EventHandler<KeyEvent> recording;
 
     private final Label paletteKeys = new Label();
-    private final Button addKey = new Button("Add a key…");
+    private final Button addKey = new Button(tr("settings.addKey"));
 
     SettingsWindow(Settings settings, String stylesheet, Consumer<Command> run) {
         this.settings = settings;
-        stage.setTitle("Settings");
+        stage.setTitle(tr("settings.windowTitle"));
         WindowIcon.applyTo(stage);
 
         ChoiceBox<Settings.ThemeChoice> theme = new ChoiceBox<>();
@@ -86,6 +89,14 @@ final class SettingsWindow {
         theme.setValue(settings.theme());
         theme.valueProperty().addListener((o, was, now) -> {
             if (now != null && now != settings.theme()) settings.setTheme(now);
+        });
+
+        ChoiceBox<String> language = new ChoiceBox<>();
+        language.getItems().addAll(SettingsCommands.languages());
+        language.setConverter(converter(SettingsWindow::languageName, ""));
+        language.setValue(Messages.available().containsKey(settings.language()) ? settings.language() : "");
+        language.valueProperty().addListener((o, was, now) -> {
+            if (now != null && !now.equals(settings.language())) settings.setLanguage(now);
         });
 
         CheckBox thumbnails = checkBox(
@@ -142,7 +153,7 @@ final class SettingsWindow {
 
         paletteKeys.setText(shownKeys(settings));
         paletteKeys.getStyleClass().add("shortcut-key");
-        Button defaultKeys = new Button("Default");
+        Button defaultKeys = new Button(tr("settings.defaultKeys"));
         defaultKeys.setOnAction(e -> settings.setPaletteKeys(Settings.defaultPaletteKeys(Command.MAC)));
         addKey.setOnAction(e -> recordKey());
         HBox keyButtons = new HBox(6, addKey, defaultKeys);
@@ -152,9 +163,9 @@ final class SettingsWindow {
 
         Label folder = new Label(String.valueOf(settings.file().toAbsolutePath().getParent()));
         folder.getStyleClass().add("info-label");
-        Button export = new Button("Export…");
+        Button export = new Button(tr("settings.export"));
         export.setOnAction(e -> run.accept(Command.EXPORT_CONFIG));
-        Button importButton = new Button("Import…");
+        Button importButton = new Button(tr("settings.import"));
         importButton.setOnAction(e -> run.accept(Command.IMPORT_CONFIG));
         HBox backupButtons = new HBox(6, export, importButton);
         backupButtons.setAlignment(Pos.CENTER_RIGHT);
@@ -163,6 +174,7 @@ final class SettingsWindow {
 
         Map<Command, Node> controls = Map.ofEntries(
                 Map.entry(Command.THEME, theme),
+                Map.entry(Command.LANGUAGE, language),
                 Map.entry(Command.THUMBNAILS_AT_START, thumbnails),
                 Map.entry(Command.PROPERTIES_AT_START, info),
                 Map.entry(Command.CHECK_DAILY, updates),
@@ -183,6 +195,7 @@ final class SettingsWindow {
         settings.addListener(() -> {
             if (recording == null) paletteKeys.setText(shownKeys(settings));
             theme.setValue(settings.theme());
+            language.setValue(Messages.available().containsKey(settings.language()) ? settings.language() : "");
             thumbnails.setSelected(settings.startWithThumbnails());
             info.setSelected(settings.startWithInfo());
             updates.setSelected(settings.checkForUpdates());
@@ -233,9 +246,9 @@ final class SettingsWindow {
             if (page != null) showPage(page);
         });
 
-        search.setPromptText("Search settings");
+        search.setPromptText(tr("settings.search"));
         search.getStyleClass().add("settings-search");
-        search.setAccessibleText("Search settings");
+        search.setAccessibleText(tr("settings.search"));
         search.textProperty().addListener((o, was, query) -> applySearch(query));
         HBox top = new HBox(search);
         HBox.setHgrow(search, Priority.ALWAYS);
@@ -331,7 +344,7 @@ final class SettingsWindow {
 
     private void recordKey() {
         if (recording != null) return;
-        paletteKeys.setText("Press a key, or Esc");
+        paletteKeys.setText(tr("settings.pressAKey"));
         EventHandler<KeyEvent> take = key -> {
             String token = KeyChord.of(key);
             if (token == null) return; // Ctrl or Shift on its own: wait for the key it goes with
@@ -357,19 +370,24 @@ final class SettingsWindow {
         return PaletteChords.display(PaletteChords.parse(settings.paletteKeys(), Command.MAC));
     }
 
+    /** A language by its own name, so anyone can find theirs; blank is the system's. */
+    static String languageName(String code) {
+        return code.isEmpty() ? tr("settings.followTheSystem") : Messages.languageName(code);
+    }
+
     static String themeName(Settings.ThemeChoice choice) {
         return switch (choice) {
-            case SYSTEM -> "Follow the system";
-            case LIGHT -> "Light";
-            case DARK -> "Dark";
+            case SYSTEM -> tr("settings.followTheSystem");
+            case LIGHT -> tr("theme.light");
+            case DARK -> tr("theme.dark");
         };
     }
 
     static String sortName(Sorting.By by) {
         return switch (by) {
-            case NAME -> "Name";
-            case DATE -> "Date modified";
-            case SIZE -> "Size";
+            case NAME -> tr("settings.sort.name");
+            case DATE -> tr("settings.sort.dateModified");
+            case SIZE -> tr("settings.sort.size");
         };
     }
 

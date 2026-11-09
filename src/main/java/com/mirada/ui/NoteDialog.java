@@ -14,6 +14,8 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * Asks for the note on an image or a folder: a few lines of the user's own, Editora's personal note
  * moved to pictures. Return starts a new line, as in any note; Ctrl+Return (Cmd+Return on a Mac)
@@ -32,10 +34,11 @@ final class NoteDialog {
         Dialog<String> dialog = new Dialog<>();
         dialog.initOwner(owner);
         dialog.setTitle(title);
-        dialog.setHeaderText("Note on " + about);
+        dialog.setHeaderText(tr("note.header", about));
         dialog.setResizable(true);
-        ButtonType save = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(save, ButtonType.CANCEL);
+        ButtonType save = new ButtonType(tr("note.save"), ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancel = new ButtonType(tr("note.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
+        dialog.getDialogPane().getButtonTypes().addAll(save, cancel);
         dialog.getDialogPane().getStylesheets().add(stylesheet);
         dialog.getDialogPane().getStyleClass().add("note-dialog");
 
@@ -46,9 +49,9 @@ final class NoteDialog {
         // The dialog pane sizes its content by the minimum, which a text area puts at two lines.
         text.setMinHeight(140);
         VBox.setVgrow(text, Priority.ALWAYS);
-        text.setPromptText("Your note. Mirada keeps it; the file is not changed.");
+        text.setPromptText(tr("note.prompt"));
         String saveKey = (Command.MAC ? "⌘" : "Ctrl+") + "Return";
-        Label hint = new Label(saveKey + " saves. Empty, the note goes.");
+        Label hint = new Label(tr("note.hint", saveKey));
         hint.getStyleClass().add("note-hint");
         dialog.getDialogPane().setContent(new VBox(8, text, hint));
         text.addEventFilter(KeyEvent.KEY_PRESSED, e -> {

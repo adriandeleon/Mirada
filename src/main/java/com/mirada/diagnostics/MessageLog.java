@@ -14,9 +14,8 @@ import org.jspecify.annotations.Nullable;
  * only: the Debug Log is the record that outlives a session. No JavaFX here; {@code
  * ui.MessageLogView} is the view and {@code ui.StatusBar} the echo area.
  *
- * <p>Mirada has no message catalogue, so there are no keys to read a severity from (MLOG-05): it is
- * said where a message is raised, or else read from the message's first words ({@link #severityOf}).
- * FX thread only.
+ * <p>A message's severity is said where it is raised (MLOG-05's direct channel): its words are
+ * translated, so they cannot tell an error from a notice. FX thread only.
  */
 public final class MessageLog {
 
@@ -29,18 +28,6 @@ public final class MessageLog {
     public record Entry(LocalTime time, String text, Severity severity) {}
 
     public static final int MAX_ENTRIES = 200;
-
-    /**
-     * The severity of a message said without one, by its first words, as Pauta reads it from a key's:
-     * "Couldn't …" is an error, "Not …" (renamed, saved) and "Finish …" a warning, anything else
-     * information. Word new messages accordingly, or give the severity.
-     */
-    public static Severity severityOf(String text) {
-        String t = text.strip();
-        if (t.startsWith("Couldn't ") || t.startsWith("Could not ")) return Severity.ERROR;
-        if (t.startsWith("Not ") || t.startsWith("Finish ")) return Severity.WARNING;
-        return Severity.INFO;
-    }
 
     static final long REPEAT_MILLIS = 2000;
 

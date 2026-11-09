@@ -22,6 +22,8 @@ import javafx.stage.Window;
 import com.mirada.AppInfo;
 import com.mirada.update.UpdateCoordinator;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * About: what this build is and where it came from — Termina's window, with Mirada's extras: the
  * versions of the runtime and of the bundled codecs, which are what a bug report needs first.
@@ -30,14 +32,12 @@ import com.mirada.update.UpdateCoordinator;
 final class AboutWindow {
 
     private static final double WIDTH = 480;
-    private static final String COPY_DETAILS = "Copy details";
-    private static final String COPIED = "Copied";
 
     private final Stage stage = new Stage();
 
     private final UpdateCoordinator updates;
     private final Label updateLine = new Label();
-    private final Hyperlink updateLink = new Hyperlink("Open its page");
+    private final Hyperlink updateLink = new Hyperlink(tr("about.openReleasePage"));
     private final Runnable refreshUpdate = this::refreshUpdate;
 
     /** @param copyDetails runs Copy Details ({@code help.copyDetails}), the command the button is for */
@@ -48,7 +48,7 @@ final class AboutWindow {
             Runnable copyDetails,
             String stylesheet) {
         this.updates = updates;
-        stage.setTitle("About " + AppInfo.NAME);
+        stage.setTitle(tr("about.title"));
         stage.setResizable(false);
         WindowIcon.applyTo(stage);
 
@@ -65,9 +65,9 @@ final class AboutWindow {
         Label name = new Label(AppInfo.NAME);
         name.getStyleClass().add("about-name");
         // The snapshot suffix stays: it says at a glance that a build came off a working tree.
-        Label version = new Label("Version " + AppInfo.VERSION);
+        Label version = new Label(tr("about.version", AppInfo.VERSION));
         version.getStyleClass().add("about-version");
-        Label tagline = new Label("A fast, folder-oriented image viewer");
+        Label tagline = new Label(tr("about.tagline"));
         tagline.getStyleClass().add("about-version");
         heading.getChildren().add(new VBox(2, name, version, tagline));
 
@@ -81,7 +81,7 @@ final class AboutWindow {
         Hyperlink pauta = new Hyperlink(pautaLink(AppInfo.PAUTA_EDITION));
         pauta.setOnAction(e -> openLink.accept(AppInfo.pautaUrl()));
         // This build's release notes, or the changelog for a snapshot (DOCS-05).
-        Hyperlink releaseNotes = new Hyperlink("Release notes");
+        Hyperlink releaseNotes = new Hyperlink(tr("about.releaseNotes"));
         releaseNotes.setOnAction(e -> openLink.accept(AppInfo.releaseNotesUrl()));
         VBox links = new VBox(0, homepage, releaseNotes, pauta);
 
@@ -100,26 +100,23 @@ final class AboutWindow {
         Label environmentBlock = new Label(environment);
         environmentBlock.getStyleClass().add("about-path");
         environmentBlock.setWrapText(true);
-        Button copy = new Button(COPY_DETAILS);
+        Button copy = new Button(tr("about.copyDetails"));
         // The command copies what this block shows: the same AppInfo.environment.
         copy.setOnAction(e -> {
             copyDetails.run();
-            copy.setText(COPIED);
+            copy.setText(tr("about.copied"));
         });
         stage.setOnHidden(e -> {
-            copy.setText(COPY_DETAILS);
+            copy.setText(tr("about.copyDetails"));
             // Listening only while open: a closed About keeps nothing alive.
             updates.removeListener(refreshUpdate);
         });
 
-        Label credits =
-                new Label("Decoding by JavaFX, libjpeg-turbo, libwebp, TwelveMonkeys ImageIO, libheif, libde265,"
-                        + " dav1d and libjxl; compiled by GraalVM Native Image, with JavaFX linked in by StaticFX;"
-                        + " EXIF by metadata-extractor; themes by AtlantaFX. Their licences are in NOTICE.");
+        Label credits = new Label(tr("about.credits"));
         credits.getStyleClass().add("about-credits");
         credits.setWrapText(true);
 
-        Button close = new Button("Close");
+        Button close = new Button(tr("about.close"));
         close.setDefaultButton(true);
         close.setOnAction(e -> stage.hide());
         Region spacer = new Region();
@@ -154,7 +151,7 @@ final class AboutWindow {
 
     /** {@code Built to Pauta 4.0.1}: the link's text, which names the edition and never "latest". */
     static String pautaLink(String edition) {
-        return "Built to Pauta " + edition;
+        return tr("about.pautaLink", edition);
     }
 
     private void refreshUpdate() {

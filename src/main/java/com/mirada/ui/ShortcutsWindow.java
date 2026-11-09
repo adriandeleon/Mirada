@@ -18,6 +18,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
+import static com.mirada.i18n.Messages.tr;
+
 /**
  * Every command that has a key, grouped as {@link Command#group} groups them, with its keys beside
  * it: read from the keys in force ({@link Keybindings#current}: the keymap and the user's own), so
@@ -32,7 +34,7 @@ final class ShortcutsWindow {
     private final ScrollPane scroll = new ScrollPane();
 
     ShortcutsWindow(String stylesheet) {
-        stage.setTitle("Keyboard Shortcuts");
+        stage.setTitle(tr("shortcuts.title"));
         WindowIcon.applyTo(stage);
 
         scroll.setContent(content());

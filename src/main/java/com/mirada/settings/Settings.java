@@ -42,6 +42,9 @@ public final class Settings {
     }
 
     static final String THEME = "theme";
+    /** The interface's language: a bundled code ({@code es}), or blank for the system's (INTL-02). */
+    static final String LANGUAGE = "language";
+
     static final String START_WITH_THUMBNAILS = "start.thumbnails";
     static final String START_WITH_INFO = "start.info";
     static final String CONTROLS_HIDE_SECONDS = "controls.hideSeconds";
@@ -85,6 +88,7 @@ public final class Settings {
     private final List<Runnable> listeners = new ArrayList<>();
 
     private ThemeChoice theme = ThemeChoice.SYSTEM;
+    private String language = "";
     private boolean startWithThumbnails;
     private boolean startWithInfo;
     private int controlsHideSeconds = 2;
@@ -210,6 +214,7 @@ public final class Settings {
     /** Sets every field from {@code properties}, each clamped or defaulted as it is read. */
     private void apply(Properties properties) {
         theme = themeOf(properties.getProperty(THEME));
+        language = languageOf(properties.getProperty(LANGUAGE));
         startWithThumbnails = Boolean.parseBoolean(
                 properties.getProperty(START_WITH_THUMBNAILS, "false").trim());
         startWithInfo = Boolean.parseBoolean(
@@ -395,6 +400,28 @@ public final class Settings {
 
     public ThemeChoice theme() {
         return theme;
+    }
+
+    /**
+     * The language chosen for the interface, a code such as {@code es}, or blank to follow the
+     * system's. Whether it is bundled is {@code Messages}' to decide: one that is not is English
+     * there, and is kept here as written, so a newer Mirada's language survives a run of an older one.
+     */
+    public String language() {
+        return language;
+    }
+
+    /** Takes effect at the next start: the interface is built in one language. */
+    public void setLanguage(String value) {
+        String code = languageOf(value);
+        if (code.equals(language)) return;
+        language = code;
+        changed();
+    }
+
+    /** The language code as written, lower case, blank for none. Pure. */
+    static String languageOf(@Nullable String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 
     public boolean startWithThumbnails() {
@@ -651,6 +678,7 @@ public final class Settings {
         Properties properties = new Properties();
         properties.setProperty(Migrations.VERSION_KEY, Integer.toString(SCHEMA_VERSION));
         properties.setProperty(THEME, theme.name().toLowerCase(Locale.ROOT));
+        if (!language.isEmpty()) properties.setProperty(LANGUAGE, language);
         properties.setProperty(START_WITH_THUMBNAILS, Boolean.toString(startWithThumbnails));
         properties.setProperty(START_WITH_INFO, Boolean.toString(startWithInfo));
         properties.setProperty(CONTROLS_HIDE_SECONDS, Integer.toString(controlsHideSeconds));
