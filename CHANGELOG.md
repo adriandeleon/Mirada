@@ -28,6 +28,14 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
   carry a `schemaVersion`; one from a newer version is copied to `settings.properties.v<n>.bak` (or
   `bookmarks.properties.v<n>.bak`) and this version starts from the defaults, and says so in the
   status bar, as it now also does for a file that could not be read.
+- **One Mirada per config folder.** Opening an image while Mirada is running, from a file
+  manager or a terminal, shows it in the running window, which comes to the front, instead of
+  starting a second Mirada; a launch with nothing to open just brings the window forward. `--dev`
+  and each `--config-dir` are Mirada's apart. **`--new-instance`** starts a window of its own all
+  the same. On a Mac, Finder already sent files to the running app.
+- **Programs Mirada starts are found on your login shell's `PATH` too** (Show in Folder, Move to
+  Trash on another drive, `--report`'s browser), so a Mirada started from a menu or Finder finds what
+  your shell would.
 - **Keymaps: Mirada's own keys or Emacs's, and your own on top.** Settings › Keys › Keymap picks
   one; in Emacs's, N and P step, M-< and M-> go to the first and last image, C-f, C-b, C-n and C-p
   pan, M-w copies and C-g leaves. Any command can be given keys of your own with
@@ -115,6 +123,8 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 - **Stepping in a folder of thousands of images costs the same as in a small one:** the thumbnail
   strip no longer compares the whole folder on every step.
 
+- **Mirada builds on JDK 25 or newer**, not on 25 alone. On 26 and later the build skips the
+  format check, with a warning, as the formatter runs only on 25.
 - **Keyboard Shortcuts lists each command's first few keys** (Right, Page Down, Space for Next
   Image), from the keymap in use, in place of a paragraph of the second ways. A key with Shift no
   longer does what it does without (Shift+F was full screen, Alt+Right the next image), except
@@ -161,6 +171,8 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 - **The sidebar never shows the details of an image you have moved on from:** a read that comes
   back late is dropped, even for the same image turned since.
 
+- **`mirada --help` and `--version` exit** on the JVM build (Intel Macs, development runs); they
+  printed and then waited.
 - **Coloured text and highlighted rows read better.** Accent, warning, success and error text,
   and the white text on a highlighted menu row or selection, now reach 4.5:1 against what they
   stand on in the light and dark themes (the light theme's blue was 4.0:1), and the system accent

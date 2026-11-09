@@ -1,5 +1,6 @@
 package com.mirada;
 
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
@@ -13,9 +14,11 @@ import com.mirada.diagnostics.DebugLog;
 import com.mirada.diagnostics.MessageLog;
 import com.mirada.image.HeadStart;
 import com.mirada.os.MacOpenFiles;
+import com.mirada.os.SingleInstance;
 import com.mirada.os.Trash;
 import com.mirada.perf.FxSampler;
 import com.mirada.perf.Startup;
+import com.mirada.perf.Tour;
 import com.mirada.report.Browser;
 import com.mirada.report.Redactor;
 import com.mirada.report.ReportCommand;
@@ -35,8 +38,11 @@ public final class App extends Application {
     /** What {@link MacOpenFiles#listen} did, for the perf trace. */
     private static String openFiles = "none (not started)";
 
-    /** The config folder the command line named, or null for the usual one (Settings.defaultFile). */
-    private static @Nullable Path configDir;
+    /** The settings file, in the config folder the command line named or the usual one. */
+    private static @Nullable Path settingsFile;
+
+    /** This process's claim on the config folder, listening for later launches if it was first. */
+    private static @Nullable SingleInstance instance;
 
     /** What the command line asked to open; JavaFX's own parameters would take a "--a=b" file. */
     private static List<String> files = List.of();
@@ -56,15 +62,11 @@ public final class App extends Application {
         // --help and --version print and exit before anything starts (CLI-01); --config-dir and --dev
         // are settled before anything reads the config folder (CLI-02).
         Launch launch = Launch.parse(List.of(args), System.getProperty("user.home", "."));
+        // Exit, not return: started as an Application (the jlink image, dev runs) the launcher has
+        // already started the toolkit, whose thread would keep the process alive.
+        if (printed(launch, System.out)) System.exit(0);
         switch (launch.action()) {
-            case HELP -> {
-                System.out.print(Launch.USAGE);
-                return;
-            }
-            case VERSION -> {
-                System.out.println(AppInfo.versionText());
-                return;
-            }
+            case HELP, VERSION -> {}
             case REPORT -> {
                 // No window: for when Mirada will not start (CLI-05).
                 System.exit(ReportCommand.run(
@@ -78,19 +80,52 @@ public final class App extends Application {
                 System.err.print(Launch.USAGE);
                 System.exit(2);
             }
-            case START -> configDir = launch.configDir();
+            case START -> {}
         }
         files = launch.files();
-        // The settings are read on a thread of their own while the toolkit starts (PERF-16).
-        settingsRead = readSettings(configDir);
+        Path settings = Settings.defaultFile(launch.configDir());
+        settingsFile = settings;
+        Path folder = settings.toAbsolutePath().getParent();
+        // One Mirada per config folder (CLI-07): a running one takes this launch's file and this
+        // process ends here. With none running this is one file check, before anything decodes. A
+        // measured start or a tour (start-up, AOT training, smoke tests) is about this process, and
+        // never hands off to a Mirada the user has open.
+        if (folder != null
+                && launch.handsOff()
+                && !Startup.enabled()
+                && !Tour.enabled()
+                && SingleInstance.handOff(
+                        folder, Launch.absolute(files, Path.of("").toAbsolutePath()))) {
+            Startup.mark("handed-off");
+            System.exit(0);
+        }
+        // The settings are read on a thread of their own while the toolkit starts (PERF-16); after the
+        // hand-off, so a launch that hands off reads nothing.
+        settingsRead = readSettings(settings);
         // The first image decodes while the toolkit starts, which is most of what comes before the
         // window (HeadStart). After the headless property: ImageIO is AWT.
         HeadStart.begin(files);
+        // Listening for later launches, on a thread of its own: binding the socket costs the first
+        // image nothing. A --new-instance launch claims too, and listens if it turns out to be first.
+        if (folder != null) instance = SingleInstance.claimInBackground(folder);
         // Before the toolkit: on macOS the file Finder launched Mirada for arrives while it starts,
         // and only what is listening by then hears it (MacOpenFiles). Elsewhere it returns at once.
         openFiles = MacOpenFiles.listen();
         Startup.mark("open-files-listening");
         launch();
+    }
+
+    /** Prints what {@code --help} or {@code --version} asks for; false for any other launch. */
+    static boolean printed(Launch launch, PrintStream out) {
+        switch (launch.action()) {
+            case HELP -> out.print(Launch.USAGE);
+            case VERSION -> out.println(AppInfo.versionText());
+            default -> {
+                return false;
+            }
+        }
+        out.flush();
+        return true;
     }
 
     /**
@@ -111,11 +146,11 @@ public final class App extends Application {
     private static @Nullable CompletableFuture<Settings> settingsRead;
 
     /** Reads the settings on a daemon thread of its own. */
-    static CompletableFuture<Settings> readSettings(@Nullable Path configDir) {
+    static CompletableFuture<Settings> readSettings(Path file) {
         CompletableFuture<Settings> read = new CompletableFuture<>();
         Thread.ofPlatform().daemon().name("settings-read").start(() -> {
             try {
-                Settings settings = new Settings(Settings.defaultFile(configDir));
+                Settings settings = new Settings(file);
                 settings.load();
                 read.complete(settings);
             } catch (RuntimeException | Error e) {
@@ -136,7 +171,8 @@ public final class App extends Application {
                 // Read again below, where a failure is the toolkit's to report.
             }
         }
-        Settings settings = new Settings(Settings.defaultFile(configDir));
+        Path chosen = settingsFile;
+        Settings settings = new Settings(chosen != null ? chosen : Settings.defaultFile(null));
         settings.load();
         return settings;
     }
@@ -149,6 +185,9 @@ public final class App extends Application {
     public void stop() {
         ViewerWindow shown = window;
         if (shown != null) shown.rememberPlace();
+        // The next launch then starts its own window at once instead of knocking on a closing one.
+        SingleInstance single = instance;
+        if (single != null) single.close();
         // The files' thread is a daemon: what it has still to write is written before the JVM goes.
         FileWrites.background().flush(Duration.ofSeconds(2));
     }
@@ -194,5 +233,19 @@ public final class App extends Application {
             if (Startup.enabled()) System.out.println("[perf] open-files " + file);
             window.open(file);
         });
+        // Later launches on this config folder, and any that came while the window was being built.
+        SingleInstance single = instance;
+        if (single != null) single.receive(later -> Platform.runLater(() -> handedOver(stage, window, later)));
+    }
+
+    /**
+     * A later launch's files, on the FX thread: the window comes to the front and opens the first, as
+     * a launch with it would have. A launch with none only brings the window forward.
+     */
+    private static void handedOver(Stage stage, ViewerWindow window, List<String> args) {
+        if (stage.isIconified()) stage.setIconified(false);
+        stage.toFront();
+        stage.requestFocus();
+        if (!args.isEmpty()) window.open(Path.of(args.getFirst()));
     }
 }

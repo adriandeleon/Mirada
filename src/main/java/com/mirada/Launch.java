@@ -1,5 +1,6 @@
 package com.mirada;
 
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,9 +15,10 @@ import org.jspecify.annotations.Nullable;
  * @param action what {@code main} does: start the window, or print and exit
  * @param configDir the folder named by {@code --config-dir} or {@code --dev}; null for the usual one
  * @param files what to open, in order
+ * @param newInstance {@code --new-instance}: start a window of its own, never hand off (CLI-03)
  * @param error what was wrong with the line, for {@link Action#MISTAKE}
  */
-public record Launch(Action action, @Nullable Path configDir, List<String> files, String error) {
+public record Launch(Action action, @Nullable Path configDir, List<String> files, boolean newInstance, String error) {
 
     public enum Action {
         START,
@@ -35,12 +37,16 @@ public record Launch(Action action, @Nullable Path configDir, List<String> files
             Options:
               --config-dir <dir>  keep settings and bookmarks in <dir>
               --dev               keep them in ~/.mirada-dev, apart from your own
+              --new-instance      start a window of its own, even when Mirada is running
               --report            write a redacted problem report beside the settings, open
                                   a prefilled GitHub issue with it, and exit; for when
                                   Mirada will not start
               --version           print the version, build, commit and Pauta edition, and exit
               --help              print this, and exit
               --                  what follows is a file, even if it starts with --
+
+            One Mirada runs per config folder: a second launch hands its file to the
+            running one, which opens it and comes to the front, and exits.
 
             MIRADA_CONFIG_DIR names the config folder too; an option wins over it.
             """;
@@ -51,6 +57,7 @@ public record Launch(Action action, @Nullable Path configDir, List<String> files
         @Nullable Path configDir = null;
         boolean onlyFiles = false;
         boolean report = false;
+        boolean newInstance = false;
         for (int i = 0; i < args.size(); i++) {
             String arg = args.get(i);
             if (onlyFiles || !arg.startsWith("--")) {
@@ -60,13 +67,14 @@ public record Launch(Action action, @Nullable Path configDir, List<String> files
             switch (arg) {
                 case "--" -> onlyFiles = true;
                 case "--help" -> {
-                    return new Launch(Action.HELP, null, List.of(), "");
+                    return new Launch(Action.HELP, null, List.of(), false, "");
                 }
                 case "--version" -> {
-                    return new Launch(Action.VERSION, null, List.of(), "");
+                    return new Launch(Action.VERSION, null, List.of(), false, "");
                 }
                 // Not at once: a --config-dir after it still names the folder it reports on.
                 case "--report" -> report = true;
+                case "--new-instance" -> newInstance = true;
                 case "--dev" -> configDir = Path.of(home, ".mirada-dev");
                 case "--config-dir" -> {
                     if (i + 1 >= args.size() || args.get(i + 1).isBlank())
@@ -82,10 +90,32 @@ public record Launch(Action action, @Nullable Path configDir, List<String> files
                 }
             }
         }
-        return new Launch(report ? Action.REPORT : Action.START, configDir, List.copyOf(files), "");
+        return new Launch(report ? Action.REPORT : Action.START, configDir, List.copyOf(files), newInstance, "");
+    }
+
+    /** Whether this launch goes to a running Mirada first (CLI-07), unless told not to (CLI-03). */
+    public boolean handsOff() {
+        return action == Action.START && !newInstance;
+    }
+
+    /**
+     * The files as the running Mirada must read them: resolved against this launch's working folder,
+     * {@code cwd}, which is not its own. One that is no path at all is passed as it is, to be refused
+     * there as it would be here.
+     */
+    public static List<String> absolute(List<String> files, Path cwd) {
+        List<String> absolute = new ArrayList<>(files.size());
+        for (String file : files) {
+            try {
+                absolute.add(cwd.resolve(file).normalize().toString());
+            } catch (InvalidPathException notAPath) {
+                absolute.add(file);
+            }
+        }
+        return List.copyOf(absolute);
     }
 
     private static Launch mistake(String error) {
-        return new Launch(Action.MISTAKE, null, List.of(), error);
+        return new Launch(Action.MISTAKE, null, List.of(), false, error);
     }
 }

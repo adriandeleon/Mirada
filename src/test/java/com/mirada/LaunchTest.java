@@ -6,6 +6,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -67,7 +68,32 @@ class LaunchTest {
 
     @Test
     void theUsageNamesEveryOption() {
-        for (String option : List.of("--config-dir", "--dev", "--report", "--version", "--help"))
+        for (String option : List.of("--config-dir", "--dev", "--new-instance", "--report", "--version", "--help"))
             assertTrue(Launch.USAGE.contains(option), option);
+    }
+
+    @Test
+    void aLaunchHandsOffToTheRunningMiradaUnlessToldToStartItsOwn() {
+        assertTrue(parse("a.jpg").handsOff());
+        assertTrue(parse().handsOff());
+        Launch own = parse("--new-instance", "a.jpg");
+        assertTrue(own.newInstance());
+        assertFalse(own.handsOff());
+        assertEquals(List.of("a.jpg"), own.files());
+        assertFalse(parse("--report").handsOff());
+        assertFalse(parse("--help").handsOff());
+        assertFalse(parse("--frobnicate").handsOff());
+    }
+
+    @Test
+    void handedOffFilesAreResolvedWhereThisLaunchStands() {
+        Path cwd = Path.of("/home/u/Pictures").toAbsolutePath();
+        Path elsewhere = Path.of("/tmp/x.jpg").toAbsolutePath();
+        assertEquals(
+                List.of(cwd.resolve("a.jpg").toString(), cwd.resolve("b c.jpg").toString(), elsewhere.toString()),
+                Launch.absolute(List.of("a.jpg", "./sub/../b c.jpg", elsewhere.toString()), cwd));
+        assertEquals(List.of(), Launch.absolute(List.of(), cwd));
+        // No path at all: passed on, for the running Mirada to refuse as this one would have.
+        assertEquals(List.of("a\0b"), Launch.absolute(List.of("a\0b"), cwd));
     }
 }
