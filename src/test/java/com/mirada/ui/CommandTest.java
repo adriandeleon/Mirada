@@ -158,7 +158,8 @@ class CommandTest {
         assertEquals("-", Keybindings.canonical("-"));
         assertNull(Keybindings.canonical("nonsense"));
         assertNull(Keybindings.canonical(" "));
-        assertEquals("Ctrl+?", Command.SHORTCUTS.chord().getDisplayText());
+        // The Mac's keymap has Cmd where the others have Ctrl, and JavaFX writes it as the symbol.
+        assertEquals(Command.MAC ? "⌘?" : "Ctrl+?", Command.SHORTCUTS.chord().getDisplayText());
     }
 
     // --- the layers (KBD-11) ---

@@ -261,7 +261,7 @@ class ToolWindowsTest {
         assertEquals(Command.COPY_MESSAGES, ran.getLast());
         logKey(card, KeyCode.G, false, true); // Alt+G: not C-g
         assertTrue(call(log::isShowing));
-        logKey(card, KeyCode.G, true, false); // C-g closes, as Escape does
+        controlKey(card, KeyCode.G); // C-g closes, as Escape does: Control on a Mac too, never Cmd
         assertFalse(call(log::isShowing));
         fx(() -> log.show(0));
         assertEquals(List.of(), call(() -> MessageLogView.matching(log.listed(), "no such words")));
@@ -326,6 +326,16 @@ class ToolWindowsTest {
             Event.fireEvent(
                     target,
                     new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, shortcut && !mac, alt, shortcut && mac));
+        });
+    }
+
+    /** {@code code} with Control held, on every platform: Emacs's keys are Control on a Mac too. */
+    private static void controlKey(Parent card, KeyCode code) throws Exception {
+        fx(() -> {
+            Node target = card.getScene() != null && card.getScene().getFocusOwner() != null
+                    ? card.getScene().getFocusOwner()
+                    : card;
+            Event.fireEvent(target, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, true, false, false));
         });
     }
 
