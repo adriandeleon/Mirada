@@ -36,7 +36,8 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
   manager or a terminal, shows it in the running window, which comes to the front, instead of
   starting a second Mirada; a launch with nothing to open just brings the window forward. `--dev`
   and each `--config-dir` are Mirada's apart. **`--new-instance`** starts a window of its own all
-  the same. On a Mac, Finder already sent files to the running app.
+  the same. On a Mac, Finder already sent files to the running app. **`--no-session`** is taken
+  too, for scripts written for the other adl apps; Mirada restores no session, so it changes nothing.
 - **Programs Mirada starts are found on your login shell's `PATH` too** (Show in Folder, Move to
   Trash on another drive, `--report`'s browser), so a Mirada started from a menu or Finder finds what
   your shell would.
