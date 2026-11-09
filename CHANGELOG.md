@@ -10,6 +10,24 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Added
 
+- **Settings has pages and a search.** A sidebar of pages (General, Viewer, Thumbnails, Folder,
+  Keys, Backup) with the page beside it, and a search field on top that finds a setting by its
+  name, its description or a word for it, opens its page and hides the rest; Escape empties it,
+  Ctrl+F returns to it. The window now fits a small screen and scrolls.
+- **Every setting is in the command palette.** Theme…, Keymap…, Hide Controls After… and Slideshow
+  Speed… ask for the value in the palette with the one in use ticked; Thumbnails at Start,
+  Properties at Start and Check for Updates Daily turn on and off; Command Palette Keys… opens
+  Settings waiting for the key to add.
+- **Export Configuration… and Import Configuration…** save the settings, keys, bookmarks and notes
+  in a `mirada-config-<date>-<time>.zip`, and put them back from one, after asking which of the
+  three to replace. The window's place and the recent folders stay this computer's. They are in the
+  palette, the Settings window's Backup page and the Mac's File menu.
+- **Two Mirada windows keep each other's settings.** A setting changed in one shows in the other
+  as it comes to the front, and a change made in either no longer puts back what the other changed.
+- **Settings and bookmarks written by a newer Mirada are kept, not overwritten.** The files now
+  carry a `schemaVersion`; one from a newer version is copied to `settings.properties.v<n>.bak` (or
+  `bookmarks.properties.v<n>.bak`) and this version starts from the defaults, and says so in the
+  status bar, as it now also does for a file that could not be read.
 - **Keymaps: Mirada's own keys or Emacs's, and your own on top.** Settings › Keys › Keymap picks
   one; in Emacs's, N and P step, M-< and M-> go to the first and last image, C-f, C-b, C-n and C-p
   pan, M-w copies and C-g leaves. Any command can be given keys of your own with

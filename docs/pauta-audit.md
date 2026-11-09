@@ -1,7 +1,7 @@
 # Pauta audit
 
 Mirada at `10329e6`, audited against [Pauta 4.0.1](https://pauta-project.dev/4.0.1/) on 2026-11-08.
-Scope: every rule (351). Rules from https://pauta-project.dev/4.0.1/rules.json.
+Scope: every rule (351). The settings rows (SET-*) were regenerated on 2026-11-08 after the settings work on this branch. Rules from https://pauta-project.dev/4.0.1/rules.json.
 
 Regenerated rather than edited: each rule was judged by its check (code, test or by hand) as the
 edition's [audit procedure](https://pauta-project.dev/4.0.1/coding-agents/) says. A rule met only in
@@ -10,8 +10,8 @@ never because Mirada lacks a part another rule requires.
 
 |        | Pass | Fail | Manual | N.a. |
 |--------|-----:|-----:|-------:|-----:|
-| MUST   | 117 | 21 | 4 | 20 |
-| SHOULD | 58 | 50 | 15 | 57 |
+| MUST   | 121 | 15 | 6 | 20 |
+| SHOULD | 59 | 49 | 15 | 57 |
 | MAY    | 1 | 2 | 0 | 6 |
 
 A failed MUST blocks a release.
@@ -30,12 +30,6 @@ A failed MUST blocks a release.
 | [PERF-08](https://pauta-project.dev/4.0.1/performance/#perf-08) | MUST | fail | `src/main/java/com/mirada/ui/ThumbnailStrip.java:194`: items.equals(images) is O(folder) on every step; lists are virtualized |
 | [PERF-12](https://pauta-project.dev/4.0.1/performance/#perf-12) | MUST | fail | `src/main/java/com/mirada/image/Animation.java:22`: one threshold; no size or heap guard before decoding |
 | [KBD-03](https://pauta-project.dev/4.0.1/keyboard/#kbd-03) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:20`: titles and descriptions are English literals, no catalog |
-| [SET-02](https://pauta-project.dev/4.0.1/settings/#set-02) | MUST | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:179`: one page of cards; no page sidebar, no search field |
-| [SET-03](https://pauta-project.dev/4.0.1/settings/#set-03) | MUST | fail | no Settings search and no ranking test |
-| [SET-06](https://pauta-project.dev/4.0.1/settings/#set-06) | MUST | fail | `src/main/java/com/mirada/ui/Command.java:120`: no palette command for theme, thumbnails/properties at start, controls delay, slideshow speed, palette keys |
-| [SET-09](https://pauta-project.dev/4.0.1/settings/#set-09) | MUST | fail | `src/main/java/com/mirada/settings/Settings.java`: no SCHEMA_VERSION or migration in settings or bookmarks |
-| [SET-10](https://pauta-project.dev/4.0.1/settings/#set-10) | MUST | fail | no version, so no too-new backup <name>.v<n>.bak |
-| [SET-12](https://pauta-project.dev/4.0.1/settings/#set-12) | MUST | fail | no Export or Import of the config folder |
 | [CLI-07](https://pauta-project.dev/4.0.1/command-line/#cli-07) | MUST | fail | `src/main/java/com/mirada/App.java:68`: macOS Apple Events reach the running app, but no single instance per config folder |
 | [INTL-01](https://pauta-project.dev/4.0.1/i18n/#intl-01) | MUST | fail | no messages*.properties; every string is an English literal |
 | [INTL-08](https://pauta-project.dev/4.0.1/i18n/#intl-08) | MUST | fail | no catalogs, no parity test |
@@ -73,8 +67,7 @@ A failed MUST blocks a release.
 | [TABS-15](https://pauta-project.dev/4.0.1/tabs-and-panels/#tabs-15) | SHOULD | fail | strip layout persists; open panels are a start setting, not the last state |
 | [MENU-03](https://pauta-project.dev/4.0.1/menus/#menu-03) | SHOULD | fail | `src/main/java/com/mirada/ui/TitleBar.java:246`: the header menu refreshes chords on showing but never greys a row |
 | [MENU-12](https://pauta-project.dev/4.0.1/menus/#menu-12) | SHOULD | fail | no danger class on Move to Trash or Remove |
-| [SET-05](https://pauta-project.dev/4.0.1/settings/#set-05) | SHOULD | fail | `src/main/java/com/mirada/ui/SettingsWindow.java:169`: one Settings object per process; a second process never sees a change and overwrites it |
-| [SET-08](https://pauta-project.dev/4.0.1/settings/#set-08) | SHOULD | fail | `src/main/java/com/mirada/settings/Settings.java:99`: names are constants, but .properties, with window place and recent folders in the preferences file |
+| [SET-08](https://pauta-project.dev/4.0.1/settings/#set-08) | SHOULD | fail | `src/main/java/com/mirada/settings/Settings.java:124`: file names are constants, but .properties, with the window's place and recent folders (`:52`) in the preferences file, no separate state file |
 | [SET-17](https://pauta-project.dev/4.0.1/settings/#set-17) | SHOULD | fail | no Settings Sync |
 | [DIAG-07](https://pauta-project.dev/4.0.1/diagnostics/#diag-07) | SHOULD | fail | no Doctor page (a row per codec library would fit) |
 | [CLI-03](https://pauta-project.dev/4.0.1/command-line/#cli-03) | SHOULD | fail | no --new-instance (every launch is a new process today) |
@@ -122,6 +115,8 @@ A failed MUST blocks a release.
 | [WELC-02](https://pauta-project.dev/4.0.1/templates/welcome/#welc-02) | SHOULD | manual | `src/main/java/com/mirada/ui/ViewerWindow.java:99`: empty state offers Open Image and Open Folder; chords only in tooltips, no Open Recent or palette |
 | [ABOUT-07](https://pauta-project.dev/4.0.1/templates/about/#about-07) | MUST | manual | this audit; 4.0.1 is honest only once its failed MUSTs pass |
 | [CONF-07](https://pauta-project.dev/4.0.1/templates/confirm-dialog/#conf-07) | SHOULD | manual | `src/main/java/com/mirada/ui/ViewerWindow.java:1082`: Move to Trash asks nothing and offers Ctrl+Z (Linux only) |
+| [SET-02](https://pauta-project.dev/4.0.1/settings/#set-02) | MUST | manual | `src/main/java/com/mirada/ui/SettingsWindow.java:245`: the search field on top, the sidebar of pages with icons (`SettingsPages.java:20`) on the left, the page on the right; seen headless (scripts/headless-run.sh, Ctrl+,): open Settings and look |
+| [SET-06](https://pauta-project.dev/4.0.1/settings/#set-06) | MUST | manual | `src/main/java/com/mirada/ui/SettingsPages.java:59`: every row names its palette command (THEME, KEYMAP, HIDE_CONTROLS_AFTER, SLIDESHOW_SPEED ask in the palette; the rest flip; `SettingsCommands.java:62`); `SettingsPagesTest.java:128` fails a setting command without a row; walk the rows in Settings |
 
 ## Passed and not applicable
 
@@ -274,10 +269,15 @@ A failed MUST blocks a release.
 | [TRAY-12](https://pauta-project.dev/4.0.1/tray-and-background/#tray-12) | MAY | n/a | no dock badge |
 | [TRAY-13](https://pauta-project.dev/4.0.1/tray-and-background/#tray-13) | SHOULD | n/a | no tray to hide behind |
 | [TRAY-14](https://pauta-project.dev/4.0.1/tray-and-background/#tray-14) | SHOULD | pass | `src/main/java/com/mirada/App.java:30`: headless decided in main (Trash.headless), headful only on macOS for Move to Trash |
-| [SET-01](https://pauta-project.dev/4.0.1/settings/#set-01) | MUST | pass | `src/main/java/com/mirada/ui/Command.java:163`: SETTINGS is Ctrl+, (Cmd+, on macOS), in the palette |
-| [SET-04](https://pauta-project.dev/4.0.1/settings/#set-04) | MUST | pass | `src/main/java/com/mirada/ui/SettingsWindow.java:64`: every control writes through; no Save or Apply |
-| [SET-07](https://pauta-project.dev/4.0.1/settings/#set-07) | MUST | pass | `src/main/java/com/mirada/settings/Settings.java:90`: one resolver: --config-dir/--dev, then MIRADA_CONFIG_DIR, then the default (~/.mirada; the platform folder on macOS and Windows) |
-| [SET-11](https://pauta-project.dev/4.0.1/settings/#set-11) | MUST | pass | `src/main/java/com/mirada/settings/ConfigFile.java:44`: clamped on read; an undecodable file kept as .corrupt.bak, an unreadable one never written over; ConfigFileTest (malformed \u escape) |
+| [SET-01](https://pauta-project.dev/4.0.1/settings/#set-01) | MUST | pass | `src/main/java/com/mirada/ui/Command.java:173`: SETTINGS (`app.settings`) is a palette command; `src/main/resources/com/mirada/keymaps/cua.json:38` binds C-, and `cua.mac.json:38` Cmd-, |
+| [SET-03](https://pauta-project.dev/4.0.1/settings/#set-03) | MUST | pass | `src/main/java/com/mirada/ui/SettingsSearch.java:27`: title, description, visible text, card and page, keywords; `src/test/java/com/mirada/ui/SettingsPagesTest.java:29` ranks a title hit above a keyword hit, `:37` a whole word above part of one; `SettingsWindow.java:308` hides rows and cards and opens the best page (SettingsWindowTest.java:261) |
+| [SET-04](https://pauta-project.dev/4.0.1/settings/#set-04) | MUST | pass | `src/main/java/com/mirada/ui/SettingsWindow.java:183`: every control writes through and follows the settings; no Save or Apply, no text field (the search is not a setting) |
+| [SET-05](https://pauta-project.dev/4.0.1/settings/#set-05) | SHOULD | pass | `src/main/java/com/mirada/settings/Settings.java:655`: another process's change is read as a window comes forward (`ViewerWindow.java:279`) and merged before each write; `src/test/java/com/mirada/ui/SettingsCommandsTest.java:237` changes one window and finds it applied in the other; CrossProcessSettingsTest:63 |
+| [SET-07](https://pauta-project.dev/4.0.1/settings/#set-07) | MUST | pass | `src/main/java/com/mirada/settings/Settings.java:114`: one resolver: --config-dir/--dev, then MIRADA_CONFIG_DIR, then the default (~/.mirada; the platform folder on macOS and Windows) |
+| [SET-09](https://pauta-project.dev/4.0.1/settings/#set-09) | MUST | pass | `src/main/java/com/mirada/settings/Settings.java:74` and `Bookmarks.java:75` declare SCHEMA_VERSION; `Migrations.java:40` one step per version, the identity for the additive v1 to v2; MigrationsTest.java:29 checks the chain |
+| [SET-10](https://pauta-project.dev/4.0.1/settings/#set-10) | MUST | pass | `src/main/java/com/mirada/settings/ConfigFile.java:119`: a newer file is copied to <name>.v<n>.bak and the defaults load; `src/test/java/com/mirada/settings/MigrationsTest.java:82` (`tooNewSettingsAreBackedUpAndDefaultsLoaded`), `:99` for bookmarks |
+| [SET-11](https://pauta-project.dev/4.0.1/settings/#set-11) | MUST | pass | `src/main/java/com/mirada/settings/ConfigFile.java:98`: clamped on read; an undecodable file kept as .corrupt.bak, an unreadable one never written over; ConfigFileTest.java:23 (malformed \u escape), SettingsTest (out of range) |
+| [SET-12](https://pauta-project.dev/4.0.1/settings/#set-12) | MUST | pass | `src/main/java/com/mirada/settings/ConfigExport.java:28` mirada-config-<stamp>.zip of the folder, `ConfigImport.java:192` replaces only the ticked parts; ConfigExportImportTest.java:44 (name and contents), `:100` (ticked parts), SettingsCommandsTest.java:129 (the commands) |
 | [SET-13](https://pauta-project.dev/4.0.1/settings/#set-13) | MUST | pass | `src/main/java/com/mirada/settings/Settings.java`: no secrets anywhere |
 | [SET-14](https://pauta-project.dev/4.0.1/settings/#set-14) | MUST | n/a | asks for no credential |
 | [SET-15](https://pauta-project.dev/4.0.1/settings/#set-15) | MUST | n/a | no repository URL; the report's redaction is DIAG-06 |

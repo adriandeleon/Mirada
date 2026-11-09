@@ -385,6 +385,51 @@
     -fx-font-size: 0.92em;
 }
 
+/* Settings: the search along the top, the pages down the left, a page greyed when a search finds nothing on it. */
+.settings-top {
+    -fx-border-color: -color-border-muted;
+    -fx-border-width: 0 0 1 0;
+}
+
+.settings-sidebar,
+.settings-sidebar > .virtual-flow > .clipped-container > .sheet > .list-cell {
+    -fx-background-color: -color-bg-subtle;
+}
+
+.settings-sidebar {
+    -fx-border-color: -color-border-muted;
+    -fx-border-width: 0 1 0 0;
+}
+
+.settings-sidebar > .virtual-flow > .clipped-container > .sheet > .list-cell {
+    -fx-padding: 7 12 7 12;
+    -fx-graphic-text-gap: 10;
+    -fx-text-fill: -color-fg-default;
+}
+
+.settings-sidebar > .virtual-flow > .clipped-container > .sheet > .list-cell:selected {
+    -fx-background-color: -color-accent-subtle;
+}
+
+.settings-sidebar > .virtual-flow > .clipped-container > .sheet > .list-cell.no-match {
+    -fx-text-fill: -color-fg-subtle;
+}
+
+.settings-sidebar .no-match .icon {
+    -fx-stroke: -color-fg-subtle;
+}
+
+.settings-scroll,
+.settings-scroll > .viewport {
+    -fx-background-color: -color-bg-default;
+}
+
+.settings-page-title {
+    -fx-font-size: 1.4em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-default;
+}
+
 .settings-group,
 .shortcuts-group {
     -fx-font-weight: bold;

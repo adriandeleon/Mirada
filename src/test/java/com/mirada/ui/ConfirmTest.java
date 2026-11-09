@@ -18,7 +18,8 @@ class ConfirmTest {
             Confirm.removeMark("beach.jpg", true),
             Confirm.removeMark("beach.jpg", false),
             Confirm.discardEdit("beach.jpg"),
-            Confirm.replaceFile("beach.jpg"));
+            Confirm.replaceFile("beach.jpg"),
+            Confirm.importConfiguration("beach.jpg"));
 
     @Test
     void everyQuestionNamesTheThing() {

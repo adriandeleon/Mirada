@@ -24,7 +24,8 @@ class MacMenusTest {
 
     /**
      * Every viewer command is in a menu once, but About and Settings (the app menu's), Copy Details
-     * (About's button), and Escape and panning, which are keys. The editor's tools and the Bookmarks
+     * (About's button), each setting's own (the Settings window's), and Escape and panning, which
+     * are keys. The editor's tools and the Bookmarks
      * window's are their own windows'.
      */
     @Test
@@ -44,6 +45,10 @@ class MacMenusTest {
                 Command.PAN_RIGHT,
                 Command.PAN_UP,
                 Command.PAN_DOWN));
+        // The settings' own commands are the Settings window's rows, in the palette (SET-06).
+        expected.removeIf(command -> command.group().equals("Settings")
+                && command != Command.EXPORT_CONFIG
+                && command != Command.IMPORT_CONFIG);
         assertEquals(expected, new HashSet<>(inMenus));
         assertEquals(inMenus.size(), new HashSet<>(inMenus).size(), "a command in two menus");
     }

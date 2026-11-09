@@ -135,6 +135,8 @@ public final class ViewerWindow {
     private @Nullable AboutWindow about;
 
     private @Nullable SettingsWindow settingsWindow;
+    /** The settings' own commands and Export and Import (SET-06, SET-12), made when first run. */
+    private @Nullable SettingsCommands settingsCommands;
     /** The Mac's menu bar, once it is built after the first paint; its palette key follows the setting. */
     private @Nullable MenuBar macMenus;
 
@@ -273,6 +275,10 @@ public final class ViewerWindow {
                 refreshStrip();
             }
         });
+        // Another Mirada may have changed the settings: they show as this window comes forward (SET-05).
+        stage.focusedProperty().addListener((o, was, focused) -> {
+            if (focused) settings.reloadIfChanged();
+        });
         // The window's own close button: an edit not yet saved asks first (CONF-01).
         stage.setOnCloseRequest(e -> {
             if (!mayClose()) e.consume();
@@ -365,6 +371,11 @@ public final class ViewerWindow {
             bookmarks.ensureLoaded();
             showMarks();
             refreshInfo();
+            // A config file this start could not use was kept aside: say where (SET-10, SET-11).
+            String settingsKept = SettingsCommands.setAside("settings", settings.setAside());
+            if (settingsKept != null) say(settingsKept, MessageLog.Severity.WARNING);
+            String marksKept = SettingsCommands.setAside("bookmarks", bookmarks.setAside());
+            if (marksKept != null) say(marksKept, MessageLog.Severity.WARNING);
         });
         if (Command.MAC) afterFirstPaint(() -> installMacMenus(overlay));
         // A window opened without an image has no first paint to wait for.
@@ -898,6 +909,16 @@ public final class ViewerWindow {
                 thumbnailsShowing.set(true);
             }
             case SETTINGS -> settingsWindow().show(stage);
+            case THEME,
+                    KEYMAP,
+                    THUMBNAILS_AT_START,
+                    PROPERTIES_AT_START,
+                    HIDE_CONTROLS_AFTER,
+                    SLIDESHOW_SPEED,
+                    PALETTE_KEYS,
+                    CHECK_DAILY,
+                    EXPORT_CONFIG,
+                    IMPORT_CONFIG -> settingsCommands().run(command);
             case ABOUT -> aboutWindow().show(stage);
             case SHORTCUTS -> shortcutsWindow().show(stage);
             case DOCUMENTATION -> openLink.accept(AppInfo.DOCS_URL);
@@ -1019,7 +1040,16 @@ public final class ViewerWindow {
                     CLEAR_DEBUG_LOG,
                     REPORT_PROBLEM,
                     CHECK_FOR_UPDATES,
-                    OPEN_RELEASE -> true;
+                    OPEN_RELEASE,
+                    THEME,
+                    KEYMAP,
+                    THUMBNAILS_AT_START,
+                    PROPERTIES_AT_START,
+                    HIDE_CONTROLS_AFTER,
+                    SLIDESHOW_SPEED,
+                    PALETTE_KEYS,
+                    CHECK_DAILY,
+                    EXPORT_CONFIG -> true;
             default -> false;
         };
     }
@@ -1558,10 +1588,19 @@ public final class ViewerWindow {
         return made;
     }
 
+    private SettingsCommands settingsCommands() {
+        SettingsCommands made = settingsCommands;
+        if (made == null) {
+            made = new SettingsCommands(settings, bookmarks, palette, this::settingsWindow, stage, this::say);
+            settingsCommands = made;
+        }
+        return made;
+    }
+
     private SettingsWindow settingsWindow() {
         SettingsWindow made = settingsWindow;
         if (made == null) {
-            made = new SettingsWindow(settings, stylesheet());
+            made = new SettingsWindow(settings, stylesheet(), this::run);
             settingsWindow = made;
             toolWindows.add(made.stage());
         }

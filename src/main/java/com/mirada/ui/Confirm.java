@@ -2,10 +2,13 @@ package com.mirada.ui;
 
 import java.util.Optional;
 
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.Label;
+import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 
 import org.jspecify.annotations.Nullable;
@@ -53,14 +56,40 @@ final class Confirm {
                 "Replace File", "Replace " + name + "?", "A file with that name is already there.", "Replace");
     }
 
+    /**
+     * Importing a configuration over the one in use: the parts ticked under the question are
+     * replaced (SET-12).
+     */
+    static Question importConfiguration(String zip) {
+        return new Question(
+                "Import Configuration",
+                "Import " + zip + " over your configuration?",
+                "The parts ticked below replace yours; the rest stay as they are. This cannot be undone,"
+                        + " but Export first keeps a copy.",
+                "Import");
+    }
+
     /** Asks over {@code owner}, styled as it is, and waits; true only for the action button. */
     static boolean ask(Question question, @Nullable Window owner) {
+        return ask(question, owner, null);
+    }
+
+    /**
+     * {@link #ask} with {@code extra} under the message: what to choose before answering, such as
+     * the parts of an import to replace.
+     */
+    static boolean ask(Question question, @Nullable Window owner, @Nullable Node extra) {
         ButtonType action = new ButtonType(question.action(), ButtonBar.ButtonData.OK_DONE);
         ButtonType cancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, question.message(), action, cancel);
         alert.setTitle(question.title());
         alert.setHeaderText(question.header());
         alert.getDialogPane().lookupButton(action).getStyleClass().add("danger");
+        if (extra != null) {
+            Label message = new Label(question.message());
+            message.setWrapText(true);
+            alert.getDialogPane().setContent(new VBox(12, message, extra));
+        }
         if (owner != null) {
             alert.initOwner(owner);
             Scene scene = owner.getScene();
