@@ -2,6 +2,7 @@ package com.mirada.ui;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,7 +13,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -81,6 +81,7 @@ import com.mirada.perf.Startup;
 import com.mirada.perf.Tour;
 import com.mirada.report.Redactor;
 import com.mirada.settings.Bookmarks;
+import com.mirada.settings.FileWrites;
 import com.mirada.settings.Settings;
 import com.mirada.update.UpdateCoordinator;
 import com.mirada.update.UpdateService;
@@ -99,8 +100,13 @@ import org.jspecify.annotations.Nullable;
 public final class ViewerWindow {
 
     private static final PseudoClass FULL_SCREEN = PseudoClass.getPseudoClass("full-screen");
-    /** Reads the sidebar's details; a virtual thread per read, as the metadata reads in ImageCache. */
-    private static final Executor DETAILS_READER = Executors.newVirtualThreadPerTaskExecutor();
+    /**
+     * Where the window's file work runs, never on the FX thread (PERF-01): listing a folder, the stats
+     * a sort by date or size reads, the sidebar's details, whether a bookmark's file is still there. A
+     * named virtual thread per task, as the metadata reads in ImageCache.
+     */
+    static final Executor FILES = Executors.newThreadPerTaskExecutor(
+            Thread.ofVirtual().name("window-files-", 0).factory());
 
     /** Whether Escape closes the window once there is nothing to leave: Linux's habit, not the others'. */
     private static final boolean ESCAPE_CLOSES = Command.escapeCloses(System.getProperty("os.name", ""));
@@ -216,6 +222,15 @@ public final class ViewerWindow {
 
     static final int UNDO_DEPTH = 20;
 
+    /** Lists the folder being opened; a later open drops an earlier one's listing (PERF-03). */
+    private final LatestOnly listing = new LatestOnly(FILES, Platform::runLater);
+    /** Sorts the open folder by date or size, reading every file's stats; the latest order only. */
+    private final LatestOnly sorting = new LatestOnly(FILES, Platform::runLater);
+    /** Reads the sidebar's details of the image on screen; only the latest read is shown. */
+    private final LatestOnly details = new LatestOnly(FILES, Platform::runLater);
+    /** Finds which bookmarks or recent folders are still there, for the palette; the latest only. */
+    private final LatestOnly lists = new LatestOnly(FILES, Platform::runLater);
+
     /** The tool windows this window has opened: About, Settings and the rest, closed with it. */
     private final List<Stage> toolWindows = new ArrayList<>();
     /** The image whose preview the viewport shows until its full resolution arrives; else null. */
@@ -228,10 +243,16 @@ public final class ViewerWindow {
         this.openLink = openLink;
         this.tour = Tour.start(() -> go(folder.step(1)), this::copy);
         this.sortedBy = settings.sorting();
-        this.bookmarks = new Bookmarks(Bookmarks.fileBeside(settings.file()));
+        // Read and written where the settings are, off the FX thread in the application.
+        FileWrites writes = settings.writes();
+        this.bookmarks = new Bookmarks(
+                Bookmarks.fileBeside(settings.file()), writes, writes.isDirect() ? Runnable::run : Platform::runLater);
         bookmarks.addListener(() -> {
             showMarks();
             refreshInfo();
+            // A bookmarks file this read could not use was kept aside: say where (SET-10, SET-11).
+            String marksKept = SettingsCommands.setAside("bookmarks", bookmarks.takeSetAside());
+            if (marksKept != null) say(marksKept, MessageLog.Severity.WARNING);
         });
 
         updates = new UpdateCoordinator(
@@ -271,8 +292,7 @@ public final class ViewerWindow {
             // From the menu, the palette or the settings window: the open folder follows.
             if (!settings.sorting().equals(sortedBy)) {
                 sortedBy = settings.sorting();
-                folder = folder.sorted(sortedBy);
-                refreshStrip();
+                sortFolder();
             }
         });
         // Another Mirada may have changed the settings: they show as this window comes forward (SET-05).
@@ -365,17 +385,24 @@ public final class ViewerWindow {
         afterFirstPaint(statusBar::finish);
         // A few seconds after the image, never on the way to it; not on a timing or training tour.
         if (tour == null) afterFirstPaint(updates::scheduleStartupCheck);
-        afterFirstPaint(() -> WindowIcon.applyTo(stage));
+        afterFirstPaint(() -> WindowIcon.load(FILES, Platform::runLater, () -> WindowIcon.applyTo(stage)));
+        // What a first key press, About or Copy Details would read: read now, off the FX thread.
+        afterFirstPaint(() -> {
+            String keymap = settings.keymap();
+            FILES.execute(() -> {
+                Keybindings.preload(keymap);
+                AppInfo.runtime();
+            });
+        });
         // The marks are not start-up's: read once the image is up, then shown on it.
         afterFirstPaint(() -> {
             bookmarks.ensureLoaded();
             showMarks();
             refreshInfo();
-            // A config file this start could not use was kept aside: say where (SET-10, SET-11).
+            // A settings file this start could not use was kept aside: say where (SET-10, SET-11). The
+            // bookmarks' is said as they arrive, read on the files' thread.
             String settingsKept = SettingsCommands.setAside("settings", settings.setAside());
             if (settingsKept != null) say(settingsKept, MessageLog.Severity.WARNING);
-            String marksKept = SettingsCommands.setAside("bookmarks", bookmarks.setAside());
-            if (marksKept != null) say(marksKept, MessageLog.Severity.WARNING);
         });
         if (Command.MAC) afterFirstPaint(() -> installMacMenus(overlay));
         // A window opened without an image has no first paint to wait for.
@@ -526,6 +553,22 @@ public final class ViewerWindow {
         return menu;
     }
 
+    /**
+     * The open folder in {@link #sortedBy}'s order: sorted off the FX thread, as a sort by date or size
+     * reads every file's stats, then applied to the folder as it is by then ({@link
+     * FolderImages#reordered}), on the image showing.
+     */
+    private void sortFolder() {
+        List<Path> images = folder.images();
+        Sorting order = sortedBy;
+        sorting.submit(() -> order.sort(images), sorted -> {
+            folder = folder.reordered(sorted);
+            refreshStrip();
+            updateControls();
+            refreshInfo();
+        });
+    }
+
     /** The strip, when it is open, on the folder's current image. */
     private void refreshStrip() {
         ThumbnailStrip shown = strip;
@@ -541,6 +584,7 @@ public final class ViewerWindow {
         if (panel == null || !infoShowing.get()) return;
         Path file = folder.current();
         if (file == null || placeholder.isVisible()) {
+            details.cancel();
             panel.show(null, InfoPanel.Marks.NONE);
             return;
         }
@@ -549,12 +593,11 @@ public final class ViewerWindow {
         int count = folder.size();
         double width = viewport.contentWidth();
         double height = viewport.contentHeight();
-        CompletableFuture.supplyAsync(() -> ImageDetails.read(file, index, count, width, height), DETAILS_READER)
-                .thenAcceptAsync(
-                        details -> {
-                            if (file.equals(wanted) && infoShowing.get()) panel.show(details, marks);
-                        },
-                        Platform::runLater);
+        // Only the latest read is shown: an earlier one for this image, turned since, or for the
+        // image before, is dropped however late it comes (PERF-03).
+        details.submit(() -> ImageDetails.read(file, index, count, width, height), read -> {
+            if (file.equals(wanted) && infoShowing.get()) panel.show(read, marks);
+        });
     }
 
     /** What the user keeps on {@code file} and its folder, for the sidebar; none until they are read. */
@@ -647,8 +690,10 @@ public final class ViewerWindow {
      * threads.
      */
     private void release() {
+        released = true;
         for (Stage tool : List.copyOf(toolWindows)) tool.close();
         toolWindows.clear();
+        for (LatestOnly work : List.of(listing, sorting, details, lists)) work.cancel();
         toastTimer.stop();
         frameTimer.stop();
         pointerIdle.stop();
@@ -659,6 +704,9 @@ public final class ViewerWindow {
         if (marks != null) marks.close();
     }
 
+    /** Closed: a result that comes after is dropped, as the decoders it would start have stopped. */
+    private boolean released;
+
     /** Saves where the window is, for the next start: once, as it closes or the app quits. */
     public void rememberPlace() {
         Rectangle2D place = normalPlace;
@@ -668,15 +716,41 @@ public final class ViewerWindow {
                 place.getMinX(), place.getMinY(), place.getWidth(), place.getHeight(), stage.isMaximized()));
     }
 
-    /** Opens a file with its folder behind it, or a folder at its first image. */
+    /**
+     * Opens a file with its folder behind it, or a folder at its first image. The folder is listed,
+     * and sorted, off the FX thread; a later open drops this one's listing.
+     */
     public void open(Path path) {
-        try {
-            sortedBy = settings.sorting();
-            folder = FolderImages.open(path, sortedBy);
-        } catch (IOException e) {
-            folder = FolderImages.EMPTY;
-            showMessage("Couldn't read " + path + ": " + e.getMessage());
+        Sorting order = settings.sorting();
+        listing.submit(() -> Listed.of(path, order), listed -> opened(path, listed));
+    }
+
+    /** A folder listed off the FX thread, or why it could not be. */
+    record Listed(
+            FolderImages images, Sorting order, @Nullable String error) {
+
+        static Listed of(Path path, Sorting order) {
+            try {
+                return new Listed(FolderImages.open(path, order), order, null);
+            } catch (IOException | UncheckedIOException e) {
+                return new Listed(FolderImages.EMPTY, order, e.getMessage());
+            }
+        }
+    }
+
+    private void opened(Path path, Listed listed) {
+        // A sort asked for while listing was for the folder before.
+        sorting.cancel();
+        sortedBy = listed.order();
+        folder = listed.images();
+        if (listed.error() != null) {
+            showMessage("Couldn't read " + path + ": " + listed.error());
             return;
+        }
+        // The order changed while it was listed: sorted again, the image found showing meanwhile.
+        if (!settings.sorting().equals(sortedBy)) {
+            sortedBy = settings.sorting();
+            sortFolder();
         }
         if (folder.isEmpty()) {
             showMessage("No images in " + path);
@@ -691,7 +765,7 @@ public final class ViewerWindow {
 
     private void showCurrent() {
         Path file = folder.current();
-        if (file == null) return;
+        if (file == null || released) return;
         wanted = file;
         stage.setTitle(fileName(file) + " — " + AppInfo.NAME);
         titleBar.setTitle(fileName(file));
@@ -735,7 +809,7 @@ public final class ViewerWindow {
     }
 
     private void display(Path file, ImageCache.Decoded decoded) {
-        if (!file.equals(wanted)) return;
+        if (!file.equals(wanted) || released) return;
         Image image = decoded.image();
         if (image == null) {
             // In the Debug Log too: the window says it to the user, this is for whoever has to find out why.
@@ -1140,13 +1214,16 @@ public final class ViewerWindow {
         File chosen = FileDialogs.save(chooser, window != null && window.isShowing() ? window.stage() : stage);
         if (chosen == null) return;
         String text = DebugLog.text() + System.lineSeparator();
-        try {
-            Files.writeString(chosen.toPath(), text, java.nio.charset.StandardCharsets.UTF_8);
-            say("Saved the Debug Log to " + chosen.getName());
-        } catch (IOException e) {
-            log().log(Level.WARNING, "Could not export the Debug Log", e);
-            say("Couldn't save the Debug Log: " + e.getMessage(), MessageLog.Severity.ERROR);
-        }
+        Thread.ofVirtual().name("export-debug-log").start(() -> {
+            try {
+                Files.writeString(chosen.toPath(), text, java.nio.charset.StandardCharsets.UTF_8);
+                Platform.runLater(() -> say("Saved the Debug Log to " + chosen.getName()));
+            } catch (IOException e) {
+                log().log(Level.WARNING, "Could not export the Debug Log", e);
+                Platform.runLater(
+                        () -> say("Couldn't save the Debug Log: " + e.getMessage(), MessageLog.Severity.ERROR));
+            }
+        });
     }
 
     /**
@@ -1231,19 +1308,34 @@ public final class ViewerWindow {
         }
         if (name.equals(old)) return;
         Path target = file.resolveSibling(name);
-        try {
-            Files.move(file, target);
-        } catch (FileAlreadyExistsException e) {
-            say("Not renamed: " + name + " already exists");
-            return;
-        } catch (IOException e) {
-            say("Not renamed: " + e.getMessage());
-            return;
-        }
-        folder = folder.renamed(file, target, settings.sorting());
+        // The move, and the sort that puts the new name in its place, off the FX thread (PERF-01).
+        List<Path> images = folder.renamed(file, target).images();
+        Sorting order = sortedBy;
+        Thread.ofVirtual().name("rename").start(() -> {
+            String failed;
+            try {
+                Files.move(file, target);
+                List<Path> sorted = order.sort(images);
+                Platform.runLater(() -> renamed(file, target, sorted));
+                return;
+            } catch (FileAlreadyExistsException e) {
+                failed = "Not renamed: " + name + " already exists";
+            } catch (IOException | RuntimeException e) {
+                failed = "Not renamed: " + e.getMessage();
+            }
+            String said = failed;
+            Platform.runLater(() -> say(said));
+        });
+    }
+
+    /** {@code file} is {@code target} now: in the folder, in its place by {@code sorted}, and in the marks. */
+    private void renamed(Path file, Path target, List<Path> sorted) {
+        boolean showing = file.equals(folder.current());
+        folder = folder.renamed(file, target).reordered(sorted);
         bookmarks.moved(file, target);
-        showCurrent();
-        say("Renamed to " + name);
+        if (showing) showCurrent();
+        else refreshStrip();
+        say("Renamed to " + fileName(target));
     }
 
     /** The folder of the image on screen, absolute, or null when there is none. */
@@ -1295,10 +1387,21 @@ public final class ViewerWindow {
      * screen is stepped to; any other opens with its folder.
      */
     private void goToBookmark() {
-        List<Bookmarks.Mark> marks = new ArrayList<>();
-        for (Bookmarks.Mark mark : bookmarks.all()) {
-            if (mark.folder() ? Files.isDirectory(mark.path()) : Files.isRegularFile(mark.path())) marks.add(mark);
+        List<Bookmarks.Mark> all = bookmarks.all();
+        // Whether each is still there is a stat apiece: asked off the FX thread (PERF-01).
+        lists.submit(() -> stillThere(all), this::goToBookmark);
+    }
+
+    /** The marks whose file or folder is there now. Reads the disk: never on the FX thread. */
+    static List<Bookmarks.Mark> stillThere(List<Bookmarks.Mark> marks) {
+        List<Bookmarks.Mark> there = new ArrayList<>();
+        for (Bookmarks.Mark mark : marks) {
+            if (mark.folder() ? Files.isDirectory(mark.path()) : Files.isRegularFile(mark.path())) there.add(mark);
         }
+        return there;
+    }
+
+    private void goToBookmark(List<Bookmarks.Mark> marks) {
         if (marks.isEmpty()) {
             say("Nothing is bookmarked or noted yet");
             return;
@@ -1488,10 +1591,21 @@ public final class ViewerWindow {
     private void openRecent() {
         Path shown = folder.current();
         Path here = shown == null ? null : shown.toAbsolutePath().getParent();
+        List<Path> recent = settings.recent();
+        // A stat apiece, off the FX thread (PERF-01).
+        lists.submit(() -> recentFolders(recent, here), this::openRecent);
+    }
+
+    /** The folders of {@code recent} that are there now, but {@code here}. Reads the disk: never on the FX thread. */
+    static List<Path> recentFolders(List<Path> recent, @Nullable Path here) {
         List<Path> folders = new ArrayList<>();
-        for (Path recent : settings.recent()) {
-            if (!recent.equals(here) && Files.isDirectory(recent)) folders.add(recent);
+        for (Path folder : recent) {
+            if (!folder.equals(here) && Files.isDirectory(folder)) folders.add(folder);
         }
+        return folders;
+    }
+
+    private void openRecent(List<Path> folders) {
         if (folders.isEmpty()) {
             say("No other folder has been opened lately");
             return;
@@ -1681,6 +1795,8 @@ public final class ViewerWindow {
      * arrows go on to the next image. Built on first need, never on a start with an image.
      */
     private void offerToOpen() {
+        // A folder on its way is not an empty window: its listing says what to show.
+        if (listing.pending()) return;
         HBox buttons = openButtons;
         if (!folder.isEmpty()) {
             if (buttons != null) buttons.setVisible(false);

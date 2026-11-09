@@ -87,8 +87,19 @@ final class BookmarksWindow {
     private final Label empty = new Label();
     private final Label count = new Label();
     private final Label hint = new Label();
-    /** The marks whose file or folder was not there when the list was last made. */
-    private final Set<Path> missing = new HashSet<>();
+    /** The marks whose file or folder was not there when they were last looked for. */
+    private Set<Path> missing = Set.of();
+
+    /**
+     * How long the filter waits while typing goes on: the list is made again at most once in this
+     * time, the first key at once (PERF-06).
+     */
+    static final int FILTER_PAUSE_MS = 150;
+
+    /** Makes the list again as the filter is typed, coalesced ({@link #FILTER_PAUSE_MS}). */
+    private final FxThrottle filtering = new FxThrottle(FILTER_PAUSE_MS, this::refresh);
+    /** Looks for each mark's file or folder off the FX thread; only the latest look is taken. */
+    private final LatestOnly looking = new LatestOnly(ViewerWindow.FILES, Platform::runLater);
 
     private BookmarkList.Show show = BookmarkList.Show.ALL;
 
@@ -114,7 +125,7 @@ final class BookmarksWindow {
 
         filter.setPromptText("Filter by name, folder or note");
         filter.getStyleClass().add("bookmarks-filter");
-        filter.textProperty().addListener((o, was, now) -> refresh());
+        filter.textProperty().addListener((o, was, now) -> filtering.request());
         HBox.setHgrow(filter, Priority.ALWAYS);
 
         HBox kinds = new HBox();
@@ -176,7 +187,7 @@ final class BookmarksWindow {
         stage.setScene(scene);
 
         bookmarks.addListener(() -> {
-            if (stage.isShowing()) refresh();
+            if (stage.isShowing()) marksChanged();
         });
     }
 
@@ -186,7 +197,7 @@ final class BookmarksWindow {
      */
     void show(Window from) {
         bookmarks.load();
-        refresh();
+        marksChanged();
         if (stage.isShowing()) {
             stage.toFront();
         } else {
@@ -207,11 +218,6 @@ final class BookmarksWindow {
         BookmarkList.Row was = list.getSelectionModel().getSelectedItem();
         int index = list.getSelectionModel().getSelectedIndex();
         List<Bookmarks.Mark> marks = bookmarks.all();
-        missing.clear();
-        for (Bookmarks.Mark mark : marks) {
-            boolean there = mark.folder() ? Files.isDirectory(mark.path()) : Files.isRegularFile(mark.path());
-            if (!there) missing.add(mark.path());
-        }
         List<BookmarkList.Row> rows = BookmarkList.rows(marks, filter.getText(), show);
         list.getItems().setAll(rows);
         int keep = BookmarkList.keep(rows, was == null ? null : was.path(), Math.max(index, 0));
@@ -231,6 +237,30 @@ final class BookmarksWindow {
                         ? "Nothing is bookmarked or noted yet. In the viewer, B bookmarks the image and N writes a"
                                 + " note on it; Shift+B and Shift+N do the same for its folder."
                         : "Nothing matches.");
+    }
+
+    /**
+     * The list made again for marks that changed, and each one's file or folder looked for off the FX
+     * thread (PERF-01): the list is made once more when the answer comes. Typing in the filter looks
+     * for nothing.
+     */
+    private void marksChanged() {
+        refresh();
+        List<Bookmarks.Mark> marks = bookmarks.all();
+        looking.submit(() -> gone(marks), gone -> {
+            missing = gone;
+            refresh();
+        });
+    }
+
+    /** The paths of {@code marks} whose file or folder is not there. Reads the disk: never on the FX thread. */
+    static Set<Path> gone(List<Bookmarks.Mark> marks) {
+        Set<Path> gone = new HashSet<>();
+        for (Bookmarks.Mark mark : marks) {
+            boolean there = mark.folder() ? Files.isDirectory(mark.path()) : Files.isRegularFile(mark.path());
+            if (!there) gone.add(mark.path());
+        }
+        return Set.copyOf(gone);
     }
 
     static String counted(int n, String what) {
@@ -575,6 +605,8 @@ final class BookmarksWindow {
 
     /** Closes it for good, with the viewer: its thumbnail workers stop. */
     void close() {
+        filtering.cancel();
+        looking.cancel();
         stage.close();
         thumbnails.close();
     }

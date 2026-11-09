@@ -67,12 +67,28 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
 - **The cache holds full resolution, so it is small.** A decoded image is four bytes a pixel: a
   48-megapixel photo is about 190 MB. Three entries (the current image and one either side).
   Downsampled previews for the fitted view would let it hold more; not done.
+- **Every image is weighed against the heap before it is decoded** (`DecodeGuard`, PERF-12, Editora's
+  `LoadHeapGuard` moved to pictures). Eight bytes a pixel (the ARGB int and the decoder's buffer
+  beside it) must fit what the heap leaves, less 64 MB; a heap that looks full is collected once and
+  asked again, as what looks used may be images let go. A refusal is a `DecodeGuard.TooLarge`, an
+  `IOException`, so the window says it like a broken file. Each decoder asks from its header:
+  libjpeg-turbo, libwebp and libjxl before decoding, libheif before the copy into Java (its decode is
+  native memory), ImageIO through `ImageReader.getWidth` before `read` (ImageIO.read would allocate
+  first), and JavaFX's own decoder only after `ImageHeader` has read a PNG's, GIF's or BMP's size
+  off the FX thread, as `new Image` allocates the whole picture before anyone can ask. Every pixel
+  array goes through `ArgbPixels.allocate`. An animation's frames stop at `Animation.MAX_PIXELS`,
+  and a WebP, which says how many frames it has, is not decoded past its first when they will not
+  fit (`Animation.fits`).
 - **A strip thumbnail of a JPEG is usually the camera's own** (`Thumbnails.embedded`): IFD1's
   JPEG, taken when it is at least 160 pixels and within 2 % of the photo's shape (`Thumbnails.fits`),
   else the photo at an eighth. metadata-extractor's "adjusted" thumbnail offset counts from the APP1
   segment, not the file, so `Thumbnails.exifTiff` walks the segments to find the TIFF block. On this
   machine's photo folders that took 56–100 % of them and made each 1–5 ms instead of 13–52. The
   queue is newest first and a cell scrolled past releases its request (`Thumbnails.release`).
+- **A step tells the strip nothing new by identity** (PERF-08). `FolderImages` keeps the same list
+  object from step to step (`List.copyOf` of an unmodifiable list is that list), so
+  `ThumbnailStrip.show` compares it with `==` and puts it in only when it is another; `equals` read
+  every image of the folder on every step. `HotPathsTest` fails on the old comparison.
 
 ## Editing and saving
 
@@ -150,6 +166,27 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   start-up was the same. The header's three buttons are named, tooltips included, as they are built
   (`Icons.button`, which names a button with its glyph): on the Headless platform that was within
   the runs' noise.
+- **No file is read or written on the FX thread** (PERF-01), not even a stat. Listing a folder
+  (`ViewerWindow.Listed`, so `open` returns before the folder is there: tests wait for the title or
+  the placeholder), a sort by date or size (`Sorting.sort` reads every file's stats; the order comes
+  back and `FolderImages.reordered` applies it to the folder as it is by then, on the image showing),
+  a rename's move and re-sort, which marks and recent folders are still there, the sidebar's details,
+  the Debug Log's export, the window icon (`WindowIcon.load`), the keymap's parse
+  (`Keybindings.preload`) and the codec versions (`AppInfo.runtime`, read once) all run on named
+  virtual threads (`ViewerWindow.FILES`), the last three after the first paint. Each result whose
+  request a newer one supersedes goes through a `LatestOnly` (Editora's, verbatim): its generation is
+  checked again on the FX thread, so a late answer never overwrites a newer one (PERF-03). A window
+  that has closed drops what still arrives (`released`), as its decoders have stopped.
+- **The settings and bookmarks are written on a thread of their own** (`FileWrites`, one daemon,
+  `config-files`). A settings write that a newer one overtakes before it runs is skipped
+  (`FileWrites.latest`); `App.stop` waits up to two seconds for what is queued, or the daemon would
+  be stopped mid-write at quit. The settings are read before the toolkit starts, on `settings-read`
+  (`App.readSettings`, PERF-16), and `start` takes them. Tests construct `Settings` without
+  `writeOn`, so their writes stay on the calling thread (`FileWrites.direct`), and the window's
+  bookmarks follow the settings' choice.
+- **`MIRADA_PERF_SAMPLE=1` names what holds the FX thread** (`FxSampler`, PERF-20): it samples the
+  FX thread's stack every 5 ms, prints any busy stretch of 100 ms or more with its frames, and at exit
+  tallies the busy samples by the deepest `com.mirada` frame. Off, it is one boolean test at start.
 - **Settings changes are frequent now; theme changes are not.** The window's place is saved as it
   closes (and from `App.stop`, as Cmd-Q may not hide it first), the recent folders on every folder
   opened (after the first paint: writing the settings is not start-up's), and every change runs every
@@ -167,7 +204,14 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   keeps the file's time and size and what it held as it last read or wrote it
   (`ConfigFile.Stamp`); a window coming to the front calls `reloadIfChanged`, and every change
   first takes another process's file with this change on top (`ConfigFile.merged`), so the last
-  writer no longer wins whole. One stat each time; nothing is watched in the background.
+  writer no longer wins whole. One stat each time; nothing is watched in the background. All of it
+  runs on the files' thread (`FileWrites`, PERF-01): a change is gathered on the FX thread and put on
+  top of the disk's file there, as the difference from the last change written (`lastOurs`), so a
+  write skipped for a newer one loses nothing. What another process wrote comes back to the FX
+  thread (`Settings.adopt`) with any change made here since on top. `CrossProcessSettingsTest`
+  holds both threads apart. The bookmarks do the same by reading, changing and writing the file on
+  that thread for every change; a file they set aside is said when they arrive
+  (`Bookmarks.takeSetAside`).
 - **Import replaces whole parts, never single keys.** `ConfigImport` sorts every key of
   `settings.properties` into Preferences, Keys (`keymap`, `palette.keys`, `keys.*`) or this
   computer's own (the window's place, `recent.*`, the last update check, the version), which are
@@ -292,16 +336,24 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
 - **Bookmarks and notes are Mirada's, never the file's** (`Bookmarks`, Editora's bookmarks and
   personal notes moved to pictures). One mark per path, image or folder: bookmarked, a note, or
   both; with neither it is dropped. Paths are kept absolute and normalised, as `FolderImages` lists
-  them, so `indexOf` finds a mark in the open folder. The file is read after the first paint
-  (`ViewerWindow.showMarks` does nothing before, so the first image never waits for it), and every
-  change reads it again before writing, so a second window's marks survive. A rename in Mirada
+  them, so `indexOf` finds a mark in the open folder. The file is read after the first paint, off
+  the FX thread (`ViewerWindow.showMarks` does nothing before, so the first image never waits for
+  it). A change applies to the marks in memory at once, then on `FileWrites`' thread reads the file
+  again, makes the same change to what it holds and writes it, so a second window's marks survive;
+  what was written comes back as the marks unless a later read or change was asked for since
+  (`Bookmarks.current`, a generation guard). So the change is a function of the marks
+  (`Bookmarks.toggled`, `renamed`), applied twice, never a value computed from memory. A rename in Mirada
   carries the mark (`Bookmarks.moved`); a file moved or renamed elsewhere loses it, and a mark
   whose file is gone is kept (an unplugged drive) but left out of Go to Bookmark. The badge over
   the image (`MarksBadge`) is built the first time a shown image has a mark. The Bookmarks and
   Notes window (`BookmarksWindow`, Editora's two tool windows in one) lists them by folder, the
   rules in `BookmarkList` (latest folder first, images by name, every word in name, folder or
   note); it is built when first asked for and reads the file again each time it is brought up. Its
-  keys stay in the filter field, as the palette's do: the list is not focus-traversable.
+  keys stay in the filter field, as the palette's do: the list is not focus-traversable. The filter
+  makes the list again through an `FxThrottle` (Editora's, PERF-06): the first key at once, then at
+  most every 150 ms while typing goes on, so tests flush it (`BookmarksWindowTest.filterBy`). Whether
+  each mark's file is there is looked up off the FX thread when the marks change or the window is
+  brought up (`BookmarksWindow.gone`), never per key.
 
 ## Platforms
 

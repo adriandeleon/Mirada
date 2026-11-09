@@ -126,15 +126,35 @@ class FolderImagesTest {
     }
 
     @Test
-    void aRenamedImageIsSortedAgainAndStaysShowing() {
+    void aRenamedImageKeepsItsPlaceUntilTheFolderIsSortedAgain() {
         Path a = Path.of("a.jpg");
         Path b = Path.of("b.jpg");
         Path c = Path.of("c.jpg");
+        Path z = Path.of("z.jpg");
         FolderImages onA = new FolderImages(List.of(a, b, c), 0);
-        FolderImages renamed = onA.renamed(a, Path.of("z.jpg"), Sorting.DEFAULT);
-        assertEquals(List.of(b, c, Path.of("z.jpg")), renamed.images());
-        assertEquals(Path.of("z.jpg"), renamed.current());
-        assertEquals(a, onA.renamed(b, Path.of("0.jpg"), Sorting.DEFAULT).current());
+        FolderImages renamed = onA.renamed(a, z);
+        assertEquals(List.of(z, b, c), renamed.images());
+        assertEquals(z, renamed.current());
+        // The sort, made off the FX thread, puts it in its place and the window stays on it.
+        FolderImages sorted = renamed.reordered(Sorting.DEFAULT.sort(renamed.images()));
+        assertEquals(List.of(b, c, z), sorted.images());
+        assertEquals(z, sorted.current());
+        assertEquals(a, onA.renamed(b, Path.of("0.jpg")).current());
+        assertEquals(onA, onA.renamed(Path.of("elsewhere.jpg"), z));
+    }
+
+    @Test
+    void aSortMadeOffTheFxThreadKeepsWhatChangedMeanwhile() {
+        Path a = Path.of("a.jpg");
+        Path b = Path.of("b.jpg");
+        Path c = Path.of("c.jpg");
+        Path d = Path.of("d.jpg");
+        // Sorted from a, b, c; meanwhile c was trashed and d came, and the window stepped to b.
+        FolderImages now = new FolderImages(List.of(a, b, d), 1);
+        FolderImages sorted = now.reordered(List.of(c, b, a));
+        assertEquals(List.of(b, a, d), sorted.images(), "gone left out, new last");
+        assertEquals(b, sorted.current());
+        assertEquals(FolderImages.EMPTY, FolderImages.EMPTY.reordered(List.of(a)));
     }
 
     @Test

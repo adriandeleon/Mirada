@@ -187,6 +187,8 @@ final class JxlDecoder {
                     expect(SUCCESS, (int) jxl.getBasicInfo.invoke(decoder, info));
                     width = info.get(JAVA_INT, INFO_XSIZE);
                     height = info.get(JAVA_INT, INFO_YSIZE);
+                    // From the header, before a pixel is decoded: refused if it will not fit (PERF-12).
+                    DecodeGuard.check(width, height);
                     channels = info.get(JAVA_INT, INFO_ALPHA_BITS) > 0 ? 4 : 3;
                     format.set(JAVA_INT, 0, channels);
                     format.set(JAVA_INT, 4, TYPE_UINT8);

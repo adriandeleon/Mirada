@@ -181,4 +181,62 @@ class BookmarksTest {
         assertFalse(bookmarks.remove(photo));
         assertEquals(1, changes[0]);
     }
+
+    // ---- Off the FX thread (PERF-01), under a generation guard (PERF-03) ----
+
+    /** Marks read and written on a held thread, delivered on another: the application's shape. */
+    private static Bookmarks held(Path file, FileWritesTest.Held io, FileWritesTest.Held fx) {
+        return new Bookmarks(file, io, fx);
+    }
+
+    @Test
+    void aChangeShowsAtOnceAndIsWrittenOnTheFilesThread(@TempDir Path dir) {
+        FileWritesTest.Held io = new FileWritesTest.Held();
+        FileWritesTest.Held fx = new FileWritesTest.Held();
+        Path file = dir.resolve("bookmarks.properties");
+        Bookmarks bookmarks = held(file, io, fx);
+        int[] changes = {0};
+        bookmarks.addListener(() -> changes[0]++);
+        Path photo = dir.resolve("a.jpg");
+
+        assertTrue(bookmarks.toggle(photo, false), "bookmarked at once");
+        assertTrue(bookmarks.isBookmarked(photo));
+        assertEquals(1, changes[0]);
+        assertFalse(Files.exists(file), "nothing read or written on the caller's thread");
+        assertFalse(bookmarks.loaded());
+
+        io.runAll();
+        assertTrue(new Bookmarks(file).isBookmarked(photo), "written on the files' thread");
+        fx.runAll();
+        assertTrue(bookmarks.loaded());
+        assertTrue(bookmarks.isBookmarked(photo));
+    }
+
+    @Test
+    void aReadOvertakenByAChangeIsDroppedAndTheChangesReadIsKept(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("bookmarks.properties");
+        Path other = dir.resolve("other.jpg");
+        new Bookmarks(file).toggle(other, false); // another window's mark, already in the file
+        FileWritesTest.Held io = new FileWritesTest.Held();
+        FileWritesTest.Held fx = new FileWritesTest.Held();
+        Bookmarks bookmarks = held(file, io, fx);
+        Path photo = dir.resolve("a.jpg");
+
+        bookmarks.ensureLoaded();
+        io.runAll(); // the read is done, its result on its way
+        bookmarks.setNote(photo, false, "mine"); // asked before that result arrives
+        io.runAll();
+        fx.runAll();
+
+        assertTrue(bookmarks.loaded());
+        assertEquals("mine", bookmarks.note(photo), "the stale read did not undo the note");
+        assertTrue(bookmarks.isBookmarked(other), "the other window's mark, from the change's own read");
+        assertEquals(Set.of(photo, other), Set.copyOf(paths(bookmarks.all())));
+    }
+
+    @Test
+    void onlyTheLatestRequestsResultIsTaken() {
+        assertTrue(Bookmarks.current(4, 4));
+        assertFalse(Bookmarks.current(3, 4));
+    }
 }

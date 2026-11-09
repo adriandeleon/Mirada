@@ -78,6 +78,25 @@ class BookmarksWindowTest {
         Stage owner = call(Stage::new);
         fx(() -> window.show(owner));
         stage = window.stage();
+        lookedFor();
+    }
+
+    /**
+     * Types {@code text} into the filter as a user would, then makes the list at once instead of after
+     * the filter's pause (PERF-06), which the tests would otherwise have to wait out.
+     */
+    private void filterBy(String text) throws Exception {
+        fx(() -> {
+            filter().setText(text);
+            FxTestSupport.<FxThrottle>field(window, "filtering").flush();
+        });
+    }
+
+    /** Waits for the window to have looked for every mark's file, off the FX thread. */
+    private void lookedFor() throws Exception {
+        waitUntil(
+                "the marks looked for",
+                () -> !FxTestSupport.<LatestOnly>field(window, "looking").pending());
     }
 
     @AfterEach
@@ -126,7 +145,7 @@ class BookmarksWindowTest {
     void theListShowsEveryMarkAndTheFilterFindsAWordOfANote() throws Exception {
         assertTrue(call(stage::isShowing));
         assertEquals("3 images, 1 folder", count(), "the gone file is listed too, marked missing");
-        fx(() -> filter().setText("lighthouse"));
+        filterBy("lighthouse");
         assertEquals("1 image", count());
         assertEquals("photos", selectedName(), "its folder heads it");
         press(KeyCode.DOWN);
@@ -136,7 +155,7 @@ class BookmarksWindowTest {
         press(KeyCode.ESCAPE);
         assertEquals("", call(() -> filter().getText()), "Escape clears the filter first");
         assertTrue(call(stage::isShowing));
-        fx(() -> filter().setText("nothing like this"));
+        filterBy("nothing like this");
         assertEquals("0 images", count());
         assertEquals(
                 "Nothing matches.",
@@ -181,14 +200,14 @@ class BookmarksWindowTest {
 
     @Test
     void aBookmarkIsToggledANoteEditedAndAMarkRemovedAskingWhenANoteGoes() throws Exception {
-        fx(() -> filter().setText("a.png"));
+        filterBy("a.png");
         press(KeyCode.DOWN);
         assertEquals("a.png", selectedName());
         press(KeyCode.B, true);
         assertFalse(bookmarks.isBookmarked(photos.resolve("a.png").toAbsolutePath()), "Ctrl+B takes it off");
         assertEquals("0 images", count(), "neither bookmark nor note: gone from the list");
 
-        fx(() -> filter().setText("lighthouse"));
+        filterBy("lighthouse");
         press(KeyCode.DOWN);
         WindowFixture.answerNextDialog(pane -> {
             WindowFixture.type(pane, "The lighthouse, at dawn");
@@ -213,8 +232,8 @@ class BookmarksWindowTest {
         assertEquals("", bookmarks.note(photos.resolve("b.png").toAbsolutePath()), "removed once confirmed");
 
         // A bare bookmark goes without a question.
-        fx(() -> filter().clear());
-        fx(() -> filter().setText("photos"));
+        filterBy("");
+        filterBy("photos");
         press(KeyCode.DOWN);
         assertEquals("photos", selectedName(), "the folder, bookmarked with no image marked in it");
         press(REMOVE, true);
@@ -223,7 +242,7 @@ class BookmarksWindowTest {
 
     @Test
     void theRightClickMenuAndADoubleClickActOnTheRow() throws Exception {
-        fx(() -> filter().setText("gone"));
+        filterBy("gone");
         waitUntil("the row's cell", () -> cell(1) != null);
         ListCell<?> gone = call(() -> cell(1));
         fx(() ->
@@ -243,7 +262,7 @@ class BookmarksWindowTest {
         fx(() -> items.getLast().fire());
         assertEquals("0 images", count(), "removed from the menu");
 
-        fx(() -> filter().setText("a.png"));
+        filterBy("a.png");
         waitUntil("a.png's cell", () -> cell(1) != null);
         ContextMenu aMenu = call(() -> (ContextMenu) FxTestSupport.invoke(
                 window,
@@ -259,11 +278,11 @@ class BookmarksWindowTest {
         fx(() -> aMenu.getItems().get(4).fire());
         assertFalse(bookmarks.isBookmarked(photos.resolve("a.png").toAbsolutePath()));
 
-        fx(() -> filter().setText("photos"));
+        filterBy("photos");
         waitUntil("the folder's cell", () -> cell(0) != null);
         fx(() -> Objects.requireNonNull(cell(0)).fireEvent(doubleClick()));
         assertEquals(List.of("a.png", "folder photos"), opened);
-        fx(() -> filter().setText("b.png"));
+        filterBy("b.png");
         waitUntil("b.png's picture", () -> {
             ListCell<?> cell = cell(1);
             return cell != null
@@ -283,7 +302,7 @@ class BookmarksWindowTest {
         press(KeyCode.L, true);
         assertTrue(call(() -> filter().isFocused()) || call(stage::isShowing));
         // Return on a file that has gone does nothing; Delete while filtering edits the filter.
-        fx(() -> filter().setText("gone"));
+        filterBy("gone");
         press(KeyCode.DOWN);
         assertEquals("gone.png", selectedName());
         press(KeyCode.ENTER);
@@ -295,7 +314,7 @@ class BookmarksWindowTest {
         press(KeyCode.E, true);
         assertEquals("", bookmarks.note(dir.resolve("gone.png").toAbsolutePath()));
         // With nothing listed, the keys have nothing to act on.
-        fx(() -> filter().setText("nothing like this at all"));
+        filterBy("nothing like this at all");
         for (KeyCode code : List.of(KeyCode.DOWN, KeyCode.UP, KeyCode.ENTER, KeyCode.F2)) press(code);
         press(KeyCode.B, true);
         press(REMOVE, true);

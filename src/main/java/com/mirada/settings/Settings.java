@@ -15,6 +15,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
+import java.util.concurrent.Executor;
 
 import com.mirada.folder.Sorting;
 import org.jspecify.annotations.Nullable;
@@ -28,7 +29,8 @@ import org.jspecify.annotations.Nullable;
  * value clamped on read as well as on write, so a bad edit cannot break the next start, and every
  * change written through at once (the settings window has no OK button).
  *
- * <p>FX thread only.
+ * <p>FX thread only; the file itself is written on {@link FileWrites}' thread once {@link #writeOn}
+ * says so.
  */
 public final class Settings {
 
@@ -177,10 +179,17 @@ public final class Settings {
     /** Where the last load kept a file it could not use (broken, or a newer Mirada's), or null. */
     private @Nullable Path setAside;
 
-    /** The file as this run last read or wrote it: its time and size, and what it held. */
-    private ConfigFile.Stamp stamp = ConfigFile.Stamp.NONE;
+    /** The file's time and size as this run last read or wrote it. The files' thread's, but for {@link #load}. */
+    private volatile ConfigFile.Stamp stamp = ConfigFile.Stamp.NONE;
 
-    private Properties saved = new Properties();
+    /** What the file held when this run last read or wrote it. The files' thread's, but for {@link #load}. */
+    private volatile Properties written = new Properties();
+
+    /**
+     * The settings of the last change written, as this run had them: what a change is told apart
+     * from, to put just it on top of the file. The files' thread's, but for {@link #load}.
+     */
+    private volatile Properties lastOurs = new Properties();
 
     /**
      * Reads the file; a missing or unreadable one leaves the defaults. One that will not decode is
@@ -194,7 +203,8 @@ public final class Settings {
         setAside = read.backup();
         apply(read.properties());
         stamp = ConfigFile.Stamp.of(file);
-        saved = properties();
+        written = properties();
+        lastOurs = written;
     }
 
     /** Sets every field from {@code properties}, each clamped or defaulted as it is read. */
@@ -241,11 +251,49 @@ public final class Settings {
     }
 
     /**
-     * Reads the file again and tells every listener, as after a change: after an import replaced it
-     * ({@link ConfigImport}).
+     * Reads the file again, on the files' thread, and tells every listener, as after a change: after
+     * an import replaced it ({@link ConfigImport}).
      */
     public void reload() {
-        load();
+        reread(true);
+    }
+
+    /**
+     * Reads the file again, and tells every listener, if another Mirada changed it since this one
+     * last read or wrote it: called as a window comes to the front, so a change made in another
+     * window shows there (SET-05). One stat, on the files' thread, when nothing changed.
+     */
+    public void reloadIfChanged() {
+        if (writable) reread(false);
+    }
+
+    /**
+     * Reads the file on the files' thread ({@code always}, or if its stamp moved) and takes it on the
+     * FX thread, with any change made here since on top. The order of the files' thread keeps a
+     * change asked for later written after this read.
+     */
+    private void reread(boolean always) {
+        Properties ours = properties();
+        writes.execute(() -> {
+            if (!always && ConfigFile.Stamp.of(file).equals(stamp)) return;
+            ConfigFile.Result read = ConfigFile.read(file, Migrations.SETTINGS);
+            stamp = ConfigFile.Stamp.of(file);
+            written = read.properties();
+            lastOurs = read.properties();
+            deliver.execute(() -> {
+                writable = read.writable();
+                if (read.backup() != null) setAside = read.backup();
+                adopt(ours, read.properties());
+            });
+        });
+    }
+
+    /**
+     * Takes {@code theirs}, what the file holds now, on the FX thread: with every setting changed here
+     * since {@code ours} was gathered on top, then tells the listeners.
+     */
+    private void adopt(Properties ours, Properties theirs) {
+        apply(ConfigFile.merged(ours, properties(), theirs));
         for (Runnable listener : List.copyOf(listeners)) listener.run();
     }
 
@@ -569,35 +617,33 @@ public final class Settings {
     }
 
     private void changed() {
-        adoptOutsideChanges();
         save();
         for (Runnable listener : List.copyOf(listeners)) listener.run();
     }
 
     /**
-     * Writes the file through a temporary one and a move, so a crash mid-write leaves the old file
-     * rather than half of the new one. A failure is swallowed: the setting still applies to this run.
+     * Writes the change: gathered here, written on the files' thread (PERF-01), where only the latest
+     * of a burst is written. If another Mirada (another process: each has its own Settings) wrote
+     * the file since this one read or wrote it, the change goes on top of its settings
+     * ({@link ConfigFile#merged}), so neither loses the other's (SET-05), and this run takes theirs
+     * too. One stat when nothing changed.
      */
     void save() {
         if (!writable) return;
-        Properties properties = properties();
-        try {
-            Path folder = file.toAbsolutePath().getParent();
-            if (folder != null) Files.createDirectories(folder);
-            Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
-            try (Writer out = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) {
-                properties.store(out, "Mirada settings. Edit freely; bad values fall back to defaults.");
+        Properties ours = properties();
+        writes.latest(file, () -> {
+            Properties disk = written;
+            if (!ConfigFile.Stamp.of(file).equals(stamp)) {
+                ConfigFile.Result read = ConfigFile.read(file, Migrations.SETTINGS);
+                if (read.outcome() == ConfigFile.Outcome.READ) disk = read.properties();
             }
-            try {
-                Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            } catch (AtomicMoveNotSupportedException e) {
-                Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
-            }
+            Properties merged = ConfigFile.merged(lastOurs, ours, disk);
+            write(file, merged);
             stamp = ConfigFile.Stamp.of(file);
-            saved = properties;
-        } catch (IOException e) {
-            // Unwritable home: the change still applies until Mirada closes.
-        }
+            written = merged;
+            lastOurs = ours;
+            if (!merged.equals(ours)) deliver.execute(() -> adopt(ours, merged));
+        });
     }
 
     /** The settings as the file holds them, at {@link #SCHEMA_VERSION}. */
@@ -634,27 +680,46 @@ public final class Settings {
         return properties;
     }
 
-    /**
-     * Before a change is written: if another Mirada (another process: each has its own Settings)
-     * wrote the file since this one read or wrote it, takes its settings, with this change on top
-     * ({@link ConfigFile#merged}), so neither loses the other's (SET-05). One stat when nothing
-     * changed.
-     */
-    private void adoptOutsideChanges() {
-        if (!writable || ConfigFile.Stamp.of(file).equals(stamp)) return;
-        ConfigFile.Result read = ConfigFile.read(file, Migrations.SETTINGS);
-        if (read.outcome() != ConfigFile.Outcome.READ) return;
-        apply(ConfigFile.merged(saved, properties(), read.properties()));
+    /** Where the file is written: on the caller's thread until {@link #writeOn} says otherwise. */
+    private FileWrites writes = FileWrites.direct();
+
+    /** Brings what the files' thread read back to the FX thread: at once until {@link #writeOn}. */
+    private Executor deliver = Runnable::run;
+
+    /** Writes the file from now on with {@code writes}: the application's, off the FX thread. */
+    public void writeOn(FileWrites writes) {
+        writeOn(writes, Runnable::run);
     }
 
     /**
-     * Reads the file again, and tells every listener, if another Mirada changed it since this one
-     * last read or wrote it: called as a window comes to the front, so a change made in another
-     * window shows there (SET-05). One stat when nothing changed. Returns whether it read.
+     * Reads and writes the file from now on with {@code writes}, and takes what it read with {@code
+     * deliver}: {@code Platform::runLater} in the application.
      */
-    public boolean reloadIfChanged() {
-        if (!writable || ConfigFile.Stamp.of(file).equals(stamp)) return false;
-        reload();
-        return true;
+    public void writeOn(FileWrites writes, Executor deliver) {
+        this.writes = writes;
+        this.deliver = deliver;
+    }
+
+    /** What writes the file: the bookmarks beside it are written the same way. */
+    public FileWrites writes() {
+        return writes;
+    }
+
+    private static void write(Path file, Properties properties) {
+        try {
+            Path folder = file.toAbsolutePath().getParent();
+            if (folder != null) Files.createDirectories(folder);
+            Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
+            try (Writer out = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) {
+                properties.store(out, "Mirada settings. Edit freely; bad values fall back to defaults.");
+            }
+            try {
+                Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException e) {
+            // Unwritable home: the change still applies until Mirada closes.
+        }
     }
 }

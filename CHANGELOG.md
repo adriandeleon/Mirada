@@ -104,6 +104,17 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Changed
 
+- **Opening a folder, sorting it, renaming, and saving settings and bookmarks no longer hold up the
+  window.** Listing a folder, the dates and sizes a sort reads, renaming a file, finding which
+  bookmarks and recent folders are still there, writing the settings and the bookmarks file, and
+  reading the window icon, the keymap and the codec versions all happen off the interface thread, so
+  a large folder or a slow drive never freezes the window while it works.
+- **The Bookmarks and Notes window's filter keeps up with fast typing:** the list is made again at
+  most every 150 ms while keys keep coming, and whether each mark's file is still there is looked up
+  in the background, once, not on every key.
+- **Stepping in a folder of thousands of images costs the same as in a small one:** the thumbnail
+  strip no longer compares the whole folder on every step.
+
 - **Keyboard Shortcuts lists each command's first few keys** (Right, Page Down, Space for Next
   Image), from the keymap in use, in place of a paragraph of the second ways. A key with Shift no
   longer does what it does without (Shift+F was full screen, Alt+Right the next image), except
@@ -142,6 +153,13 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
   each Linux file keeps its `.asc`, and the signing key stays `mirada-signing-key.asc`.
 
 ### Fixed
+
+- **An image too large for the memory left is refused with a message** naming its size, how much
+  memory it needs and how much is free, read from its header before it is decoded, instead of
+  running out of memory and leaving the window stuck; an animation too long to hold shows as a still,
+  decided before its frames are decoded where the file says how many there are.
+- **The sidebar never shows the details of an image you have moved on from:** a read that comes
+  back late is dropped, even for the same image turned since.
 
 - **Coloured text and highlighted rows read better.** Accent, warning, success and error text,
   and the white text on a highlighted menu row or selection, now reach 4.5:1 against what they

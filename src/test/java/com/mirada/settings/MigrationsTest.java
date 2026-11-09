@@ -104,7 +104,7 @@ class MigrationsTest {
         Bookmarks bookmarks = new Bookmarks(file);
         bookmarks.load();
         assertTrue(bookmarks.all().isEmpty());
-        assertEquals(dir.resolve("bookmarks.properties.v" + newer + ".bak"), bookmarks.setAside());
+        assertEquals(dir.resolve("bookmarks.properties.v" + newer + ".bak"), bookmarks.takeSetAside());
         assertEquals(text, Files.readString(dir.resolve("bookmarks.properties.v" + newer + ".bak")));
     }
 
@@ -118,7 +118,7 @@ class MigrationsTest {
         Bookmarks again = new Bookmarks(file);
         again.load();
         assertEquals(2, again.all().size());
-        assertNull(again.setAside());
+        assertNull(again.takeSetAside());
     }
 
     @Test

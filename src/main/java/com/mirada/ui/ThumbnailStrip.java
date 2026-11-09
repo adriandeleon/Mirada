@@ -195,9 +195,25 @@ final class ThumbnailStrip {
         for (Cell cell : cells) cell.showMark();
     }
 
+    /** The list {@link #show} last put in, compared by identity. */
+    private List<Path> shown = List.of();
+
+    /**
+     * Whether {@code images} is another list than the one {@code shown}: the same object is the same
+     * folder, as {@link com.mirada.folder.FolderImages} keeps its list from step to step, so a step is
+     * one comparison, never one per image (PERF-08). Pure.
+     */
+    static boolean changed(List<Path> shown, List<Path> images) {
+        return shown != images;
+    }
+
     /** Shows {@code images}, the one at {@code index} selected and in view. */
     void show(List<Path> images, int index) {
-        if (!items.equals(images)) items.setAll(images);
+        // A step keeps the folder's list, the same object: only a new list is put in (PERF-08).
+        if (changed(shown, images)) {
+            items.setAll(images);
+            shown = images;
+        }
         if (index < 0 || index >= items.size()) {
             list.getSelectionModel().clearSelection();
             return;

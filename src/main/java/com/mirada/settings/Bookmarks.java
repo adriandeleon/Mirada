@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
+import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,9 +41,12 @@ import org.jspecify.annotations.Nullable;
  * normalised, so a photo opened by a relative path is the same photo. A mark whose file has gone is
  * kept (its drive may be unplugged); the lists that offer marks leave it out.
  *
- * <p>Every change reads the file again first and writes it straight after, so two Mirada windows
- * add to each other's marks instead of overwriting them. Read lazily ({@link #ensureLoaded}): start-up
- * never waits for it. FX thread only.
+ * <p>Every change applies at once to the marks in memory, then, on the files' thread ({@link
+ * FileWrites}), reads the file again, makes the same change to what it holds and writes it, so two
+ * Mirada windows add to each other's marks instead of overwriting them; what was written comes back as
+ * the marks, unless a later change or read has been asked for since (a generation guard, PERF-03). Read
+ * lazily ({@link #ensureLoaded}), off the FX thread (PERF-01): start-up never waits for it. FX thread
+ * only, but for the reads and writes, which run on {@code io} and report back on {@code deliver}.
  */
 public final class Bookmarks {
 
@@ -82,9 +87,27 @@ public final class Bookmarks {
 
     private final List<Runnable> listeners = new ArrayList<>();
     private boolean loaded;
+    /** A read is on its way; {@link #ensureLoaded} asks for no second. */
+    private boolean loading;
 
+    private final Executor io;
+    private final Executor deliver;
+    /** Counts the reads and changes asked for: only the latest one's file is taken as the marks. */
+    private long generation;
+
+    /** Marks read and written on the calling thread, at once: for tests and {@code --report}. */
     public Bookmarks(Path file) {
+        this(file, FileWrites.direct(), Runnable::run);
+    }
+
+    /**
+     * @param io reads and writes the file: {@link FileWrites#background()} in the application
+     * @param deliver brings what was read back to the thread the marks live on: the FX thread
+     */
+    public Bookmarks(Path file, Executor io, Executor deliver) {
         this.file = file;
+        this.io = io;
+        this.deliver = deliver;
     }
 
     /** {@code bookmarks.properties} in the folder that holds {@code settingsFile}. */
@@ -96,15 +119,17 @@ public final class Bookmarks {
         return file;
     }
 
-    /** False after a read that failed on a file that is there: it is not written over. */
-    private boolean writable = true;
-
-    /** Where the last load kept a file it could not use (broken, or a newer Mirada's), or null. */
+    /** Where the last read kept a file it could not use (broken, or a newer Mirada's), or null. */
     private @Nullable Path setAside;
 
-    /** Where the last {@link #load} kept a file it could not use, or null when it was used. */
-    public @Nullable Path setAside() {
-        return setAside;
+    /**
+     * Where a read kept a file it could not use, once, then null: the window says so when it hears
+     * the marks arrive.
+     */
+    public @Nullable Path takeSetAside() {
+        Path kept = setAside;
+        setAside = null;
+        return kept;
     }
 
     /** The path as marks are kept by: absolute, without {@code .} or {@code ..}. */
@@ -114,7 +139,7 @@ public final class Bookmarks {
 
     /** Reads the file the first time anything asks; a missing or unreadable one is no marks. */
     public void ensureLoaded() {
-        if (!loaded) load();
+        if (!loaded && !loading) load();
     }
 
     /** Whether the file has been read, so a mark shown now is the real one. */
@@ -123,22 +148,53 @@ public final class Bookmarks {
     }
 
     /**
-     * Reads the file again, dropping what was read before. A file that will not decode is kept as
-     * {@code bookmarks.properties.corrupt.bak} and is no marks, one a newer Mirada wrote is kept as
-     * {@code bookmarks.properties.v<n>.bak} and is no marks (SET-10), an older one is brought
-     * forward ({@link Migrations}); one that cannot be read is no marks and is not written over, or
-     * the next bookmark would replace every mark it holds (SET-11).
+     * Reads the file again, dropping what was read before, and tells the listeners once it is in. A
+     * file that will not decode is kept as {@code bookmarks.properties.corrupt.bak} and is no marks,
+     * one a newer Mirada wrote is kept as {@code bookmarks.properties.v<n>.bak} and is no marks
+     * (SET-10), an older one is brought forward ({@link Migrations}); one that cannot be read is no
+     * marks and is not written over, or the next bookmark would replace every mark it holds (SET-11).
      */
     public void load() {
-        loaded = true;
-        marks.clear();
-        ConfigFile.Result read = ConfigFile.read(file, Migrations.BOOKMARKS);
-        writable = read.writable();
-        setAside = read.backup();
+        loading = true;
+        long mine = ++generation;
+        io.execute(() -> {
+            ConfigFile.Result read = ConfigFile.read(file, Migrations.BOOKMARKS);
+            Map<Path, Mark> fresh = marksIn(read);
+            Path kept = read.backup();
+            deliver.execute(() -> arrived(mine, fresh, kept));
+        });
+    }
+
+    /** The marks a read found, by key, the oldest first; a hand-made copy of a path is the later one. */
+    private static Map<Path, Mark> marksIn(ConfigFile.Result read) {
+        Map<Path, Mark> out = new LinkedHashMap<>();
         for (Mark mark : marksOf(read.properties())) {
-            marks.remove(mark.path()); // a hand-made copy: the later one, in its place
-            marks.put(mark.path(), mark);
+            out.remove(mark.path()); // a hand-made copy: the later one, in its place
+            out.put(mark.path(), mark);
         }
+        return out;
+    }
+
+    /**
+     * What a read (or a change's read and write) found, back on the marks' thread: taken as the marks
+     * when nothing was asked for since ({@link #current}), and the listeners told if it differs.
+     */
+    private void arrived(long mine, Map<Path, Mark> fresh, @Nullable Path kept) {
+        if (kept != null) setAside = kept;
+        if (!current(mine, generation)) return;
+        loading = false;
+        boolean first = !loaded;
+        loaded = true;
+        boolean same = List.copyOf(marks.values()).equals(List.copyOf(fresh.values()));
+        if (!first && same && setAside == null) return;
+        marks.clear();
+        marks.putAll(fresh);
+        notifyListeners();
+    }
+
+    /** Whether the result of request {@code mine} is still wanted, {@code latest} having been asked last. Pure. */
+    static boolean current(long mine, long latest) {
+        return mine == latest;
     }
 
     /**
@@ -207,33 +263,39 @@ public final class Bookmarks {
      * bookmark is the latest mark. Returns whether it is bookmarked now.
      */
     public boolean toggle(Path path, boolean folder) {
-        load();
+        ensureLoaded();
         Path key = key(path);
+        change(marks -> toggled(marks, key, folder));
+        Mark now = marks.get(key);
+        return now != null && now.bookmarked();
+    }
+
+    private static void toggled(Map<Path, Mark> marks, Path key, boolean folder) {
         Mark was = marks.get(key);
         boolean now = was == null || !was.bookmarked();
         Mark mark = new Mark(key, folder, now, was == null ? "" : was.note());
         if (now) marks.remove(key); // to the end: the latest
-        put(mark);
-        changed();
-        return now;
+        put(marks, mark);
     }
 
     /** Sets the note on {@code path}; a blank one takes it off. Its bookmark, if any, stays. */
     public void setNote(Path path, boolean folder, String note) {
-        load();
+        ensureLoaded();
         Path key = key(path);
         Mark was = marks.get(key);
-        Mark mark = new Mark(key, folder, was != null && was.bookmarked(), note);
-        if (was != null && was.equals(mark)) return;
-        put(mark);
-        changed();
+        if (was != null && was.equals(new Mark(key, folder, was.bookmarked(), note))) return;
+        change(marks -> {
+            Mark before = marks.get(key);
+            put(marks, new Mark(key, folder, before != null && before.bookmarked(), note));
+        });
     }
 
     /** Takes the whole mark off {@code path}, its bookmark and its note. Returns whether it had one. */
     public boolean remove(Path path) {
-        load();
-        if (marks.remove(key(path)) == null) return false;
-        changed();
+        ensureLoaded();
+        Path key = key(path);
+        if (!marks.containsKey(key)) return false;
+        change(marks -> marks.remove(key));
         return true;
     }
 
@@ -242,11 +304,16 @@ public final class Bookmarks {
      * the same image. Nothing is written when there is none.
      */
     public void moved(Path from, Path to) {
-        load();
+        ensureLoaded();
         Path old = key(from);
+        if (!marks.containsKey(old)) return;
+        Path key = key(to);
+        change(marks -> renamed(marks, old, key));
+    }
+
+    private static void renamed(Map<Path, Mark> marks, Path old, Path key) {
         Mark mark = marks.get(old);
         if (mark == null) return;
-        Path key = key(to);
         Map<Path, Mark> renamed = new LinkedHashMap<>();
         for (Map.Entry<Path, Mark> entry : marks.entrySet()) {
             if (entry.getKey().equals(old)) {
@@ -257,10 +324,28 @@ public final class Bookmarks {
         }
         marks.clear();
         marks.putAll(renamed);
-        changed();
     }
 
-    private void put(Mark mark) {
+    /**
+     * Makes {@code edit} to the marks now, and on the files' thread to what the file holds then, which
+     * is written and comes back as the marks: another window's marks are kept, not written over.
+     */
+    private void change(Consumer<Map<Path, Mark>> edit) {
+        edit.accept(marks);
+        notifyListeners();
+        long mine = ++generation;
+        io.execute(() -> {
+            ConfigFile.Result read = ConfigFile.read(file, Migrations.BOOKMARKS);
+            Map<Path, Mark> fresh = marksIn(read);
+            edit.accept(fresh);
+            // A file that is there but could not be read is not written over (SET-11).
+            if (read.writable()) save(file, List.copyOf(fresh.values()));
+            Path kept = read.backup();
+            deliver.execute(() -> arrived(mine, fresh, kept));
+        });
+    }
+
+    private static void put(Map<Path, Mark> marks, Mark mark) {
         if (mark.isEmpty()) marks.remove(mark.path());
         else marks.put(mark.path(), mark);
     }
@@ -278,7 +363,10 @@ public final class Bookmarks {
         return -1;
     }
 
-    /** Called after every change, once it is saved, so whatever shows a mark can show it again. */
+    /**
+     * Called after every change, and when a read or another window's marks change what is kept, so
+     * whatever shows a mark can show it again.
+     */
     public void addListener(Runnable listener) {
         listeners.add(listener);
     }
@@ -286,11 +374,9 @@ public final class Bookmarks {
     /** Reads the file again and tells every listener: after an import replaced it ({@link ConfigImport}). */
     public void reload() {
         load();
-        for (Runnable listener : List.copyOf(listeners)) listener.run();
     }
 
-    private void changed() {
-        save();
+    private void notifyListeners() {
         for (Runnable listener : List.copyOf(listeners)) listener.run();
     }
 
@@ -312,9 +398,8 @@ public final class Bookmarks {
      * Writes the file through a temporary one and a move, as the settings are written. A failure is
      * swallowed: the marks still hold for this run.
      */
-    private void save() {
-        if (!writable) return;
-        Properties properties = propertiesOf(List.copyOf(marks.values()));
+    private static void save(Path file, List<Mark> marks) {
+        Properties properties = propertiesOf(marks);
         properties.setProperty(Migrations.VERSION_KEY, Integer.toString(SCHEMA_VERSION));
         try {
             Path folder = file.toAbsolutePath().getParent();

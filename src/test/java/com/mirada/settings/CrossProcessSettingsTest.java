@@ -3,6 +3,8 @@ package com.mirada.settings;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 import org.junit.jupiter.api.Test;
@@ -45,17 +47,19 @@ class CrossProcessSettingsTest {
         two.load();
         int[] heard = {0};
         two.addListener(() -> heard[0]++);
-        assertFalse(two.reloadIfChanged(), "nothing changed yet");
+        two.reloadIfChanged();
+        assertEquals(0, heard[0], "nothing changed yet");
 
         one.setTheme(Settings.ThemeChoice.DARK);
-        assertTrue(two.reloadIfChanged());
+        two.reloadIfChanged();
         assertEquals(Settings.ThemeChoice.DARK, two.theme());
         assertEquals(1, heard[0]);
-        assertFalse(two.reloadIfChanged(), "read once");
+        two.reloadIfChanged();
+        assertEquals(1, heard[0], "read once");
 
         two.setKeepZoom(true);
         assertFalse(one.keepZoom());
-        assertTrue(one.reloadIfChanged());
+        one.reloadIfChanged();
         assertTrue(one.keepZoom());
     }
 
@@ -79,15 +83,58 @@ class CrossProcessSettingsTest {
         assertEquals(Settings.ThemeChoice.DARK, two.theme(), "and two has the others' now");
     }
 
+    /**
+     * In the application a change is written on the files' thread (PERF-01): there it goes on top of
+     * what another Mirada wrote, this run takes theirs back on the FX thread, and a change made here
+     * while that write was on its way stays.
+     */
+    @Test
+    void aChangeWrittenOnTheFilesThreadKeepsTheOthersAndTakesThem() {
+        Path file = dir.resolve("settings.properties");
+        Settings one = new Settings(file);
+        one.load();
+        Settings two = new Settings(file);
+        two.load();
+        List<Runnable> files = new ArrayList<>();
+        List<Runnable> fx = new ArrayList<>();
+        two.writeOn(new FileWrites(files::add), fx::add);
+
+        one.setTheme(Settings.ThemeChoice.DARK);
+        two.setKeepZoom(true);
+        two.setSlideshowSeconds(9);
+        assertEquals(2, files.size(), "nothing written on the FX thread");
+        run(files);
+        two.setKeepZoom(false); // while theirs is on its way back
+        run(fx);
+        assertEquals(Settings.ThemeChoice.DARK, two.theme(), "theirs taken");
+        assertFalse(two.keepZoom(), "the change made since stays");
+        assertEquals(9, two.slideshowSeconds());
+        run(files);
+
+        Settings fresh = new Settings(file);
+        fresh.load();
+        assertEquals(Settings.ThemeChoice.DARK, fresh.theme());
+        assertFalse(fresh.keepZoom());
+        assertEquals(9, fresh.slideshowSeconds());
+    }
+
+    private static void run(List<Runnable> queue) {
+        while (!queue.isEmpty()) queue.removeFirst().run();
+    }
+
     @Test
     void aFileMendedByHandIsReadWhenTheWindowLooksAgain() throws IOException {
         Path file = dir.resolve("settings.properties");
         Files.write(file, new byte[] {'m', '=', '\\', 'u', '1'});
         Settings settings = new Settings(file);
         settings.load(); // set aside: writable, the defaults
-        assertFalse(settings.reloadIfChanged(), "a missing file is as it was");
+        int[] heard = {0};
+        settings.addListener(() -> heard[0]++);
+        settings.reloadIfChanged();
+        assertEquals(0, heard[0], "a missing file is as it was");
         Files.writeString(file, "theme=light\n");
-        assertTrue(settings.reloadIfChanged());
+        settings.reloadIfChanged();
+        assertEquals(1, heard[0]);
         assertEquals(Settings.ThemeChoice.LIGHT, settings.theme());
     }
 
