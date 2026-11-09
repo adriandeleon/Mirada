@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
@@ -83,7 +84,14 @@ public final class HeadlessDriver {
         Robot robot = call(Robot::new);
         for (String step : steps) {
             System.out.println("[drive] " + step);
-            run(robot, step.trim());
+            try {
+                run(robot, step.trim());
+            } catch (Exception e) {
+                // Said here: App.main gave uncaught exceptions to the Debug Log, which prints nothing.
+                Throwable cause = e instanceof ExecutionException && e.getCause() != null ? e.getCause() : e;
+                System.err.println("[drive] failed: " + step + ": " + cause);
+                System.exit(1);
+            }
             Thread.sleep(SETTLE_MS);
         }
         Platform.exit();

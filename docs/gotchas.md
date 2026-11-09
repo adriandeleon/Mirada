@@ -397,7 +397,9 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   own `PATH`, not the child's, so `ToolPath` resolves it to a full path too. Windows keeps its own.
 - **`--help` and `--version` must `System.exit`.** Started as an `Application` (the jlink image, dev
   runs), the JDK's launcher starts the toolkit before `main`, whose thread keeps the process alive.
-  The native image starts from `Launcher`, a plain class, and starts no toolkit for them.
+  The native image starts from `Launcher`, a plain class, and starts no toolkit for them. Starting the
+  JVM from `Launcher` too reaches `main` about 80 ms sooner, but measured slower to the first paint
+  headless (median of 10: 611 against 563 ms), so `App` stays the JVM's main class.
 - **`java.awt.headless` is decided in `App.main`, as the first statement**, before `HeadStart` can
   touch ImageIO: headless everywhere but macOS, where Move to Trash is AWT's `Desktop`
   (`Trash.headless`); AWT itself loads only when a file is first trashed. ImageIO and `BufferedImage` are `java.desktop` and need no display; tests are

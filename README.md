@@ -104,6 +104,8 @@ Options:
   --config-dir <dir>  keep settings and bookmarks in <dir>
   --dev               keep them in ~/.mirada-dev, apart from your own
   --new-instance      start a window of its own, even when Mirada is running
+  --no-session        open only what is named; Mirada restores no session, so
+                      this changes nothing, and is taken for scripts that pass it
   --report            write a redacted problem report beside the settings, open
                       a prefilled GitHub issue with it, and exit; for when
                       Mirada will not start

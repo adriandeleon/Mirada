@@ -68,7 +68,8 @@ class LaunchTest {
 
     @Test
     void theUsageNamesEveryOption() {
-        for (String option : List.of("--config-dir", "--dev", "--new-instance", "--report", "--version", "--help"))
+        for (String option :
+                List.of("--config-dir", "--dev", "--new-instance", "--no-session", "--report", "--version", "--help"))
             assertTrue(Launch.USAGE.contains(option), option);
     }
 
@@ -95,5 +96,13 @@ class LaunchTest {
         assertEquals(List.of(), Launch.absolute(List.of(), cwd));
         // No path at all: passed on, for the running Mirada to refuse as this one would have.
         assertEquals(List.of("a\0b"), Launch.absolute(List.of("a\0b"), cwd));
+    }
+
+    @Test
+    void noSessionIsTakenAndOpensOnlyWhatIsNamed() {
+        Launch launch = parse("--no-session", "a.jpg");
+        assertEquals(Launch.Action.START, launch.action());
+        assertEquals(List.of("a.jpg"), launch.files());
+        assertTrue(launch.handsOff());
     }
 }

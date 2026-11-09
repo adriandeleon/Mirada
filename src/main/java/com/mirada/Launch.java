@@ -38,6 +38,8 @@ public record Launch(Action action, @Nullable Path configDir, List<String> files
               --config-dir <dir>  keep settings and bookmarks in <dir>
               --dev               keep them in ~/.mirada-dev, apart from your own
               --new-instance      start a window of its own, even when Mirada is running
+              --no-session        open only what is named; Mirada restores no session, so
+                                  this changes nothing, and is taken for scripts that pass it
               --report            write a redacted problem report beside the settings, open
                                   a prefilled GitHub issue with it, and exit; for when
                                   Mirada will not start
@@ -75,6 +77,8 @@ public record Launch(Action action, @Nullable Path configDir, List<String> files
                 // Not at once: a --config-dir after it still names the folder it reports on.
                 case "--report" -> report = true;
                 case "--new-instance" -> newInstance = true;
+                // CLI-04: Mirada restores no session, so a launch already opens only what it names.
+                case "--no-session" -> {}
                 case "--dev" -> configDir = Path.of(home, ".mirada-dev");
                 case "--config-dir" -> {
                     if (i + 1 >= args.size() || args.get(i + 1).isBlank())

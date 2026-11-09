@@ -113,7 +113,10 @@ decodes the matrix on the JVM. Add a variant there when a new kind of file turns
 scripts/headless-run.sh photo.jpg -- 'key C-S-p' 'type rot' 'shot /tmp/palette.png'
 ```
 
-The steps are listed in `src/test/java/com/mirada/ui/HeadlessDriver.java`.
+The steps are listed in `src/test/java/com/mirada/ui/HeadlessDriver.java`. A step that fails (a key
+name it does not know, such as `Return` for `Enter`) is named on stderr and the run exits 1: Mirada's
+Debug Log takes uncaught exceptions, so the driver says it itself. Mirada's own options go before the
+file (`scripts/headless-run.sh --new-instance photo.jpg -- …`).
 
 - **Agents look at the UI headless, never on the desktop.** Someone works at this machine, and a
   Mirada window popping up takes their focus. `scripts/headless-run.sh` runs the app on JavaFX's
