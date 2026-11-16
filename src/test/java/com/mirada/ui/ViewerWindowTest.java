@@ -470,7 +470,8 @@ class ViewerWindowTest {
                 return exported.toFile();
             });
             window.run(Command.EXPORT_DEBUG_LOG);
-            waitUntil("the export", () -> Files.exists(exported));
+            // Saying it comes after the write: a file that merely exists may not have its text yet.
+            window.waitToSay("Saved the Debug Log");
             assertTrue(Files.readString(exported).contains("a line for the log"));
             window.run(Command.CLEAR_DEBUG_LOG);
             assertFalse(DebugLog.text().contains("a line for the log"));

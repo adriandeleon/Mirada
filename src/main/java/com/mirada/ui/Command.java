@@ -105,6 +105,11 @@ enum Command {
     COPY_DEBUG_LOG("help.copyDebugLog", "diagnostics clipboard logging"),
     EXPORT_DEBUG_LOG("help.exportDebugLog", "diagnostics save file logging"),
     CLEAR_DEBUG_LOG("help.clearDebugLog", "diagnostics logging empty"),
+    /**
+     * The Debug Log's find bar (FIND-04): opens it over the log, and run while it is open finds the
+     * next match. Its keys work in the Debug Log window ({@link Context#DEBUG_LOG}).
+     */
+    DEBUG_LOG_FIND("log.find", "search look text diagnostics logging next"),
     REPORT_PROBLEM("help.reportProblem", "bug issue feedback support crash help"),
     CHECK_FOR_UPDATES("help.checkForUpdates", "update version release new upgrade"),
     OPEN_RELEASE("help.openRelease", "update download upgrade version"),
@@ -155,14 +160,16 @@ enum Command {
     BOOKMARKS_LIST_NOTES("bookmarks.listNotes", "filter show comments");
 
     /**
-     * Where a command's keys work: the viewer, the editor while it is open, or the Bookmarks and
-     * Notes window. One key can mean a different command in each (R turns the image in the viewer
+     * Where a command's keys work: the viewer, the editor while it is open, the Bookmarks and Notes
+     * window, or the Debug Log window. One key can mean a different command in each (R turns the image in the viewer
      * and the picture being edited in the editor); the palette lists every command in all of them.
      */
     enum Context {
         VIEWER,
         EDITOR,
-        BOOKMARKS
+        BOOKMARKS,
+        /** The Debug Log window, whose find command takes the keys a find takes. */
+        DEBUG_LOG
     }
 
     /** Every command by its id, built once when first asked. */
@@ -231,6 +238,7 @@ enum Command {
                     BOOKMARKS_LIST_ALL,
                     BOOKMARKS_LIST_BOOKMARKED,
                     BOOKMARKS_LIST_NOTES -> Context.BOOKMARKS;
+            case DEBUG_LOG_FIND -> Context.DEBUG_LOG;
             default -> Context.VIEWER;
         };
     }
@@ -389,6 +397,7 @@ enum Command {
                     COPY_DEBUG_LOG,
                     EXPORT_DEBUG_LOG,
                     CLEAR_DEBUG_LOG,
+                    DEBUG_LOG_FIND,
                     REPORT_PROBLEM,
                     CHECK_FOR_UPDATES,
                     OPEN_RELEASE,

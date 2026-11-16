@@ -132,7 +132,7 @@ final class Icons {
             case PREVIOUS -> Command.vertical() ? UP : PREVIOUS;
             case FIRST -> FIRST;
             case LAST -> LAST;
-            case GO_TO_IMAGE -> SEARCH;
+            case GO_TO_IMAGE, DEBUG_LOG_FIND -> SEARCH;
             case SLIDESHOW -> PLAY;
             case ZOOM_IN -> ZOOM_IN;
             case ZOOM_OUT -> ZOOM_OUT;

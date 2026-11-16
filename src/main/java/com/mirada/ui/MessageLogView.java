@@ -30,9 +30,12 @@ import static com.mirada.i18n.Messages.tr;
 
 /**
  * The Message Log: this session's status-bar messages, newest first, as a card over the window just
- * above the status bar (DIAG-01, MLOG-01, Pauta 4.0.1). The filter has the keyboard when it opens;
- * Escape, {@code C-g} or a click outside closes it; Copy copies what it shows, Clear empties it.
- * Built the first time it is opened.
+ * above the status bar (DIAG-01, MLOG-01), a card in the window's {@link OverlayHost}. The filter has
+ * the keyboard when it opens; Escape, the keymap's cancel chord ({@code C-g} in Emacs) or a press
+ * outside closes it (MLOG-03), and the focus goes back to where it was. The list moves on the
+ * palette's keys ({@link PaletteKeys}, QOPEN-12). Copy, {@code Ctrl+C} ({@code Cmd+C}) and the
+ * keymap's copy chord ({@code M-w} in Emacs, MLOG-04) copy what it shows or the selected entries;
+ * Clear empties it. Built the first time it is opened.
  */
 final class MessageLogView {
 
@@ -43,10 +46,9 @@ final class MessageLogView {
     /** Makes the list again as the filter is typed, coalesced as the Bookmarks window's is. */
     private final FxThrottle filtering = new FxThrottle(BookmarksWindow.FILTER_PAUSE_MS, this::refresh);
 
-    private final StackPane host;
+    private final OverlayHost host;
     private final MessageLog messages;
     private final Consumer<Command> run;
-    private final Region backdrop = new Region();
     private final TextField filter = new TextField();
     private final ListView<MessageLog.Entry> list = new ListView<>();
     /** Says how many older messages the bounded log no longer holds. */
@@ -54,17 +56,10 @@ final class MessageLogView {
 
     private final VBox card;
 
-    MessageLogView(StackPane host, MessageLog messages, Consumer<Command> run) {
+    MessageLogView(OverlayHost host, MessageLog messages, Consumer<Command> run) {
         this.host = host;
         this.messages = messages;
         this.run = run;
-
-        // Transparent: the image stays as it is, but a press outside the card closes it (MLOG-03).
-        backdrop.getStyleClass().add("message-log-backdrop");
-        backdrop.setOnMousePressed(e -> {
-            hide();
-            e.consume();
-        });
 
         Label title = new Label(tr("messageLog.title"));
         title.getStyleClass().add("message-log-title");
@@ -119,25 +114,33 @@ final class MessageLogView {
     }
 
     private void onKey(KeyEvent e) {
-        if (closes(e.getCode(), e.isControlDown(), e.isShiftDown() || e.isAltDown() || e.isMetaDown())) {
+        PaletteKeys.Action action = PaletteKeys.action(e, filter.isFocused());
+        if (action == PaletteKeys.Action.CANCEL) {
             hide();
             e.consume();
-        } else if (e.isShortcutDown() && !e.isShiftDown() && e.getCode() == KeyCode.C && list.isFocused()) {
+        } else if (list.isFocused() && copies(e, Keybindings.current())) {
             run.accept(Command.COPY_MESSAGES);
             e.consume();
-        } else if ((e.getCode() == KeyCode.DOWN || e.getCode() == KeyCode.ENTER)
-                && filter.isFocused()
-                && !list.getItems().isEmpty()) {
-            list.requestFocus();
-            if (list.getSelectionModel().isEmpty()) list.getSelectionModel().selectFirst();
+        } else if (PaletteKeys.isNavigation(action) || action == PaletteKeys.Action.ACCEPT && filter.isFocused()) {
+            // The palette's moves (QOPEN-12); from the filter they carry the keyboard into the list.
+            if (list.getItems().isEmpty()) return;
+            if (!list.isFocused()) list.requestFocus();
+            if (action == PaletteKeys.Action.ACCEPT) {
+                if (list.getSelectionModel().isEmpty()) PaletteKeys.select(list, 0);
+            } else {
+                PaletteKeys.navigate(list, action, entry -> true);
+            }
             e.consume();
         }
     }
 
-    /** Escape, or Emacs's {@code C-g}, closes the log (MLOG-03). */
-    static boolean closes(KeyCode code, boolean control, boolean otherModifiers) {
-        if (otherModifiers) return false;
-        return code == KeyCode.ESCAPE && !control || code == KeyCode.G && control;
+    /**
+     * Whether {@code e} copies the selected entries: {@code Ctrl+C} ({@code Cmd+C}) in every keymap,
+     * and the keymap's own copy chord, {@code M-w} in Emacs (MLOG-04).
+     */
+    static boolean copies(KeyEvent e, Keybindings keys) {
+        boolean platform = e.isShortcutDown() && !e.isShiftDown() && !e.isAltDown() && e.getCode() == KeyCode.C;
+        return platform || keys.copies(e);
     }
 
     /** Opens the log above the status bar, {@code bottom} pixels up, and marks its errors read (MLOG-06). */
@@ -148,16 +151,17 @@ final class MessageLogView {
         list.getSelectionModel().clearSelection();
         list.scrollTo(0);
         UiZoom.stackMargin(card, 8, 8, bottom + 6, 8);
-        if (!isShowing()) host.getChildren().addAll(backdrop, card);
+        // Transparent: the image stays as it is, but a press outside the card closes it (MLOG-03).
+        host.show(card, "message-log-backdrop", null);
         filter.requestFocus();
     }
 
     void hide() {
-        host.getChildren().removeAll(backdrop, card);
+        if (isShowing()) host.hide();
     }
 
     boolean isShowing() {
-        return host.getChildren().contains(card);
+        return host.isShowing(card);
     }
 
     /** What Copy copies: while the log is open, the selected entries or else those it lists; else every entry. */

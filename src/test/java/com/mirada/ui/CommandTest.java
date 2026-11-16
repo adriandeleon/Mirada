@@ -257,6 +257,7 @@ class CommandTest {
             if (command.id().startsWith("editor.")) assertEquals(Command.Context.EDITOR, context, command.id());
             else if (command.id().startsWith("bookmarks."))
                 assertEquals(Command.Context.BOOKMARKS, context, command.id());
+            else if (command.id().startsWith("log.")) assertEquals(Command.Context.DEBUG_LOG, context, command.id());
             else assertEquals(Command.Context.VIEWER, context, command.id());
         }
     }

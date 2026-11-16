@@ -36,11 +36,17 @@ final class PaletteChords {
 
     /**
      * Whether the open palette moves or edits by this key itself, so it must not close the palette
-     * even when it is one of the palette's keys: C-p is the row above there, M-f a word forward.
-     * Pure.
+     * even when it is one of the palette's keys: C-p is the row above there in Emacs, M-f a word
+     * forward. Under the keys in force.
      */
     static boolean keptByPalette(@Nullable String token) {
-        return PaletteKeys.resolve(token, true) != PaletteKeys.Action.NONE || TextInputKeys.actionFor(token) != null;
+        return keptByPalette(token, Keybindings.current());
+    }
+
+    /** {@link #keptByPalette} under {@code keys}. Pure. */
+    static boolean keptByPalette(@Nullable String token, Keybindings keys) {
+        return PaletteKeys.resolve(token, true, keys) != PaletteKeys.Action.NONE
+                || TextInputKeys.actionFor(token) != null;
     }
 
     /** Whether {@code e} is one of the chords that open the palette. */

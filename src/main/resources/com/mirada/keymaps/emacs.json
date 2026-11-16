@@ -66,7 +66,9 @@
     "bookmarks.undoRemove": ["C-/", "C-S--", "C-z"],
     "bookmarks.listAll": "C-1",
     "bookmarks.listBookmarked": "C-2",
-    "bookmarks.listNotes": "C-3"
+    "bookmarks.listNotes": "C-3",
+
+    "log.find": "C-s"
   },
   "vertical": {
     "go.next": ["n", "space", "down", "pagedown"],
@@ -75,5 +77,13 @@
     "view.panRight": ["C-f", "right", "S-right"],
     "view.panUp": ["C-p", "S-up"],
     "view.panDown": ["C-n", "S-down"]
+  },
+  "lists": {
+    "nav.lineDown": "C-n",
+    "nav.lineUp": "C-p",
+    "nav.pageDown": "C-v",
+    "nav.pageUp": "M-v",
+    "nav.first": "M-S-,",
+    "nav.last": "M-S-."
   }
 }

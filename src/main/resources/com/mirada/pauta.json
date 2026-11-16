@@ -201,14 +201,6 @@
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
-      "rule": "ACC-08",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-08",
-      "kind": "pending",
-      "reason": "A screen reader is not told which row of the palette is selected.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
       "rule": "WIN-08",
       "level": "SHOULD",
       "url": "https://pauta-project.dev/6.1.0/window-shell/#win-08",
@@ -305,22 +297,6 @@
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
-      "rule": "PAL-06",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/command-palette/#pal-06",
-      "kind": "pending",
-      "reason": "In the palette, the keys that move the selection do not come from the keymap you chose.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "PAL-07",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/command-palette/#pal-07",
-      "kind": "pending",
-      "reason": "Closing the palette does not put the focus back where it was, and its cancel key is fixed.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
       "rule": "PAL-08",
       "level": "SHOULD",
       "url": "https://pauta-project.dev/6.1.0/templates/command-palette/#pal-08",
@@ -329,139 +305,11 @@
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
-      "rule": "QOPEN-02",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/quick-open/#qopen-02",
-      "kind": "pending",
-      "reason": "The pickers have no title naming what they are for.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "QOPEN-06",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/quick-open/#qopen-06",
-      "kind": "pending",
-      "reason": "In the pickers, the keys that move the selection do not come from the keymap you chose.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "QOPEN-07",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/quick-open/#qopen-07",
-      "kind": "pending",
-      "reason": "Closing a picker does not put the focus back where it was, and its cancel key is fixed.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "QOPEN-11",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/quick-open/#qopen-11",
-      "kind": "pending",
-      "reason": "Opening a picker while another is up is refused instead of replacing it.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "QOPEN-12",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/quick-open/#qopen-12",
-      "kind": "pending",
-      "reason": "The Bookmarks list and the Message Log do not move their selection with the palette's keys.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
       "rule": "WELC-02",
       "level": "SHOULD",
       "url": "https://pauta-project.dev/6.1.0/templates/welcome/#welc-02",
       "kind": "pending",
       "reason": "The empty window shows the key for Open but not for its other actions.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "FIND-01",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-01",
-      "kind": "pending",
-      "reason": "The Debug Log has no find bar.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "FIND-02",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-02",
-      "kind": "pending",
-      "reason": "The Debug Log has no find bar that searches as you type.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "FIND-04",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-04",
-      "kind": "pending",
-      "reason": "No command opens a find bar in the Debug Log.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "FIND-05",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-05",
-      "kind": "pending",
-      "reason": "The Debug Log cannot highlight what you search for.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "FIND-06",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-06",
-      "kind": "pending",
-      "reason": "The Debug Log has no find bar to step through matches with Enter.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "FIND-07",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-07",
-      "kind": "pending",
-      "reason": "The Debug Log has no find bar to close with Escape.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "FIND-09",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-09",
-      "kind": "pending",
-      "reason": "The Debug Log has no find bar whose fields follow your keymap's editing keys.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "FIND-10",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-10",
-      "kind": "pending",
-      "reason": "The Debug Log has no find bar to say when nothing is found.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "MLOG-03",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/message-log/#mlog-03",
-      "kind": "pending",
-      "reason": "The Message Log closes on Escape and a fixed key, not on your keymap's cancel key.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "MLOG-04",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/message-log/#mlog-04",
-      "kind": "pending",
-      "reason": "The Message Log does not copy on the Emacs keymap's copy key.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "MLOG-05",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/message-log/#mlog-05",
-      "kind": "pending",
-      "reason": "A message's severity is set where it is raised, not read from the message itself.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {

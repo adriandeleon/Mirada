@@ -66,7 +66,9 @@
     "bookmarks.undoRemove": "Cmd-z",
     "bookmarks.listAll": "Cmd-1",
     "bookmarks.listBookmarked": "Cmd-2",
-    "bookmarks.listNotes": "Cmd-3"
+    "bookmarks.listNotes": "Cmd-3",
+
+    "log.find": ["Cmd-f", "Cmd-g"]
   },
   "vertical": {
     "go.next": ["down", "pagedown", "space"],

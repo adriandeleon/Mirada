@@ -2,10 +2,13 @@ package com.mirada.ui;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Predicate;
 
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.ListView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 
 import org.jspecify.annotations.Nullable;
@@ -13,17 +16,18 @@ import org.jspecify.annotations.Nullable;
 import static com.mirada.i18n.Messages.tr;
 
 /**
- * The one definition of how the command palette is driven from the keyboard, and of the legend that
- * tells the user so.
+ * The one definition of how a list overlay is driven from the keyboard, and of the legend that tells
+ * the user so: the command palette, the pickers on its card, the Message Log and the Bookmarks list
+ * all move, accept and cancel by these keys (PAL-06, QOPEN-06, QOPEN-12).
  *
- * <p>The arrows, PageUp/PageDown, Enter and Escape always work. On top of those the palette answers
- * to Emacs's own movement — {@code C-n}/{@code C-p} a row, {@code C-v}/{@code M-v} a page,
- * {@code M-<}/{@code M->} the ends, {@code C-g} to cancel — which is what the hands of anyone who
- * reaches for {@code M-x} already do. They are safe to take here: while the palette is open it owns
- * the keyboard, so nothing is stolen from the shell. The table is Editora's Emacs keymap, token for
- * token, so the two palettes move alike.
+ * <p>The arrows, PageUp/PageDown, Ctrl/Cmd+Home and End, Enter and Escape always work. On top of
+ * those the active keymap's own moves do, its {@code lists} section ({@link Keymap#lists}): in Emacs
+ * {@code C-n}/{@code C-p} a row, {@code C-v}/{@code M-v} a page, {@code M-<}/{@code M->} the ends, as
+ * in Editora. Its cancel chord, a key of {@link Command#ESCAPE} ({@code C-g} in Emacs), closes the
+ * overlay as Escape does (PAL-07, QOPEN-07, MLOG-03). Nothing here is a fixed table of letters: a
+ * keymap that binds no moves leaves the fixed keys alone.
  *
- * <p>The legend is built from the same table, so it can only name keys that reach the palette.
+ * <p>The legend is built from the same keys, so it can only name keys that reach the overlay.
  */
 final class PaletteKeys {
 
@@ -40,37 +44,36 @@ final class PaletteKeys {
         CANCEL
     }
 
+    /** The list moves a keymap binds in its {@code lists} section. */
+    static final String LINE_DOWN = "nav.lineDown";
+
+    static final String LINE_UP = "nav.lineUp";
+    static final String PAGE_DOWN = "nav.pageDown";
+    static final String PAGE_UP = "nav.pageUp";
+    static final String FIRST = "nav.first";
+    static final String LAST = "nav.last";
+
     /** Rows moved by PageUp/PageDown when the list cannot say how many it shows. */
     private static final int DEFAULT_PAGE = 8;
 
     private static final String SEPARATOR = "  ·  ";
 
-    /** The Emacs movement chords, in {@link KeyChord} tokens, and what each means here. */
-    static final Map<String, Action> EMACS = Map.of(
-            "C-n", Action.DOWN,
-            "C-p", Action.UP,
-            "C-v", Action.PAGE_DOWN,
-            "M-v", Action.PAGE_UP,
-            "M-S-,", Action.FIRST,
-            "M-S-.", Action.LAST,
-            "C-g", Action.CANCEL);
-
     private PaletteKeys() {}
 
     /**
-     * The action for a key press. {@code queryField} says whether a text field has the focus: then
-     * plain Home/End stay with its caret.
+     * The action for a key press under the keys in force. {@code queryField} says whether a text
+     * field has the focus: then plain Home/End stay with its caret.
      */
     static Action action(KeyEvent e, boolean queryField) {
-        return resolve(KeyChord.of(e), queryField);
+        return resolve(KeyChord.of(e), queryField, Keybindings.current());
     }
 
     /**
-     * The pure decision behind {@link #action}: the fixed keys first, then the Emacs table. Plain
-     * Home/End move the query field's caret when there is one (as in every search box); Ctrl/Cmd+Home
-     * and Ctrl/Cmd+End always jump to the first/last row.
+     * The pure decision behind {@link #action}: the fixed keys first, then the keymap's list moves
+     * and its cancel chord. Plain Home/End move the query field's caret when there is one (as in
+     * every search box); Ctrl/Cmd+Home and Ctrl/Cmd+End always jump to the first/last row.
      */
-    static Action resolve(@Nullable String token, boolean queryField) {
+    static Action resolve(@Nullable String token, boolean queryField, Keybindings keys) {
         if (token == null) return Action.NONE;
         switch (token) {
             case "down":
@@ -94,8 +97,21 @@ final class PaletteKeys {
             case "end":
                 return queryField ? Action.NONE : Action.LAST;
             default:
-                return EMACS.getOrDefault(token, Action.NONE);
+                break;
         }
+        String move = keys.listMove(token);
+        if (move != null) {
+            return switch (move) {
+                case LINE_DOWN -> Action.DOWN;
+                case LINE_UP -> Action.UP;
+                case PAGE_DOWN -> Action.PAGE_DOWN;
+                case PAGE_UP -> Action.PAGE_UP;
+                case FIRST -> Action.FIRST;
+                case LAST -> Action.LAST;
+                default -> Action.NONE;
+            };
+        }
+        return keys.cancels(token) ? Action.CANCEL : Action.NONE;
     }
 
     /**
@@ -149,11 +165,24 @@ final class PaletteKeys {
             idx = seek(items, target, dir, selectable);
             if (idx < 0) idx = seek(items, target, -dir, selectable);
         }
-        if (idx >= 0) {
-            list.getSelectionModel().select(idx);
-            list.scrollTo(idx);
-        }
+        if (idx >= 0) select(list, idx);
         return true;
+    }
+
+    /**
+     * Puts the cursor on row {@code index} (-1 clears it) and tells a screen reader, since the focus
+     * stays in the query field: the list's focused item is the row, and the list says it moved
+     * (ACC-08).
+     */
+    static void select(ListView<?> list, int index) {
+        if (index < 0) {
+            list.getSelectionModel().clearSelection();
+            return;
+        }
+        list.getSelectionModel().clearAndSelect(index);
+        list.getFocusModel().focus(index);
+        list.scrollTo(index);
+        list.notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
     }
 
     private static <T> int seek(List<T> items, int from, int dir, Predicate<? super T> selectable) {
@@ -180,16 +209,33 @@ final class PaletteKeys {
     }
 
     /**
-     * The palette legend: "move", the palette's own entries (nulls skipped), "cancel". The Emacs
-     * chords are shown beside the fixed keys in the platform's notation, which is what the menus use.
+     * The palette legend: "move", the palette's own entries (nulls skipped), "cancel". The keymap's
+     * moves and cancel chord are shown beside the fixed keys in the platform's notation, which is
+     * what the menus use; a keymap with none shows the fixed keys alone. Read again when the keymap
+     * changes (PAL-09).
      */
-    static String legend(@Nullable String... entries) {
+    static String legend(Keybindings keys, @Nullable String... entries) {
         List<String> parts = new ArrayList<>();
-        parts.add(hint(tr("keys.move"), "↑↓ / " + KeyChord.display("C-n") + " " + KeyChord.display("C-p")));
+        StringBuilder moves = new StringBuilder("↑↓");
+        List<String> down = keys.listKeys(LINE_DOWN);
+        List<String> up = keys.listKeys(LINE_UP);
+        if (!down.isEmpty() && !up.isEmpty()) {
+            moves.append(" / ")
+                    .append(KeyChord.display(down.getFirst()))
+                    .append(' ')
+                    .append(KeyChord.display(up.getFirst()));
+        }
+        parts.add(hint(tr("keys.move"), moves.toString()));
         for (String entry : entries) {
             if (entry != null) parts.add(entry);
         }
-        parts.add(hint(tr("keys.cancel"), "Esc / " + KeyChord.display("C-g")));
+        StringBuilder cancel = new StringBuilder("Esc");
+        for (KeyCombination chord : keys.chords(Command.ESCAPE)) {
+            if (!ESCAPE.equals(chord)) cancel.append(" / ").append(chord.getDisplayText());
+        }
+        parts.add(hint(tr("keys.cancel"), cancel.toString()));
         return String.join(SEPARATOR, parts);
     }
+
+    private static final KeyCombination ESCAPE = new KeyCodeCombination(KeyCode.ESCAPE);
 }

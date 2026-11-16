@@ -39,6 +39,10 @@ final class Keybindings {
     private final Map<Command, List<KeyCombination>> chords = new EnumMap<>(Command.class);
     private final Map<Command.Context, Map<String, Command>> byToken = new EnumMap<>(Command.Context.class);
     private final Map<Command.Context, Map<KeyCombination, Command>> byCharacter = new EnumMap<>(Command.Context.class);
+    /** A list overlay's moves ({@link Keymap#lists}): each token and the {@code nav.*} id it is bound to. */
+    private final Map<String, String> listMoves = new HashMap<>();
+    /** Each {@code nav.*} id's tokens, the one shown first. */
+    private final Map<String, List<String>> listKeys = new HashMap<>();
 
     private Keybindings() {
         for (Command.Context context : Command.Context.values()) {
@@ -59,12 +63,15 @@ final class Keybindings {
         if (vertical) base.vertical().forEach((id, keys) -> put(tokens, id, keys));
         // In id order, so which of two clashing user bindings wins never depends on hashing.
         Map<Command, List<String>> users = new EnumMap<>(Command.class);
+        Map<String, List<String>> lists = new TreeMap<>(base.lists());
         new TreeMap<>(user).forEach((id, text) -> {
             List<String> keys = words(text);
             if (!keys.isEmpty() && keys.stream().allMatch(key -> canonical(key) == null)) return;
-            put(users, id, keys);
+            if (id.startsWith("nav.")) lists.put(id, keys);
+            else put(users, id, keys);
         });
         Keybindings made = new Keybindings();
+        lists.forEach(made::bindListMove);
         // The palette's first: its keys open it from anywhere, so no other binding may take them.
         List<String> palette = users.get(Command.PALETTE);
         if (palette != null) made.bind(Command.PALETTE, palette);
@@ -100,6 +107,46 @@ final class Keybindings {
             bound.add(combination);
         }
         chords.put(command, List.copyOf(bound));
+    }
+
+    /** Binds what is still free of {@code keys} to the list move {@code id}. */
+    private void bindListMove(String id, List<String> keys) {
+        List<String> bound = new ArrayList<>();
+        for (String key : keys) {
+            String token = canonical(key);
+            if (token != null && listMoves.putIfAbsent(token, id) == null) bound.add(token);
+        }
+        listKeys.put(id, List.copyOf(bound));
+    }
+
+    /**
+     * The list move ({@code nav.lineDown} and the rest, {@link Keymap#lists}) {@code token} is bound to in
+     * a list overlay, or null. Pure.
+     */
+    @Nullable
+    String listMove(@Nullable String token) {
+        String canonical = token == null ? null : canonical(token);
+        return canonical == null ? null : listMoves.get(canonical);
+    }
+
+    /** The tokens bound to the list move {@code id}, the one to show first; empty for none. */
+    List<String> listKeys(String id) {
+        return listKeys.getOrDefault(id, List.of());
+    }
+
+    /**
+     * Whether {@code token} is the keymap's cancel chord, a key of {@link Command#ESCAPE} ({@code C-g}
+     * beside Escape in Emacs): what closes the palette, a picker and the Message Log (PAL-07, MLOG-03).
+     * Pure.
+     */
+    boolean cancels(@Nullable String token) {
+        return token != null && commandFor(Command.Context.VIEWER, token) == Command.ESCAPE;
+    }
+
+    /** Whether {@code event} is the keymap's copy chord, a key of {@link Command#COPY} ({@code M-w} in Emacs). */
+    boolean copies(KeyEvent event) {
+        for (KeyCombination chord : chords(Command.COPY)) if (chord.match(event)) return true;
+        return false;
     }
 
     private Map<String, Command> tokens(Command.Context context) {
@@ -231,6 +278,11 @@ final class Keybindings {
      */
     static void preload(String keymapId) {
         Keymap.load(keymapId, Os.isMac());
+    }
+
+    /** Whether the keymap in force is Emacs's: a text field then takes its caret and editing chords (FIND-09). */
+    static boolean emacs() {
+        return Keymap.resolve(keymap).equals("emacs");
     }
 
     /**

@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -209,6 +208,8 @@ public final class ViewerWindow {
 
     private final ImageCache cache = new ImageCache(3);
     private final CommandPalette palette;
+    /** The window's in-scene overlay: the palette's card, its pickers' and the Message Log's, one at a time. */
+    private final OverlayHost overlays;
     /** Steps through the folder on its own when measuring or training the AOT cache; else null. */
     private final @Nullable Tour tour;
 
@@ -357,7 +358,8 @@ public final class ViewerWindow {
 
         // The palette lays its card and backdrop over everything, the header included.
         StackPane overlay = new StackPane(root);
-        palette = new CommandPalette(overlay, this::run);
+        overlays = new OverlayHost(overlay);
+        palette = new CommandPalette(overlays, this::run);
 
         Scene scene = new Scene(overlay, 1100, 760);
         scene.getStylesheets().add(stylesheet());
@@ -1125,6 +1127,12 @@ public final class ViewerWindow {
             case COPY_MESSAGES -> copyText(MessageLogView.asText(messageLog().listed()), tr("viewer.copiedMessages"));
             case CLEAR_MESSAGES -> messages.clear();
             case DEBUG_LOG -> debugLog().show(stage);
+            case DEBUG_LOG_FIND -> {
+                // From the palette it opens the log too; from the log's own keys it finds the next.
+                DebugLogWindow window = debugLog();
+                if (!window.isShowing()) window.show(stage);
+                window.find();
+            }
             case COPY_DEBUG_LOG -> copyText(DebugLog.text(), tr("viewer.copiedDebugLog"));
             case CLEAR_DEBUG_LOG -> {
                 DebugLog.clear();
@@ -1304,8 +1312,7 @@ public final class ViewerWindow {
     private MessageLogView messageLog() {
         MessageLogView made = messageLog;
         if (made == null) {
-            made = new MessageLogView(
-                    (StackPane) Objects.requireNonNull(stage.getScene()).getRoot(), messages, this::run);
+            made = new MessageLogView(overlays, messages, this::run);
             made.setMenu(() -> {
                 ContextMenu menu = commandMenu(List.of(List.of(Command.COPY_MESSAGES, Command.CLEAR_MESSAGES)));
                 Popups.closedByWindow(menu);
@@ -1321,6 +1328,7 @@ public final class ViewerWindow {
         if (made == null) {
             made = new DebugLogWindow(this::run, stylesheet());
             made.setMenu(() -> commandMenu(List.of(
+                    List.of(Command.DEBUG_LOG_FIND),
                     List.of(Command.COPY_DEBUG_LOG, Command.EXPORT_DEBUG_LOG),
                     List.of(Command.CLEAR_DEBUG_LOG),
                     List.of(Command.REPORT_PROBLEM))));

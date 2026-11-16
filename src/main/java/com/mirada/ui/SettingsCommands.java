@@ -255,7 +255,8 @@ final class SettingsCommands {
                 Platform.runLater(() -> say(exported(zip, files)));
             } catch (IOException e) {
                 log().log(Level.WARNING, "Could not export the configuration", e);
-                Platform.runLater(() -> say(tr("export.failed", e.getMessage()), MessageLog.Severity.ERROR));
+                Platform.runLater(
+                        () -> say(tr("export.failed", e.getMessage()), MessageLog.severityOf("export.failed")));
             }
         });
     }
@@ -321,7 +322,8 @@ final class SettingsCommands {
                 });
             } catch (IOException e) {
                 log().log(Level.WARNING, "Could not import the configuration", e);
-                Platform.runLater(() -> say(tr("import.failed", e.getMessage()), MessageLog.Severity.ERROR));
+                Platform.runLater(
+                        () -> say(tr("import.failed", e.getMessage()), MessageLog.severityOf("import.failed")));
             }
         });
     }

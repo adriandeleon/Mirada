@@ -66,7 +66,9 @@
     "bookmarks.undoRemove": "C-z",
     "bookmarks.listAll": "C-1",
     "bookmarks.listBookmarked": "C-2",
-    "bookmarks.listNotes": "C-3"
+    "bookmarks.listNotes": "C-3",
+
+    "log.find": ["C-f", "f3"]
   },
   "vertical": {
     "go.next": ["down", "pagedown", "space"],

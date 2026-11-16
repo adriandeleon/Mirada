@@ -1,6 +1,7 @@
 package com.mirada.ui;
 
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import javafx.scene.control.TextInputControl;
@@ -71,9 +72,23 @@ final class TextInputKeys {
 
     /** Package-visible so both platform branches are testable; {@link Os#isMac} picks one. */
     static void install(TextInputControl control, boolean mac) {
+        install(control, mac, () -> true);
+    }
+
+    /**
+     * Installs the Emacs chords on {@code control} for while {@code active} says so: a find bar's
+     * field takes them under the Emacs keymap only, and the platform's own editing keys otherwise
+     * (FIND-09), so a CUA chord such as Ctrl+F stays the find bar's command.
+     */
+    static void install(TextInputControl control, BooleanSupplier active) {
+        install(control, Os.isMac(), active);
+    }
+
+    static void install(TextInputControl control, boolean mac, BooleanSupplier active) {
         boolean[] consumed = {false};
         control.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
             consumed[0] = false;
+            if (!active.getAsBoolean()) return;
             if (e.isConsumed()) {
                 // An earlier filter (the palette's list navigation) already claimed this chord.
                 // Its typed character is that chord's by-product all the same.

@@ -83,6 +83,7 @@ class ToolWindowsTest {
     @AfterEach
     void close() throws Exception {
         FxToolkit.cleanupStages();
+        fx(() -> Keybindings.use(Settings.DEFAULT_KEYMAP, java.util.Map.of(), Settings.defaultPaletteKeys(Os.isMac())));
     }
 
     /** The button or link under {@code root} whose text is {@code text}. */
@@ -268,12 +269,15 @@ class ToolWindowsTest {
         MessageLog messages = new MessageLog();
         messages.add("Copied a.png", MessageLog.Severity.INFO, LocalTime.NOON);
         messages.add("Couldn't open b.png: broken", MessageLog.Severity.ERROR, LocalTime.NOON.plusSeconds(1));
-        StackPane host = new StackPane();
+        StackPane root = new StackPane();
         fx(() -> {
             Stage stage = new Stage();
-            stage.setScene(new Scene(host, 600, 400));
+            stage.setScene(new Scene(root, 600, 400));
             stage.show();
+            // The Emacs keymap: its cancel chord, C-g, and its copy chord, M-w (MLOG-03, MLOG-04).
+            Keybindings.use("emacs", java.util.Map.of(), Settings.defaultPaletteKeys(Os.isMac()));
         });
+        OverlayHost host = new OverlayHost(root);
         MessageLogView log = call(() -> new MessageLogView(host, messages, ran::add));
         fx(() -> log.show(0));
         assertEquals(2, call(() -> log.listed().size()));
@@ -305,6 +309,17 @@ class ToolWindowsTest {
         assertEquals(Command.COPY_MESSAGES, ran.getLast());
         logKey(card, KeyCode.C, true, true); // with Shift, not a copy
         assertEquals(Command.COPY_MESSAGES, ran.getLast());
+        int copies = ran.size();
+        fx(() -> Event.fireEvent(
+                card, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.W, false, false, true, false)));
+        assertEquals(copies + 1, ran.size(), "M-w, Emacs's copy, copies too");
+        // C-n and C-p, Emacs's list moves, walk the list (QOPEN-12).
+        fx(() -> Event.fireEvent(
+                card, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.N, false, true, false, false)));
+        assertEquals(1, call(() -> list.getSelectionModel().getSelectedIndex()));
+        fx(() -> Event.fireEvent(
+                card, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.P, false, true, false, false)));
+        assertEquals(0, call(() -> list.getSelectionModel().getSelectedIndex()));
         logKey(card, KeyCode.G, false, true); // Alt+G: not C-g
         assertTrue(call(log::isShowing));
         controlKey(card, KeyCode.G); // C-g closes, as Escape does: Control on a Mac too, never Cmd
@@ -314,7 +329,7 @@ class ToolWindowsTest {
         logKey(card, KeyCode.ESCAPE, false, false);
         assertFalse(call(log::isShowing));
         fx(() -> log.show(0));
-        Node backdrop = FxTestSupport.field(log, "backdrop");
+        Node backdrop = FxTestSupport.field(host, "backdrop");
         fx(() -> backdrop.fireEvent(new MouseEvent(
                 MouseEvent.MOUSE_PRESSED,
                 1,

@@ -11,10 +11,12 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
@@ -25,9 +27,11 @@ import static com.mirada.i18n.Messages.tr;
 
 /**
  * The Debug Log in a window of its own, beside the viewer: modeless, with Refresh, Copy, Clear,
- * Export and Report a Problem (DIAG-03, Pauta 4.0.1). The only way to read Mirada's log in a packaged
- * build, which has no console. Every button runs a {@link Command}, so the palette reaches the same
- * work. Built the first time it is asked for.
+ * Export and Report a Problem (DIAG-03). The only way to read Mirada's log in a packaged build,
+ * which has no console. Every button runs a {@link Command}, so the palette reaches the same work.
+ * A find bar over the log ({@link FindBar}, FIND-01) opens on {@code log.find}, whose keys
+ * ({@link Command.Context#DEBUG_LOG}) work anywhere in the window, the bar's field included.
+ * Built the first time it is asked for.
  */
 final class DebugLogWindow {
 
@@ -36,6 +40,7 @@ final class DebugLogWindow {
     private final Stage stage = new Stage();
     private final TextArea text = new TextArea();
     private final Label where = new Label();
+    private final FindBar findBar = new FindBar(text);
 
     DebugLogWindow(Consumer<Command> run, String stylesheet) {
         stage.setTitle(tr("debugLog.title"));
@@ -59,11 +64,20 @@ final class DebugLogWindow {
         buttons.setAlignment(Pos.CENTER_LEFT);
         UiZoom.pad(buttons, 8);
 
+        UiZoom.pad(findBar, 6, 8, 0, 8);
         BorderPane root = new BorderPane(text);
-        root.setBottom(buttons);
+        root.setBottom(new VBox(findBar, buttons));
         root.getStyleClass().add("debug-log");
         Scene scene = new Scene(root, UiZoom.px(WIDTH), UiZoom.px(480));
         scene.getStylesheets().add(stylesheet);
+        // The window's own commands, from the keymap (FIND-04): before the field or the log take the key.
+        scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            Command command = Keybindings.current().commandFor(Command.Context.DEBUG_LOG, e);
+            if (command != null) {
+                run.accept(command);
+                e.consume();
+            }
+        });
         scene.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.ESCAPE) stage.hide();
             else if (e.getCode() == KeyCode.F5) refresh();
@@ -112,6 +126,19 @@ final class DebugLogWindow {
 
     boolean isShowing() {
         return stage.isShowing();
+    }
+
+    /** Opens the find bar over the log, or finds the next match when it is open ({@code log.find}). */
+    void find() {
+        findBar.openOrNext();
+    }
+
+    FindBar findBar() {
+        return findBar;
+    }
+
+    TextArea text() {
+        return text;
     }
 
     Stage stage() {

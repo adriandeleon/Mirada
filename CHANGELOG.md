@@ -10,6 +10,13 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Added
 
+- **Find in the Debug Log.** Ctrl+F (⌘F on a Mac, C-s in Emacs), F3, or **Find in Debug Log** in
+  the palette or the log's right-click menu opens a find bar under the log: it searches as you type
+  and counts the matches, Enter and Shift+Enter step to the next and the previous one, round the
+  ends, the find key again finds the next, and Escape or Close puts the keyboard back in the log.
+- **A screen reader hears the palette's rows**: the row the arrows land on is announced, with its
+  key, and one that cannot run says why.
+
 - **The whole interface can be made larger or smaller.** Settings › General › **Interface zoom**
   (or **Interface Zoom…** in the palette) draws the menus, the header, the status bar, the palette,
   the floating controls and every window from 80 % to 200 %, at once and in every open window, and
@@ -150,6 +157,13 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
   without installing anything or needing root.
 
 ### Changed
+
+- **The palette, its pickers, the Message Log and the Bookmarks list move on your keymap's keys.**
+  In Emacs, C-n, C-p, C-v, M-v, M-< and M-> move and C-g cancels in all four; the CUA keymaps move on
+  the arrows, Page Up and Down and Ctrl+Home and End (⌘ on a Mac) alone, as before, without Emacs's
+  letters. The Message Log also copies on the keymap's copy key (M-w in Emacs). Closing the palette
+  or a picker puts the focus back where it was, a picker opened while the palette is up takes its
+  place, and Go to Image, Go to Bookmark and Open Recent name themselves over the field.
 
 - **Enter in a question never removes or discards.** Every question before something is lost opens
   with Cancel as its default; leaving the editor with an unsaved edit now asks **Cancel**, **Save**

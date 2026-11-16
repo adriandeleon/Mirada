@@ -77,4 +77,14 @@ class CommandPaletteTest {
     void theListShowsWholeRows() {
         assertEquals(CommandPalette.VISIBLE_ROWS * CommandPalette.ROW_HEIGHT + 4, CommandPalette.listHeight(4));
     }
+
+    /** ACC-08: a row says its name and key, and why it cannot run when it cannot. */
+    @Test
+    void aRowTellsAScreenReaderWhyItCannotRun() {
+        assertEquals("Rotate Right, R", CommandPalette.rowText("Rotate Right", "R", null));
+        assertEquals("Next Image", CommandPalette.rowText("Next Image", "", null));
+        assertEquals(
+                "Next Image, Right, unavailable: This is the last image.",
+                CommandPalette.rowText("Next Image", "Right", "This is the last image."));
+    }
 }

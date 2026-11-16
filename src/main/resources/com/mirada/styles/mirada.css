@@ -553,6 +553,14 @@
     -fx-translate-y: 48px;
 }
 
+/* A picker's title, naming the command that opened it (QOPEN-02); the command palette has none. */
+.command-palette .palette-title {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-muted;
+    -fx-padding: 4px 12px 0 12px;
+}
+
 .command-palette .palette-input-row {
     -fx-padding: 4px 10px 8px 10px;
 }
@@ -775,6 +783,20 @@
 .debug-log .debug-log-text {
     -fx-font-family: monospace;
     -fx-font-size: 12px;
+}
+
+/* The find bar's match is the log's selection (FIND-05): drawn as strongly while the field has the
+   keyboard as when the log has it, not in the faint colour of an unfocused selection. */
+.debug-log .debug-log-text,
+.debug-log .debug-log-text:focused {
+    -fx-highlight-fill: -color-accent-emphasis;
+    -fx-highlight-text-fill: -color-fg-emphasis;
+}
+
+/* The Debug Log's find bar (FIND-01): a row of the window over the buttons, never a popup. */
+.debug-log .find-bar .find-count {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 11px;
 }
 
 .debug-log .debug-log-file {

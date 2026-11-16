@@ -14,8 +14,9 @@ import org.jspecify.annotations.Nullable;
  * only: the Debug Log is the record that outlives a session. No JavaFX here; {@code
  * ui.MessageLogView} is the view and {@code ui.StatusBar} the echo area.
  *
- * <p>A message's severity is said where it is raised (MLOG-05's direct channel): its words are
- * translated, so they cannot tell an error from a notice. FX thread only.
+ * <p>A message's severity comes from its key ({@link #severityOf}, MLOG-05) where the key names it,
+ * or is said where it is raised (MLOG-05's direct channel): its words are translated, so they cannot
+ * tell an error from a notice. FX thread only.
  */
 public final class MessageLog {
 
@@ -26,6 +27,19 @@ public final class MessageLog {
     }
 
     public record Entry(LocalTime time, String text, Severity severity) {}
+
+    /**
+     * A message's severity from its catalog key (MLOG-05, Editora's {@code StatusSeverity.ofKey}): a key
+     * whose last segment contains {@code fail} or {@code error} is an error, one containing {@code
+     * cannot} or {@code invalid} a warning, any other information. Name a new key accordingly, or say
+     * its severity where it is raised. Pure.
+     */
+    public static Severity severityOf(String key) {
+        String last = key.substring(key.lastIndexOf('.') + 1).toLowerCase(java.util.Locale.ROOT);
+        if (last.contains("fail") || last.contains("error")) return Severity.ERROR;
+        if (last.contains("cannot") || last.contains("invalid")) return Severity.WARNING;
+        return Severity.INFO;
+    }
 
     public static final int MAX_ENTRIES = 200;
 

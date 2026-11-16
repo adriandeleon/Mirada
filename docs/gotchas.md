@@ -376,9 +376,31 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   change the image under the editor). Those that work where it opened lead its list
   (`Command.inPalette(Context)`).
 - **The editor's and the Bookmarks window's own keys stay theirs where no command fits.** The arrows
-  move and size the crop (`Editor.onKey`); the Bookmarks window's filter keeps Up, Down, Ctrl+P and
-  Ctrl+N to move, Escape, and Delete to remove while the filter is empty. Everything else there is a
-  command, so it has a key in the keymap and a row in the palette.
+  move and size the crop (`Editor.onKey`); the Bookmarks window's list moves on the palette's keys
+  (`PaletteKeys`), Escape or the cancel chord peels the filter, and Delete removes while the filter
+  is empty. Everything else there is a command, so it has a key in the keymap and a row in the
+  palette.
+- **A list overlay's moves are the keymap's, but not commands.** The palette, its pickers, the
+  Message Log and the Bookmarks list move on the arrows, the pages and Ctrl/Cmd+Home and End, and on
+  the keymap's `lists` section (`nav.lineDown`, `nav.lineUp`, `nav.pageDown`, `nav.pageUp`,
+  `nav.first`, `nav.last`; only Emacs binds them, C-n, C-p, C-v, M-v, M-<, M->). They are not in
+  `Command`, so the palette does not list "Line Down" and `everyKeymapBindsCommandsToKeysOnce` stays
+  about commands; `keys.nav.*` in the settings rebinds them all the same (`Keybindings.layered`).
+  The cancel chord is whatever `window.escape` is bound to (C-g beside Escape in Emacs), and the
+  Message Log's copy chord is `image.copy`'s (M-w). CUA binds no moves, so Ctrl+N in a CUA palette is
+  nothing: the old fixed Emacs table answered in every keymap (PAL-06).
+- **One card at a time in a window's overlay** (`OverlayHost`): the palette, a picker and the
+  Message Log all show through it, a second replaces the first (QOPEN-11), and the focus owner from
+  before the *first* card is what `hide` gives back. A card shown again (the palette's card turning
+  into a picker) keeps its place and does not run its own `onHide`, which would drop the names it was
+  just given.
+- **The Debug Log's find bar takes its keys before the log and the field do.** `log.find` works in
+  `Command.Context.DEBUG_LOG`, read by a scene filter in `DebugLogWindow`, so Ctrl+F (C-s in Emacs)
+  finds the next match even from the field (FIND-04). The field's Emacs chords are on only under the
+  Emacs keymap (`TextInputKeys.install(field, Keybindings::emacs)`): under CUA, C-f is find and C-a
+  select all, not Emacs's forward and line start (FIND-09). A text area draws its selection faintly
+  when it lacks the focus, and the match is the selection while the field has the focus, so the
+  log's highlight colours are set for both states in `mirada.css` (FIND-05).
 
 ## Translations
 

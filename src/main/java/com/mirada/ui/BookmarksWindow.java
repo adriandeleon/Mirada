@@ -54,8 +54,9 @@ import static com.mirada.i18n.Messages.tr;
  * pictures: grouped by folder ({@link BookmarkList}), each image with its thumbnail and its note,
  * found by typing a word of its name, its folder's or its note.
  *
- * <p>The keys stay in the filter field, as in the palette: Up and Down (Ctrl+P and Ctrl+N) move,
- * Escape clears the filter and then closes. What can be done to a row is a command ({@link
+ * <p>The keys stay in the filter field, as in the palette, and move the list as the palette's do
+ * ({@link PaletteKeys}, QOPEN-12): the arrows, the pages and the keymap's own moves (Ctrl+N and Ctrl+P
+ * in Emacs); Escape or the keymap's cancel chord clears the filter and then closes. What can be done to a row is a command ({@link
  * Command.Context#BOOKMARKS}, {@link #run}), on its key from the keymap (Return opens in the viewer,
  * F2 edits the note, Ctrl+B bookmarks, Ctrl+Delete removes the mark and Ctrl+Z puts it back, Ctrl+1–3 list all, the
  * bookmarks or the notes), from the row's menu, and from the window's own command palette, which
@@ -193,7 +194,7 @@ final class BookmarksWindow {
         content.getStyleClass().add("bookmarks-window");
         // A root the palette can lie over, as the viewer's does.
         StackPane root = new StackPane(content);
-        palette = new CommandPalette(root, runner);
+        palette = new CommandPalette(new OverlayHost(root), runner);
         Scene scene = new Scene(root, UiZoom.px(WIDTH), UiZoom.px(640));
         scene.getStylesheets().add(stylesheet);
         scene.addEventFilter(KeyEvent.KEY_PRESSED, this::onKey);
@@ -306,18 +307,14 @@ final class BookmarksWindow {
             return;
         }
         KeyCode code = e.getCode();
-        boolean control = e.isControlDown() && !e.isAltDown();
-        if (code == KeyCode.ESCAPE) {
+        // The palette's keys (QOPEN-12): the arrows, the pages, the ends and the keymap's own moves
+        // walk the list, and Escape or the keymap's cancel chord peels the filter, then closes.
+        PaletteKeys.Action action = PaletteKeys.action(e, filter.isFocused());
+        if (action == PaletteKeys.Action.CANCEL) {
             if (filter.getText().isEmpty()) stage.hide();
             else filter.clear();
-        } else if (code == KeyCode.UP || (control && code == KeyCode.P)) {
-            move(-1);
-        } else if (code == KeyCode.DOWN || (control && code == KeyCode.N)) {
-            move(1);
-        } else if (code == KeyCode.PAGE_UP) {
-            move(-10);
-        } else if (code == KeyCode.PAGE_DOWN) {
-            move(10);
+        } else if (PaletteKeys.isNavigation(action)) {
+            move(action);
         } else if (Popups.isMenuKey(e)) {
             showMenuFromKeyboard();
         } else if (code == KeyCode.DELETE
@@ -407,13 +404,18 @@ final class BookmarksWindow {
         return chord == KeyCombination.NO_MATCH ? command.label() : chord.getDisplayText();
     }
 
-    /** Moves the selection by {@code delta} rows, stopping at either end. */
-    private void move(int delta) {
+    /** Moves the selection as {@code action} says, stopping at either end; a page is ten rows. */
+    private void move(PaletteKeys.Action action) {
         int size = list.getItems().size();
         if (size == 0) return;
         int at = list.getSelectionModel().getSelectedIndex();
-        int next = at < 0 ? (delta > 0 ? 0 : size - 1) : Math.clamp(at + delta, 0, size - 1);
-        list.getSelectionModel().select(next);
+        int next =
+                switch (action) {
+                    case DOWN -> at < 0 ? 0 : Math.min(size - 1, at + 1);
+                    case UP -> at < 0 ? size - 1 : Math.max(0, at - 1);
+                    default -> PaletteKeys.target(action, at, size, 10);
+                };
+        PaletteKeys.select(list, next);
         list.scrollTo(Math.max(0, next - 2));
     }
 
