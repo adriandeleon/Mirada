@@ -182,4 +182,70 @@ class BuildHygieneTest {
         }
         assertEquals(List.of(), untagged, "these start JavaFX but are not @Tag(\"fx\")");
     }
+
+    // ---- Javadoc sits on its member (DOCS-15) ----
+
+    /**
+     * A doc comment followed by another, with only blank lines or {@code //} comments between,
+     * documents nothing: it was left behind when its member moved.
+     */
+    @Test
+    void noDocCommentIsStackedOnAnother() throws IOException {
+        List<String> stacked = new ArrayList<>();
+        for (String root : List.of("src/main/java", "src/test/java")) {
+            try (Stream<Path> files = Files.walk(REPO.resolve(root))) {
+                for (Path file :
+                        files.filter(f -> f.toString().endsWith(".java")).toList()) {
+                    stacked.addAll(stackedDocComments(
+                            REPO.relativize(file).toString(),
+                            read(REPO.relativize(file).toString())));
+                }
+            }
+        }
+        assertTrue(stacked.isEmpty(), "a doc comment on another, documenting nothing:\n" + String.join("\n", stacked));
+    }
+
+    /** Where in {@code source} a doc comment ends and the next thing after it is another one. */
+    static List<String> stackedDocComments(String name, String source) {
+        List<String> found = new ArrayList<>();
+        String[] lines = source.split("\n", -1);
+        boolean inDoc = false;
+        boolean afterDoc = false;
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i].strip();
+            if (inDoc) {
+                if (line.contains("*/")) {
+                    inDoc = false;
+                    afterDoc = true;
+                }
+                continue;
+            }
+            if (line.startsWith("/**") && !line.startsWith("/**/")) {
+                if (afterDoc) found.add(name + ":" + (i + 1));
+                afterDoc = false;
+                if (!line.contains("*/")) inDoc = true;
+                else afterDoc = true;
+                continue;
+            }
+            if (afterDoc && (line.isEmpty() || line.startsWith("//"))) continue;
+            afterDoc = false;
+        }
+        return found;
+    }
+
+    @Test
+    void aStackedDocCommentIsFoundAndAMembersIsNot() {
+        assertEquals(
+                List.of("A.java:3"),
+                stackedDocComments(
+                        "A.java", "class A {\n    /** Left behind. */\n    /** Its own. */\n    void a() {}\n}"));
+        assertEquals(
+                List.of("A.java:5"),
+                stackedDocComments(
+                        "A.java",
+                        "class A {\n    /**\n     * Left.\n     */\n    /** Its own. */\n    void a() {}\n}"));
+        assertTrue(stackedDocComments(
+                        "A.java", "class A {\n    /** One. */\n    void a() {}\n    /** Two. */\n    void b() {}\n}")
+                .isEmpty());
+    }
 }

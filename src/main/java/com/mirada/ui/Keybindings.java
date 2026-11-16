@@ -224,10 +224,6 @@ final class Keybindings {
     private static @Nullable Keybindings sideways;
 
     /**
-     * The keys in force now: the keymap the settings name for this platform, the strip's side, the
-     * user's keys. Made when first asked, after the first paint.
-     */
-    /**
      * Reads and parses the keymap {@code keymapId} names, on the calling thread, so the first key press
      * finds it parsed: the window asks on a background thread after its first paint (PERF-01). Any
      * thread; the parsed keymap is kept by {@link Keymap#load}.
@@ -236,6 +232,10 @@ final class Keybindings {
         Keymap.load(keymapId, Command.MAC);
     }
 
+    /**
+     * The keys in force now: the keymap the settings name for this platform, the strip's side, the
+     * user's keys. Made when first asked, after the first paint.
+     */
     static Keybindings current() {
         boolean vertical = Command.vertical();
         Keybindings made = vertical ? sideways : along;

@@ -21,7 +21,7 @@ new tag and the five checksums from its `SHA256SUMS` in the pom.
 
 Mirada ships as a GraalVM native image with JavaFX linked in by StaticFX, on Linux (x64, arm64),
 Windows and Apple silicon; GraalVM 25.4 has no Intel macOS, which keeps the jlink image. It starts
-in half the time of the jlink image and uses a third less memory ([native-image.md](native-image.md); [decision 0001](decisions/0001-native-image-over-jlink.md)).
+in half the time of the jlink image and uses a third less memory ([native-image.md](reference/native-image.md); [decision 0001](decisions/0001-native-image-over-jlink.md)).
 
 `-Pdist,native` builds it inside jpackage's app image: the native profile compiles `target/mirada`
 in `prepare-package`, jpackage makes the app image as before, and `scripts/native-app-image.sh`

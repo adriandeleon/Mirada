@@ -118,7 +118,7 @@ jobs:
               printf "Lines %.1f%% · methods %.1f%% · branches %.1f%%\n", 100 * lc / (lc + lm), 100 * mc / (mc + mm), 100 * bc / (bc + bm)
             }' os="${{ matrix.os }}" "$csv" >> "$GITHUB_STEP_SUMMARY"
 
-  # What ships: the native image (GraalVM + StaticFX, docs/native-image.md) in jpackage's app image
+  # What ships: the native image (GraalVM + StaticFX, docs/reference/native-image.md) in jpackage's app image
   # wherever GraalVM builds one, and the jlink image with its AOT cache on Intel macOS, which
   # GraalVM 25.4 no longer targets. A native image is only as complete as its reachability
   # metadata, and a gap shows only when a file that needs it is opened, so every variant of every
@@ -207,7 +207,7 @@ jobs:
           /usr/libexec/PlistBuddy -c "Print :CFBundleDocumentTypes:0" target/dist/Mirada.app/Contents/Info.plist
           hdiutil verify target/installers/*.dmg
 
-      # Cold runs on a shared virtual machine: a sanity figure, not a benchmark (docs/native-image.md
+      # Cold runs on a shared virtual machine: a sanity figure, not a benchmark (docs/reference/native-image.md
       # has the real numbers).
       - name: Start-up (for information)
         if: runner.os != 'Windows'

@@ -98,15 +98,15 @@ final class ThumbnailStrip {
         setLayout(false, false, false);
     }
 
-    /**
-     * What a right-click on the strip opens: closing it, and where it stands and what it shows. Made
-     * when asked for, so it ticks what is on now.
-     */
     /** Stops making thumbnails, for a window that has closed. */
     void close() {
         thumbnails.close();
     }
 
+    /**
+     * What a right-click on the strip opens: closing it, and where it stands and what it shows. Made
+     * when asked for, so it ticks what is on now.
+     */
     void setMenu(Supplier<ContextMenu> menu) {
         list.setOnContextMenuRequested(e -> {
             Popups.show(menu.get(), list, e.getScreenX(), e.getScreenY());

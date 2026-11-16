@@ -19,7 +19,7 @@
 # Each platform's AWT reaches its own JNI (Windows' calls back into java.awt.Toolkit as it loads, for
 # one), so the committed file is the union of runs on Linux, macOS and Windows. MIRADA_METADATA_MERGE=1
 # merges this run into the committed file instead of replacing it; the Native metadata workflow does
-# that on macOS and Windows, and native-image-configure joins the results (docs/native-image.md).
+# that on macOS and Windows, and native-image-configure joins the results (docs/reference/native-image.md).
 #
 # Usage: GRAALVM_HOME=~/.sdkman/candidates/java/25.4.4.1+1-graal scripts/native-metadata.sh
 set -euo pipefail

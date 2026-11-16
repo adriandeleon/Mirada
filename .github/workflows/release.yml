@@ -106,7 +106,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # 25.4, not the 25.0 LTS: 25.0 has no AWT on macOS (docs/native-image.md).
+      # 25.4, not the 25.0 LTS: 25.0 has no AWT on macOS (docs/reference/native-image.md).
       - name: Set up Oracle GraalVM 25.4
         if: matrix.build == 'native'
         uses: graalvm/setup-graalvm@f70bc8032f90a104502824a54bcb94b6f01715bc # v1.6.8

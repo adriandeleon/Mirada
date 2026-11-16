@@ -19,7 +19,6 @@ change.
 | [building-and-packaging.md](building-and-packaging.md) | The codec bundle, the native image that ships, the installers, start-up numbers |
 | [decisions/](decisions/README.md) | Decision records: the native image, libjpeg-turbo, codecs from source, `.properties`, no TestFX yet |
 | [reference/](reference/README.md) | History: older measurements and the native image experiment |
-| [native-image.md](native-image.md) | The GraalVM native image experiment: why, how it was built, what it measured |
 | [competitive-landscape.md](competitive-landscape.md) | Other image viewers, and what Mirada takes from each |
 | [pauta-audit.md](pauta-audit.md) | Where Mirada stands against each rule of its Pauta edition, with evidence; regenerated, not edited |
 
