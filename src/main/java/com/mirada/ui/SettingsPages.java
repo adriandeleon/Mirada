@@ -46,6 +46,12 @@ final class SettingsPages {
         }
     }
 
+    /** The descriptions whose setting a viewer command toggles as well, and that command (KBD-13). */
+    static final Map<String, Command> TOGGLED_BY = Map.of(
+            "settings.thumbnailsAtStart.description", Command.THUMBNAILS,
+            "settings.propertiesAtStart.description", Command.INFO,
+            "settings.keepZoom.description", Command.KEEP_ZOOM);
+
     /**
      * One row: where it stands, the keys of what it says (its card's heading, its title and its
      * description, translated by {@link #card()}, {@link #title()} and {@link #description()}), the
@@ -63,8 +69,19 @@ final class SettingsPages {
             return tr(titleKey);
         }
 
+        /**
+         * The description, and for a setting a command toggles too, the sentence naming that
+         * command's chord now (KBD-13): the chord is the keymap's, never written into the catalog,
+         * and an unbound command leaves the sentence out.
+         */
         String description() {
-            return tr(descriptionKey);
+            String text = tr(descriptionKey);
+            Command keyed = TOGGLED_BY.get(descriptionKey);
+            if (keyed == null) return text;
+            javafx.scene.input.KeyCombination chord = keyed.chord();
+            if (chord == javafx.scene.input.KeyCombination.NO_MATCH) return text;
+            String sentence = descriptionKey.substring(0, descriptionKey.length() - "description".length()) + "keyHint";
+            return text + " " + tr(sentence, chord.getDisplayText());
         }
 
         /** What the search finds this row by, with the text its control shows: the translated words. */

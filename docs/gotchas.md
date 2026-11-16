@@ -293,6 +293,13 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   row of a right-click menu is one too, and a submenu among them carries the same layout as its
   graphic (`AppMenus.submenuRow`); a plain `MenuItem` beside them would put its glyph in another
   column.
+- **A disabled menu row shows no tooltip.** A disabled node gets no mouse events, so its reason
+  (KBD-04) would never show. A row that cannot run stays enabled with the `unavailable` style class,
+  its reason as tooltip and accessible help, and choosing it says the reason
+  (`AppMenus.showAvailability`); a submenu does the same on its own row and greys the rows inside.
+- **Search that leaves the FX thread waits for typing to pause.** The Debug Log's find bar uses
+  `Debounce` (PERF-23): the search runs once the keys stop for 150 ms. `FxThrottle`, which runs the
+  first key at once, is for filters over a list in memory (the Bookmarks window, the Message Log).
 - **The stage's style is fixed before it shows.** The menu bar in the title bar (the setting, on by
   default) is read once, as the window is made: switched off, the window keeps the system's title
   bar and the same row goes under it, from the next start (the setting says so).

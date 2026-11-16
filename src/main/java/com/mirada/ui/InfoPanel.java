@@ -38,6 +38,8 @@ final class InfoPanel {
     private @Nullable TitledPane metadata;
     /** Whether All Metadata is unfolded: the user's choice, kept from image to image. */
     private boolean metadataExpanded;
+    /** The command buttons on screen now, renamed when the keys change (TBAR-03). */
+    private final java.util.Map<Button, Command> buttons = new java.util.LinkedHashMap<>();
 
     /**
      * The most tags All Metadata lists (PERF-08): a file can carry thousands (a maker note, an XMP
@@ -79,6 +81,7 @@ final class InfoPanel {
         shown = details;
         shownMarks = marks;
         cards.getChildren().clear();
+        buttons.clear();
         metadata = null;
         if (details == null) {
             Label none = new Label(tr("info.noImage"));
@@ -90,7 +93,7 @@ final class InfoPanel {
         ZoneId zone = ZoneId.systemDefault();
 
         // The folder in the file manager, with this image selected: Show in Folder, as the menus have it.
-        Button open = Icons.button(Command.SHOW_IN_FOLDER, "info-action", () -> run.accept(Command.SHOW_IN_FOLDER));
+        Button open = commandButton(Command.SHOW_IN_FOLDER);
 
         if (marks.any()) cards.getChildren().add(marksCard(marks));
         cards.getChildren()
@@ -162,7 +165,26 @@ final class InfoPanel {
     }
 
     private Button editButton(Command command) {
-        return Icons.button(command, "info-action", () -> run.accept(command));
+        return commandButton(command);
+    }
+
+    private Button commandButton(Command command) {
+        Button button = Icons.button(command, "info-action", () -> run.accept(command));
+        buttons.put(button, command);
+        return button;
+    }
+
+    /**
+     * The command buttons named again from their titles and the chords now (TBAR-03): the keys
+     * changed while the same image is on screen, which {@link #show} does not build again.
+     */
+    void relabel() {
+        buttons.forEach((button, command) -> Icons.name(button, command));
+    }
+
+    /** The command buttons on screen now, for the tests. */
+    java.util.Map<Button, Command> buttons() {
+        return java.util.Collections.unmodifiableMap(buttons);
     }
 
     /**

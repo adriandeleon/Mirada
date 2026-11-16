@@ -6,7 +6,7 @@ code with it, but nothing is extracted yet.
 
 ## Pauta
 
-Mirada works toward [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), edition [6.1.0](https://pauta-project.dev/6.1.0/).
+Mirada is built to [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), edition [6.1.0](https://pauta-project.dev/6.1.0/), at Core conformance.
 Its rules: https://pauta-project.dev/6.1.0/llms.txt (every rule in one file:
 https://pauta-project.dev/6.1.0/llms-full.txt). Where Mirada stands against each rule:
 [docs/pauta-audit.md](docs/pauta-audit.md), written by the `pauta-audit` skill

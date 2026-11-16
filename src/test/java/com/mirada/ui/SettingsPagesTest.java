@@ -33,6 +33,19 @@ class SettingsPagesTest {
         assertTrue(SettingsSearch.score("theme", KEYWORDED) > 0);
     }
 
+    /** KBD-13: a description that names a chord takes it from the keymap, never from the catalog. */
+    @Test
+    void aDescriptionsChordComesFromTheKeymap() {
+        for (Row row : SettingsPages.ROWS) {
+            Command keyed = SettingsPages.TOGGLED_BY.get(row.descriptionKey());
+            if (keyed == null) continue;
+            String chord = keyed.chord().getDisplayText();
+            assertTrue(row.description().contains(chord + " "), row.description());
+            assertTrue(!com.mirada.i18n.Messages.tr(row.descriptionKey()).contains(chord + " "), row.descriptionKey());
+        }
+        assertEquals(3, SettingsPages.TOGGLED_BY.size());
+    }
+
     @Test
     void aWholeWordRanksAboveAWordStartAbovePartOfAWord() {
         assertEquals(3, SettingsSearch.field("zoom", "keep zoom when stepping"));

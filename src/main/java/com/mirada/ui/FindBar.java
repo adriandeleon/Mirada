@@ -3,6 +3,7 @@ package com.mirada.ui;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
 import javafx.application.Platform;
 import javafx.geometry.Pos;
@@ -30,12 +31,15 @@ import static com.mirada.i18n.Messages.tr;
  * gives the keyboard back to the log (FIND-07). A text area draws one selection only, so the active
  * match is the selection and the count says how many there are (FIND-05).
  *
- * <p>Previous, Next and Close stay out of the Tab order, since Shift+Enter, Enter and Escape in the
- * field do what they do; Match case stays in it, as no command toggles it (FIND-16). The field takes
+ * <p>Next, Previous and Match case are commands, {@code log.find}, {@code log.findPrevious} and
+ * {@code log.findMatchCase} (KBD-01): the buttons, Enter and Shift+Enter run them through the window.
+ * Previous, Next and Close stay out of the Tab order, since Shift+Enter, Enter and Escape in the
+ * field do what they do; Match case stays in it (FIND-16). The field takes
  * the Emacs keymap's caret and editing chords while that keymap is in force, the platform's own
  * otherwise, and the find command's chord stays the bar's (FIND-09).
  *
- * <p>The search runs off the FX thread and only its latest request is applied (PERF-01, PERF-03); a
+ * <p>The search waits for typing to pause ({@link Debounce}, PERF-23), then runs off the FX thread and
+ * only its latest request is applied (PERF-01, PERF-03); a
  * query that grows is narrowed from the matches it already has, never the whole log again (PERF-08,
  * {@link LogSearch}). A step asked for while a search runs waits for it. A Refresh or Clear changes
  * the log's text, and the open bar searches the new text.
@@ -60,13 +64,17 @@ final class FindBar extends HBox {
     private final TextField query = new TextField();
     private final CheckBox matchCase = new CheckBox(tr("find.matchCase"));
     private final Label count = new Label();
-    /** The first key searches at once, then at most once a pause while typing goes on (PERF-06). */
-    private final FxThrottle searching = new FxThrottle(BookmarksWindow.FILTER_PAUSE_MS, this::refine);
+    /** Typing searches once it pauses, never on every key (PERF-23). */
+    private final Debounce searching = new Debounce(this::refine);
 
     /** Where the caret was when the bar opened: a search starts there (FIND-05). */
     private int anchor;
 
-    FindBar(TextArea target) {
+    /**
+     * @param run runs the bar's commands through the window: Next ({@link Command#DEBUG_LOG_FIND}),
+     *     Previous ({@link Command#DEBUG_LOG_FIND_PREVIOUS})
+     */
+    FindBar(TextArea target, Consumer<Command> run) {
         this.target = target;
         this.text = target.getText();
         UiZoom.bind(spacingProperty(), 6);
@@ -90,15 +98,15 @@ final class FindBar extends HBox {
             button.getStyleClass().add("flat");
             button.setFocusTraversable(false); // Shift+Enter, Enter and Escape in the field (FIND-16)
         }
-        previous.setOnAction(e -> step(false));
-        next.setOnAction(e -> step(true));
+        previous.setOnAction(e -> run.accept(Command.DEBUG_LOG_FIND_PREVIOUS));
+        next.setOnAction(e -> run.accept(Command.DEBUG_LOG_FIND));
         close.setOnAction(e -> close());
         query.textProperty().addListener((o, was, now) -> searching.request());
         matchCase.selectedProperty().addListener((o, was, now) -> searching.request());
         query.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
             if (e.getCode() == KeyCode.ENTER) {
                 searching.flush();
-                step(!e.isShiftDown());
+                run.accept(e.isShiftDown() ? Command.DEBUG_LOG_FIND_PREVIOUS : Command.DEBUG_LOG_FIND);
                 e.consume();
             } else if (e.getCode() == KeyCode.ESCAPE) {
                 close();
@@ -122,6 +130,22 @@ final class FindBar extends HBox {
         } else {
             open();
         }
+    }
+
+    /** {@code log.findPrevious}: opens the bar, or steps to the match before, the focus kept in the field. */
+    void openOrPrevious() {
+        if (isOpen()) {
+            step(false);
+            query.requestFocus();
+        } else {
+            open();
+        }
+    }
+
+    /** {@code log.findMatchCase}: the search tells capitals apart, or stops; the bar opens for it. */
+    void toggleMatchCase() {
+        matchCase.setSelected(!matchCase.isSelected());
+        if (!isOpen()) open();
     }
 
     /** Shows the bar, seeding the query with a one-line selection when there is one. */

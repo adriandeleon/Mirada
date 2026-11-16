@@ -481,6 +481,8 @@ public final class ViewerWindow {
         palette.refreshKeys();
         BookmarksWindow marks = bookmarksWindow;
         if (marks != null) marks.refreshKeys();
+        SettingsWindow shownSettings = settingsWindow;
+        if (shownSettings != null) shownSettings.refreshKeys();
         // The menus write their chords as they open; the buttons' tooltips are written now, and the
         // Mac's Settings item, which has no menu of Mirada's to open (WIN-15).
         relabelButtons();
@@ -1032,6 +1034,8 @@ public final class ViewerWindow {
         if (built != null) built.relabel();
         MarksBadge badge = marksBadge;
         if (badge != null) badge.relabel();
+        InfoPanel panel = info;
+        if (panel != null) panel.relabel();
         Editor open = editor;
         if (open != null) open.relabel();
         HBox buttons = openButtons;
@@ -1177,12 +1181,9 @@ public final class ViewerWindow {
             case COPY_MESSAGES -> copyText(MessageLogView.asText(messageLog().listed()), tr("viewer.copiedMessages"));
             case CLEAR_MESSAGES -> messages.clear();
             case DEBUG_LOG -> debugLog().show(stage);
-            case DEBUG_LOG_FIND -> {
-                // From the palette it opens the log too; from the log's own keys it finds the next.
-                DebugLogWindow window = debugLog();
-                if (!window.isShowing()) window.show(stage);
-                window.find();
-            }
+            // From the palette they open the log too; from the log's own keys and buttons they act there.
+            case DEBUG_LOG_FIND, DEBUG_LOG_FIND_PREVIOUS, DEBUG_LOG_MATCH_CASE, DEBUG_LOG_REFRESH ->
+                debugLog().run(command, stage);
             case COPY_DEBUG_LOG -> copyText(DebugLog.text(), tr("viewer.copiedDebugLog"));
             case CLEAR_DEBUG_LOG -> {
                 DebugLog.clear();
@@ -1379,7 +1380,7 @@ public final class ViewerWindow {
         if (made == null) {
             made = new DebugLogWindow(this::run, stylesheet());
             made.setMenu(() -> commandMenu(List.of(
-                    List.of(Command.DEBUG_LOG_FIND),
+                    List.of(Command.DEBUG_LOG_FIND, Command.DEBUG_LOG_REFRESH),
                     List.of(Command.COPY_DEBUG_LOG, Command.EXPORT_DEBUG_LOG),
                     List.of(Command.CLEAR_DEBUG_LOG),
                     List.of(Command.REPORT_PROBLEM))));
@@ -1480,6 +1481,7 @@ public final class ViewerWindow {
         dialog.setTitle(tr("rename.title"));
         dialog.setHeaderText(tr("rename.header", old));
         dialog.setContentText(tr("rename.newName"));
+        dialog.getEditor().setAccessibleText(tr("rename.newName")); // its label is not its labelFor (ACC-01)
         // Mirada's words, not JavaFX's OK and Cancel in the JVM's language (CONF-14).
         dialog.getDialogPane()
                 .getButtonTypes()
@@ -2175,7 +2177,7 @@ public final class ViewerWindow {
         reversed.setOnAction(e -> run(Command.REVERSE_ORDER));
         MenuChord.on(reversed, Command.REVERSE_ORDER);
         menu.getItems().addAll(new SeparatorMenuItem(), reversed);
-        menu.setDisable(folder.isEmpty());
+        AppMenus.showAvailability(menu, unavailable(Command.SORT_BY_NAME));
         return menu;
     }
 

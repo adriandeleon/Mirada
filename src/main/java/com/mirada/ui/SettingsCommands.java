@@ -144,10 +144,7 @@ final class SettingsCommands {
                 say(settings.checkForUpdates() ? tr("settings.checkForUpdatesOn") : tr("settings.checkForUpdatesOff"));
             }
             case PALETTE_KEYS -> settingsWindow.get().recordPaletteKey(stage);
-            case RESET_PALETTE_KEYS -> {
-                settings.setPaletteKeys(Settings.defaultPaletteKeys(Os.isMac()));
-                say(tr("viewer.paletteKeysReset"));
-            }
+            case RESET_PALETTE_KEYS -> resetPaletteKeys();
             case EXPORT_CONFIG -> exportConfiguration();
             case IMPORT_CONFIG -> importConfiguration();
             default -> {
@@ -155,6 +152,21 @@ final class SettingsCommands {
             }
         }
         return true;
+    }
+
+    /**
+     * Puts the palette's default keys back (CONF-01): the user's own are replaced only once they say
+     * so; keys that are the defaults already lose nothing, and are not asked about.
+     */
+    private void resetPaletteKeys() {
+        String defaults = Settings.defaultPaletteKeys(Os.isMac());
+        String keys = settings.paletteKeys();
+        if (!keys.equals(defaults)
+                && !Confirm.ask(
+                        Confirm.resetPaletteKeys(PaletteChords.display(PaletteChords.parse(keys, Os.isMac()))),
+                        owner())) return;
+        settings.setPaletteKeys(defaults);
+        say(tr("viewer.paletteKeysReset"));
     }
 
     /** The system's, then every bundled language: blank, then the codes. */

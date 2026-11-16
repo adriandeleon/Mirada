@@ -69,8 +69,11 @@ final class OnScreenControls {
                         item(Command.ZOOM_OUT, run));
 
         navigation = pill(previous, next);
-        // Its chords are the keymap's as it opens (MENU-15): the user's keys may have changed since.
-        zoomMenu.setOnShowing(e -> MenuChord.refresh(zoomMenu.getItems()));
+        // Its rows are written again as it opens, their chords the keymap's (MENU-15): the user's keys
+        // may have changed since; once shown, the chords line up in one column (MENU-18).
+        zoomMenu.setOnShowing(
+                e -> rows().forEach(row -> AppMenus.refresh(row, row.command().label(), false)));
+        zoomMenu.setOnShown(e -> AppMenus.alignChords(rows()));
         zooming = pill(zoom, zoomMenu);
         screen = pill(fullScreen);
         StackPane.setAlignment(navigation, Pos.BOTTOM_LEFT);
@@ -198,10 +201,22 @@ final class OnScreenControls {
         return pill;
     }
 
+    /**
+     * A zoom row drawn as the menus' are (MENU-18): the glyph in the 22 px icon column, the title,
+     * and the chord at least 18 px after the widest title.
+     */
     private static MenuItem item(Command command, Consumer<Command> run) {
-        MenuItem item = new MenuItem(command.label(), Icons.menu(command));
-        item.setOnAction(e -> run.accept(command));
-        item.setUserData(command);
-        return MenuChord.on(item, command);
+        AppMenus.Row row = AppMenus.inWindowRow(command);
+        row.item().setOnAction(e -> run.accept(command));
+        return row.item();
+    }
+
+    /** The zoom menu's rows. */
+    private List<AppMenus.Row> rows() {
+        return zoomMenu.getItems().stream()
+                .map(item -> item.getProperties().get(AppMenus.ROW))
+                .filter(AppMenus.Row.class::isInstance)
+                .map(AppMenus.Row.class::cast)
+                .toList();
     }
 }

@@ -68,7 +68,10 @@
     "bookmarks.listBookmarked": "C-2",
     "bookmarks.listNotes": "C-3",
 
-    "log.find": "C-s"
+    "log.find": "C-s",
+    "log.findPrevious": "C-r",
+    "log.findMatchCase": "M-c",
+    "log.refresh": "f5"
   },
   "vertical": {
     "go.next": ["n", "space", "down", "pagedown"],

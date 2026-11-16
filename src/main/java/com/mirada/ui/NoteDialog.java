@@ -63,6 +63,7 @@ final class NoteDialog {
         UiZoom.bind(text.minHeightProperty(), 140);
         VBox.setVgrow(text, Priority.ALWAYS);
         text.setPromptText(tr("note.prompt"));
+        text.setAccessibleText(title); // the prompt goes when typing starts; the dialog's title stays (ACC-01)
         String saveKey = (Os.isMac() ? "⌘" : "Ctrl+") + "Return";
         Label hint = new Label(tr("note.hint", saveKey));
         hint.getStyleClass().add("note-hint");

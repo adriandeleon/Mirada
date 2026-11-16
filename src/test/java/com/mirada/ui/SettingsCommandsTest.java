@@ -3,6 +3,7 @@ package com.mirada.ui;
 import java.awt.Color;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -77,15 +78,37 @@ class SettingsCommandsTest {
         }
     }
 
-    /** KBD-01: Settings' Default button for the palette's keys is a command, in the palette too. */
+    /**
+     * KBD-01: Settings' Default button for the palette's keys is a command, in the palette too; and
+     * CONF-01: the user's own keys go only once they say so.
+     */
     @Test
-    void defaultCommandPaletteKeysPutsThemBack() throws Exception {
+    void defaultCommandPaletteKeysPutsThemBackOnceAsked() throws Exception {
+        List<Confirm.Question> asked = new ArrayList<>();
         try (WindowFixture window = open()) {
             Settings settings = window.settings;
             fx(() -> settings.setPaletteKeys("f3"));
+            Confirm.answeredBy(q -> {
+                asked.add(q);
+                return Confirm.Answer.CANCEL;
+            });
+            window.run(Command.RESET_PALETTE_KEYS);
+            assertEquals("f3", settings.paletteKeys(), "Cancel keeps the user's keys");
+            assertEquals(1, asked.size());
+            assertEquals("Put Back", asked.getFirst().action());
+            assertTrue(
+                    asked.getFirst().header().contains("F3"), asked.getFirst().header());
+            Confirm.answeredBy(q -> {
+                asked.add(q);
+                return Confirm.Answer.ACTION;
+            });
             window.run(Command.RESET_PALETTE_KEYS);
             assertEquals(Settings.defaultPaletteKeys(Os.isMac()), settings.paletteKeys());
             assertEquals("The palette opens with its default keys again", window.lastSaid());
+            window.run(Command.RESET_PALETTE_KEYS);
+            assertEquals(2, asked.size(), "the defaults already: nothing to lose, nothing asked");
+        } finally {
+            Confirm.answeredBy(null);
         }
     }
 

@@ -30,6 +30,12 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
   the palette or the log's right-click menu opens a find bar under the log: it searches as you type
   and counts the matches, Enter and Shift+Enter step to the next and the previous one, round the
   ends, the find key again finds the next, and Escape or Close puts the keyboard back in the log.
+- **The Debug Log's find bar steps back and matches case from the keyboard too.** **Find Previous in
+  Debug Log** (Shift+F3, ⌘⇧G on a Mac, C-r in Emacs), **Match Case in Debug Log** (Alt+C, ⌘⌥C, M-c)
+  and **Refresh Debug Log** (F5, ⌘R) are commands, in the palette and the keymaps; the Previous and
+  Refresh buttons and Shift+Enter run them.
+- **The Menu key and Shift+F10 open the Message Log's and the Debug Log's right-click menus**, under
+  the selected message in the Message Log.
 - **A screen reader hears the palette's rows**: the row the arrows land on is announced, with its
   key, and one that cannot run says why.
 
@@ -173,6 +179,20 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
   without installing anything or needing root.
 
 ### Changed
+
+- **Default Command Palette Keys asks first** when the palette has keys of your own, and only then
+  puts its default keys back.
+- **The Debug Log's find bar searches once typing pauses**, not on the first key.
+- **The Debug Log's right-click menu closes on a click anywhere in the window**, the log included, and
+  a second right-click replaces it rather than open another.
+- **The Bookmarks window's right-click menu and the zoom menu are drawn as the other menus**: the
+  glyph column, the key in its own column, and a row that cannot run greyed with the reason as its
+  tooltip. With no folder open, the image menu's **Sort** says why instead of being greyed silently.
+- **The palette puts a command whose title you typed first**, then one whose title you began,
+  before looser matches.
+- **The sidebar's Show in Folder and note buttons name the new key** as soon as the keys change.
+- **Settings' descriptions name the keys of the keymap in use** ("T toggles it") rather than a
+  fixed letter.
 
 - **The sidebar's and the thumbnails' commands are `tool.properties` and `tool.thumbnails`**
   (they were `view.properties` and `view.thumbnails`), and in the Emacs keymap M-1 and M-2 open

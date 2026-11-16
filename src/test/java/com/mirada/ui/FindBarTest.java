@@ -45,11 +45,23 @@ class FindBarTest {
         fx(() -> Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Os.isMac())));
     }
 
-    /** The Debug Log, shown, with {@link #LOG} as its text; its commands land in {@code ran}. */
+    /**
+     * The Debug Log, shown, with {@link #LOG} as its text; its commands land in {@code ran}, and its
+     * own ({@code log.*}) run there as the viewer runs them.
+     */
     private static DebugLogWindow log(List<Command> ran) throws Exception {
-        DebugLogWindow window = call(() -> new DebugLogWindow(ran::add, ViewerWindow.stylesheet()));
+        Stage[] owners = new Stage[1];
+        DebugLogWindow[] made = new DebugLogWindow[1];
+        DebugLogWindow window = call(() -> new DebugLogWindow(
+                command -> {
+                    ran.add(command);
+                    made[0].run(command, owners[0]);
+                },
+                ViewerWindow.stylesheet()));
+        made[0] = window;
         fx(() -> {
             Stage owner = new Stage();
+            owners[0] = owner;
             owner.setScene(new Scene(new javafx.scene.layout.StackPane(), 200, 200));
             owner.show();
             window.show(owner);
@@ -64,7 +76,7 @@ class FindBarTest {
     }
 
     private static void settle(FindBar bar) throws Exception {
-        fx(() -> FxTestSupport.<FxThrottle>field(bar, "searching").flush());
+        fx(() -> FxTestSupport.<Debounce>field(bar, "searching").flush());
         FxTestSupport.waitUntil("the search", () -> {
             try {
                 return !call(bar::searching);
@@ -134,6 +146,71 @@ class FindBarTest {
         assertTrue(call(() -> bar.matchCase().isFocusTraversable()));
         fx(() -> buttons.getLast().fire());
         assertFalse(call(bar::isOpen));
+    }
+
+    /** PERF-23: typing waits for a pause before the log is searched off the FX thread. */
+    @Test
+    void typingWaitsForAPauseBeforeTheSearch() throws Exception {
+        DebugLogWindow window = log(new ArrayList<>());
+        FindBar bar = window.findBar();
+        fx(window::find);
+        fx(() -> bar.field().setText("a"));
+        fx(() -> bar.field().setText("al"));
+        LatestOnly searches = call(() -> FxTestSupport.<LatestOnly>field(bar, "searches"));
+        assertTrue(call(() -> FxTestSupport.<Debounce>field(bar, "searching").pending()), "waiting for the pause");
+        assertFalse(call(searches::pending), "no search starts on the first key");
+        assertEquals("", call(bar::countText));
+        FxTestSupport.waitUntil("the pause", () -> {
+            try {
+                return !call(bar::searching);
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+        });
+        FxTestSupport.drain();
+        assertEquals("1 of 2", call(bar::countText), "searched once typing paused");
+    }
+
+    /** KBD-01: Previous, Shift+Enter, Match case and Refresh run commands, which the keymap reaches too. */
+    @Test
+    void theBarsButtonsAndKeysRunCommands() throws Exception {
+        List<Command> ran = new ArrayList<>();
+        DebugLogWindow window = log(ran);
+        FindBar bar = window.findBar();
+        fx(window::find);
+        fx(() -> bar.field().setText("alpha"));
+        settle(bar);
+        assertEquals("1 of 2", call(bar::countText));
+        Button previous = call(() -> (Button) bar.getChildren().stream()
+                .filter(n -> n instanceof Button b && b.getText().equals(com.mirada.i18n.Messages.tr("find.previous")))
+                .findFirst()
+                .orElseThrow());
+        fx(previous::fire);
+        assertEquals(List.of(Command.DEBUG_LOG_FIND_PREVIOUS), ran);
+        assertEquals("2 of 2", call(bar::countText), "the match before, wrapping");
+        press(bar.field(), KeyCode.ENTER, true);
+        assertEquals(List.of(Command.DEBUG_LOG_FIND_PREVIOUS, Command.DEBUG_LOG_FIND_PREVIOUS), ran);
+        assertEquals("1 of 2", call(bar::countText));
+        ran.clear();
+        // Match case from its command: the box follows, and the search narrows.
+        fx(() -> window.run(Command.DEBUG_LOG_MATCH_CASE, window.stage()));
+        assertTrue(call(() -> bar.matchCase().isSelected()));
+        settle(bar);
+        assertEquals("1 of 1", call(bar::countText));
+        // The keymap's chords reach all three in the window (Context.DEBUG_LOG).
+        for (Command command :
+                List.of(Command.DEBUG_LOG_FIND_PREVIOUS, Command.DEBUG_LOG_MATCH_CASE, Command.DEBUG_LOG_REFRESH)) {
+            assertEquals(Command.Context.DEBUG_LOG, command.context());
+            assertTrue(
+                    Keybindings.current().chord(command) != javafx.scene.input.KeyCombination.NO_MATCH, command.id());
+        }
+        Button refresh = call(() -> (Button) window.stage().getScene().getRoot().lookupAll(".button").stream()
+                .filter(n ->
+                        n instanceof Button b && b.getText().equals(com.mirada.i18n.Messages.tr("debugLog.refresh")))
+                .findFirst()
+                .orElseThrow());
+        fx(refresh::fire);
+        assertEquals(List.of(Command.DEBUG_LOG_REFRESH), ran);
     }
 
     /** FIND-04: the window's own keys, from the keymap, run its find command, the field's focus or not. */

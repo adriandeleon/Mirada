@@ -214,6 +214,89 @@ class MenusFxTest {
         });
     }
 
+    /** MENU-06, MENU-07, MENU-09 in the Debug Log's window: one menu, closed by a press, opened by key. */
+    @Test
+    void theDebugLogsMenuIsOneAtATimeClosedByAPressAndOpenedByTheMenuKey() throws Exception {
+        fx(() -> {
+            FxTestSupport.invoke(window, "run", new Class<?>[] {Command.class}, Command.DEBUG_LOG);
+            DebugLogWindow log = FxTestSupport.field(window, "debugLog");
+            Stage shown = log.stage();
+            shown.setX(0);
+            shown.setY(0);
+            shown.getScene().getRoot().applyCss();
+            shown.getScene().getRoot().layout();
+            Node text = log.text();
+            rightClick(text);
+            rightClick(text);
+            assertEquals(1, showingMenus().size(), "a second right-click replaces the first menu");
+            assertFalse(showingMenus().getFirst().isAutoHide(), "the window closes it, not the grab");
+            int[] pressed = {0};
+            var count = (javafx.event.EventHandler<MouseEvent>) e -> pressed[0]++;
+            text.addEventHandler(MouseEvent.MOUSE_PRESSED, count);
+            Event.fireEvent(text, press(text, MouseButton.PRIMARY));
+            text.removeEventHandler(MouseEvent.MOUSE_PRESSED, count);
+            assertTrue(showingMenus().isEmpty(), "a press inside the log closes its menu");
+            assertEquals(1, pressed[0], "and is not consumed");
+            for (KeyEvent key : List.of(key(KeyCode.CONTEXT_MENU, false), key(KeyCode.F10, true))) {
+                Event.fireEvent(text, key);
+                assertEquals(1, showingMenus().size(), key.getCode().toString());
+                closeMenus();
+            }
+            shown.hide();
+            return null;
+        });
+    }
+
+    /** MENU-09 in the Message Log: the keyboard's right-click opens the selected row's menu under it. */
+    @Test
+    void theMenuKeyOpensTheSelectedMessagesMenuUnderItsRow() throws Exception {
+        fx(() -> {
+            com.mirada.diagnostics.MessageLog messages = FxTestSupport.field(window, "messages");
+            for (int i = 0; i < 3; i++)
+                messages.add(
+                        "message " + i, com.mirada.diagnostics.MessageLog.Severity.INFO, java.time.LocalTime.now());
+            FxTestSupport.invoke(window, "run", new Class<?>[] {Command.class}, Command.MESSAGE_LOG);
+            stage.getScene().getRoot().applyCss();
+            stage.getScene().getRoot().layout();
+            ListView<?> list = (ListView<?>) stage.getScene().lookup(".message-log-list");
+            list.getSelectionModel().clearAndSelect(1);
+            list.requestFocus();
+            for (KeyEvent key : List.of(key(KeyCode.CONTEXT_MENU, false), key(KeyCode.F10, true))) {
+                Event.fireEvent(list, key);
+                List<ContextMenu> menus = showingMenus();
+                assertEquals(1, menus.size(), key.getCode().toString());
+                Bounds row = Popups.selectedRow(list);
+                assertNotNull(row);
+                assertEquals(row.getMaxY(), menus.getFirst().getAnchorY(), 1, "under the selected row");
+                closeMenus();
+            }
+            MessageLogView view = FxTestSupport.field(window, "messageLog");
+            view.hide();
+            return null;
+        });
+    }
+
+    /** KBD-04: with no folder, the image menu's Sort submenu stays, greyed, and says why. */
+    @Test
+    void theSortSubmenuSaysWhyItCannotRun() throws Exception {
+        fx(() -> {
+            ContextMenu menu = rightClick(viewport());
+            Menu sort = menu.getItems().stream()
+                    .filter(Menu.class::isInstance)
+                    .map(Menu.class::cast)
+                    .findFirst()
+                    .orElseThrow();
+            assertTrue(sort.getStyleClass().contains("unavailable"));
+            assertEquals(
+                    com.mirada.i18n.Messages.tr("reason.noFolder"),
+                    sort.getGraphic().getAccessibleHelp());
+            assertTrue(
+                    sort.getItems().stream().allMatch(item -> item.isDisable() || item instanceof SeparatorMenuItem));
+            closeMenus();
+            return null;
+        });
+    }
+
     @Test
     void theMenuKeyAndShiftF10OpenTheImagesMenu() throws Exception {
         fx(() -> {

@@ -329,7 +329,7 @@ final class AppMenus {
         return menu;
     }
 
-    private static final String ROW = AppMenus.class.getName() + ".row";
+    static final String ROW = AppMenus.class.getName() + ".row";
 
     /**
      * Writes a row's glyph, title and chord as they are now: the tick in the glyph's place while its
@@ -366,6 +366,24 @@ final class AppMenus {
         content.setAccessibleHelp(reason);
         if (reason == null) return;
         item.getStyleClass().add("unavailable");
+        Tooltip tip = Icons.tip(reason);
+        Tooltip.install(content, tip);
+        content.getProperties().put(REASON_TIP, tip);
+    }
+
+    /**
+     * A submenu whose rows cannot run now stays, greyed, and says why on its own row (KBD-04): a
+     * disabled row shows no tooltip, so the submenu keeps working as a row and its rows are greyed.
+     */
+    static void showAvailability(Menu submenu, @Nullable String reason) {
+        submenu.getStyleClass().remove("unavailable");
+        Node content = submenu.getGraphic();
+        if (content == null) return;
+        if (content.getProperties().remove(REASON_TIP) instanceof Tooltip tip) Tooltip.uninstall(content, tip);
+        content.setAccessibleHelp(reason);
+        for (MenuItem item : submenu.getItems()) item.setDisable(reason != null);
+        if (reason == null) return;
+        submenu.getStyleClass().add("unavailable");
         Tooltip tip = Icons.tip(reason);
         Tooltip.install(content, tip);
         content.getProperties().put(REASON_TIP, tip);

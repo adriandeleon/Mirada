@@ -10,6 +10,7 @@ import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -269,8 +270,12 @@ class BookmarksWindowTest {
                 "gone.png",
                 call(() -> String.valueOf(
                         ((BookmarkList.Row) list().getItems().get(1)).path().getFileName())));
-        assertTrue(items.get(0).isDisable(), "a missing file cannot be opened");
-        assertTrue(items.get(1).isDisable(), "nor shown in its folder");
+        // KBD-04: a row that cannot run stays, greyed, and says why.
+        for (int i : new int[] {0, 1}) {
+            CustomMenuItem row = (CustomMenuItem) items.get(i);
+            assertTrue(row.getStyleClass().contains("unavailable"), "a missing file cannot be opened, nor shown");
+            assertEquals("The file is not there.", row.getContent().getAccessibleHelp());
+        }
         fx(() -> items.getLast().fire());
         assertEquals("0 images", count(), "removed from the menu");
 

@@ -57,6 +57,8 @@ final class MessageLogView {
     private final Label cut = new Label();
 
     private final VBox card;
+    /** The list's right-click menu, made as it opens; null until the window hands one over. */
+    private @Nullable Supplier<ContextMenu> menu;
 
     MessageLogView(OverlayHost host, MessageLog messages, Consumer<Command> run) {
         this.host = host;
@@ -111,13 +113,37 @@ final class MessageLogView {
      * row selects it first (ListView's own), so Copy copies what was clicked (MENU-10).
      */
     void setMenu(Supplier<ContextMenu> menu) {
+        this.menu = menu;
         list.setOnContextMenuRequested(e -> {
             Popups.show(menu.get(), list, e.getScreenX(), e.getScreenY());
             e.consume();
         });
     }
 
+    /**
+     * The list's menu from the Menu key or Shift+F10 (MENU-09): under the selected row, scrolled into
+     * view first; with none selected, the first row is selected for it, as a right-click on it would.
+     * An empty list has no row to open a menu for.
+     */
+    private void showMenuFromKeyboard() {
+        Supplier<ContextMenu> making = menu;
+        if (making == null || list.getItems().isEmpty()) return;
+        if (list.getSelectionModel().isEmpty()) PaletteKeys.select(list, 0);
+        list.applyCss();
+        list.layout();
+        javafx.geometry.Bounds row = Popups.selectedRow(list);
+        if (row == null) return;
+        javafx.geometry.Point2D at = Popups.under(row);
+        Popups.show(making.get(), list, at.getX(), at.getY());
+    }
+
     private void onKey(KeyEvent e) {
+        if (Popups.isMenuKey(e)) {
+            // The keyboard's right-click opens the selected row's menu (MENU-09), from the filter too.
+            showMenuFromKeyboard();
+            e.consume();
+            return;
+        }
         PaletteKeys.Action action = PaletteKeys.action(e, filter.isFocused());
         if (action == PaletteKeys.Action.CANCEL) {
             hide();

@@ -65,6 +65,15 @@ final class Confirm {
                 tr("confirm.importConfiguration.action"));
     }
 
+    /** Settings' Default keys: the keys the user gave the palette, {@code keys}, give way to its own. */
+    static Question resetPaletteKeys(String keys) {
+        return new Question(
+                tr("confirm.resetPaletteKeys.title"),
+                tr("confirm.resetPaletteKeys.header", keys),
+                tr("confirm.resetPaletteKeys.message"),
+                tr("confirm.resetPaletteKeys.action"));
+    }
+
     /**
      * The answers to a question: its action, Save where saving is an option (CONF-05), or Cancel,
      * which Escape, the window's close button and anything else but the other two are.

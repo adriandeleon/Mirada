@@ -115,6 +115,12 @@ enum Command {
      * next match. Its keys work in the Debug Log window ({@link Context#DEBUG_LOG}).
      */
     DEBUG_LOG_FIND("log.find", "search look text diagnostics logging next"),
+    /** The find bar's Previous button and Shift+Enter (KBD-01): the match before, wrapping. */
+    DEBUG_LOG_FIND_PREVIOUS("log.findPrevious", "search look text diagnostics logging back"),
+    /** The find bar's Match case box (KBD-01): the search tells capitals apart, or stops. */
+    DEBUG_LOG_MATCH_CASE("log.findMatchCase", "search case sensitive capitals uppercase diagnostics logging"),
+    /** The Debug Log's Refresh button (KBD-01): what is logged now. */
+    DEBUG_LOG_REFRESH("log.refresh", "reload update diagnostics logging"),
     REPORT_PROBLEM("help.reportProblem", "bug issue feedback support crash help"),
     CHECK_FOR_UPDATES("help.checkForUpdates", "update version release new upgrade"),
     OPEN_RELEASE("help.openRelease", "update download upgrade version"),
@@ -243,7 +249,7 @@ enum Command {
                     BOOKMARKS_LIST_ALL,
                     BOOKMARKS_LIST_BOOKMARKED,
                     BOOKMARKS_LIST_NOTES -> Context.BOOKMARKS;
-            case DEBUG_LOG_FIND -> Context.DEBUG_LOG;
+            case DEBUG_LOG_FIND, DEBUG_LOG_FIND_PREVIOUS, DEBUG_LOG_MATCH_CASE, DEBUG_LOG_REFRESH -> Context.DEBUG_LOG;
             default -> Context.VIEWER;
         };
     }
@@ -403,6 +409,9 @@ enum Command {
                     EXPORT_DEBUG_LOG,
                     CLEAR_DEBUG_LOG,
                     DEBUG_LOG_FIND,
+                    DEBUG_LOG_FIND_PREVIOUS,
+                    DEBUG_LOG_MATCH_CASE,
+                    DEBUG_LOG_REFRESH,
                     REPORT_PROBLEM,
                     CHECK_FOR_UPDATES,
                     OPEN_RELEASE,

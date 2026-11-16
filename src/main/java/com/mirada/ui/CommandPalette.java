@@ -364,7 +364,8 @@ final class CommandPalette {
 
     /**
      * The command ordering. An empty query keeps {@link Command#inPalette()}'s order; a real query
-     * uses the fuzzy score, then the shorter and then the alphabetical label, so equal-scoring rows
+     * puts a title it spells first, then a title it begins ({@link #titleTier}), then the fuzzy
+     * score, then the shorter and then the alphabetical label, so equal-scoring rows
      * do not shuffle under the cursor between keystrokes.
      */
     static List<Command> orderedMatches(Collection<Command> commands, @Nullable String query) {
@@ -377,13 +378,29 @@ final class CommandPalette {
             if (score == FuzzyMatch.NO_SCORE) score = keywordScore(command, q);
             if (score != FuzzyMatch.NO_SCORE) scored.add(new Scored(command, score));
         }
-        scored.sort(Comparator.comparingInt(Scored::score)
+        // A query that spells a title leads, then one that begins one, before any fuzzy hit (KBD-06).
+        scored.sort(Comparator.comparingInt((Scored s) -> titleTier(s.command().label(), q))
                 .reversed()
+                .thenComparing(Comparator.comparingInt(Scored::score).reversed())
                 .thenComparingInt((Scored s) -> s.command().label().length())
                 .thenComparing(s -> s.command().label(), String.CASE_INSENSITIVE_ORDER));
         List<Command> matches = new ArrayList<>(scored.size());
         for (Scored s : scored) matches.add(s.command());
         return matches;
+    }
+
+    /**
+     * How a query names a title, ignoring case and a trailing "…": 2 when it spells the title, whole
+     * or after its "Category: " prefix; 1 when it begins one of those; 0 otherwise. Pure.
+     */
+    static int titleTier(String label, String query) {
+        String q = query.strip();
+        if (q.isEmpty()) return 0;
+        String whole = label.endsWith("…") ? label.substring(0, label.length() - 1) : label;
+        String bare = Icons.withoutPrefix(whole);
+        if (whole.equalsIgnoreCase(q) || bare.equalsIgnoreCase(q)) return 2;
+        if (whole.regionMatches(true, 0, q, 0, q.length()) || bare.regionMatches(true, 0, q, 0, q.length())) return 1;
+        return 0;
     }
 
     /**

@@ -530,7 +530,21 @@
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.35</minimum>
+                                            <minimum>0.58</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                                <rule>
+                                    <!-- The root package, com.mirada: App, AppInfo, Launch, PautaConformance. -->
+                                    <element>PACKAGE</element>
+                                    <includes>
+                                        <include>com.mirada</include>
+                                    </includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.78</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

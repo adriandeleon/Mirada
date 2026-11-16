@@ -6,7 +6,9 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -21,6 +23,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -526,41 +529,46 @@ final class BookmarksWindow {
         Popups.show(menu(row), list, at.getX(), at.getY());
     }
 
+    /**
+     * The row's menu, its rows drawn as the menu bar's (MENU-18): the command's glyph in the icon
+     * column, its title in the row's words, and its chord. A row that cannot run stays, greyed, and
+     * says why (KBD-04); the window's commands act on the selected row, which the menu is for.
+     */
     private ContextMenu menu(BookmarkList.Row row) {
+        // The menu is the row's: a right-click selects it first, the keyboard opens the selected one's.
+        if (list.getSelectionModel().getSelectedItem() != row)
+            list.getSelectionModel().select(row);
         Bookmarks.Mark mark = markOf(row);
         boolean folder = row instanceof BookmarkList.FolderRow;
-        MenuItem open = new MenuItem(
-                tr(folder ? "bookmarks.menu.openFolder" : "bookmarks.menu.open"),
-                Icons.of(folder ? Icons.FOLDER_OPEN : Icons.PICTURE));
-        MenuChord.on(open, Command.BOOKMARKS_OPEN);
-        open.setOnAction(e -> open(row));
-        open.setDisable(missing.contains(row.path()));
-        MenuItem note = new MenuItem(
-                tr(mark != null && mark.hasNote() ? "bookmarks.menu.editNote" : "bookmarks.menu.addNote"),
-                Icons.of(Icons.NOTE));
-        MenuChord.on(note, Command.BOOKMARKS_EDIT_NOTE);
-        note.setOnAction(e -> editNote(row));
         boolean bookmarked = mark != null && mark.bookmarked();
-        MenuItem bookmark = new MenuItem(
+        Map<Command, String> words = new LinkedHashMap<>();
+        words.put(Command.BOOKMARKS_OPEN, tr(folder ? "bookmarks.menu.openFolder" : "bookmarks.menu.open"));
+        words.put(Command.BOOKMARKS_SHOW_IN_FOLDER, tr("bookmarks.menu.showInFolder"));
+        words.put(
+                Command.BOOKMARKS_EDIT_NOTE,
+                tr(mark != null && mark.hasNote() ? "bookmarks.menu.editNote" : "bookmarks.menu.addNote"));
+        words.put(
+                Command.BOOKMARKS_TOGGLE,
                 tr(
                         bookmarked
                                 ? "bookmarks.menu.takeBookmarkOff"
-                                : folder ? "bookmarks.menu.bookmarkFolder" : "bookmarks.menu.bookmarkImage"),
-                Icons.of(Icons.BOOKMARK));
-        MenuChord.on(bookmark, Command.BOOKMARKS_TOGGLE);
-        bookmark.setOnAction(e -> toggle(row));
-        MenuItem show = new MenuItem(tr("bookmarks.menu.showInFolder"), Icons.of(Icons.FOLDER));
-        MenuChord.on(show, Command.BOOKMARKS_SHOW_IN_FOLDER);
-        show.setOnAction(e -> showInFolder(row));
-        show.setDisable(missing.contains(row.path()));
-        MenuItem remove = new MenuItem(tr("bookmarks.menu.remove"), Icons.of(Icons.REMOVE_MARK));
-        MenuChord.on(remove, Command.BOOKMARKS_REMOVE);
-        remove.setOnAction(e -> remove(row));
-        remove.setDisable(mark == null);
-        // It forgets the mark and its note (MENU-12).
-        remove.getStyleClass().add("danger");
-        ContextMenu menu =
-                new ContextMenu(open, show, new SeparatorMenuItem(), note, bookmark, new SeparatorMenuItem(), remove);
+                                : folder ? "bookmarks.menu.bookmarkFolder" : "bookmarks.menu.bookmarkImage"));
+        // Remove forgets the mark and its note: the row is red (MENU-12).
+        words.put(Command.BOOKMARKS_REMOVE, tr("bookmarks.menu.remove"));
+        List<MenuItem> rows = new ArrayList<>();
+        for (Map.Entry<Command, String> entry : words.entrySet()) {
+            Command command = entry.getKey();
+            if (command == Command.BOOKMARKS_EDIT_NOTE || command == Command.BOOKMARKS_REMOVE)
+                rows.add(new SeparatorMenuItem());
+            CustomMenuItem item = AppMenus.commandRow(
+                    command, this::run, this::unavailable, c -> false, c -> entry.getValue(), this::say);
+            if (command == Command.BOOKMARKS_OPEN
+                    && folder
+                    && item.getProperties().get(AppMenus.ROW) instanceof AppMenus.Row drawn)
+                drawn.icon().getChildren().setAll(Icons.of(Icons.FOLDER_OPEN));
+            rows.add(item);
+        }
+        ContextMenu menu = AppMenus.aligned(new ContextMenu(rows.toArray(MenuItem[]::new)));
         Popups.closedByWindow(menu);
         return menu;
     }

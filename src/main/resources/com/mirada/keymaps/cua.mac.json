@@ -68,7 +68,10 @@
     "bookmarks.listBookmarked": "Cmd-2",
     "bookmarks.listNotes": "Cmd-3",
 
-    "log.find": ["Cmd-f", "Cmd-g"]
+    "log.find": ["Cmd-f", "Cmd-g"],
+    "log.findPrevious": "Cmd-S-g",
+    "log.findMatchCase": "Cmd-M-c",
+    "log.refresh": ["Cmd-r", "f5"]
   },
   "vertical": {
     "go.next": ["down", "pagedown", "space"],

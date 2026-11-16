@@ -11,6 +11,7 @@ import java.util.Objects;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
@@ -31,6 +32,7 @@ import com.mirada.folder.FolderImages;
 import com.mirada.folder.Sorting;
 import com.mirada.os.Os;
 import com.mirada.settings.Bookmarks;
+import com.mirada.settings.Settings;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
@@ -125,6 +127,43 @@ class ViewerWindowTest {
         if (node instanceof javafx.scene.control.ScrollPane scroll && scroll.getContent() != null)
             collect(scroll.getContent(), found);
         if (node instanceof Parent parent) for (Node child : parent.getChildrenUnmodifiable()) collect(child, found);
+    }
+
+    /** TBAR-03: the sidebar's command buttons are named again when the keys change, the image the same. */
+    @Test
+    void theSidebarsButtonsFollowTheKeys() throws Exception {
+        try (WindowFixture window = open("a.png")) {
+            window.run(Command.INFO);
+            FxTestSupport.drain();
+            InfoPanel panel = call(() -> window.field("info"));
+            waitUntil("the sidebar's cards", () -> !panel.buttons().isEmpty());
+            Button show = call(() -> panel.buttons().entrySet().stream()
+                    .filter(e -> e.getValue() == Command.SHOW_IN_FOLDER)
+                    .map(java.util.Map.Entry::getKey)
+                    .findFirst()
+                    .orElseThrow());
+            assertEquals(
+                    Icons.tooltip(Command.SHOW_IN_FOLDER),
+                    call(() -> show.getTooltip().getText()));
+            try {
+                fx(() -> {
+                    Keybindings.use(
+                            Settings.DEFAULT_KEYMAP,
+                            java.util.Map.of("file.showInFolder", "f9"),
+                            Settings.defaultPaletteKeys(com.mirada.os.Os.isMac()));
+                    FxTestSupport.invoke(window.window, "relabelButtons", new Class<?>[0]);
+                });
+                assertTrue(
+                        call(() -> show.getTooltip().getText()).endsWith("(F9)"),
+                        call(() -> show.getTooltip().getText()));
+                assertEquals(call(() -> show.getTooltip().getText()), call(show::getAccessibleText));
+            } finally {
+                fx(() -> Keybindings.use(
+                        Settings.DEFAULT_KEYMAP,
+                        java.util.Map.of(),
+                        Settings.defaultPaletteKeys(com.mirada.os.Os.isMac())));
+            }
+        }
     }
 
     // ---- Stepping through the folder ----

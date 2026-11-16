@@ -70,6 +70,8 @@ final class SettingsWindow {
     private final Map<Page, VBox> pages = new EnumMap<>(Page.class);
     /** Each row's node, by row; and each card, by page and heading. */
     private final Map<Row, HBox> rowNodes = new HashMap<>();
+    /** The descriptions that name a command's chord, written again when the keys change (KBD-13). */
+    private final Map<Row, Label> keyed = new HashMap<>();
 
     private final Map<Row, String> visibleText = new HashMap<>();
     private final List<VBox> cards = new ArrayList<>();
@@ -266,6 +268,10 @@ final class SettingsWindow {
                     Node control = Objects.requireNonNull(controls.get(row.command()), row.title());
                     HBox node = row(row.title(), row.description(), control);
                     rowNodes.put(row, node);
+                    if (SettingsPages.TOGGLED_BY.containsKey(row.descriptionKey()))
+                        keyed.put(row, (Label) ((VBox) node.getChildren().getFirst())
+                                .getChildren()
+                                .get(1));
                     visibleText.put(row, visibleText(control));
                     rows.add(node);
                 }
@@ -499,6 +505,11 @@ final class SettingsWindow {
         row.setAlignment(Pos.CENTER_LEFT);
         row.getStyleClass().add("info-row");
         return row;
+    }
+
+    /** The descriptions that name a chord, from the keys now (KBD-13): the keymap or the user's keys changed. */
+    void refreshKeys() {
+        keyed.forEach((row, label) -> label.setText(row.description()));
     }
 
     /** Its stage, closed with the viewer's. */

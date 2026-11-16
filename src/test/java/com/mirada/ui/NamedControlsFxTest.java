@@ -51,8 +51,14 @@ class NamedControlsFxTest {
     Path dir;
 
     /** What holds controls but is no control a person uses: text, scrolling, separators, layout. */
-    private static final Set<Class<?>> NOT_A_CONTROL =
-            Set.of(Label.class, ScrollBar.class, ScrollPane.class, Separator.class, SplitPane.class, MenuBar.class);
+    private static final Set<Class<?>> NOT_A_CONTROL = Set.of(
+            Label.class,
+            ScrollBar.class,
+            ScrollPane.class,
+            Separator.class,
+            SplitPane.class,
+            MenuBar.class,
+            javafx.scene.control.ButtonBar.class);
 
     @AfterEach
     void cleanUp() throws Exception {
@@ -118,8 +124,111 @@ class NamedControlsFxTest {
             sweep(fixture, unnamed, "settings page " + page);
         }
 
+        // The dialogs, built as they are asked and walked without showing them modally.
+        fx(() -> {
+            List<javafx.scene.control.Dialog<?>> dialogs = List.of(
+                    Confirm.dialog(Confirm.discardEdit("a.png"), fixture.stage, null, true),
+                    Confirm.dialog(
+                            Confirm.importConfiguration("mirada.zip"),
+                            fixture.stage,
+                            new javafx.scene.layout.VBox(new javafx.scene.control.CheckBox("Settings")),
+                            false),
+                    Confirm.dialog(Confirm.resetPaletteKeys("F3"), fixture.stage, null, false),
+                    ViewerWindow.renameDialog("a.png", fixture.stage),
+                    NoteDialog.dialog(fixture.stage, "Note", "a.png", ""));
+            for (javafx.scene.control.Dialog<?> dialog : dialogs) {
+                javafx.scene.control.DialogPane pane = dialog.getDialogPane();
+                pane.applyCss();
+                pane.layout();
+                walk(pane, labelled(pane), unnamed, "dialog " + dialog.getTitle());
+            }
+        });
+
+        // The menus: the menu bar's, the image's, the Message Log's, the Debug Log's, the
+        // Bookmarks window's rows and the zoom drop-down; each row reads as its title (ACC-01).
+        fx(() -> {
+            List<javafx.scene.control.MenuItem> rows = new ArrayList<>();
+            TitleBar titleBar = FxTestSupport.field(fixture.window, "titleBar");
+            MenuBar bar = titleBar.menuBar();
+            if (bar != null) for (javafx.scene.control.Menu menu : bar.getMenus()) rows.add(menu);
+            rows.addAll(((javafx.scene.control.ContextMenu)
+                            FxTestSupport.invoke(fixture.window, "contextMenu", new Class<?>[0]))
+                    .getItems());
+            OnScreenControls controls = new OnScreenControls(new javafx.scene.layout.StackPane(), c -> {});
+            rows.addAll(controls.zoomMenu().getItems());
+            List<String> blank = new ArrayList<>();
+            unread(rows, blank);
+            unnamed.addAll(blank);
+        });
+        for (Command command : List.of(Command.MESSAGE_LOG, Command.DEBUG_LOG)) {
+            fixture.run(command);
+            FxTestSupport.drain();
+        }
+        fx(() -> {
+            MessageLogView log = fixture.field("messageLog");
+            ListView<?> list = (ListView<?>) fixture.stage.getScene().lookup(".message-log-list");
+            DebugLogWindow debug = fixture.field("debugLog");
+            List<String> blank = new ArrayList<>();
+            // The Bookmarks window's row menu, from the keyboard on its selected row.
+            for (Window window : List.copyOf(Window.getWindows())) {
+                Scene scene = window.getScene();
+                if (scene == null || !window.isShowing()) continue;
+                if (scene.lookup(".bookmarks-list") instanceof ListView<?> rows
+                        && !rows.getItems().isEmpty()) {
+                    rows.getSelectionModel().select(rows.getItems().size() - 1);
+                    rows.fireEvent(new javafx.scene.input.KeyEvent(
+                            javafx.scene.input.KeyEvent.KEY_PRESSED, "", "", KeyCode.F10, true, false, false, false));
+                    collectMenus(blank, "bookmark row");
+                }
+            }
+            for (Node owner : List.of(list, debug.text())) {
+                owner.fireEvent(new javafx.scene.input.ContextMenuEvent(
+                        javafx.scene.input.ContextMenuEvent.CONTEXT_MENU_REQUESTED, 1, 1, 1, 1, false, null));
+                collectMenus(blank, owner.getStyleClass().toString());
+            }
+            assertEquals(
+                    3, blank.stream().filter(b -> b.startsWith("menu opened")).count(), blank.toString());
+            blank.removeIf(b -> b.startsWith("menu opened"));
+            unnamed.addAll(blank);
+            log.hide();
+        });
+
         fixture.close();
         assertEquals(List.of(), unnamed, "controls with no name");
+    }
+
+    /** The rows of the menus showing now that read as nothing; each menu is closed after. */
+    private static void collectMenus(List<String> blank, String where) {
+        for (Window window : List.copyOf(Window.getWindows())) {
+            if (window instanceof javafx.scene.control.ContextMenu menu && menu.isShowing()) {
+                blank.add("menu opened: " + where);
+                unread(menu.getItems(), blank);
+                menu.hide();
+            }
+        }
+    }
+
+    /**
+     * The rows that read as nothing: a row of Mirada's own drawing ({@code CustomMenuItem}) reads its
+     * content's accessible text, a stock row its text; a submenu's rows are walked too.
+     */
+    private static void unread(List<javafx.scene.control.MenuItem> rows, List<String> blank) {
+        for (javafx.scene.control.MenuItem row : rows) {
+            if (row instanceof javafx.scene.control.SeparatorMenuItem) continue;
+            // A submenu Mirada draws reads as its graphic, as JavaFX reads a row's graphic before its text.
+            String read = row instanceof javafx.scene.control.CustomMenuItem custom && custom.getContent() != null
+                    ? custom.getContent().getAccessibleText()
+                    : has(row.getText())
+                            ? row.getText()
+                            : row.getGraphic() == null ? null : row.getGraphic().getAccessibleText();
+            if (!has(read))
+                blank.add("menu row " + row.getClass().getSimpleName() + " " + row.getStyleClass() + " "
+                        + row.getUserData() + " in "
+                        + (row.getParentMenu() == null
+                                ? "-"
+                                : row.getParentMenu().getText()));
+            if (row instanceof javafx.scene.control.Menu menu) unread(menu.getItems(), blank);
+        }
     }
 
     /** Walks every showing window's scene. */

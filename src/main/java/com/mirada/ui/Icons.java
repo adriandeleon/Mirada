@@ -132,7 +132,8 @@ final class Icons {
             case PREVIOUS -> Command.vertical() ? UP : PREVIOUS;
             case FIRST -> FIRST;
             case LAST -> LAST;
-            case GO_TO_IMAGE, DEBUG_LOG_FIND -> SEARCH;
+            case GO_TO_IMAGE, DEBUG_LOG_FIND, DEBUG_LOG_FIND_PREVIOUS -> SEARCH;
+            case DEBUG_LOG_REFRESH -> UPDATE;
             case SLIDESHOW -> PLAY;
             case ZOOM_IN -> ZOOM_IN;
             case ZOOM_OUT -> ZOOM_OUT;
@@ -197,6 +198,12 @@ final class Icons {
             case CLEAR_MESSAGES, CLEAR_DEBUG_LOG -> TRASH;
             case EXPORT_DEBUG_LOG, OPEN_RELEASE -> DOWNLOAD;
             case REPORT_PROBLEM -> WARNING;
+            // The Bookmarks window's rows, each the glyph of the viewer's command it mirrors (MENU-14).
+            case BOOKMARKS_OPEN -> PICTURE;
+            case BOOKMARKS_SHOW_IN_FOLDER -> FOLDER;
+            case BOOKMARKS_EDIT_NOTE -> NOTE;
+            case BOOKMARKS_TOGGLE -> BOOKMARK;
+            case BOOKMARKS_REMOVE -> REMOVE_MARK;
             case CHECK_FOR_UPDATES -> UPDATE;
             default -> null;
         };

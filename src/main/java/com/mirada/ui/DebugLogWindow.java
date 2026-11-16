@@ -22,6 +22,7 @@ import javafx.stage.Window;
 
 import com.mirada.AppInfo;
 import com.mirada.diagnostics.DebugLog;
+import org.jspecify.annotations.Nullable;
 
 import static com.mirada.i18n.Messages.tr;
 
@@ -40,9 +41,12 @@ final class DebugLogWindow {
     private final Stage stage = new Stage();
     private final TextArea text = new TextArea();
     private final Label where = new Label();
-    private final FindBar findBar = new FindBar(text);
+    private final FindBar findBar;
+    /** The log's right-click menu, made as it opens; null until the window is handed one. */
+    private @Nullable Supplier<ContextMenu> menu;
 
     DebugLogWindow(Consumer<Command> run, String stylesheet) {
+        findBar = new FindBar(text, run);
         stage.setTitle(tr("debugLog.title"));
         WindowIcon.applyTo(stage);
         text.setEditable(false);
@@ -51,8 +55,7 @@ final class DebugLogWindow {
         text.getStyleClass().add("debug-log-text");
         text.setAccessibleText(Icons.title(Command.DEBUG_LOG));
 
-        Button refresh = new Button(tr("debugLog.refresh"));
-        refresh.setOnAction(e -> refresh());
+        Button refresh = button(tr("debugLog.refresh"), Command.DEBUG_LOG_REFRESH, run);
         Button copy = button(tr("debugLog.copy"), Command.COPY_DEBUG_LOG, run);
         Button clear = button(tr("debugLog.clear"), Command.CLEAR_DEBUG_LOG, run);
         Button export = button(tr("debugLog.export"), Command.EXPORT_DEBUG_LOG, run);
@@ -71,8 +74,17 @@ final class DebugLogWindow {
         root.getStyleClass().add("debug-log");
         Scene scene = new Scene(root, UiZoom.px(WIDTH), UiZoom.px(480));
         scene.getStylesheets().add(stylesheet);
+        // The log's menu closes on a press anywhere in the window, the log included (MENU-07), and the
+        // keyboard's right-click opens it (MENU-09), never the platform's request as well.
+        Popups.closeOnPressOutside(stage, scene);
+        Popups.menusByKey(scene);
         // The window's own commands, from the keymap (FIND-04): before the field or the log take the key.
         scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            if (Popups.isMenuKey(e) && !findBar.field().isFocused()) {
+                showMenuFromKeyboard();
+                e.consume();
+                return;
+            }
             Command command = Keybindings.current().commandFor(Command.Context.DEBUG_LOG, e);
             if (command != null) {
                 run.accept(command);
@@ -81,7 +93,6 @@ final class DebugLogWindow {
         });
         scene.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.ESCAPE) stage.hide();
-            else if (e.getCode() == KeyCode.F5) refresh();
         });
         stage.setScene(scene);
     }
@@ -97,11 +108,54 @@ final class DebugLogWindow {
      * made as it opens so each row is greyed or not as it is then. A read-only console's menu.
      */
     void setMenu(Supplier<ContextMenu> menu) {
+        this.menu = menu;
+        // One menu at a time (MENU-06), closed by the window's press filter (MENU-07).
         text.setOnContextMenuRequested(e -> {
-            ContextMenu made = menu.get();
-            made.show(text, e.getScreenX(), e.getScreenY());
+            showMenu(e.getScreenX(), e.getScreenY());
             e.consume();
         });
+    }
+
+    /** The log's menu at a point on the screen, after any other menu over the window has closed. */
+    private void showMenu(double screenX, double screenY) {
+        Supplier<ContextMenu> making = menu;
+        if (making == null) return;
+        ContextMenu made = making.get();
+        Popups.closedByWindow(made);
+        Popups.show(made, text, screenX, screenY);
+    }
+
+    /**
+     * The log's menu from the Menu key or Shift+F10 (MENU-09): the log has no rows, so it opens over
+     * the view, a little in from its top left corner.
+     */
+    void showMenuFromKeyboard() {
+        javafx.geometry.Bounds view = text.localToScreen(text.getBoundsInLocal());
+        if (view == null) return;
+        javafx.geometry.Point2D at = Popups.under(new javafx.geometry.BoundingBox(
+                view.getMinX(), view.getMinY(), view.getWidth(), Math.min(view.getHeight(), 24)));
+        showMenu(at.getX(), at.getY());
+    }
+
+    /**
+     * Runs one of the window's own commands, the {@code log.*} ones; whether {@code command} was
+     * one. The window shows itself first when it is closed.
+     */
+    boolean run(Command command, Window from) {
+        switch (command) {
+            case DEBUG_LOG_FIND, DEBUG_LOG_FIND_PREVIOUS, DEBUG_LOG_MATCH_CASE, DEBUG_LOG_REFRESH -> {}
+            default -> {
+                return false;
+            }
+        }
+        if (!isShowing()) show(from);
+        switch (command) {
+            case DEBUG_LOG_FIND -> findBar.openOrNext();
+            case DEBUG_LOG_FIND_PREVIOUS -> findBar.openOrPrevious();
+            case DEBUG_LOG_MATCH_CASE -> findBar.toggleMatchCase();
+            default -> refresh();
+        }
+        return true;
     }
 
     /** Shows the window beside {@code from}, or brings it forward; either way with what is logged now. */

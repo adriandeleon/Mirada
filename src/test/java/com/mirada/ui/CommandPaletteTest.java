@@ -49,6 +49,21 @@ class CommandPaletteTest {
         assertTrue(CommandPalette.keywordScore(Command.ROTATE_CLOCKWISE, "turn") < -CommandPalette.KEYWORD_PENALTY / 2);
     }
 
+    /** KBD-06: a query that spells a title, or begins one, leads every fuzzy hit. */
+    @Test
+    void aTypedTitleLeads() {
+        assertEquals(
+                Command.BOOKMARKS_LIST_BOOKMARKED,
+                find("Bookmarks: List Bookmarks Only").getFirst());
+        assertEquals(
+                Command.BOOKMARKS_LIST_BOOKMARKED, find("list bookmarks only").getFirst(), "without its prefix");
+        assertEquals(Command.UI_ZOOM_IN, find("Zoom Interface In").getFirst());
+        assertEquals(Command.UI_ZOOM_IN, find("zoom interface i").getFirst(), "a title it begins");
+        assertEquals(2, CommandPalette.titleTier("Interface Zoom…", "interface zoom"));
+        assertEquals(1, CommandPalette.titleTier("Bookmarks: List Notes Only", "Bookmarks: List"));
+        assertEquals(0, CommandPalette.titleTier("Zoom In", "zin"));
+    }
+
     @Test
     void nonsenseMatchesNothing() {
         assertTrue(find("qqqq").isEmpty());

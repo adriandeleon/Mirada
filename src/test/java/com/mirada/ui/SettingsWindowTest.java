@@ -207,7 +207,20 @@ class SettingsWindowTest {
         fx(() -> this.<ChoiceBox<Sorting.By>>control("Sort by").setValue(Sorting.By.SIZE));
         fx(() -> this.<Spinner<Integer>>control("Hide controls after").increment(3));
         fx(() -> this.<Spinner<Integer>>control("Slideshow speed").increment(4));
-        fx(() -> settings.setPaletteKeys(settings.paletteKeys() + " f2"));
+        // The palette's keys through their control: Add, then the key pressed (QUAL-13).
+        javafx.scene.layout.VBox keys = control("Command palette");
+        Button add = (Button) ((HBox) keys.getChildren().get(1)).getChildren().get(0);
+        String keysBefore = settings.paletteKeys();
+        fx(add::fire);
+        press(KeyCode.F2);
+        assertEquals(keysBefore + " f2", settings.paletteKeys());
+        // The menu bar in the title bar, where the OS leaves the choice to Mirada (WIN-03).
+        CheckBox menus = (CheckBox)
+                this.<HBox>control("Menu bar in the title bar").getChildren().getFirst();
+        boolean menusChangeable = !call(menus::isDisabled);
+        boolean menusBefore = settings.titleBarMenus();
+        if (menusChangeable) fx(menus::fire);
+        assertEquals(menusChangeable != menusBefore, settings.titleBarMenus());
         // The choices that change what the window says and which keys it takes (QUAL-13).
         fx(() -> this.<ChoiceBox<String>>control("Language").setValue("es"));
         fx(() -> this.<ChoiceBox<String>>control("Keymap").setValue("emacs"));
@@ -230,6 +243,8 @@ class SettingsWindowTest {
         assertEquals(was.controlsHideSeconds(), again.controlsHideSeconds());
         assertEquals(was.slideshowSeconds(), again.slideshowSeconds());
         assertEquals(was.paletteKeys(), again.paletteKeys());
+        assertTrue(again.paletteKeys().endsWith(" f2"), again.paletteKeys());
+        assertEquals(was.titleBarMenus(), again.titleBarMenus());
         assertEquals("es", again.language());
         assertEquals("emacs", again.keymap());
         assertEquals(was.uiZoom(), again.uiZoom());
@@ -260,6 +275,15 @@ class SettingsWindowTest {
         assertEquals(
                 again.uiZoom(),
                 call(() -> this.<Spinner<Integer>>control("Interface zoom").getValue()));
+        assertEquals(
+                again.titleBarMenus(),
+                call(() -> ((CheckBox) this.<HBox>control("Menu bar in the title bar")
+                                .getChildren()
+                                .getFirst())
+                        .isSelected()));
+        javafx.scene.layout.VBox keysAgain = control("Command palette");
+        assertTrue(call(() -> ((Label) keysAgain.getChildren().getFirst()).getText())
+                .contains("F2"));
     }
 
     @Test

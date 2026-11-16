@@ -253,12 +253,15 @@ class ToolWindowsTest {
         }
         assertEquals(
                 List.of(
+                        Command.DEBUG_LOG_REFRESH,
                         Command.COPY_DEBUG_LOG,
                         Command.CLEAR_DEBUG_LOG,
                         Command.EXPORT_DEBUG_LOG,
                         Command.REPORT_PROBLEM),
                 ran);
+        // F5 is log.refresh's chord in the keymap (KBD-01), no key of the window's own.
         press(log.stage(), KeyCode.F5);
+        assertEquals(Command.DEBUG_LOG_REFRESH, ran.getLast());
         fx(() -> log.show(owner));
         press(log.stage(), KeyCode.ESCAPE);
         assertFalse(call(() -> log.stage().isShowing()));
