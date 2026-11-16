@@ -215,6 +215,67 @@
 }
 
 /*
+ * The rows Mirada draws itself (AppMenus.inWindowRow): the menu bar's and the right-click menus'.
+ * The chord is the row's own label (.menu-item-chord), in the keyboard's periwinkle (MENU-15); its
+ * size is ui-font.css's (MENU-16).
+ */
+.menu-item .menu-item-chord {
+    -fx-text-fill: -state-key;
+}
+
+.menu-item:focused .menu-item-chord {
+    -fx-text-fill: -color-fg-emphasis;
+}
+
+/* A row that deletes, discards or resets (MENU-12): its title in the danger colour. */
+.menu-item.danger .menu-item-title,
+.menu-item.danger > .label {
+    -fx-text-fill: -color-danger-fg;
+}
+
+.menu-item.danger:focused .menu-item-title,
+.menu-item.danger:focused > .label {
+    -fx-text-fill: -color-fg-emphasis;
+}
+
+/* A command that can't run now: greyed, still a row, its tooltip saying why (KBD-04). */
+.menu-item.unavailable .menu-item-title,
+.menu-item.unavailable .menu-item-chord {
+    -fx-text-fill: -color-fg-subtle;
+}
+
+.menu-item.unavailable .icon {
+    -fx-stroke: -color-fg-subtle;
+}
+
+/*
+ * Every menu's card (MENU-18): a radius of 8 and a shadow of radius 16 at offset Y 16, never less
+ * than its radius, so no invisible shadow rises over the bar the menu hangs from; rows 34 px high.
+ */
+.context-menu {
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-effect: dropshadow(gaussian, -shadow-log, 16, 0, 0, 16);
+}
+
+.context-menu .menu-item {
+    -fx-padding: 8 12 8 12;
+}
+
+/* The menu bar in the title bar: on the header's ground, its headings as flat as its buttons. */
+.header-bar .menu-bar {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.header-bar .menu-bar > .container > .menu-button {
+    -fx-background-radius: 8;
+    -fx-padding: 6 10 6 10;
+}
+
+/*
  * The floating controls over the image: dark translucent pills, the same on light and dark themes,
  * because they sit on the photo, not on the window.
  */

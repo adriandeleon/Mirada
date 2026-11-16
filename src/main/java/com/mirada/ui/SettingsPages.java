@@ -91,6 +91,13 @@ final class SettingsPages {
                     Command.LANGUAGE),
             new Row(
                     Page.GENERAL,
+                    "settings.card.appearance",
+                    "settings.titleBarMenus.title",
+                    "settings.titleBarMenus.description",
+                    "menu bar header title frame decorated chrome",
+                    Command.TITLE_BAR_MENUS),
+            new Row(
+                    Page.GENERAL,
                     "settings.card.atStart",
                     "settings.thumbnailsAtStart.title",
                     "settings.thumbnailsAtStart.description",

@@ -41,7 +41,8 @@
     "file.open": "C-o",
     "file.openFolder": "C-S-f",
     "file.openRecent": "C-S-o",
-    "window.close": ["C-w", "C-q"],
+    "window.close": "C-w",
+    "app.quit": "C-q",
     "palette.show": ["C-S-p", "M-x", "f1"],
 
     "editor.save": ["enter", "C-s"],

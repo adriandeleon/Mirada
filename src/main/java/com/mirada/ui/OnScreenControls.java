@@ -70,6 +70,8 @@ final class OnScreenControls {
                         item(Command.ZOOM_OUT, run));
 
         navigation = pill(previous, next);
+        // Its chords are the keymap's as it opens (MENU-15): the user's keys may have changed since.
+        zoomMenu.setOnShowing(e -> MenuChord.refresh(zoomMenu.getItems()));
         zooming = pill(zoom, zoomMenu);
         screen = pill(fullScreen);
         StackPane.setAlignment(navigation, Pos.BOTTOM_LEFT);
@@ -199,6 +201,7 @@ final class OnScreenControls {
     private static MenuItem item(Command command, Consumer<Command> run) {
         MenuItem item = new MenuItem(command.label(), Icons.menu(command));
         item.setOnAction(e -> run.accept(command));
+        item.setUserData(command);
         return MenuChord.on(item, command);
     }
 }

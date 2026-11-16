@@ -17,9 +17,11 @@ import javafx.scene.control.ButtonBase;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
+import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
@@ -79,10 +81,10 @@ class MenusFxTest {
             stage.setHeight(700);
             return null;
         });
-        // The header's menu is filled after the first paint, or half a second after start without one.
+        // The menu bar is built after the first paint, or half a second after start without one.
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-        while (fx(() -> headerMenu().getItems().isEmpty())) {
-            if (System.nanoTime() > deadline) throw new AssertionError("the header's menu was never filled");
+        while (fx(() -> FxTestSupport.field(window, "afterFirstPaint") != null)) {
+            if (System.nanoTime() > deadline) throw new AssertionError("the menu bar was never built");
             Thread.sleep(50);
         }
     }
@@ -100,7 +102,11 @@ class MenusFxTest {
     void everyRowOfEveryMenuHasAGlyph() throws Exception {
         List<String> blank = new ArrayList<>();
         fx(() -> {
-            unglyphed("header menu", headerMenu().getItems(), blank);
+            // A Mac's system menu bar draws no icons (MENU-02).
+            if (!Command.MAC) {
+                for (Menu menu : menuBar().getMenus())
+                    unglyphed("menu bar > " + menu.getText(), menu.getItems(), blank);
+            }
             OnScreenControls controls = new OnScreenControls(new StackPane(), c -> {});
             unglyphed("zoom menu", controls.zoomMenu().getItems(), blank);
             unglyphed("image menu", rightClick(viewport()).getItems(), blank);
@@ -111,20 +117,49 @@ class MenusFxTest {
     }
 
     @Test
-    void previousAndNextAreInTheHeadersMenu() throws Exception {
-        // TBAR-08: the floating arrows are not the only way to them on Linux and Windows.
-        List<Object> commands = fx(() ->
-                headerMenu().getItems().stream().map(MenuItem::getUserData).toList());
+    void previousAndNextAreInTheMenuBar() throws Exception {
+        // TBAR-08: the floating arrows are not the only way to them.
+        List<Object> commands = fx(() -> menuBar().getMenus().stream()
+                .flatMap(menu -> menu.getItems().stream())
+                .map(MenuItem::getUserData)
+                .toList());
         assertTrue(commands.contains(Command.PREVIOUS) && commands.contains(Command.NEXT), commands.toString());
+    }
+
+    /**
+     * MENU-17: no keymap, on any OS, takes F10 or a lone Alt, so the window's key filter leaves them
+     * to JavaFX, which opens the in-window menu bar's first menu on either.
+     */
+    @Test
+    void f10AndALoneAltAreLeftToTheMenuBar() {
+        for (String keymap : Keymap.PRESETS) {
+            for (boolean mac : new boolean[] {false, true}) {
+                for (boolean vertical : new boolean[] {false, true}) {
+                    Keybindings keys = Keybindings.layered(Keymap.load(keymap, mac), vertical, java.util.Map.of());
+                    for (Command.Context where : Command.Context.values()) {
+                        assertEquals(null, keys.commandFor(where, key(KeyCode.F10, false)), keymap);
+                        assertEquals(
+                                null,
+                                keys.commandFor(
+                                        where,
+                                        new KeyEvent(
+                                                KeyEvent.KEY_PRESSED, "", "", KeyCode.ALT, false, false, true, false)),
+                                keymap);
+                    }
+                }
+            }
+        }
     }
 
     @Test
     void menusAreInterFourteenWhateverTheyOpenFrom() throws Exception {
         assertTrue(fx(Fonts::registered).contains("Inter Bold"), "Inter's faces are registered");
         fx(() -> {
-            headerMenu().show();
-            assertInter(showingMenu(), "header menu");
-            closeMenus();
+            if (!Command.MAC) {
+                menuBar().getMenus().getFirst().show();
+                assertInter(showingMenu(), "menu bar");
+                closeMenus();
+            }
             assertInter(rightClick(viewport()), "image menu");
             closeMenus();
             return null;
@@ -241,6 +276,15 @@ class MenusFxTest {
     private static void unglyphed(String where, List<MenuItem> items, List<String> blank) {
         for (MenuItem item : items) {
             if (item instanceof SeparatorMenuItem || item instanceof RadioMenuItem) continue;
+            if (item instanceof CustomMenuItem row) {
+                // A row Mirada draws: its glyph in the icon column, where its command has one.
+                Command command = (Command) item.getUserData();
+                Node icon = row.getContent().lookup(".menu-item-icon");
+                boolean drawn = icon instanceof javafx.scene.Parent parent
+                        && !parent.getChildrenUnmodifiable().isEmpty();
+                if (!drawn && Icons.forCommand(command) != null) blank.add(where + ": " + command);
+                continue;
+            }
             if (item.getGraphic() == null && !(item instanceof CheckMenuItem)) blank.add(where + ": " + item.getText());
             if (item instanceof Menu menu) unglyphed(where + " > " + menu.getText(), menu.getItems(), blank);
         }
@@ -256,18 +300,23 @@ class MenusFxTest {
                     || label.getText().isEmpty()) continue;
             Font font = label.getFont();
             assertEquals(Fonts.FAMILY, font.getFamily(), where + ": " + label.getText());
-            double size = label.getStyleClass().contains("accelerator-text") ? 11 : 14;
+            double size = label.getStyleClass().contains("accelerator-text")
+                            || label.getStyleClass().contains("menu-item-chord")
+                    ? 11
+                    : 14;
             assertEquals(size, font.getSize(), where + ": " + label.getText());
             rows++;
         }
         assertTrue(rows > 3, where + " has rows");
     }
 
-    private static MenuButton headerMenu() {
-        for (Node node : stage.getScene().getRoot().lookupAll(".header-button")) {
-            if (node instanceof MenuButton menu) return menu;
-        }
-        throw new AssertionError("no header menu");
+    /** The menu bar: in the window's title bar, or on a Mac the system's. */
+    private static MenuBar menuBar() {
+        if (Command.MAC) return FxTestSupport.field(window, "macMenus");
+        TitleBar titleBar = FxTestSupport.field(window, "titleBar");
+        MenuBar bar = titleBar.menuBar();
+        assertNotNull(bar, "the in-window menu bar");
+        return bar;
     }
 
     private static Node viewport() {

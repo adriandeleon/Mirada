@@ -2,11 +2,13 @@ package com.mirada.ui;
 
 import java.nio.file.Path;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
@@ -74,6 +76,18 @@ final class DebugLogWindow {
         Button button = new Button(label);
         button.setOnAction(e -> run.accept(command));
         return button;
+    }
+
+    /**
+     * The log's right-click menu (MENU-05): its commands, Copy, Export, Clear and Report a Problem,
+     * made as it opens so each row is greyed or not as it is then. A read-only console's menu.
+     */
+    void setMenu(Supplier<ContextMenu> menu) {
+        text.setOnContextMenuRequested(e -> {
+            ContextMenu made = menu.get();
+            made.show(text, e.getScreenX(), e.getScreenY());
+            e.consume();
+        });
     }
 
     /** Shows the window beside {@code from}, or brings it forward; either way with what is logged now. */

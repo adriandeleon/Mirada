@@ -18,7 +18,7 @@ import org.jspecify.annotations.Nullable;
  * <p>They are the user's layer over the keymap's {@code palette.show} ({@link Keybindings#use}),
  * put on before any other, so no other command's key takes them. The key filter asks {@link
  * #opens} before anything else, in every window and while the editor is open. The first chord is
- * the one shown beside the palette, in the header's menu, the shortcuts window and the Mac's Help
+ * the one shown beside the palette, in the menu bar, the shortcuts window and the Help
  * menu ({@link Command#chord()}).
  *
  * <p>FX thread only, like the settings it follows.

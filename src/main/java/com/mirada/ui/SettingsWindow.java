@@ -24,6 +24,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -105,6 +106,17 @@ final class SettingsWindow {
         CheckBox updates =
                 checkBox(settings.checkForUpdates(), settings::checkForUpdates, settings::setCheckForUpdates);
         CheckBox statusBar = checkBox(settings.statusBar(), settings::statusBar, settings::setStatusBar);
+        CheckBox titleBarMenus =
+                checkBox(settings.titleBarMenus(), settings::titleBarMenus, settings::setTitleBarMenus);
+        // On every OS (OS-01), and disabled with the reason where the system keeps the menus itself.
+        String menusReason = TitleBar.titleBarMenusUnavailable();
+        HBox titleBarMenusControl = new HBox(titleBarMenus);
+        titleBarMenusControl.setAlignment(Pos.CENTER_RIGHT);
+        if (menusReason != null) {
+            titleBarMenus.setDisable(true);
+            titleBarMenus.setAccessibleHelp(menusReason);
+            Tooltip.install(titleBarMenusControl, new Tooltip(menusReason));
+        }
         CheckBox keepZoom = checkBox(settings.keepZoom(), settings::keepZoom, settings::setKeepZoom);
         CheckBox atSide =
                 checkBox(settings.thumbnailsAtSide(), settings::thumbnailsAtSide, settings::setThumbnailsAtSide);
@@ -179,6 +191,7 @@ final class SettingsWindow {
                 Map.entry(Command.PROPERTIES_AT_START, info),
                 Map.entry(Command.CHECK_DAILY, updates),
                 Map.entry(Command.STATUS_BAR, statusBar),
+                Map.entry(Command.TITLE_BAR_MENUS, titleBarMenusControl),
                 Map.entry(Command.HIDE_CONTROLS_AFTER, hide),
                 Map.entry(Command.KEEP_ZOOM, keepZoom),
                 Map.entry(Command.THUMBNAILS_AT_SIDE, atSide),
@@ -208,6 +221,7 @@ final class SettingsWindow {
             names.setSelected(settings.thumbnailNames());
             captions.setSelected(settings.thumbnailCaptions());
             statusBar.setSelected(settings.statusBar());
+            titleBarMenus.setSelected(settings.titleBarMenus());
             keymap.setValue(Keymap.resolve(settings.keymap()));
         });
 

@@ -25,6 +25,13 @@
     -fx-font-weight: normal;
 }
 
-.context-menu .menu-item .accelerator-text {
+.context-menu .menu-item .accelerator-text,
+.context-menu .menu-item .label.menu-item-chord {
     -fx-font-size: 11px;
+}
+
+/* The in-window menu bar's headings, in the menus' face and size. */
+.menu-bar .menu-button > .label {
+    -fx-font-family: "Inter", "System", "sans-serif";
+    -fx-font-size: 14px;
 }

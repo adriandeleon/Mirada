@@ -107,9 +107,7 @@ class StartupDeferralTest {
             UpdateCoordinator updates = field(window, "updates");
             return new Before(
                     built,
-                    !((javafx.scene.control.MenuButton) field(titleBar, "menu"))
-                            .getItems()
-                            .isEmpty(),
+                    titleBar.menuBar() != null || field(window, "macMenus") != null,
                     ((Parent) statusBar.node()).getChildrenUnmodifiable().size(),
                     stage.getIcons().size(),
                     bookmarks.loaded(),
@@ -118,7 +116,7 @@ class StartupDeferralTest {
         });
 
         assertEquals(Map.of(), before.built(), "built before the first paint");
-        assertFalse(before.titleBarFinished(), "the header's tooltips and menu wait");
+        assertFalse(before.titleBarFinished(), "the header's tooltips and the menu bar wait");
         assertEquals(0, before.statusBarChildren(), "the status bar's labels wait");
         assertEquals(0, before.icons(), "the window icon waits");
         assertFalse(before.bookmarksLoaded(), "the bookmarks file is not read before the image");
@@ -128,9 +126,8 @@ class StartupDeferralTest {
         ViewerWindow window = made.getFirst();
         waitUntil("the first paint", () -> field(window, "afterFirstPaint") == null);
         assertNotNull(call(() -> field(window, "shownImage")), "released after the image was painted");
-        assertFalse(call(() -> ((javafx.scene.control.MenuButton) field(field(window, "titleBar"), "menu"))
-                .getItems()
-                .isEmpty()));
+        assertTrue(call(
+                () -> ((TitleBar) field(window, "titleBar")).menuBar() != null || field(window, "macMenus") != null));
         assertEquals(1, call(() -> stage.getIcons().size()));
         assertTrue(call(() -> ((Bookmarks) field(window, "bookmarks")).loaded()));
         assertEquals(List.of(dir.resolve("photos").toAbsolutePath()), call(settings::recent));

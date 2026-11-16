@@ -496,6 +496,8 @@ final class BookmarksWindow {
         MenuChord.on(remove, Command.BOOKMARKS_REMOVE);
         remove.setOnAction(e -> remove(row));
         remove.setDisable(mark == null);
+        // It forgets the mark and its note (MENU-12).
+        remove.getStyleClass().add("danger");
         ContextMenu menu =
                 new ContextMenu(open, show, new SeparatorMenuItem(), note, bookmark, new SeparatorMenuItem(), remove);
         Popups.closedByWindow(menu);

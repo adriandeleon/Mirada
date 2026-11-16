@@ -10,7 +10,6 @@ import java.util.Objects;
 
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
@@ -699,11 +698,45 @@ class ViewerWindowTest {
         }
     }
 
+    /**
+     * MENU-17: F10 takes the keyboard to the in-window menu bar, and the arrows then walk the menus,
+     * not the folder; Escape gives the keys back to the window.
+     */
     @Test
-    void escapeClosesTheWindowOnLinuxOnly() throws Exception {
+    void f10OpensTheMenuBarAndTheArrowsWalkItNotTheFolder() throws Exception {
+        if (Command.MAC) return; // a Mac's menus are the system's, reached with its own keys
+        try (WindowFixture window = open("a.png")) {
+            window.waitForFirstPaint();
+            fx(() -> window.stage.requestFocus());
+            javafx.scene.robot.Robot robot = call(javafx.scene.robot.Robot::new);
+            TitleBar titleBar = window.field("titleBar");
+            javafx.scene.control.MenuBar bar = call(titleBar::menuBar);
+            assertNotNull(bar);
+            for (KeyCode code : List.of(KeyCode.F10, KeyCode.RIGHT)) {
+                fx(() -> {
+                    robot.keyPress(code);
+                    robot.keyRelease(code);
+                });
+            }
+            Object focused = call(() -> bar.queryAccessibleAttribute(javafx.scene.AccessibleAttribute.FOCUS_NODE));
+            assertNotNull(focused, "the menu bar has the keyboard");
+            assertEquals(0, folder(window).index(), "Right walked the menus, not the folder");
+            for (KeyCode code : List.of(KeyCode.ESCAPE, KeyCode.RIGHT)) {
+                fx(() -> {
+                    robot.keyPress(code);
+                    robot.keyRelease(code);
+                });
+            }
+            window.waitForImage("b.png");
+        }
+    }
+
+    @Test
+    void escapeNeverClosesTheWindowOnAnyOs() throws Exception {
+        // OS-04: one behaviour everywhere; a stray press never loses the user's place.
         try (WindowFixture window = open("a.png")) {
             window.press(KeyCode.ESCAPE);
-            assertEquals(Command.escapeCloses(System.getProperty("os.name")), !call(window.stage::isShowing));
+            assertTrue(call(window.stage::isShowing));
         }
     }
 
@@ -753,11 +786,11 @@ class ViewerWindowTest {
                     .filter(i -> Command.INFO.label().equals(i.getText()))
                     .findFirst()
                     .orElseThrow();
-            assertTrue(((CheckMenuItem) info).isSelected(), "the sidebar is open: ticked");
-            Menu sort = (Menu) items.stream()
-                    .filter(i -> "Sort".equals(i.getText()))
-                    .findFirst()
-                    .orElseThrow();
+            javafx.scene.control.Label infoTitle = (javafx.scene.control.Label)
+                    ((javafx.scene.control.CustomMenuItem) info).getContent().lookup(".menu-item-title");
+            assertTrue(infoTitle.getText().startsWith(AppMenus.TICK), "the sidebar is open: ticked");
+            Menu sort = (Menu)
+                    items.stream().filter(i -> i instanceof Menu).findFirst().orElseThrow();
             assertFalse(sort.isDisable());
             fx(() -> sort.getItems().get(2).fire());
             assertEquals(Sorting.By.SIZE, window.settings.sorting().by(), "the menu's item runs its command");
@@ -765,9 +798,16 @@ class ViewerWindowTest {
                     .filter(i -> Command.COPY.label().equals(i.getText()))
                     .findFirst()
                     .orElseThrow();
-            assertFalse(copy.isDisable());
+            assertFalse(copy.getStyleClass().contains("unavailable"));
             fx(copy::fire);
             window.waitToSay("Copied a.png");
+            // Move to Trash is drawn as dangerous (MENU-12).
+            assertTrue(items.stream()
+                    .filter(i -> i.getUserData() == Command.MOVE_TO_TRASH)
+                    .findFirst()
+                    .orElseThrow()
+                    .getStyleClass()
+                    .contains("danger"));
             for (Command command : Command.values()) {
                 FxTestSupport.invoke(window.window, "ticked", new Class<?>[] {Command.class}, command);
             }

@@ -159,7 +159,7 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
 - **Only what the first frame shows is built before it.** The header bar is; the floating controls
   are built on the first pointer movement over the image, the properties sidebar and the thumbnail
   strip the first time they open, About and Settings the first time they are asked for, and the
-  folder's tooltip, the header's menu's items and the window icon run from
+  folder's tooltip, the menu bar and the window icon run from
   `ViewerWindow.afterFirstPaint`, on the pulse after the first image is shown (or half a second
   after start without one). Building them first measured +40 ms; deferred, +20 ms over the old
   window. Put new chrome behind the same door. `HeaderBar` itself is not the cost: switched off, the
@@ -243,6 +243,24 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
 
 ## Keys, commands and the palette
 
+- **The in-window menu bar takes F10 and a lone Alt, and then the arrows, without the focus.**
+  `MenuBarSkin` opens its menu mode from a scene accelerator (F10) and a scene handler (Alt), so the
+  window's key filter, which runs first, must leave both alone (no keymap binds them;
+  `MenusFxTest.f10AndALoneAltAreLeftToTheMenuBar`). In menu mode JavaFX gives no node the focus:
+  the arrows reach the window's filter too, and would step the folder as they walk the menus. The
+  filter steps aside while a menu is open or the skin reports a focused menu
+  (`queryAccessibleAttribute(FOCUS_NODE)`, `ViewerWindow.menuBarActive`); a test drives it with
+  the Robot, as fired events never reach the accelerator.
+- **A `CustomMenuItem`'s text is not drawn, only its content.** `AppMenus.inWindowRow` sets it all
+  the same, to the title without the tick: code and tests that find a row by `getText()` keep
+  working. The row lays out its own 22 px icon column, title, spacer and chord (MENU-18), so every
+  row of a right-click menu is one too, and a submenu among them carries the same layout as its
+  graphic (`AppMenus.submenuRow`); a plain `MenuItem` beside them would put its glyph in another
+  column.
+- **The stage's style is fixed before it shows.** The menu bar in the title bar (the setting, on by
+  default) is read once, as the window is made: switched off, the window keeps the system's title
+  bar and the same row goes under it, from the next start (the setting says so).
+
 - **Every command is in `Command`, with a dotted id** (`go.next`, `editor.save`, `help.copyDetails`;
   `<area>.<camelCase>`, KBD-02), its name, its description, its group and where its keys work
   (`Command.Context`: the viewer, the editor while it is open, the Bookmarks and Notes window). The
@@ -286,12 +304,13 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   command's glyph from `Icons.forCommand`, the menus' (ICON-20): the zoom button the glyph of Actual
   Size or Zoom to Fit, whichever it would do; full screen's is the way out while in it, in the menus
   too (`Icons.setFullScreen`). A command without a fitting glyph gets one of its own (MENU-14):
-  `MenusFxTest` opens the menus and fails on a row with none. Previous and Next are in the header's
-  menu too, so the floating arrows are never the only way (TBAR-08).
+  `MenusFxTest` opens the menus and fails on a row with none. Previous and Next are in the menu
+  bar's Go menu too, so the floating arrows are never the only way (TBAR-08).
 - **Escape is ours, not the stage's.** JavaFX's full-screen exit key would leave full screen and
   then let the same press reach the key filter, which would close the window.
-  `setFullScreenExitKeyCombination(NO_MATCH)` hands it to `Command.ESCAPE`: leave full screen if in
-  it, otherwise close — on Linux only (`Command.escapeCloses`); macOS and Windows keep the window.
+  `setFullScreenExitKeyCombination(NO_MATCH)` hands it to `Command.ESCAPE`: stop the slideshow or
+  leave full screen, and otherwise nothing, on every OS (OS-04). It used to close the window on
+  Linux only, GNOME's habit; a difference by OS that no row of Pauta's table allows.
 - **A scroll is a wheel's or a trackpad's** (`Scrolling`): macOS reports the fingers
   (`ScrollEvent.getTouchCount`), and those scrolls pan, or swipe once a gesture when there is nothing
   to pan; a wheel zooms. Windows and Linux touchpads report no fingers and so still zoom; Windows
@@ -431,12 +450,13 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   Java on a second thread while the main thread waits without AppKit, and the event comes and goes
   in between. Files sent to a running Mirada arrive; the smoke test warns there and fails the
   native image.
-- **The macOS menu bar is JavaFX's system `MenuBar`, the application menu is glass's.** `MacMenus`
-  builds File, Image, View, Go and Help from `Command` after the first paint, unmanaged in the scene
-  (it draws nothing there); the header's ☰ menu stays as well, as on the other platforms. No item
+- **The macOS menu bar is JavaFX's system `MenuBar`, the application menu is glass's.** `AppMenus`
+  builds File, Edit, Image, View, Go, Bookmarks and Help from `Command` after the first paint,
+  unmanaged in the scene (it draws nothing there); Windows and Linux get the same menus in the
+  window (`AppMenus.inWindow`), and the header holds no menu on a Mac (WIN-03). No item
   has a key equivalent (Pauta MENU-02): the native menu would take the key before `onKey`, and a
   bare one while the palette's field has focus. Each chord is written into its item's title instead
-  ("Rotate Right   R", `MacMenus.title`, MENU-15), as the native menu draws text only (and so no
+  ("Rotate Right   R", `AppMenus.title`, MENU-15), as the native menu draws text only (and so no
   icons); a Cmd key reaches `Keybindings.commandFor` like any other. Items grey, and their titles are
   written again, only while their menu is open (`onShowing`, by `Command.unavailable`). JavaFX gives no way into the application menu (Hide, Quit), so `MacAppMenu`
   gets it from `com.sun.glass.ui.mac.MacApplication.getAppleMenu`, by reflection, since that

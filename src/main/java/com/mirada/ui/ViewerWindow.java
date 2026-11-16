@@ -111,9 +111,6 @@ public final class ViewerWindow {
     static final Executor FILES = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("window-files-", 0).factory());
 
-    /** Whether Escape closes the window once there is nothing to leave: Linux's habit, not the others'. */
-    private static final boolean ESCAPE_CLOSES = Command.escapeCloses(System.getProperty("os.name", ""));
-
     private final Stage stage;
     private final ImageViewport viewport = new ImageViewport();
     /** Says how to open an image, or why the one asked for is not showing; its first words wait for {@link #offerToOpen}. */
@@ -304,9 +301,11 @@ public final class ViewerWindow {
         stage.focusedProperty().addListener((o, was, focused) -> {
             if (focused) settings.reloadIfChanged();
         });
-        // The window's own close button: an edit not yet saved asks first (CONF-01).
+        // The window's own close button, and on macOS the application menu's and the Dock's Quit,
+        // which JavaFX turns into a close request: the one quit method (WIN-13).
         stage.setOnCloseRequest(e -> {
-            if (!mayClose()) e.consume();
+            e.consume();
+            quit();
         });
         stage.setOnHidden(e -> {
             slideshow.stop();
@@ -338,13 +337,15 @@ public final class ViewerWindow {
         root.setBottom(bottom);
         showStatusBar();
         settings.addListener(this::showStatusBar);
-        // The menu's tick and the setting, kept in step both ways.
-        BooleanProperty statusBarOn = new SimpleBooleanProperty(this, "statusBarOn", settings.statusBar());
-        statusBarOn.addListener((o, was, now) -> {
-            if (now != settings.statusBar()) settings.setStatusBar(now);
-        });
-        settings.addListener(() -> statusBarOn.set(settings.statusBar()));
-        titleBar = new TitleBar(stage, this::run, infoShowing, thumbnailsShowing, statusBarOn);
+        // The window's style is fixed before it first shows, so where the menus go is decided once.
+        titleBar = new TitleBar(
+                stage,
+                this::run,
+                infoShowing,
+                TitleBar.usesHeaderBar(
+                        Command.MAC,
+                        settings.titleBarMenus(),
+                        Platform.isSupported(javafx.application.ConditionalFeature.EXTENDED_WINDOW)));
         root.setTop(titleBar.node());
         infoShowing.addListener((o, was, now) -> {
             root.setRight(now ? infoPanel().node() : null);
@@ -386,7 +387,8 @@ public final class ViewerWindow {
             showPointer();
         });
         updateControls();
-        afterFirstPaint(titleBar::finish);
+        // The menu bar: in the window on Windows and Linux (WIN-03), the system's on a Mac.
+        afterFirstPaint(() -> titleBar.finish(Command.MAC ? null : inWindowMenus()));
         afterFirstPaint(statusBar::finish);
         // A few seconds after the image, never on the way to it; not on a timing or training tour.
         if (tour == null) afterFirstPaint(updates::scheduleStartupCheck);
@@ -420,29 +422,39 @@ public final class ViewerWindow {
         infoShowing.set(settings.startWithInfo());
     }
 
+    /** The menu bar in the window, on Windows and Linux ({@link AppMenus#inWindow}). */
+    private MenuBar inWindowMenus() {
+        return AppMenus.inWindow(
+                this::runFromMenu,
+                this::unavailable,
+                this::ticked,
+                this::label,
+                reason -> say(reason, MessageLog.Severity.WARNING));
+    }
+
+    /**
+     * A menu row's command. A row can be chosen while the palette is up (a Mac's menu bar is always
+     * there); the palette goes, and the palette's own row only closes it, as its key does.
+     */
+    private void runFromMenu(Command command) {
+        boolean wasShowing = palette.isShowing();
+        palette.hide();
+        if (command != Command.PALETTE || !wasShowing) run(command);
+    }
+
     /**
      * The menu bar along the top of a Mac's screen, and About and Settings in its application menu.
      * After the first paint, like the rest of the chrome: nobody reaches for a menu before the image.
      */
     private void installMacMenus(StackPane overlay) {
-        MenuBar bar = MacMenus.build(
-                command -> {
-                    // A menu's key equivalent can arrive while the palette is up; the palette goes,
-                    // and the palette's own key only closes it, as it does from the key filter.
-                    boolean wasShowing = palette.isShowing();
-                    palette.hide();
-                    if (command != Command.PALETTE || !wasShowing) run(command);
-                },
-                this::unavailable,
-                this::ticked,
-                this::label);
+        MenuBar bar = AppMenus.system(this::runFromMenu, this::unavailable, this::ticked, this::label);
         bar.setManaged(false);
         overlay.getChildren().add(bar);
         macMenus = bar;
         String appMenu = MacAppMenu.install(
                 Command.ABOUT.label(),
                 () -> run(Command.ABOUT),
-                tr("viewer.settingsMenu"),
+                () -> AppMenus.title(tr("viewer.settingsMenu"), Command.SETTINGS),
                 () -> run(Command.SETTINGS));
         if (Startup.enabled()) System.out.println("[perf] application menu: " + appMenu);
     }
@@ -453,8 +465,10 @@ public final class ViewerWindow {
         palette.refreshKeys();
         BookmarksWindow marks = bookmarksWindow;
         if (marks != null) marks.refreshKeys();
-        // The Mac menus write their chords as they open; the buttons' tooltips are written now.
+        // The menus write their chords as they open; the buttons' tooltips are written now, and the
+        // Mac's Settings item, which has no menu of Mirada's to open (WIN-15).
         relabelButtons();
+        if (Command.MAC) MacAppMenu.refresh();
         ShortcutsWindow shortcuts = shortcutsWindow;
         if (shortcuts != null) shortcuts.refresh();
     }
@@ -506,7 +520,7 @@ public final class ViewerWindow {
         if (made == null) {
             made = new ThumbnailStrip(index -> go(folder.jump(index)), viewport.thumbnailDragger());
             made.setMarked(file -> bookmarks.loaded() && bookmarks.isBookmarked(file));
-            made.setMenu(this::stripMenu);
+            made.setMenu(this::stripMenu, this::contextMenu);
             strip = made;
         }
         return made;
@@ -547,19 +561,41 @@ public final class ViewerWindow {
         if (shortcuts != null) shortcuts.refresh();
     }
 
-    /** The strip's own menu: closing it, and where it stands and what it shows. */
+    /**
+     * The strip's own menu, for a right-click past its last image: closing it, and where it stands
+     * and what it shows. A right-click on an image opens that image's menu ({@link #contextMenu}).
+     */
     private ContextMenu stripMenu() {
-        MenuItem hide = new MenuItem(tr("viewer.hideThumbnails"), Icons.menu(Command.THUMBNAILS));
-        hide.setOnAction(e -> run(Command.THUMBNAILS));
-        MenuChord.on(hide, Command.THUMBNAILS);
-        ContextMenu menu = new ContextMenu(
+        MenuItem hide = AppMenus.commandRow(
+                Command.THUMBNAILS,
+                this::run,
+                this::unavailable,
+                c -> false,
+                c -> tr("viewer.hideThumbnails"),
+                this::warn);
+        ContextMenu menu = AppMenus.aligned(new ContextMenu(
                 hide,
                 new SeparatorMenuItem(),
                 item(Command.THUMBNAILS_AT_SIDE),
                 item(Command.THUMBNAIL_CAPTIONS),
-                item(Command.THUMBNAIL_NAMES));
+                item(Command.THUMBNAIL_NAMES)));
         Popups.closedByWindow(menu);
         return menu;
+    }
+
+    /** A right-click menu of commands, its rows as the menu bar's; one per group, separated. */
+    private ContextMenu commandMenu(List<List<Command>> groups) {
+        ContextMenu menu = new ContextMenu();
+        for (List<Command> group : groups) {
+            if (!menu.getItems().isEmpty()) menu.getItems().add(new SeparatorMenuItem());
+            for (Command command : group) menu.getItems().add(item(command));
+        }
+        return AppMenus.aligned(menu);
+    }
+
+    /** Says why a chosen menu row cannot run (KBD-04). */
+    private void warn(String reason) {
+        say(reason, MessageLog.Severity.WARNING);
     }
 
     /**
@@ -867,6 +903,9 @@ public final class ViewerWindow {
     }
 
     private void onKey(KeyEvent e) {
+        // The menu bar's keys are its own while F10 or Alt has it, or a menu of it is open: the
+        // arrows walk the menus, Escape leaves them (MENU-17).
+        if (menuBarActive()) return;
         // The Message Log's keys are its own while it is open: Escape closes it, not the window.
         MessageLogView log = messageLog;
         if (log != null && log.isShowing()) return;
@@ -902,6 +941,18 @@ public final class ViewerWindow {
         } else if (open != null && editing && open.onKey(e)) {
             e.consume();
         }
+    }
+
+    /**
+     * Whether the in-window menu bar has the keyboard: one of its menus is open, or F10 or a lone Alt
+     * has put it in its menu mode. JavaFX gives the bar no focus then; its skin only reports the menu
+     * the keyboard is on, as the node a screen reader is told has the focus.
+     */
+    private boolean menuBarActive() {
+        MenuBar bar = titleBar.menuBar();
+        if (bar == null) return false;
+        for (Menu menu : bar.getMenus()) if (menu.isShowing()) return true;
+        return bar.queryAccessibleAttribute(javafx.scene.AccessibleAttribute.FOCUS_NODE) != null;
     }
 
     /** Where the keys go now: the editor's tools while it is open, else the viewer's. */
@@ -942,7 +993,7 @@ public final class ViewerWindow {
     }
 
     private void run(Command command) {
-        // From the header's menu while the editor is open: what would change the image under it waits.
+        // From a menu while the editor is open: what would change the image under it waits.
         Editor open = editor;
         if (open != null && open.isShowing() && !duringEdit(command)) {
             say(tr("viewer.finishEditing"), MessageLog.Severity.WARNING);
@@ -965,15 +1016,11 @@ public final class ViewerWindow {
                     stopSlideshow();
                 } else if (stage.isFullScreen()) {
                     stage.setFullScreen(false);
-                } else if (ESCAPE_CLOSES && mayClose()) {
-                    stage.close();
                 }
             }
             case OPEN -> chooseFile();
             case OPEN_FOLDER -> chooseFolder();
-            case CLOSE -> {
-                if (mayClose()) stage.close();
-            }
+            case CLOSE, QUIT -> quit();
             case PALETTE -> palette.show(Command.inPalette(context()), this::unavailable);
             case GO_TO_IMAGE -> goToImage();
             case OPEN_RECENT -> openRecent();
@@ -1002,6 +1049,7 @@ public final class ViewerWindow {
                     PALETTE_KEYS,
                     RESET_PALETTE_KEYS,
                     CHECK_DAILY,
+                    TITLE_BAR_MENUS,
                     EXPORT_CONFIG,
                     IMPORT_CONFIG -> settingsCommands().run(command);
             case ABOUT -> aboutWindow().show(stage);
@@ -1097,6 +1145,18 @@ public final class ViewerWindow {
         }
     }
 
+    /**
+     * The one quit method (WIN-13): the Quit row and {@code app.quit}, Close Window, the window's own
+     * close button and, on macOS, the application menu's and the Dock's Quit (a close request) all
+     * come here. Mirada has one main window, so closing it is quitting: an edit not yet saved asks
+     * first (CONF-01), then the window closes, and as it hides it saves its place and closes its
+     * tool windows and dialogs ({@link #rememberPlace}, {@link #release}).
+     */
+    private void quit() {
+        if (!mayClose()) return;
+        stage.close();
+    }
+
     /** Whether the window may close: an edit in progress is discarded only when the user says so. */
     private boolean mayClose() {
         Editor open = editor;
@@ -1124,6 +1184,8 @@ public final class ViewerWindow {
                     PAUTA_DOCS,
                     COPY_PAUTA,
                     CLOSE,
+                    QUIT,
+                    TITLE_BAR_MENUS,
                     BOOKMARK,
                     BOOKMARK_FOLDER,
                     NOTE,
@@ -1208,6 +1270,11 @@ public final class ViewerWindow {
         if (made == null) {
             made = new MessageLogView(
                     (StackPane) Objects.requireNonNull(stage.getScene()).getRoot(), messages, this::run);
+            made.setMenu(() -> {
+                ContextMenu menu = commandMenu(List.of(List.of(Command.COPY_MESSAGES, Command.CLEAR_MESSAGES)));
+                Popups.closedByWindow(menu);
+                return menu;
+            });
             messageLog = made;
         }
         return made;
@@ -1217,6 +1284,10 @@ public final class ViewerWindow {
         DebugLogWindow made = debugLog;
         if (made == null) {
             made = new DebugLogWindow(this::run, stylesheet());
+            made.setMenu(() -> commandMenu(List.of(
+                    List.of(Command.COPY_DEBUG_LOG, Command.EXPORT_DEBUG_LOG),
+                    List.of(Command.CLEAR_DEBUG_LOG),
+                    List.of(Command.REPORT_PROBLEM))));
             debugLog = made;
             toolWindows.add(made.stage());
         }
@@ -1798,6 +1869,7 @@ public final class ViewerWindow {
         }
         if (editing && !duringEdit(command)) return tr("viewer.finishEditingReason");
         if (command == Command.OPEN_RECENT && settings.recent().isEmpty()) return tr("viewer.noRecentFolder");
+        if (command == Command.TITLE_BAR_MENUS) return TitleBar.titleBarMenusUnavailable();
         if (command == Command.GO_TO_BOOKMARK && bookmarks.all().isEmpty()) return tr("viewer.nothingBookmarkedReason");
         String folderReason = command.unavailable(folder.index(), folder.size(), !placeholder.isVisible());
         if (folderReason == null && command == Command.NEXT_BOOKMARK && bookmarkFrom(1) < 0)
@@ -1915,7 +1987,7 @@ public final class ViewerWindow {
     }
 
     private ContextMenu contextMenu() {
-        ContextMenu menu = new ContextMenu(
+        ContextMenu menu = AppMenus.aligned(new ContextMenu(
                 item(Command.PALETTE),
                 new SeparatorMenuItem(),
                 item(Command.OPEN),
@@ -1944,7 +2016,7 @@ public final class ViewerWindow {
                 item(Command.THUMBNAIL_CAPTIONS),
                 item(Command.THUMBNAIL_NAMES),
                 item(Command.FULL_SCREEN),
-                item(Command.SLIDESHOW));
+                item(Command.SLIDESHOW)));
         Popups.closedByWindow(menu);
         return menu;
     }
@@ -1953,7 +2025,7 @@ public final class ViewerWindow {
     private Menu sortMenu() {
         Sorting sorting = settings.sorting();
         ToggleGroup group = new ToggleGroup();
-        Menu menu = new Menu(tr("viewer.sortMenu"), Icons.of(Icons.SORT));
+        Menu menu = AppMenus.submenuRow(tr("viewer.sortMenu"), Icons.of(Icons.SORT));
         for (Command command : List.of(Command.SORT_BY_NAME, Command.SORT_BY_DATE, Command.SORT_BY_SIZE)) {
             RadioMenuItem item = new RadioMenuItem(command.label());
             item.setToggleGroup(group);
@@ -1975,20 +2047,13 @@ public final class ViewerWindow {
         return menu;
     }
 
-    /** A context-menu row, named as the palette names it and greyed when the palette would grey it. */
+    /**
+     * A right-click menu's row, drawn as the menu bar's: named as the palette names it, ticked when
+     * on, its chord the keymap's now, a destructive one in red, and greyed with the palette's reason
+     * when it cannot run (KBD-04, MENU-12, MENU-15).
+     */
     private MenuItem item(Command command) {
-        MenuItem item;
-        if (MacMenus.TICKED.contains(command)) {
-            // A setting or a panel: ticked when on, as the Mac's menus tick it.
-            CheckMenuItem check = new CheckMenuItem(label(command), Icons.menu(command));
-            check.setSelected(ticked(command));
-            item = check;
-        } else {
-            item = new MenuItem(label(command), Icons.menu(command));
-        }
-        item.setOnAction(e -> run(command));
-        item.setDisable(unavailable(command) != null);
-        return MenuChord.on(item, command);
+        return AppMenus.commandRow(command, this::run, this::unavailable, this::ticked, this::label, this::warn);
     }
 
     /** What a menu calls {@code command} now: its label, but for full screen while in it. */
@@ -1996,7 +2061,7 @@ public final class ViewerWindow {
         return command == Command.FULL_SCREEN && stage.isFullScreen() ? tr("viewer.leaveFullScreen") : command.label();
     }
 
-    /** Whether a setting or panel the Mac menus tick ({@link MacMenus#TICKED}) is on. */
+    /** Whether a setting or panel the Mac menus tick ({@link AppMenus#TICKED}) is on. */
     private boolean ticked(Command command) {
         Sorting sorting = settings.sorting();
         return switch (command) {

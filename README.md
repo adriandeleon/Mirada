@@ -57,8 +57,9 @@ and the [FAQ](https://mirada-project.dev/docs/faq). What changed in each release
   ([properties](https://mirada-project.dev/docs/properties)).
 - **Rename, Move to Trash, Copy, Show in Folder, a slideshow**, and full screen
   ([files](https://mirada-project.dev/docs/files), [viewing](https://mirada-project.dev/docs/viewing)).
-- **Native on each platform**: a header bar on Linux, a menu bar and Finder's and Preview's keys on
-  macOS, the Recycle Bin and the system's accent colour on Windows.
+- **The same on every OS, native where it counts**: the menus in the title bar on Windows and Linux
+  and in the menu bar on macOS, Finder's and Preview's keys on a Mac, the Recycle Bin on Windows, and
+  the system's accent colour everywhere.
 
 ## Installing it
 

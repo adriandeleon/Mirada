@@ -34,11 +34,9 @@ final class Icons {
     static final String LEAVE_FULL_SCREEN = "M4 14 H10 V20 M20 10 H14 V4 M14 10 L21 3 M3 21 L10 14";
     static final String ROTATE = "M20 4 V9 H15 M20 9 A8.5 8.5 0 1 0 20.5 14";
     static final String INFO = "M12 3 A9 9 0 1 1 11.99 3 Z M12 11 V16.5 M12 7.5 V7.6";
-    /** A question mark in a circle: the Help submenu, which runs no command of its own (MENU-14). */
-    static final String HELP =
-            "M12 3 A9 9 0 1 1 11.99 3 Z M9.5 9.5 Q9.5 7 12 7 Q14.5 7 14.5 9.3 Q14.5 11 12 12 V13.5 M12 16.5 V16.6";
-
+    /** Three lines: the fallback for an icon button whose command has no glyph of its own. */
     static final String MENU = "M4 6.5 H20 M4 12 H20 M4 17.5 H20";
+
     static final String PREVIOUS = "M15 18 L9 12 L15 6";
     static final String NEXT = "M9 18 L15 12 L9 6";
     /** Previous and next with the thumbnails down the side, where the folder runs top to bottom. */
@@ -100,6 +98,10 @@ final class Icons {
     static final String BOOKMARKS = "M4 3.5 H10.5 V14 L7.25 11.5 L4 14 Z M14 6 H20 M14 10.5 H20 M4 18.5 H20";
     /** A mark taken off: the bookmark with a stroke through it, not the trash a file goes to. */
     static final String REMOVE_MARK = "M6.5 3.5 H17.5 V20.5 L12 16 L6.5 20.5 Z M9.5 10 H14.5";
+    /** A door with an arrow leaving it: Quit. */
+    static final String QUIT = "M10 4 H5 V20 H10 M15 8 L19 12 L15 16 M19 12 H9";
+    /** A window with its title row ruled off: the menu bar in the title bar. */
+    static final String TITLE_BAR = "M3 5 H21 V19 H3 Z M3 9 H21 M6 7 H9";
     /** A tick in a circle: the Pauta window, how fully Mirada meets its guidelines. */
     static final String PAUTA = "M12 3 A9 9 0 1 1 11.99 3 Z M8 12.5 L11 15.5 L16.5 9";
     /** About Mirada: an eye, the app's name ("a look"). */
@@ -166,6 +168,8 @@ final class Icons {
             case OPEN_FOLDER -> FOLDER_OPEN;
             case OPEN_RECENT -> CLOCK;
             case CLOSE -> CLOSE;
+            case QUIT -> QUIT;
+            case TITLE_BAR_MENUS -> TITLE_BAR;
             case PALETTE -> PROMPT;
             case DOCUMENTATION -> BOOK;
             case STATUS_BAR -> STATUS_BAR;

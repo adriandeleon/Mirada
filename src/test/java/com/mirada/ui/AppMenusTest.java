@@ -20,10 +20,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class MacMenusTest {
+class AppMenusTest {
 
     /**
-     * Every viewer command is in a menu once, but About and Settings (the app menu's), About's links
+     * Every viewer command is in a menu once, on every OS, but About's links
      * and Copy Details (About's button), the Pauta window's links and Copy as text, each setting's
      * own (the Settings window's), and Escape and panning, which are keys. The editor's tools and the Bookmarks
      * window's are their own windows'.
@@ -31,14 +31,12 @@ class MacMenusTest {
     @Test
     void theMenusHoldTheViewersCommandsOnce() {
         List<Command> inMenus = new ArrayList<>();
-        for (MacMenus.Heading heading : MacMenus.HEADINGS) heading.groups().forEach(inMenus::addAll);
+        for (AppMenus.Heading heading : AppMenus.HEADINGS) heading.groups().forEach(inMenus::addAll);
         Set<Command> expected = new HashSet<>();
         for (Command command : Command.values()) {
             if (command.context() == Command.Context.VIEWER) expected.add(command);
         }
         expected.removeAll(Set.of(
-                Command.ABOUT,
-                Command.SETTINGS,
                 Command.COPY_DETAILS,
                 Command.HOME_PAGE,
                 Command.RELEASES,
@@ -64,8 +62,8 @@ class MacMenusTest {
     void aRowsChordIsInItsTitle() {
         assertEquals(
                 "Rotate Right   " + Command.ROTATE_CLOCKWISE.chord().getDisplayText(),
-                MacMenus.title("Rotate Right", Command.ROTATE_CLOCKWISE));
-        assertEquals("Sort by Name", MacMenus.title("Sort by Name", Command.SORT_BY_NAME));
+                AppMenus.title("Rotate Right", Command.ROTATE_CLOCKWISE));
+        assertEquals("Sort by Name", AppMenus.title("Sort by Name", Command.SORT_BY_NAME));
     }
 
     /** No key equivalents (MENU-02), no icons, and every bound command's chord shown (MENU-15). */
@@ -74,7 +72,7 @@ class MacMenusTest {
     void theBarHasNoAcceleratorsAndShowsEveryChord() throws Exception {
         FxTestSupport.start();
         CompletableFuture<MenuBar> built = new CompletableFuture<>();
-        Platform.runLater(() -> built.complete(MacMenus.build(c -> {}, c -> null, c -> false, Command::label)));
+        Platform.runLater(() -> built.complete(AppMenus.system(c -> {}, c -> null, c -> false, Command::label)));
         MenuBar bar = built.get(10, TimeUnit.SECONDS);
         for (Menu menu : bar.getMenus()) {
             for (MenuItem item : menu.getItems()) {
@@ -87,13 +85,35 @@ class MacMenusTest {
             }
         }
     }
-    /** Help opens with the palette, then the documentation (DOCS-06, DOCS-07, Pauta 4.0.1). */
+    /**
+     * Help's rows in Pauta's order (DOCS-06, DOCS-07, DOCS-08, ABOUT-01): Command Palette,
+     * Documentation, the keyboard reference, Check for Updates, Message Log, Debug Log, Report a
+     * Problem, Pauta Conformance, About last. Each log's own commands follow it.
+     */
     @Test
-    void helpPutsTheDocumentationRightAfterThePalette() {
-        MacMenus.Heading help = MacMenus.HEADINGS.getLast();
+    void helpHoldsItsRowsInPautasOrderWithAboutLast() {
+        AppMenus.Heading help = AppMenus.HEADINGS.getLast();
         assertEquals("Help", help.title());
-        assertEquals(
-                List.of(Command.PALETTE, Command.DOCUMENTATION),
-                help.groups().getFirst().subList(0, 2));
+        List<Command> rows = help.groups().stream().flatMap(List::stream).toList();
+        List<Command> order = List.of(
+                Command.PALETTE,
+                Command.DOCUMENTATION,
+                Command.SHORTCUTS,
+                Command.CHECK_FOR_UPDATES,
+                Command.MESSAGE_LOG,
+                Command.DEBUG_LOG,
+                Command.REPORT_PROBLEM,
+                Command.PAUTA,
+                Command.ABOUT);
+        assertEquals(order, rows.stream().filter(order::contains).toList());
+        assertEquals(Command.ABOUT, rows.getLast());
+    }
+
+    /** WIN-14: the File menu ends with Quit, on every OS. */
+    @Test
+    void fileEndsWithQuit() {
+        AppMenus.Heading file = AppMenus.HEADINGS.getFirst();
+        assertEquals("File", file.title());
+        assertEquals(Command.QUIT, file.groups().getLast().getLast());
     }
 }

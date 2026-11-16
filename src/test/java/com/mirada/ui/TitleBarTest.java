@@ -3,22 +3,29 @@ package com.mirada.ui;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TitleBarTest {
 
+    /** WIN-03: the menus in the title bar by default; a Mac's header holds none, and is always drawn. */
     @Test
-    void aMacCentresTheTitle() {
-        assertEquals(new TitleBar.Layout(false), TitleBar.Layout.of("Mac OS X"));
+    void theWindowDrawsItsTitleBarWhereItCanAndTheSettingSays() {
+        assertTrue(TitleBar.usesHeaderBar(false, true, true), "Windows and Linux, by default");
+        assertFalse(TitleBar.usesHeaderBar(false, false, true), "the setting off: the system's title bar");
+        assertTrue(TitleBar.usesHeaderBar(true, false, true), "a Mac's header, which holds no menus");
+        assertFalse(TitleBar.usesHeaderBar(false, true, false), "never where the platform cannot");
+        assertFalse(TitleBar.usesHeaderBar(true, true, false));
     }
 
+    /** OS-01: the setting is on every OS, and says why where it can do nothing. */
     @Test
-    void windowsPutsTheTitleOnTheLeft() {
-        assertEquals(new TitleBar.Layout(true), TitleBar.Layout.of("Windows 11"));
-    }
-
-    @Test
-    void linuxIsGnomes() {
-        assertEquals(new TitleBar.Layout(false), TitleBar.Layout.of("Linux"));
+    void theSettingSaysWhyWhereItCanDoNothing() {
+        assertNull(TitleBar.titleBarMenusUnavailable(false, true));
+        assertNotNull(TitleBar.titleBarMenusUnavailable(true, true));
+        assertNotNull(TitleBar.titleBarMenusUnavailable(false, false));
     }
 
     @Test

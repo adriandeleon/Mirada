@@ -62,7 +62,10 @@ enum Command {
     THUMBNAILS_AT_SIDE("view.thumbnailsAtSide", "vertical column filmstrip strip left layout"),
     THUMBNAIL_NAMES("view.thumbnailNames", "names list text filmstrip strip filenames"),
     THUMBNAIL_CAPTIONS("view.thumbnailCaptions", "captions labels titles filmstrip strip filenames"),
-    /** Leaves full screen, or on Linux closes the window: look, then go ({@link #escapeCloses}). */
+    /**
+     * Stops the slideshow or leaves full screen; with nothing to leave it does nothing, on every OS
+     * (OS-04): a stray press never loses the user's place.
+     */
     ESCAPE("window.escape", ""),
     SETTINGS("app.settings", "preferences options configure"),
     // One command for each setting that has no other (SET-06, Pauta 4.0.1): it flips the setting, or
@@ -78,6 +81,8 @@ enum Command {
     /** Settings' Default button beside the palette's keys (KBD-01): the keys it opens with at first. */
     RESET_PALETTE_KEYS("settings.resetPaletteKeys", "default shortcut keys bindings palette restore"),
     CHECK_DAILY("settings.checkForUpdatesDaily", "automatic update version network release"),
+    /** The menu bar in the title bar, or under the system's (WIN-03): takes effect at the next start. */
+    TITLE_BAR_MENUS("settings.titleBarMenus", "menu bar header title frame decorated window chrome"),
     /** Export Configuration (SET-12): the config folder as a timestamped zip. */
     EXPORT_CONFIG("config.export", "settings preferences backup save zip copy move"),
     /** Import Configuration (SET-12): the parts of an exported zip the user ticks. */
@@ -98,7 +103,9 @@ enum Command {
     OPEN("file.open", "file"),
     OPEN_FOLDER("file.openFolder", "directory browse"),
     OPEN_RECENT("file.openRecent", "recent history folders previous last"),
-    CLOSE("window.close", "quit exit"),
+    CLOSE("window.close", "exit"),
+    /** File → Quit (WIN-14): the one quit method, which the window's own close and macOS's Quit run too. */
+    QUIT("app.quit", "exit close leave"),
     /** Its keys are the user's ({@code palette.keys}, {@link PaletteChords}), on top of the keymap's. */
     PALETTE("palette.show", ""),
     /** Help → Documentation (DOCS-06): the user guide on the website, in the browser. */
@@ -379,7 +386,7 @@ enum Command {
                     PAUTA_RULES,
                     PAUTA_DOCS,
                     COPY_PAUTA -> tr("group.help");
-            case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, OPEN_FOLDER, OPEN_RECENT, CLOSE, PALETTE ->
+            case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, OPEN_FOLDER, OPEN_RECENT, CLOSE, QUIT, PALETTE ->
                 tr("group.mirada");
             case THEME,
                     LANGUAGE,
@@ -391,6 +398,7 @@ enum Command {
                     PALETTE_KEYS,
                     RESET_PALETTE_KEYS,
                     CHECK_DAILY,
+                    TITLE_BAR_MENUS,
                     EXPORT_CONFIG,
                     IMPORT_CONFIG -> tr("group.settings");
             case DOCUMENTATION -> tr("group.help");
@@ -413,15 +421,6 @@ enum Command {
                     BOOKMARKS_LIST_BOOKMARKED,
                     BOOKMARKS_LIST_NOTES -> tr("group.bookmarksWindow");
         };
-    }
-
-    /**
-     * Whether Escape, with nothing to leave, closes the window. GNOME's viewer does, and Linux keeps
-     * it; on macOS and Windows no viewer does, and a stray press would lose the user's place.
-     */
-    static boolean escapeCloses(String osName) {
-        String os = osName.toLowerCase(Locale.ROOT);
-        return !os.startsWith("mac") && !os.startsWith("windows");
     }
 
     static boolean isMac(String osName) {

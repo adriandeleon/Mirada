@@ -326,7 +326,8 @@ class CommandTest {
     void windowCommandsNeedTheShortcut() {
         assertEquals(Command.OPEN, key("C-o"));
         assertEquals(Command.CLOSE, key("C-w"));
-        assertEquals(Command.CLOSE, key("C-q"));
+        assertEquals(Command.QUIT, key("C-q"));
+        assertEquals(Command.QUIT, mac("Cmd-q"));
         assertEquals(Command.OPEN_FOLDER, key("C-S-f"));
         assertEquals(Command.OPEN_FOLDER, mac("Cmd-S-f"));
         // Ctrl+F alone is nothing; bare F is full screen, as is Ctrl-Cmd-F on a Mac.
@@ -509,13 +510,6 @@ class CommandTest {
     }
 
     @Test
-    void escapeClosesTheWindowOnlyOnLinux() {
-        assertTrue(Command.escapeCloses("Linux"));
-        assertFalse(Command.escapeCloses("Mac OS X"));
-        assertFalse(Command.escapeCloses("Windows 11"));
-    }
-
-    @Test
     void everyCommandHasAGroupAndTheShortcutsWindowListsEveryKey() {
         int keyed = 0;
         for (Command command : Command.values()) {
@@ -526,6 +520,17 @@ class CommandTest {
                 keyed,
                 ShortcutsWindow.grouped().values().stream().mapToInt(List::size).sum());
         assertEquals("Editor", Command.EDITOR_SAVE.group());
+    }
+
+    /** DOCS-08: the keyboard reference is searchable, by a command's name or by its key. */
+    @Test
+    void theShortcutsWindowFindsACommandByItsNameOrItsKey() {
+        assertTrue(ShortcutsWindow.matches(Command.ROTATE_CLOCKWISE, ""));
+        assertTrue(ShortcutsWindow.matches(Command.ROTATE_CLOCKWISE, "rotate"));
+        assertTrue(ShortcutsWindow.matches(Command.ROTATE_CLOCKWISE, " ROTATE "));
+        assertFalse(ShortcutsWindow.matches(Command.ROTATE_CLOCKWISE, "trash"));
+        String key = Command.MOVE_TO_TRASH.chord().getDisplayText();
+        assertTrue(ShortcutsWindow.matches(Command.MOVE_TO_TRASH, key), key);
     }
 
     @Test

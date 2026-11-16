@@ -123,6 +123,10 @@ final class SettingsCommands {
                                 ? tr("settings.propertiesOpenAtStart")
                                 : tr("settings.propertiesClosedAtStart"));
             }
+            case TITLE_BAR_MENUS -> {
+                settings.setTitleBarMenus(!settings.titleBarMenus());
+                say(settings.titleBarMenus() ? tr("settings.titleBarMenusOn") : tr("settings.titleBarMenusOff"));
+            }
             case CHECK_DAILY -> {
                 settings.setCheckForUpdates(!settings.checkForUpdates());
                 say(settings.checkForUpdates() ? tr("settings.checkForUpdatesOn") : tr("settings.checkForUpdatesOff"));

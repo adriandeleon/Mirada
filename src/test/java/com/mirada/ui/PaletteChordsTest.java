@@ -80,7 +80,7 @@ class PaletteChordsTest {
 
     @Test
     void theMacMenuShowsTheFirstKey() {
-        assertTrue(MacMenus.title("Command Palette", Command.PALETTE)
+        assertTrue(AppMenus.title("Command Palette", Command.PALETTE)
                 .endsWith("   " + PaletteChords.current().getFirst().getDisplayText()));
     }
 

@@ -10,6 +10,20 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Added
 
+- **The menus are in the title bar on Windows and Linux, as on a Mac's menu bar.** File, Edit,
+  Image, View, Go, Bookmarks and Help sit on the left of the window's top row, the same menus as
+  macOS's menu bar; F10 or Alt opens them from the keyboard in every keymap, and each row shows its
+  icon and its key. A row that cannot run now stays, greyed, and says why. Settings › General ›
+  **Menu bar in the title bar** (on by default, or **Menu Bar in the Title Bar** in the palette)
+  puts them under the system's title bar instead, from the next start. The ☰ menu is gone.
+- **Quit Mirada** (Ctrl+Q, ⌘Q on a Mac) ends File, and is in the palette; it asks first about an
+  edit not yet saved, as closing the window does.
+- **Help lists everything in one order**: Command Palette, Documentation, Keyboard Shortcuts,
+  Check for Updates, Message Log, Debug Log, Report a Problem, Pauta Conformance and About.
+- **Keyboard Shortcuts has a search field** that finds a command by its name or its key.
+- **More right-click menus.** A right-click on a thumbnail shows that image and opens its menu; the
+  Debug Log and the Message Log have Copy, Clear and their other commands on a right-click.
+
 - **Help › Pauta Conformance shows how far Mirada meets its guidelines.** Mirada now works toward
   [Pauta 6.1.0](https://pauta-project.dev/6.1.0/), the adl desktop apps guidelines, and says how
   fully it conforms (Partial for now) and lists each rule it does not meet yet, with one plain
@@ -123,6 +137,15 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
   without installing anything or needing root.
 
 ### Changed
+
+- **Escape no longer closes the window on Linux.** It stops a slideshow or leaves full screen, the
+  same on every system; Ctrl+W closes the window.
+- **The system's accent colour is followed on Linux too**, as on macOS and Windows, and the file
+  name stays in the middle of the title bar on Windows, as elsewhere.
+- **Menus look the same everywhere**: rounded cards with a soft shadow, taller rows, keys in one
+  column, and Move to Trash, Clear and Remove in red. The zoom menu's keys follow a keymap change.
+- **On a Mac, Settings in the application menu shows the keymap's key** for it, and no longer takes
+  ⌘, for itself under a keymap that binds another.
 
 - **About links the website, the source code and releases, and colours the update check.** Its
   links are now the website, *Source code and releases*, this version's release notes, the Pauta

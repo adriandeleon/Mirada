@@ -17,14 +17,6 @@
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
-      "rule": "OS-04",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/same-on-every-os/#os-04",
-      "kind": "pending",
-      "reason": "A few things still differ by system, such as Escape closing the window on Linux only.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
       "rule": "PAUTA-13",
       "level": "MUST",
       "url": "https://pauta-project.dev/6.1.0/conformance/#pauta-13",
@@ -78,30 +70,6 @@
       "url": "https://pauta-project.dev/6.1.0/documentation/#docs-04",
       "kind": "pending",
       "reason": "The website does not yet generate its roadmap from the app or check the keys and commands it quotes.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "DOCS-06",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/documentation/#docs-06",
-      "kind": "pending",
-      "reason": "On Windows and Linux, Help has no Documentation row; it is in the main menu beside it.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "DOCS-07",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/documentation/#docs-07",
-      "kind": "pending",
-      "reason": "On Windows and Linux, the Help menu's rows are not yet in the usual order.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "DOCS-08",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/documentation/#docs-08",
-      "kind": "pending",
-      "reason": "The keyboard reference is not in the Help menu on Windows and Linux, and it has no search field.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
@@ -174,14 +142,6 @@
       "url": "https://pauta-project.dev/6.1.0/performance/#perf-17",
       "kind": "pending",
       "reason": "The stylesheets are not shipped precompiled, which would start the window a little sooner.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "KBD-04",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/keyboard/#kbd-04",
-      "kind": "pending",
-      "reason": "The main menu does not grey out commands that cannot run; only the palette does.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
@@ -281,14 +241,6 @@
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
-      "rule": "WIN-03",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/window-shell/#win-03",
-      "kind": "pending",
-      "reason": "On Windows and Linux the menus are behind a button in the title bar, not a menu bar.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
       "rule": "WIN-04",
       "level": "SHOULD",
       "url": "https://pauta-project.dev/6.1.0/window-shell/#win-04",
@@ -326,22 +278,6 @@
       "url": "https://pauta-project.dev/6.1.0/window-shell/#win-12",
       "kind": "pending",
       "reason": "There is no setting yet to make the whole interface larger or smaller.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "WIN-14",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/window-shell/#win-14",
-      "kind": "pending",
-      "reason": "There is no Quit command yet; Close closes the window.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "WIN-15",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/window-shell/#win-15",
-      "kind": "pending",
-      "reason": "On macOS the Settings item in the application menu does not show the current keymap's key.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
@@ -433,67 +369,11 @@
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
-      "rule": "MENU-15",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/menus/#menu-15",
-      "kind": "pending",
-      "reason": "The zoom drop-down's rows keep their old keys after you change your keymap.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
       "rule": "MENU-16",
       "level": "MUST",
       "url": "https://pauta-project.dev/6.1.0/menus/#menu-16",
       "kind": "pending",
       "reason": "Menus do not grow and shrink with an interface zoom, since there is none yet.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "MENU-18",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/menus/#menu-18",
-      "kind": "pending",
-      "reason": "Menu rows are not yet spaced like the other apps' menus.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "MENU-02",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/menus/#menu-02",
-      "kind": "pending",
-      "reason": "On Windows and Linux the menus are not yet an in-window menu bar.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "MENU-17",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/menus/#menu-17",
-      "kind": "pending",
-      "reason": "On Windows and Linux there is no menu bar to reach with F10 or Alt.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "MENU-05",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/menus/#menu-05",
-      "kind": "pending",
-      "reason": "A right-click on a thumbnail opens the strip's menu, not one for that image.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "MENU-10",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/menus/#menu-10",
-      "kind": "pending",
-      "reason": "A right-click on a thumbnail does not select it first.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "MENU-12",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/menus/#menu-12",
-      "kind": "pending",
-      "reason": "Rows such as Move to Trash are not shown in red as dangerous.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
@@ -662,14 +542,6 @@
       "url": "https://pauta-project.dev/6.1.0/templates/welcome/#welc-02",
       "kind": "pending",
       "reason": "The empty window shows the key for Open but not for its other actions.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "ABOUT-01",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/templates/about/#about-01",
-      "kind": "pending",
-      "reason": "The Help menus have no About row; About is beside Help in the main menu and in the application menu on macOS.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {

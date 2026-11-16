@@ -69,6 +69,7 @@ public final class Settings {
     public static final String DEFAULT_KEYMAP = "cua";
 
     static final String STATUS_BAR = "window.statusBar";
+    static final String TITLE_BAR_MENUS = "window.titleBarMenus";
     static final String CHECK_FOR_UPDATES = "updates.check";
     static final String LAST_UPDATE_CHECK = "updates.lastCheck";
 
@@ -104,6 +105,7 @@ public final class Settings {
     private String keymap = DEFAULT_KEYMAP;
     private Map<String, String> keys = Map.of();
     private boolean statusBar = true;
+    private boolean titleBarMenus = true;
     private boolean checkForUpdates = true;
     private long lastUpdateCheck;
 
@@ -250,6 +252,8 @@ public final class Settings {
         keys = keysOf(properties);
         statusBar =
                 Boolean.parseBoolean(properties.getProperty(STATUS_BAR, "true").trim());
+        titleBarMenus = Boolean.parseBoolean(
+                properties.getProperty(TITLE_BAR_MENUS, "true").trim());
         checkForUpdates = Boolean.parseBoolean(
                 properties.getProperty(CHECK_FOR_UPDATES, "true").trim());
         lastUpdateCheck = millisOf(properties.getProperty(LAST_UPDATE_CHECK));
@@ -618,6 +622,20 @@ public final class Settings {
         changed();
     }
 
+    /**
+     * Whether the menu bar sits in the window's title bar (WIN-03), on by default; off, the window
+     * keeps the system's title bar and the menu bar goes under it. Read as the window is made: the
+     * window's style cannot change once it is shown, so a change takes effect at the next start.
+     */
+    public boolean titleBarMenus() {
+        return titleBarMenus;
+    }
+
+    public void setTitleBarMenus(boolean value) {
+        titleBarMenus = value;
+        changed();
+    }
+
     /** Whether Mirada asks GitHub, once a day, whether a newer release is out (DIAG-05). */
     public boolean checkForUpdates() {
         return checkForUpdates;
@@ -703,6 +721,7 @@ public final class Settings {
         properties.setProperty(KEYMAP, keymap);
         keys.forEach((id, chords) -> properties.setProperty(KEYS + id, chords));
         properties.setProperty(STATUS_BAR, Boolean.toString(statusBar));
+        properties.setProperty(TITLE_BAR_MENUS, Boolean.toString(titleBarMenus));
         properties.setProperty(CHECK_FOR_UPDATES, Boolean.toString(checkForUpdates));
         if (lastUpdateCheck > 0) properties.setProperty(LAST_UPDATE_CHECK, Long.toString(lastUpdateCheck));
         return properties;

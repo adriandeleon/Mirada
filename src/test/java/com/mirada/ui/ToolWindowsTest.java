@@ -17,11 +17,11 @@ import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -47,6 +47,8 @@ import static com.mirada.ui.FxTestSupport.call;
 import static com.mirada.ui.FxTestSupport.fx;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -400,19 +402,25 @@ class ToolWindowsTest {
     }
 
     @Test
-    void theHeadersButtonsAndMenuRunTheirCommands() throws Exception {
+    void theHeadersButtonsAndMenuBarRunTheirCommands() throws Exception {
         SimpleBooleanProperty info = new SimpleBooleanProperty(false);
-        SimpleBooleanProperty thumbnails = new SimpleBooleanProperty(false);
-        SimpleBooleanProperty statusBar = new SimpleBooleanProperty(true);
-        TitleBar bar = call(() -> new TitleBar(owner, ran::add, info, thumbnails, statusBar));
+        TitleBar bar = call(() -> new TitleBar(owner, ran::add, info, false));
+        List<String> said = new ArrayList<>();
+        MenuBar menus = call(() -> AppMenus.inWindow(
+                ran::add,
+                command -> command == Command.COPY ? "The image is still loading." : null,
+                command -> command == Command.INFO,
+                Command::label,
+                said::add));
         fx(() -> {
             owner.setScene(new Scene(new javafx.scene.layout.BorderPane(null, bar.node(), null, null, null)));
             owner.show();
-            bar.finish();
+            bar.finish(menus);
             bar.setTitle("a.png");
             bar.setFolder(dir);
             bar.setImageShowing(true);
         });
+        assertSame(menus, call(bar::menuBar));
         ButtonBase rotate = FxTestSupport.field(bar, "rotate");
         fx(rotate::fire);
         fx(() -> {
@@ -438,15 +446,39 @@ class ToolWindowsTest {
             rotate.fire();
         });
         assertEquals(List.of(Command.ROTATE_CLOCKWISE, Command.ROTATE_COUNTERCLOCKWISE), ran);
-        MenuButton menu = FxTestSupport.field(bar, "menu");
-        List<MenuItem> items = call(() -> flatten(menu.getItems()));
-        assertFalse(items.isEmpty());
+        // The in-window bar: every row a CustomMenuItem of icon, title, spacer and chord, with no
+        // accelerator (MENU-02), its chord the keymap's (MENU-15).
         ran.clear();
-        for (MenuItem item : items) {
-            if (item instanceof javafx.scene.control.SeparatorMenuItem || item instanceof Menu) continue;
-            fx(item::fire);
+        for (Menu menu : menus.getMenus()) {
+            fx(() -> menu.getOnShowing().handle(new Event(Menu.ON_SHOWING)));
+            for (MenuItem item : menu.getItems()) {
+                if (item instanceof javafx.scene.control.SeparatorMenuItem) continue;
+                assertTrue(item instanceof javafx.scene.control.CustomMenuItem, item.toString());
+                assertNull(item.getAccelerator());
+                Command command = (Command) item.getUserData();
+                javafx.scene.layout.HBox row =
+                        (javafx.scene.layout.HBox) ((javafx.scene.control.CustomMenuItem) item).getContent();
+                javafx.scene.control.Label chord =
+                        (javafx.scene.control.Label) row.getChildren().get(3);
+                KeyCombination key = command.chord();
+                assertEquals(key == KeyCombination.NO_MATCH ? "" : key.getDisplayText(), chord.getText());
+                if (command == Command.COPY) {
+                    assertTrue(item.getStyleClass().contains("unavailable"), "greyed, and says why (KBD-04)");
+                    assertEquals("The image is still loading.", row.getAccessibleHelp());
+                }
+                if (command == Command.INFO) {
+                    javafx.scene.control.Label title =
+                            (javafx.scene.control.Label) row.getChildren().get(1);
+                    assertTrue(title.getText().startsWith(AppMenus.TICK), "ticked: " + title.getText());
+                }
+                if (AppMenus.DESTRUCTIVE.contains(command))
+                    assertTrue(item.getStyleClass().contains("danger"));
+                fx(item::fire);
+            }
         }
-        assertTrue(ran.contains(Command.OPEN) && ran.contains(Command.PALETTE), ran.toString());
+        assertTrue(ran.contains(Command.OPEN) && ran.contains(Command.QUIT), ran.toString());
+        assertFalse(ran.contains(Command.COPY), "a row that cannot run does not");
+        assertEquals(List.of("The image is still loading."), said);
         fx(() ->
                 bar.fullScreen((javafx.scene.layout.BorderPane) owner.getScene().getRoot(), true));
         fx(() ->
@@ -454,24 +486,15 @@ class ToolWindowsTest {
         fx(() -> bar.setFolder(null));
     }
 
-    private static List<MenuItem> flatten(List<MenuItem> items) {
-        List<MenuItem> all = new ArrayList<>();
-        for (MenuItem item : items) {
-            all.add(item);
-            if (item instanceof Menu menu) all.addAll(flatten(menu.getItems()));
-        }
-        return all;
-    }
-
     @Test
     void theMacsMenuBarRunsCommandsAndGreysAndTicksThemWhileOpen() throws Exception {
-        MenuBar bar = call(() -> MacMenus.build(
+        MenuBar bar = call(() -> AppMenus.system(
                 ran::add,
                 command -> command == Command.COPY ? "The image is still loading." : null,
                 command -> command == Command.INFO,
                 command -> command == Command.FULL_SCREEN ? "Leave Full Screen" : command.label()));
         List<String> headings = bar.getMenus().stream().map(Menu::getText).toList();
-        assertEquals(MacMenus.HEADINGS.stream().map(MacMenus.Heading::title).toList(), headings);
+        assertEquals(AppMenus.HEADINGS.stream().map(AppMenus.Heading::title).toList(), headings);
         for (Menu menu : bar.getMenus()) {
             fx(() -> menu.getOnShowing().handle(new Event(Menu.ON_SHOWING)));
             for (MenuItem item : menu.getItems()) {

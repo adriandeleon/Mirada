@@ -2,7 +2,6 @@ package com.mirada.ui;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.Locale;
 import java.util.Objects;
 
 import javafx.application.Application;
@@ -21,10 +20,10 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * AtlantaFX's Cupertino pair: the system's light or dark setting, followed as it changes, or one of
- * them always, as the settings say. On macOS and Windows the accent is the system's too ({@link
- * Accent}), followed as it changes: a stylesheet of its own, a data URL, kept on every window's
- * scene. Popups copy their owner's stylesheets as they open. Linux keeps Cupertino's blue: what
- * JavaFX reads there is the GTK theme's selection colour, not a choice the user made.
+ * them always, as the settings say. The accent is the system's too ({@link Accent}), on every OS alike
+ * (OS-04), followed as it changes: a stylesheet of its own, a data URL, kept on every window's scene.
+ * Popups copy their owner's stylesheets as they open. On Linux JavaFX reads the GTK theme's selection
+ * colour; where the platform reports none, Cupertino's blue stays.
  *
  * <p>Every window's scene is also told the scheme chosen ({@code Scene.Preferences.colorScheme}):
  * JavaFX draws an extended window's minimize, maximize and close buttons from it, and a decorated
@@ -33,8 +32,6 @@ import org.jspecify.annotations.Nullable;
  * header bar.
  */
 public final class Theme {
-
-    private static final boolean FOLLOWS_ACCENT = followsAccent(System.getProperty("os.name", ""));
 
     private static Settings.ThemeChoice choice = Settings.ThemeChoice.SYSTEM;
     private static boolean following;
@@ -52,9 +49,7 @@ public final class Theme {
         if (!following) {
             following = true;
             Platform.getPreferences().colorSchemeProperty().addListener((obs, was, now) -> refresh());
-            if (FOLLOWS_ACCENT) {
-                Platform.getPreferences().accentColorProperty().addListener((obs, was, now) -> refresh());
-            }
+            Platform.getPreferences().accentColorProperty().addListener((obs, was, now) -> refresh());
             // A window joins the list as it is shown, before its first frame is drawn.
             Window.getWindows().addListener((ListChangeListener<Window>) change -> {
                 while (change.next()) {
@@ -73,18 +68,13 @@ public final class Theme {
         };
     }
 
-    static boolean followsAccent(String osName) {
-        String os = osName.toLowerCase(Locale.ROOT);
-        return os.startsWith("mac") || os.startsWith("windows");
-    }
-
     private static void refresh() {
         boolean dark = dark(choice, Platform.getPreferences().getColorScheme());
         atlantafx.base.theme.Theme theme = dark ? new CupertinoDark() : new CupertinoLight();
         Application.setUserAgentStylesheet(theme.getUserAgentStylesheet());
         scheme = dark ? ColorScheme.DARK : ColorScheme.LIGHT;
         String old = accentSheet;
-        if (FOLLOWS_ACCENT) accentSheet = accent(Platform.getPreferences().getAccentColor(), dark);
+        accentSheet = accent(Platform.getPreferences().getAccentColor(), dark);
         for (Window window : Window.getWindows()) restyle(window, Objects.equals(old, accentSheet) ? null : old);
     }
 

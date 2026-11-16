@@ -4,11 +4,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -103,6 +105,17 @@ final class MessageLogView {
         card.addEventFilter(KeyEvent.KEY_PRESSED, this::onKey);
         messages.addListener(() -> {
             if (isShowing()) refresh();
+        });
+    }
+
+    /**
+     * The list's right-click menu (MENU-05): Copy and Clear, the log's commands. A right-click on a
+     * row selects it first (ListView's own), so Copy copies what was clicked (MENU-10).
+     */
+    void setMenu(Supplier<ContextMenu> menu) {
+        list.setOnContextMenuRequested(e -> {
+            Popups.show(menu.get(), list, e.getScreenX(), e.getScreenY());
+            e.consume();
         });
     }
 
