@@ -154,7 +154,7 @@ final class SettingsWindow {
         paletteKeys.setText(shownKeys(settings));
         paletteKeys.getStyleClass().add("shortcut-key");
         Button defaultKeys = new Button(tr("settings.defaultKeys"));
-        defaultKeys.setOnAction(e -> settings.setPaletteKeys(Settings.defaultPaletteKeys(Command.MAC)));
+        defaultKeys.setOnAction(e -> run.accept(Command.RESET_PALETTE_KEYS));
         addKey.setOnAction(e -> recordKey());
         HBox keyButtons = new HBox(6, addKey, defaultKeys);
         keyButtons.setAlignment(Pos.CENTER_RIGHT);

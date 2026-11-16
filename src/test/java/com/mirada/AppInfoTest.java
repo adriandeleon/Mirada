@@ -37,7 +37,7 @@ class AppInfoTest {
 
     @Test
     void theLinksAreTheRepositorysOwn() {
-        assertTrue(AppInfo.NEW_ISSUE_URL.startsWith(AppInfo.HOMEPAGE));
+        assertTrue(AppInfo.NEW_ISSUE_URL.startsWith(AppInfo.REPOSITORY));
         assertTrue(AppInfo.LATEST_RELEASE_API.endsWith("/repos/adriandeleon/Mirada/releases/latest"));
     }
 }

@@ -97,7 +97,8 @@ final class MacMenus {
                                     Command.COPY_DEBUG_LOG,
                                     Command.EXPORT_DEBUG_LOG,
                                     Command.CLEAR_DEBUG_LOG),
-                            List.of(Command.REPORT_PROBLEM))));
+                            List.of(Command.REPORT_PROBLEM),
+                            List.of(Command.PAUTA))));
 
     /** The commands that are a setting or a panel, shown with a tick when on. */
     static final Set<Command> TICKED = Set.of(

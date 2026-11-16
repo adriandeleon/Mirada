@@ -64,6 +64,7 @@ import javafx.stage.WindowEvent;
 import javafx.util.Duration;
 
 import com.mirada.AppInfo;
+import com.mirada.PautaConformance;
 import com.mirada.diagnostics.DebugLog;
 import com.mirada.diagnostics.MessageLog;
 import com.mirada.edit.Edit;
@@ -141,6 +142,8 @@ public final class ViewerWindow {
     private final Consumer<String> openLink;
     /** Built the first time each is opened. */
     private @Nullable AboutWindow about;
+
+    private @Nullable PautaWindow pautaWindow;
 
     private @Nullable SettingsWindow settingsWindow;
     /** The settings' own commands and Export and Import (SET-06, SET-12), made when first run. */
@@ -394,6 +397,7 @@ public final class ViewerWindow {
             FILES.execute(() -> {
                 Keybindings.preload(keymap);
                 AppInfo.runtime();
+                PautaConformance.exceptions();
             });
         });
         // The marks are not start-up's: read once the image is up, then shown on it.
@@ -996,12 +1000,20 @@ public final class ViewerWindow {
                     HIDE_CONTROLS_AFTER,
                     SLIDESHOW_SPEED,
                     PALETTE_KEYS,
+                    RESET_PALETTE_KEYS,
                     CHECK_DAILY,
                     EXPORT_CONFIG,
                     IMPORT_CONFIG -> settingsCommands().run(command);
             case ABOUT -> aboutWindow().show(stage);
             case SHORTCUTS -> shortcutsWindow().show(stage);
             case DOCUMENTATION -> openLink.accept(AppInfo.DOCS_URL);
+            case HOME_PAGE -> openLink.accept(AppInfo.HOMEPAGE);
+            case RELEASES -> openLink.accept(AppInfo.RELEASES_URL);
+            case RELEASE_NOTES -> openLink.accept(AppInfo.releaseNotesUrl());
+            case PAUTA -> pautaWindow().show(stage);
+            case PAUTA_RULES -> openLink.accept(AppInfo.pautaUrl());
+            case PAUTA_DOCS -> openLink.accept(AppInfo.pautaDocsUrl());
+            case COPY_PAUTA -> copyText(PautaWindow.markdown(PautaConformance.exceptions()), tr("viewer.copiedPauta"));
             case PAN_LEFT -> viewport.pan(-PAN_STEP, 0);
             case PAN_RIGHT -> viewport.pan(PAN_STEP, 0);
             case PAN_UP -> viewport.pan(0, -PAN_STEP);
@@ -1104,6 +1116,13 @@ public final class ViewerWindow {
                     SHORTCUTS,
                     DOCUMENTATION,
                     ABOUT,
+                    HOME_PAGE,
+                    RELEASES,
+                    RELEASE_NOTES,
+                    PAUTA,
+                    PAUTA_RULES,
+                    PAUTA_DOCS,
+                    COPY_PAUTA,
                     CLOSE,
                     BOOKMARK,
                     BOOKMARK_FOLDER,
@@ -1129,6 +1148,7 @@ public final class ViewerWindow {
                     HIDE_CONTROLS_AFTER,
                     SLIDESHOW_SPEED,
                     PALETTE_KEYS,
+                    RESET_PALETTE_KEYS,
                     CHECK_DAILY,
                     EXPORT_CONFIG -> true;
             default -> false;
@@ -1741,8 +1761,18 @@ public final class ViewerWindow {
     private AboutWindow aboutWindow() {
         AboutWindow made = about;
         if (made == null) {
-            made = new AboutWindow(settings.file(), openLink, updates, () -> run(Command.COPY_DETAILS), stylesheet());
+            made = new AboutWindow(settings.file(), this::run, updates, stylesheet());
             about = made;
+            toolWindows.add(made.stage());
+        }
+        return made;
+    }
+
+    private PautaWindow pautaWindow() {
+        PautaWindow made = pautaWindow;
+        if (made == null) {
+            made = new PautaWindow(PautaConformance.exceptions(), this::run, openLink, stylesheet());
+            pautaWindow = made;
             toolWindows.add(made.stage());
         }
         return made;

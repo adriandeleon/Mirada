@@ -128,6 +128,10 @@ final class SettingsCommands {
                 say(settings.checkForUpdates() ? tr("settings.checkForUpdatesOn") : tr("settings.checkForUpdatesOff"));
             }
             case PALETTE_KEYS -> settingsWindow.get().recordPaletteKey(stage);
+            case RESET_PALETTE_KEYS -> {
+                settings.setPaletteKeys(Settings.defaultPaletteKeys(Command.MAC));
+                say(tr("viewer.paletteKeysReset"));
+            }
             case EXPORT_CONFIG -> exportConfiguration();
             case IMPORT_CONFIG -> importConfiguration();
             default -> {

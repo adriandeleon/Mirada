@@ -100,6 +100,8 @@ final class Icons {
     static final String BOOKMARKS = "M4 3.5 H10.5 V14 L7.25 11.5 L4 14 Z M14 6 H20 M14 10.5 H20 M4 18.5 H20";
     /** A mark taken off: the bookmark with a stroke through it, not the trash a file goes to. */
     static final String REMOVE_MARK = "M6.5 3.5 H17.5 V20.5 L12 16 L6.5 20.5 Z M9.5 10 H14.5";
+    /** A tick in a circle: the Pauta window, how fully Mirada meets its guidelines. */
+    static final String PAUTA = "M12 3 A9 9 0 1 1 11.99 3 Z M8 12.5 L11 15.5 L16.5 9";
     /** About Mirada: an eye, the app's name ("a look"). */
     static final String ABOUT = "M2.5 12 Q12 3.5 21.5 12 Q12 20.5 2.5 12 Z M12 9.25 A2.75 2.75 0 1 1 11.99 9.25 Z";
 
@@ -169,7 +171,13 @@ final class Icons {
             case STATUS_BAR -> STATUS_BAR;
             case MESSAGE_LOG -> MESSAGES;
             case DEBUG_LOG -> LOG;
-            case COPY_MESSAGES, COPY_DEBUG_LOG, COPY_DETAILS -> COPY;
+            case COPY_MESSAGES, COPY_DEBUG_LOG, COPY_DETAILS, COPY_PAUTA -> COPY;
+            case HOME_PAGE -> LANGUAGE;
+            case RELEASE_NOTES -> LOG;
+            case RELEASES -> DOWNLOAD;
+            case PAUTA -> PAUTA;
+            case PAUTA_RULES, PAUTA_DOCS -> BOOK;
+            case RESET_PALETTE_KEYS -> UNDO;
             case CLEAR_MESSAGES, CLEAR_DEBUG_LOG -> TRASH;
             case EXPORT_DEBUG_LOG, OPEN_RELEASE -> DOWNLOAD;
             case REPORT_PROBLEM -> WARNING;

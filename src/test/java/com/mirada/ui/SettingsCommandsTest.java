@@ -76,6 +76,18 @@ class SettingsCommandsTest {
         }
     }
 
+    /** KBD-01: Settings' Default button for the palette's keys is a command, in the palette too. */
+    @Test
+    void defaultCommandPaletteKeysPutsThemBack() throws Exception {
+        try (WindowFixture window = open()) {
+            Settings settings = window.settings;
+            fx(() -> settings.setPaletteKeys("f3"));
+            window.run(Command.RESET_PALETTE_KEYS);
+            assertEquals(Settings.defaultPaletteKeys(Command.MAC), settings.paletteKeys());
+            assertEquals("The palette opens with its default keys again", window.lastSaid());
+        }
+    }
+
     @Test
     void theChoicesAreAskedInThePaletteWithTheOneInUseUnderTheCursor() throws Exception {
         try (WindowFixture window = open()) {

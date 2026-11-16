@@ -29,6 +29,7 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
 import com.mirada.AppInfo;
+import com.mirada.PautaConformance;
 import com.mirada.diagnostics.MessageLog;
 import com.mirada.report.Redactor;
 import com.mirada.settings.Settings;
@@ -120,43 +121,49 @@ class ToolWindowsTest {
                 () -> 0L);
     }
 
+    /** KBD-01, ABOUT-02, ABOUT-09, PWIN-04: every link and button in About runs a command. */
     @Test
-    void aboutsLinksOpenTheirPagesAndCopyDetailsCopiesTheEnvironment() throws Exception {
+    void aboutsLinksAndButtonsRunTheirCommands() throws Exception {
         UpdateCoordinator updates =
                 updates(new UpdateService.Outcome(new ReleaseInfo("99.0.0", "https://example.org/release"), null));
-        AboutWindow about = call(() -> new AboutWindow(
-                settings.file(), links::add, updates, () -> ran.add(Command.COPY_DETAILS), ViewerWindow.stylesheet()));
+        AboutWindow about = call(() -> new AboutWindow(settings.file(), ran::add, updates, ViewerWindow.stylesheet()));
         fx(() -> about.show(owner));
         Parent root = call(() -> about.stage().getScene().getRoot());
+        PautaConformance.Conformance conformance = PautaConformance.conformance();
         fx(() -> named(root, AppInfo.HOMEPAGE).fire());
+        fx(() -> named(root, "Source code and releases").fire());
         fx(() -> named(root, "Release notes").fire());
-        fx(() -> named(root, AboutWindow.pautaLink(AppInfo.PAUTA_EDITION)).fire());
-        assertEquals(List.of(AppInfo.HOMEPAGE, AppInfo.releaseNotesUrl(), AppInfo.pautaUrl()), links);
+        fx(() -> named(root, AboutWindow.pautaLink(conformance, AppInfo.PAUTA_EDITION))
+                .fire());
+        fx(() -> named(root, "Pauta conformance: " + conformance.english()).fire());
+        assertEquals(
+                List.of(Command.HOME_PAGE, Command.RELEASES, Command.RELEASE_NOTES, Command.PAUTA_RULES, Command.PAUTA),
+                ran);
+        assertTrue(
+                call(() -> all(root).stream()
+                        .anyMatch(n -> n instanceof Labeled l
+                                && Objects.equals(
+                                        l.getText(), AppInfo.environment(AppInfo.runtime(), settings.file())))),
+                "the environment block names the conformance");
+        ran.clear();
 
         ButtonBase copy = named(root, "Copy details");
         fx(copy::fire);
         assertEquals(List.of(Command.COPY_DETAILS), ran, "the button runs the command");
         assertFalse(call(copy::getText).equals("Copy details"), "it says it copied");
 
-        // A newer release, once checked, is named with a link to it.
+        // A newer release, once checked, is named in amber with a link to it (ABOUT-10).
         fx(() -> updates.checkNow(true));
-        assertTrue(call(() -> all(root).stream()
-                .anyMatch(n -> n instanceof Labeled l
+        Labeled line = call(() -> all(root).stream()
+                .filter(n -> n instanceof Labeled l
                         && l.getText() != null
-                        && l.getText().contains("99.0.0"))));
-        ButtonBase release = call(() -> all(root).stream()
-                .filter(n -> n instanceof javafx.scene.control.Hyperlink h
-                        && h.isVisible()
-                        && !links.isEmpty()
-                        && h.getText() != null
-                        && !h.getText().equals(AppInfo.HOMEPAGE)
-                        && !h.getText().equals("Release notes")
-                        && !h.getText().startsWith("Built to"))
-                .map(n -> (ButtonBase) n)
+                        && l.getText().contains("99.0.0"))
+                .map(n -> (Labeled) n)
                 .findFirst()
                 .orElseThrow());
-        fx(release::fire);
-        assertEquals("https://example.org/release", links.getLast());
+        assertTrue(call(() -> line.getStyleClass().contains("update-available")));
+        fx(() -> named(root, "Open its page").fire());
+        assertEquals(Command.OPEN_RELEASE, ran.getLast());
 
         press(about.stage(), KeyCode.ESCAPE);
         assertFalse(call(() -> about.stage().isShowing()));
@@ -164,6 +171,42 @@ class ToolWindowsTest {
         assertEquals("Copy details", call(copy::getText), "reset once closed");
         fx(() -> named(root, "Close").fire());
         assertFalse(call(() -> about.stage().isShowing()));
+    }
+
+    /** PWIN-02 to PWIN-06: the window lists every exception and its links run their commands. */
+    @Test
+    void thePautaWindowListsEveryExceptionAndItsLinksRunTheirCommands() throws Exception {
+        List<PautaConformance.Entry> exceptions = PautaConformance.exceptions();
+        PautaWindow window = call(() -> new PautaWindow(exceptions, ran::add, links::add, ViewerWindow.stylesheet()));
+        fx(() -> window.show(owner));
+        Parent root = call(() -> window.stage().getScene().getRoot());
+        PautaConformance.Entry first = PautaConformance.sorted(exceptions).getFirst();
+        fx(() -> named(root, first.rule()).fire());
+        assertEquals(List.of(first.url()), links, "a rule's ID opens its address in this edition");
+        long rows = call(() -> window.list().getChildren().stream()
+                .filter(n -> n.getStyleClass().contains("pauta-row"))
+                .count());
+        assertEquals(exceptions.size(), rows);
+
+        fx(() -> named(root, "Pauta " + AppInfo.PAUTA_EDITION + " rules").fire());
+        fx(() -> named(root, "Conformance in the docs").fire());
+        ButtonBase copy = window.copyButton();
+        fx(copy::fire);
+        assertEquals(List.of(Command.PAUTA_RULES, Command.PAUTA_DOCS, Command.COPY_PAUTA), ran);
+        assertEquals("Copied", call(copy::getText));
+        press(window.stage(), KeyCode.ESCAPE);
+        assertFalse(call(() -> window.stage().isShowing()));
+        assertEquals("Copy as text", call(copy::getText), "reset once closed");
+    }
+
+    /** PWIN-08: with no exceptions, one line says so where the list would be. */
+    @Test
+    void withNoExceptionsThePautaWindowSaysSoInOneLine() throws Exception {
+        PautaWindow window = call(() -> new PautaWindow(List.of(), ran::add, links::add, ViewerWindow.stylesheet()));
+        assertEquals(1, call(() -> window.list().getChildren().size()));
+        assertEquals(
+                "No exceptions: Mirada meets every MUST and SHOULD of Pauta " + AppInfo.PAUTA_EDITION + ".",
+                call(() -> ((Labeled) window.list().getChildren().getFirst()).getText()));
     }
 
     @Test

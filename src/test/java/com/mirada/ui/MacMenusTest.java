@@ -23,9 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MacMenusTest {
 
     /**
-     * Every viewer command is in a menu once, but About and Settings (the app menu's), Copy Details
-     * (About's button), each setting's own (the Settings window's), and Escape and panning, which
-     * are keys. The editor's tools and the Bookmarks
+     * Every viewer command is in a menu once, but About and Settings (the app menu's), About's links
+     * and Copy Details (About's button), the Pauta window's links and Copy as text, each setting's
+     * own (the Settings window's), and Escape and panning, which are keys. The editor's tools and the Bookmarks
      * window's are their own windows'.
      */
     @Test
@@ -40,6 +40,12 @@ class MacMenusTest {
                 Command.ABOUT,
                 Command.SETTINGS,
                 Command.COPY_DETAILS,
+                Command.HOME_PAGE,
+                Command.RELEASES,
+                Command.RELEASE_NOTES,
+                Command.PAUTA_RULES,
+                Command.PAUTA_DOCS,
+                Command.COPY_PAUTA,
                 Command.ESCAPE,
                 Command.PAN_LEFT,
                 Command.PAN_RIGHT,

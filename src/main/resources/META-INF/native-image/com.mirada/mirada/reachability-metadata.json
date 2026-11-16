@@ -3117,6 +3117,9 @@
       "glob": "com/mirada/keymaps/emacs.json"
     },
     {
+      "glob": "com/mirada/pauta.json"
+    },
+    {
       "glob": "com/mirada/styles/mirada.css"
     },
     {

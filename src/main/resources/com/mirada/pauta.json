@@ -1,0 +1,852 @@
+{
+  "exceptions": [
+    {
+      "rule": "OS-02",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/same-on-every-os/#os-02",
+      "kind": "pending",
+      "reason": "Mirada asks which system it runs on in many places instead of in one.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "OS-03",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/same-on-every-os/#os-03",
+      "kind": "pending",
+      "reason": "Mirada's tests cannot yet pretend to run on each system in turn to show it behaves the same on all three.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "OS-04",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/same-on-every-os/#os-04",
+      "kind": "pending",
+      "reason": "A few things still differ by system, such as Escape closing the window on Linux only.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "PAUTA-13",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/conformance/#pauta-13",
+      "kind": "pending",
+      "reason": "Mirada's website has no page yet listing its Pauta conformance and exceptions.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "PAUTA-14",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/conformance/#pauta-14",
+      "kind": "pending",
+      "reason": "The website's conformance page is not yet generated from the list Mirada carries.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "PLAT-14",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/platform/#plat-14",
+      "kind": "pending",
+      "reason": "Mirada's settings and bookmarks are still stored as properties files, not JSON.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "REPO-11",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/repository/#repo-11",
+      "kind": "pending",
+      "reason": "A few of the developers' helper scripts are written in Python rather than Java or shell.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "DOCS-01",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/documentation/#docs-01",
+      "kind": "pending",
+      "reason": "The user guide has no screenshots of the real window yet.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "DOCS-03",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/documentation/#docs-03",
+      "kind": "pending",
+      "reason": "Links into the user guide open the latest guide, not the one for the version you run.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "DOCS-04",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/documentation/#docs-04",
+      "kind": "pending",
+      "reason": "The website does not yet generate its roadmap from the app or check the keys and commands it quotes.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "DOCS-06",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/documentation/#docs-06",
+      "kind": "pending",
+      "reason": "On Windows and Linux, Help has no Documentation row; it is in the main menu beside it.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "DOCS-07",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/documentation/#docs-07",
+      "kind": "pending",
+      "reason": "On Windows and Linux, the Help menu's rows are not yet in the usual order.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "DOCS-08",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/documentation/#docs-08",
+      "kind": "pending",
+      "reason": "The keyboard reference is not in the Help menu on Windows and Linux, and it has no search field.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "DOCS-18",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/documentation/#docs-18",
+      "kind": "pending",
+      "reason": "The README's screenshot has no light and dark pair and is not taken at high resolution.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "QUAL-05",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/quality/#qual-05",
+      "kind": "pending",
+      "reason": "Whether some menu rows are available is decided inside the window rather than by tested rules.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "QUAL-07",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/quality/#qual-07",
+      "kind": "pending",
+      "reason": "Some tests wait a fixed time instead of waiting for the work to finish.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "QUAL-13",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/quality/#qual-13",
+      "kind": "pending",
+      "reason": "The test that restarts with every setting changed does not change the language yet.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "PERF-01",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/performance/#perf-01",
+      "kind": "pending",
+      "reason": "A few actions still do slow work on the thread that draws the window.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "PERF-06",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/performance/#perf-06",
+      "kind": "pending",
+      "reason": "The Message Log and other lists redraw on every change instead of once per frame.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "PERF-08",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/performance/#perf-08",
+      "kind": "pending",
+      "reason": "The properties sidebar still does work for the whole list when only part of it changes.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "PERF-16",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/performance/#perf-16",
+      "kind": "pending",
+      "reason": "Only the native build starts reading the settings before the window toolkit starts.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "PERF-17",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/performance/#perf-17",
+      "kind": "pending",
+      "reason": "The stylesheets are not shipped precompiled, which would start the window a little sooner.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "KBD-04",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/keyboard/#kbd-04",
+      "kind": "pending",
+      "reason": "The main menu does not grey out commands that cannot run; only the palette does.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "KBD-10",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/keyboard/#kbd-10",
+      "kind": "pending",
+      "reason": "Mirada has no IntelliJ, VS Code or Sublime keymaps yet.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "KBD-12",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/keyboard/#kbd-12",
+      "kind": "pending",
+      "reason": "Settings has no keymap editor that lists every command with its keys.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "KBD-13",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/keyboard/#kbd-13",
+      "kind": "pending",
+      "reason": "A few translated descriptions name a key in their text instead of showing the current one.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "KBD-15",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/keyboard/#kbd-15",
+      "kind": "pending",
+      "reason": "The All metadata section of the properties sidebar can only be opened with the mouse.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "KBD-18",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/keyboard/#kbd-18",
+      "kind": "pending",
+      "reason": "On and off settings are check boxes rather than switches.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "ACC-01",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-01",
+      "kind": "pending",
+      "reason": "No test yet opens every window to check that each control has a name a screen reader can read.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "ACC-02",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-02",
+      "kind": "pending",
+      "reason": "The status bar's message and count act like buttons but do not tell a screen reader so.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "ACC-04",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-04",
+      "kind": "pending",
+      "reason": "The on-screen controls fade in and out even when the system asks for reduced motion.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "ACC-06",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-06",
+      "kind": "pending",
+      "reason": "There is no command to move the focus between the image, the thumbnails and the sidebar.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "ACC-07",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-07",
+      "kind": "pending",
+      "reason": "The release steps do not yet include a pass with Narrator and VoiceOver.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "ACC-08",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-08",
+      "kind": "pending",
+      "reason": "A screen reader is not told which row of the palette is selected.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "ACC-09",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-09",
+      "kind": "pending",
+      "reason": "Mirada does not switch to a high-contrast theme in Windows' high-contrast mode.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "WIN-03",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/window-shell/#win-03",
+      "kind": "pending",
+      "reason": "On Windows and Linux the menus are behind a button in the title bar, not a menu bar.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "WIN-04",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/window-shell/#win-04",
+      "kind": "pending",
+      "reason": "Dialogs are not all built by one helper that gives them the same look.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "WIN-11",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/window-shell/#win-11",
+      "kind": "pending",
+      "reason": "Dialog buttons follow each system's own order instead of the same order everywhere.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "WIN-08",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/window-shell/#win-08",
+      "kind": "pending",
+      "reason": "The image and folder you had open are not reopened at the next start.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "WIN-09",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/window-shell/#win-09",
+      "kind": "pending",
+      "reason": "The Emacs keymap zooms with bare keys only, and the zoom level is not remembered.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "WIN-12",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/window-shell/#win-12",
+      "kind": "pending",
+      "reason": "There is no setting yet to make the whole interface larger or smaller.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "WIN-14",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/window-shell/#win-14",
+      "kind": "pending",
+      "reason": "There is no Quit command yet; Close closes the window.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "WIN-15",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/window-shell/#win-15",
+      "kind": "pending",
+      "reason": "On macOS the Settings item in the application menu does not show the current keymap's key.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "ICON-04",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/icons-and-color/#icon-04",
+      "kind": "pending",
+      "reason": "Mirada uses the AtlantaFX themes as they are rather than a theme file of its own.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "ICON-05",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/icons-and-color/#icon-05",
+      "kind": "pending",
+      "reason": "Mirada's default theme is not yet the Caret and Ink pair the other apps share.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "ICON-07",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/icons-and-color/#icon-07",
+      "kind": "pending",
+      "reason": "Some colors for warnings and errors are named in several places instead of once.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "ICON-08",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/icons-and-color/#icon-08",
+      "kind": "pending",
+      "reason": "A few colors in the stylesheet are fixed values rather than the theme's own.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "ICON-09",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/icons-and-color/#icon-09",
+      "kind": "pending",
+      "reason": "No test yet checks that muted text stays readable on every background.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "TBAR-01",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/toolbars-and-tooltips/#tbar-01",
+      "kind": "pending",
+      "reason": "A screen reader reads a button's name without the key shown in its tooltip.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "TBAR-03",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/toolbars-and-tooltips/#tbar-03",
+      "kind": "pending",
+      "reason": "Some buttons in the editor keep their old key in the tooltip after you change your keys.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "TBAR-14",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/toolbars-and-tooltips/#tbar-14",
+      "kind": "pending",
+      "reason": "Tooltips do not all appear after the same delay.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "TABS-10",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/tabs-and-panels/#tabs-10",
+      "kind": "pending",
+      "reason": "The window title names the file and Mirada but not the folder.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "TABS-13",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/tabs-and-panels/#tabs-13",
+      "kind": "pending",
+      "reason": "The commands that show the sidebar and the thumbnails do not yet use the shared panel names.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "TABS-15",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/tabs-and-panels/#tabs-15",
+      "kind": "pending",
+      "reason": "Which panels are open is not remembered from one start to the next.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "MENU-15",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/menus/#menu-15",
+      "kind": "pending",
+      "reason": "The zoom drop-down's rows keep their old keys after you change your keymap.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "MENU-16",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/menus/#menu-16",
+      "kind": "pending",
+      "reason": "Menus do not grow and shrink with an interface zoom, since there is none yet.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "MENU-18",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/menus/#menu-18",
+      "kind": "pending",
+      "reason": "Menu rows are not yet spaced like the other apps' menus.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "MENU-02",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/menus/#menu-02",
+      "kind": "pending",
+      "reason": "On Windows and Linux the menus are not yet an in-window menu bar.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "MENU-17",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/menus/#menu-17",
+      "kind": "pending",
+      "reason": "On Windows and Linux there is no menu bar to reach with F10 or Alt.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "MENU-05",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/menus/#menu-05",
+      "kind": "pending",
+      "reason": "A right-click on a thumbnail opens the strip's menu, not one for that image.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "MENU-10",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/menus/#menu-10",
+      "kind": "pending",
+      "reason": "A right-click on a thumbnail does not select it first.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "MENU-12",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/menus/#menu-12",
+      "kind": "pending",
+      "reason": "Rows such as Move to Trash are not shown in red as dangerous.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "SET-07",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/settings/#set-07",
+      "kind": "pending",
+      "reason": "On macOS and Windows the settings are not yet in a folder in your home named after Mirada.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "SET-08",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/settings/#set-08",
+      "kind": "pending",
+      "reason": "Where the window was and the recent folders are kept in the settings file, not a file of their own.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "SET-11",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/settings/#set-11",
+      "kind": "pending",
+      "reason": "A setting whose value cannot be read may not fall back to its default.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "DIAG-07",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/diagnostics/#diag-07",
+      "kind": "pending",
+      "reason": "There is no Doctor page to check the image codecs and other parts Mirada needs.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "DIAG-08",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/diagnostics/#diag-08",
+      "kind": "pending",
+      "reason": "An unsaved edit is not kept to be offered back after a crash.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "CLI-05",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/command-line/#cli-05",
+      "kind": "pending",
+      "reason": "The problem report from the command line is written beside the settings, not in the current folder.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "CLI-12",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/command-line/#cli-12",
+      "kind": "pending",
+      "reason": "A short option Mirada does not know is taken for a file name instead of stopping the launch.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "CLI-13",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/command-line/#cli-13",
+      "kind": "pending",
+      "reason": "The short flags for help and version are not understood yet.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "CLI-11",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/command-line/#cli-11",
+      "kind": "pending",
+      "reason": "On Windows, help and version text are not printed in the console you typed them in.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "CLI-06",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/command-line/#cli-06",
+      "kind": "pending",
+      "reason": "Only the first file named on the command line is opened.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "INTL-12",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/i18n/#intl-12",
+      "kind": "pending",
+      "reason": "One message in the Message Log does not change its wording for one item.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "INTL-14",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/i18n/#intl-14",
+      "kind": "pending",
+      "reason": "The system's region is dropped, so dates and numbers may not be written your way.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "PAL-06",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/command-palette/#pal-06",
+      "kind": "pending",
+      "reason": "In the palette, the keys that move the selection do not come from the keymap you chose.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "PAL-07",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/command-palette/#pal-07",
+      "kind": "pending",
+      "reason": "Closing the palette does not put the focus back where it was, and its cancel key is fixed.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "PAL-08",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/command-palette/#pal-08",
+      "kind": "pending",
+      "reason": "The palette has no key to open the selected command's page in the user guide.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "QOPEN-02",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/quick-open/#qopen-02",
+      "kind": "pending",
+      "reason": "The pickers have no title naming what they are for.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "QOPEN-06",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/quick-open/#qopen-06",
+      "kind": "pending",
+      "reason": "In the pickers, the keys that move the selection do not come from the keymap you chose.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "QOPEN-07",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/quick-open/#qopen-07",
+      "kind": "pending",
+      "reason": "Closing a picker does not put the focus back where it was, and its cancel key is fixed.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "QOPEN-11",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/quick-open/#qopen-11",
+      "kind": "pending",
+      "reason": "Opening a picker while another is up is refused instead of replacing it.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "QOPEN-12",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/quick-open/#qopen-12",
+      "kind": "pending",
+      "reason": "The Bookmarks list and the Message Log do not move their selection with the palette's keys.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "WELC-02",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/welcome/#welc-02",
+      "kind": "pending",
+      "reason": "The empty window shows the key for Open but not for its other actions.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "ABOUT-01",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/templates/about/#about-01",
+      "kind": "pending",
+      "reason": "The Help menus have no About row; About is beside Help in the main menu and in the application menu on macOS.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "CONF-01",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/templates/confirm-dialog/#conf-01",
+      "kind": "pending",
+      "reason": "Removing a bookmark without a note does not ask first and cannot be undone.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "CONF-14",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/templates/confirm-dialog/#conf-14",
+      "kind": "pending",
+      "reason": "The Rename dialog's buttons are worded in the system's language rather than Mirada's.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "CONF-13",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/templates/confirm-dialog/#conf-13",
+      "kind": "pending",
+      "reason": "In a question before something is removed, Enter runs the red action instead of Cancel.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "CONF-05",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/confirm-dialog/#conf-05",
+      "kind": "pending",
+      "reason": "Leaving the editor with an unsaved edit offers Discard and Cancel but not Save.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "CONF-12",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/confirm-dialog/#conf-12",
+      "kind": "pending",
+      "reason": "The questions Mirada asks cannot be answered by a test without a screen.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "FIND-01",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-01",
+      "kind": "pending",
+      "reason": "The Debug Log has no find bar.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "FIND-02",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-02",
+      "kind": "pending",
+      "reason": "The Debug Log has no find bar that searches as you type.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "FIND-04",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-04",
+      "kind": "pending",
+      "reason": "No command opens a find bar in the Debug Log.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "FIND-05",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-05",
+      "kind": "pending",
+      "reason": "The Debug Log cannot highlight what you search for.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "FIND-06",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-06",
+      "kind": "pending",
+      "reason": "The Debug Log has no find bar to step through matches with Enter.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "FIND-07",
+      "level": "MUST",
+      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-07",
+      "kind": "pending",
+      "reason": "The Debug Log has no find bar to close with Escape.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "FIND-09",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-09",
+      "kind": "pending",
+      "reason": "The Debug Log has no find bar whose fields follow your keymap's editing keys.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "FIND-10",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/find-bar/#find-10",
+      "kind": "pending",
+      "reason": "The Debug Log has no find bar to say when nothing is found.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "MLOG-03",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/message-log/#mlog-03",
+      "kind": "pending",
+      "reason": "The Message Log closes on Escape and a fixed key, not on your keymap's cancel key.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "MLOG-04",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/message-log/#mlog-04",
+      "kind": "pending",
+      "reason": "The Message Log does not copy on the Emacs keymap's copy key.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "MLOG-05",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/message-log/#mlog-05",
+      "kind": "pending",
+      "reason": "A message's severity is set where it is raised, not read from the message itself.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "SYNC-01",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/templates/settings-sync/#sync-01",
+      "kind": "pending",
+      "reason": "There is no Settings Sync to carry your bookmarks, notes and keys to another computer.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "REL-09",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/release/#rel-09",
+      "kind": "pending",
+      "reason": "The Linux packages carry no AppStream metainfo of their own.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "REL-12",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/release/#rel-12",
+      "kind": "pending",
+      "reason": "Mirada cannot be installed with Homebrew yet.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "REL-13",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/release/#rel-13",
+      "kind": "pending",
+      "reason": "Mirada's winget manifests are written but not yet submitted on release.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "REL-14",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/release/#rel-14",
+      "kind": "pending",
+      "reason": "There are no Homebrew or winget packagers yet to give a token to.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    },
+    {
+      "rule": "REL-17",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/release/#rel-17",
+      "kind": "pending",
+      "reason": "The Windows installer is not signed yet.",
+      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+    }
+  ]
+}

@@ -10,6 +10,13 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Added
 
+- **Help › Pauta Conformance shows how far Mirada meets its guidelines.** Mirada now works toward
+  [Pauta 6.1.0](https://pauta-project.dev/6.1.0/), the adl desktop apps guidelines, and says how
+  fully it conforms (Partial for now) and lists each rule it does not meet yet, with one plain
+  sentence and the issue that tracks it. **Copy as text** copies the list as Markdown; About links
+  the window and names the conformance, and its environment block (and Copy details) carries a
+  `Pauta conformance:` line.
+
 - **Mirada speaks Spanish, Portuguese, French, Italian and German.** It follows the system's
   language, or the one chosen in Settings › General › Language (or **Language…** in the command
   palette), from its next start. Every window, menu, message and command name is translated, and
@@ -116,6 +123,14 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
   without installing anything or needing root.
 
 ### Changed
+
+- **About links the website, the source code and releases, and colours the update check.** Its
+  links are now the website, *Source code and releases*, this version's release notes, the Pauta
+  edition and the conformance, and each is a command in the palette too (Mirada Website, Source Code
+  and Releases, Release Notes, Pauta Rules). An available update is bold amber, up to date green and
+  a failed check red.
+- **Settings' Default button for the palette's keys is a command too:** *Default Command Palette
+  Keys* in the palette puts them back.
 
 - **Opening a folder, sorting it, renaming, and saving settings and bookmarks no longer hold up the
   window.** Listing a folder, the dates and sizes a sort reads, renaming a file, finding which

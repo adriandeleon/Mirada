@@ -75,6 +75,8 @@ enum Command {
     HIDE_CONTROLS_AFTER("settings.hideControlsAfter", "delay fade timeout overlay buttons seconds"),
     SLIDESHOW_SPEED("settings.slideshowSpeed", "interval delay seconds play pace"),
     PALETTE_KEYS("settings.paletteKeys", "shortcut keys bindings palette"),
+    /** Settings' Default button beside the palette's keys (KBD-01): the keys it opens with at first. */
+    RESET_PALETTE_KEYS("settings.resetPaletteKeys", "default shortcut keys bindings palette restore"),
     CHECK_DAILY("settings.checkForUpdatesDaily", "automatic update version network release"),
     /** Export Configuration (SET-12): the config folder as a timestamped zip. */
     EXPORT_CONFIG("config.export", "settings preferences backup save zip copy move"),
@@ -99,10 +101,22 @@ enum Command {
     CLOSE("window.close", "quit exit"),
     /** Its keys are the user's ({@code palette.keys}, {@link PaletteChords}), on top of the keymap's. */
     PALETTE("palette.show", ""),
-    /** Help → Documentation (DOCS-06, Pauta 4.0.1): the user guide on the website, in the browser. */
+    /** Help → Documentation (DOCS-06): the user guide on the website, in the browser. */
     DOCUMENTATION("help.documentation", "help manual guide docs website"),
     /** About's Copy details, which needs no About window: what a bug report needs (ABOUT-03). */
     COPY_DETAILS("help.copyDetails", "about version clipboard bug report environment"),
+    // About's links, each a command so the palette reaches it too (KBD-01, ABOUT-02).
+    HOME_PAGE("help.homePage", "website web site home about"),
+    RELEASE_NOTES("help.releaseNotes", "changelog changes new version about"),
+    RELEASES("help.releases", "source code repository github download versions about"),
+    /** The Pauta window (PWIN-01): the edition, the conformance and every exception. */
+    PAUTA("help.pauta", "guidelines conformance rules standard exceptions about"),
+    /** The edition's own page, never latest/ (PWIN-04, ABOUT-06). */
+    PAUTA_RULES("help.pautaRules", "guidelines edition rules standard"),
+    /** The website's page on Mirada's conformance (PWIN-07). */
+    PAUTA_DOCS("help.pautaDocs", "guidelines conformance website exceptions"),
+    /** The Pauta window's Copy as text (PWIN-06), which needs no window. */
+    COPY_PAUTA("help.copyPauta", "guidelines conformance clipboard markdown exceptions"),
     // The editor's tools: they run while the editor is open (Command.Context.EDITOR).
     EDITOR_ROTATE_LEFT("editor.rotateLeft", "turn crop"),
     EDITOR_ROTATE_RIGHT("editor.rotateRight", "turn crop"),
@@ -357,7 +371,14 @@ enum Command {
                     REPORT_PROBLEM,
                     CHECK_FOR_UPDATES,
                     OPEN_RELEASE,
-                    COPY_DETAILS -> tr("group.help");
+                    COPY_DETAILS,
+                    HOME_PAGE,
+                    RELEASE_NOTES,
+                    RELEASES,
+                    PAUTA,
+                    PAUTA_RULES,
+                    PAUTA_DOCS,
+                    COPY_PAUTA -> tr("group.help");
             case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, OPEN_FOLDER, OPEN_RECENT, CLOSE, PALETTE ->
                 tr("group.mirada");
             case THEME,
@@ -368,6 +389,7 @@ enum Command {
                     HIDE_CONTROLS_AFTER,
                     SLIDESHOW_SPEED,
                     PALETTE_KEYS,
+                    RESET_PALETTE_KEYS,
                     CHECK_DAILY,
                     EXPORT_CONFIG,
                     IMPORT_CONFIG -> tr("group.settings");

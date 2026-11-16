@@ -123,13 +123,18 @@ class SettingsPagesTest {
                         .sum());
     }
 
-    /** SET-06: each setting's own command is a row's, so none is only a Settings row. */
+    /**
+     * SET-06: each setting's own command is a row's, so none is only a Settings row. Import is the
+     * Backup row's second button, and the palette keys' Default its row's.
+     */
     @Test
     void everySettingsCommandIsARowsCommand() {
         Set<Command> rows = new HashSet<>();
         for (Row row : SettingsPages.ROWS) rows.add(row.command());
         for (Command command : Command.values()) {
-            if (command.group().equals("Settings") && command != Command.IMPORT_CONFIG)
+            if (command.group().equals("Settings")
+                    && command != Command.IMPORT_CONFIG
+                    && command != Command.RESET_PALETTE_KEYS)
                 assertTrue(rows.contains(command), command.id() + " has no row");
         }
     }

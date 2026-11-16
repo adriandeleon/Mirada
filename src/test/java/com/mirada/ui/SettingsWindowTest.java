@@ -181,9 +181,9 @@ class SettingsWindowTest {
         fx(stage::hide); // closed while recording: it stops
         assertFalse(call(shown::getText).startsWith("Press"));
 
-        fx(() -> settings.setPaletteKeys("f3"));
+        // Default runs its command, which puts the keys back (KBD-01; SettingsCommandsTest).
         fx(defaults::fire);
-        assertEquals(Settings.defaultPaletteKeys(Command.MAC), settings.paletteKeys());
+        assertEquals(Command.RESET_PALETTE_KEYS, ran.getLast());
     }
 
     @Test

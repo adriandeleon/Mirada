@@ -321,7 +321,10 @@ final class TitleBar {
         return MenuChord.on(item, command);
     }
 
-    /** Help: the logs, reporting a problem and the update check (DIAG-03, DIAG-05, DIAG-06). */
+    /**
+     * Help: the logs, reporting a problem and the update check (DIAG-03, DIAG-05, DIAG-06), then the
+     * Pauta window (PWIN-01).
+     */
     private static Menu help(Consumer<Command> run) {
         Menu help = new Menu(tr("titleBar.help"), Icons.of(Icons.HELP));
         help.getItems()
@@ -330,7 +333,9 @@ final class TitleBar {
                         item(Command.DEBUG_LOG, run),
                         new SeparatorMenuItem(),
                         item(Command.REPORT_PROBLEM, run),
-                        item(Command.CHECK_FOR_UPDATES, run));
+                        item(Command.CHECK_FOR_UPDATES, run),
+                        new SeparatorMenuItem(),
+                        item(Command.PAUTA, run));
         return help;
     }
 

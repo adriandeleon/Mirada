@@ -30,6 +30,16 @@
      */
     -state-key: ladder(-color-bg-default, #b0b6e0 0%, #b8bee5 10%, #cdd1f1 20%, #e3e6f9 30%, #ecedfb 49%, #3c4380 50%);
 
+    /*
+     * The states About's update line shows (ABOUT-10), Editora's names: an available update in
+     * amber, which no link or label in About uses, up to date in green, a failed check in red; the
+     * links keep the accent.
+     */
+    -state-amber: -color-warning-fg;
+    -state-green: -color-success-fg;
+    -state-red: -color-danger-fg;
+    -state-accent: -color-accent-fg;
+
     /* The one keyboard focus ring (ICON-12), drawn by the :focus-visible block at the end. */
     -focus-ring: -color-accent-emphasis;
 
@@ -701,8 +711,63 @@
     -fx-font-size: 12px;
 }
 
+/* The update check's answer (ABOUT-10): muted until one has come, then by its state. */
 .about .about-update {
     -fx-text-fill: -color-fg-muted;
+}
+
+.about .about-update.update-available {
+    -fx-text-fill: -state-amber;
+    -fx-font-weight: bold;
+}
+
+.about .about-update.up-to-date {
+    -fx-text-fill: -state-green;
+}
+
+.about .about-update.update-failed {
+    -fx-text-fill: -state-red;
+}
+
+.about .hyperlink,
+.pauta .hyperlink {
+    -fx-text-fill: -state-accent;
+}
+
+/* The Pauta window: the conformance as a pill, the exceptions under a heading per kind. */
+.pauta {
+    -fx-background-color: -color-bg-default;
+}
+
+.pauta-conformance {
+    -fx-background-color: -color-bg-subtle;
+    -fx-background-radius: 999;
+    -fx-border-color: -color-border-default;
+    -fx-border-radius: 999;
+    -fx-padding: 2 10 2 10;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-default;
+}
+
+.pauta-meaning,
+.pauta-counts,
+.pauta-level {
+    -fx-text-fill: -color-fg-muted;
+}
+
+.pauta-group {
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-default;
+    -fx-padding: 10 0 2 0;
+}
+
+.pauta-list,
+.pauta-list > .viewport {
+    -fx-background-color: -color-bg-default;
+}
+
+.pauta-reason .text {
+    -fx-fill: -color-fg-default;
 }
 
 /* The editor: the window's own surfaces for its bars, a dark canvas for the picture, and the crop

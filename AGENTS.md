@@ -6,19 +6,32 @@ code with it, but nothing is extracted yet.
 
 ## Pauta
 
-Mirada is built to [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), edition [4.0.1](https://pauta-project.dev/4.0.1/).
-Its rules: https://pauta-project.dev/4.0.1/llms.txt (every rule in one file:
-https://pauta-project.dev/4.0.1/llms-full.txt). Where Mirada stands against each rule:
+Mirada works toward [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), edition [6.1.0](https://pauta-project.dev/6.1.0/).
+Its rules: https://pauta-project.dev/6.1.0/llms.txt (every rule in one file:
+https://pauta-project.dev/6.1.0/llms-full.txt). Where Mirada stands against each rule:
 [docs/pauta-audit.md](docs/pauta-audit.md), written by the `pauta-audit` skill
 ([`.claude/skills/pauta-audit/`](.claude/skills/pauta-audit/SKILL.md)); `/pauta-audit KBD` audits one
 prefix. Regenerate it, never edit it by hand.
 
 - Before building a feature, read the rules on its page and copy from the code each rule's
   Reference names (Editora, `../Editora`, and the app template, `../javafx-app-template`).
-- Cite a rule by its ID and edition: "KBD-07 (Pauta 4.0.1)".
-- Read the numbered edition, never `latest/`. Moving to a newer edition is its own change:
-  `pauta.version` in `pom.xml`, this section and the README change together (`EditionTest`). About
-  and the version text read the number from the pom through `AppInfo`.
+- Cite a rule by its ID and edition: "KBD-07 (Pauta 6.1.0)".
+- Read the numbered edition, never `latest/`. About and the version text read the number from the
+  pom through `AppInfo`.
+
+**Conformance.** Every MUST and SHOULD Mirada does not meet is an exception in
+`src/main/resources/com/mirada/pauta.json`: `pending` with an issue in this repository, `deviation`
+(SHOULDs only) with a decision record in `docs/decisions/`, or `not-applicable` with a reason; each
+reason is one plain sentence for the user, with no rule ID. Meeting a rule removes its entry in the
+same change. `PautaConformance` computes Complete, Core or Partial from the exceptions, never stored;
+About (the edition's link reads "Working toward" at Partial) and the Pauta window (Help → Pauta
+Conformance) show it. `PautaConformanceTest` holds the file to `src/test/resources/pauta-rules.json`
+(the edition's `rules.json`, copied byte for byte), a `checked` entry (a by-hand rule a person found
+met) to its rule's `changed`, and the README's badge and line to the computed conformance.
+
+**Moving to a newer edition** is one change (PAUTA-11): replace `pauta-rules.json` and the skill
+above with the new edition's, remove the `checked` entries the test calls stale, audit again, update
+`pauta.json`, then `pauta.version` in `pom.xml`, the README and this section together (`EditionTest`).
 
 ## Commands
 
