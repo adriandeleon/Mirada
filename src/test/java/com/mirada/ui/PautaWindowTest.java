@@ -82,8 +82,10 @@ class PautaWindowTest {
     /** ABOUT-10: amber is the available update's alone, bold; the links keep the accent. */
     @Test
     void amberIsTheAvailableUpdatesAlone() throws Exception {
-        String css =
-                Files.readString(Path.of("src/main/resources/com/mirada/styles/mirada.css"), StandardCharsets.UTF_8);
+        String css = Files.readString(
+                        Path.of("src/main/resources/com/mirada/styles/mirada.css"), StandardCharsets.UTF_8)
+                // A Windows checkout ends lines with CRLF.
+                .replace("\r\n", "\n");
         Matcher rule = Pattern.compile("([^{}]+)\\{([^}]*)}").matcher(css);
         int amber = 0;
         while (rule.find()) {
