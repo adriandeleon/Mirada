@@ -77,40 +77,22 @@ ln -s "$id.png" "$appdir/.DirIcon"
 released=$(sed -n "s/^## \[$version\] - \([0-9-]*\)\$/\1/p" "$root/CHANGELOG.md" | head -1)
 [ -n "$released" ] || released=$(date -u +%F)
 
-# AppStream, which software centres and AppImage catalogues read; the media types are the menu
-# entry's, so the two cannot disagree.
+# AppStream (packaging/linux, REL-09), which software centres and AppImage catalogues read; the media
+# types are the menu entry's, so the two cannot disagree.
 mimetypes=$(sed -n 's/^MimeType=//p' "$appdir/$id.desktop" | tr ';' '\n' | sed '/^$/d' |
     sed 's|.*|    <mediatype>&</mediatype>|')
-cat > "$appdir/usr/share/metainfo/$id.appdata.xml" <<XML
-<?xml version="1.0" encoding="UTF-8"?>
-<component type="desktop-application">
-  <id>$id</id>
-  <name>Mirada</name>
-  <summary>A fast, folder-oriented image viewer</summary>
-  <metadata_license>CC0-1.0</metadata_license>
-  <project_license>MIT</project_license>
-  <developer id="io.github.adriandeleon">
-    <name>Adrian De Leon</name>
-  </developer>
-  <description>
-    <p>
-      Mirada opens a photo and the folder it is in, and steps through them as fast as the disk
-      allows: JPEG, PNG, GIF, WebP, TIFF, PSD, HEIC, AVIF and JPEG XL, animations included.
-      Everything is on the keyboard and in a command palette.
-    </p>
-  </description>
-  <launchable type="desktop-id">$id.desktop</launchable>
-  <url type="homepage">https://github.com/adriandeleon/Mirada</url>
-  <url type="bugtracker">https://github.com/adriandeleon/Mirada/issues</url>
-  <content_rating type="oars-1.1"/>
-  <provides>
-$mimetypes
-  </provides>
-  <releases>
-    <release version="$version" date="$released"/>
-  </releases>
-</component>
-XML
+metainfo="$root/packaging/linux/$id.metainfo.xml"
+[ -f "$metainfo" ] || { echo "::error::[appimage] no AppStream metainfo at $metainfo" >&2; exit 1; }
+awk -v version="$version" -v date="$released" -v types="$mimetypes" '
+    /^<!--/ { comment = 1 }
+    comment { if (/-->/) comment = 0; next }
+    /@MEDIATYPES@/ { print types; next }
+    { gsub(/@VERSION@/, version); gsub(/@DATE@/, date); print }
+' "$metainfo" > "$appdir/usr/share/metainfo/$id.metainfo.xml"
+if grep -q '@[A-Z]*@' "$appdir/usr/share/metainfo/$id.metainfo.xml"; then
+    echo "::error::[appimage] the metainfo has a token this does not fill" >&2
+    exit 1
+fi
 
 if [ -n "${MIRADA_APPDIR_ONLY:-}" ]; then
     echo "[appimage] AppDir at $appdir (MIRADA_APPDIR_ONLY: no AppImage)"

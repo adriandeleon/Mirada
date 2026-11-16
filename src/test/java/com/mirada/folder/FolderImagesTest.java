@@ -40,6 +40,23 @@ class FolderImagesTest {
         assertEquals(opened, folder.current());
     }
 
+    /** CLI-06: several files named open together, just those, on the first named. */
+    @Test
+    void severalNamedFilesOpenTogether() throws IOException {
+        Path c = touch("c.jpg");
+        touch("b.jpg");
+        Path a = touch("a.jpg");
+        Path sub = Files.createDirectory(dir.resolve("sub"));
+        Files.createFile(sub.resolve("d.png"));
+
+        FolderImages named = FolderImages.open(List.of(c, a, sub), Sorting.DEFAULT);
+
+        assertEquals(List.of("a.jpg", "c.jpg", "d.png"), names(named));
+        assertEquals(c, named.current());
+        // One is the usual: its folder around it.
+        assertEquals(List.of("a.jpg", "b.jpg", "c.jpg"), names(FolderImages.open(List.of(c), Sorting.DEFAULT)));
+    }
+
     @Test
     void aFolderOpensAtItsFirstImage() throws IOException {
         touch("b.gif");

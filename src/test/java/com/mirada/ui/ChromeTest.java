@@ -25,6 +25,7 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
 import com.mirada.diagnostics.MessageLog;
+import com.mirada.os.Os;
 import com.mirada.settings.Settings;
 import com.mirada.update.UpdateCoordinator;
 import com.mirada.update.UpdateService;
@@ -153,6 +154,15 @@ class ChromeTest {
             if (node instanceof Hyperlink link) fx(link::fire);
         }
         assertEquals(List.of(Command.MESSAGE_LOG, Command.MESSAGE_LOG, Command.OPEN_RELEASE), ran);
+        // ACC-02: to a screen reader each label is a button it can press.
+        ran.clear();
+        for (Node node : call(() -> List.copyOf(((javafx.scene.Parent) bar.node()).getChildrenUnmodifiable()))) {
+            if (node instanceof Label label) {
+                assertEquals(javafx.scene.AccessibleRole.BUTTON, label.getAccessibleRole());
+                fx(() -> label.executeAccessibleAction(javafx.scene.AccessibleAction.FIRE));
+            }
+        }
+        assertEquals(List.of(Command.MESSAGE_LOG, Command.MESSAGE_LOG), ran);
     }
 
     /** MENU-07 (Pauta 4.0.1): the press closes the menu and is not consumed. */
@@ -191,7 +201,7 @@ class ChromeTest {
                 .anyMatch(n -> n instanceof Label l
                         && l.getText() != null
                         && l.getText().contains("F9"))));
-        fx(() -> Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Command.MAC)));
+        fx(() -> Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Os.isMac())));
         fx(() -> window.show(owner));
         fx(() -> Event.fireEvent(
                 window.stage().getScene().getRoot(),
@@ -205,7 +215,8 @@ class ChromeTest {
         ThumbnailStrip strip = call(() -> new ThumbnailStrip(picked::add, (source, file, picture) -> {}));
         Stage stage = shown(new StackPane(strip.node()));
         ContextMenu menu = new ContextMenu(new MenuItem("Hide Thumbnails"));
-        fx(() -> strip.setMenu(() -> menu));
+        ContextMenu image = new ContextMenu(new MenuItem("Rotate Right"));
+        fx(() -> strip.setMenu(() -> menu, () -> image));
         fx(() -> strip.setLayout(true, true, false));
         assertTrue(call(strip::atSide));
         fx(() -> strip.show(List.of(dir.resolve("a.png"), dir.resolve("b.png")), 0));
@@ -235,7 +246,24 @@ class ChromeTest {
                     true,
                     null)));
         }
-        assertEquals(List.of(), picked, "a right click picks nothing");
+        assertEquals(List.of(), picked, "a right press moves no selection by itself");
+        // A right-click on a row selects it first and opens that image's menu (MENU-05, MENU-10).
+        Node second = call(() -> strip.node().lookupAll(".list-cell").stream()
+                .filter(n -> n instanceof javafx.scene.control.ListCell<?> c && c.getIndex() == 1)
+                .findFirst()
+                .orElseThrow());
+        fx(() -> second.fireEvent(new ContextMenuEvent(
+                ContextMenuEvent.CONTEXT_MENU_REQUESTED,
+                5,
+                5,
+                5,
+                5,
+                false,
+                new javafx.scene.input.PickResult(second, 5, 5))));
+        assertEquals(List.of(1), picked, "the clicked row is picked");
+        assertTrue(call(image::isShowing), "and its image's menu opens");
+        assertFalse(call(menu::isShowing));
+        fx(image::hide);
         assertTrue(call(stage::isShowing));
     }
 }

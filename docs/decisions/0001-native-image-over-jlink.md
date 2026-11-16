@@ -8,7 +8,7 @@ Start-up is the first of Mirada's priorities: an image viewer is opened a hundre
 few seconds each. The jlink image, with jpackage's launcher replaced by a script and an AOT cache
 trained by a tour of every format, reached the first image in 271–275 ms, about 168 of them before
 `main`. A native image built with StaticFX (JavaFX linked in statically) and Oracle GraalVM 25.4
-measured 126–130 ms and a third less memory on the same machine ([native-image.md](../native-image.md)).
+measured 126–130 ms and a third less memory on the same machine ([native-image.md](../reference/native-image.md)).
 
 ## Decision
 

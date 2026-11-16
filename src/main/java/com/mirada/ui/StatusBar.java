@@ -4,9 +4,10 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import javafx.geometry.Pos;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleRole;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -39,7 +40,7 @@ final class StatusBar {
     private final MessageLog messages;
     private final UpdateCoordinator updates;
     private final Consumer<Command> run;
-    private final HBox bar = new HBox(10);
+    private final HBox bar = UiZoom.hbox(10);
 
     /** The bar's contents, made after the first paint. */
     private record Parts(Label echo, Label unread, Hyperlink update) {}
@@ -52,27 +53,25 @@ final class StatusBar {
         this.run = run;
         bar.getStyleClass().add("status-bar");
         bar.setAlignment(Pos.CENTER_LEFT);
-        bar.setMinHeight(HEIGHT);
-        bar.setPrefHeight(HEIGHT);
-        bar.setMaxHeight(HEIGHT);
+        UiZoom.bind(bar.minHeightProperty(), HEIGHT);
+        UiZoom.bind(bar.prefHeightProperty(), HEIGHT);
+        UiZoom.bind(bar.maxHeightProperty(), HEIGHT);
     }
 
     /** Adds the echo area, the unread count and the update notice: after the first paint. */
     void finish() {
         if (parts != null) return;
-        Label echo = new Label();
-        Label unread = new Label();
+        Label echo = new ActionLabel(() -> run.accept(Command.MESSAGE_LOG));
+        Label unread = new ActionLabel(() -> run.accept(Command.MESSAGE_LOG));
         Hyperlink update = new Hyperlink();
         parts = new Parts(echo, unread, update);
         echo.getStyleClass().add("status-echo");
         echo.setMaxWidth(Double.MAX_VALUE);
         echo.setMinWidth(0);
         // A click runs the Message Log command, as its menu item and the palette do (WIN-01, MLOG-02).
-        echo.setOnMouseClicked(e -> run.accept(Command.MESSAGE_LOG));
-        echo.setTooltip(new Tooltip(tr("status.messageLogTip")));
+        echo.setTooltip(Icons.tip(tr("status.messageLogTip")));
         unread.getStyleClass().add("status-unread");
-        unread.setOnMouseClicked(e -> run.accept(Command.MESSAGE_LOG));
-        unread.setTooltip(new Tooltip(tr("status.unreadTip")));
+        unread.setTooltip(Icons.tip(tr("status.unreadTip")));
         update.getStyleClass().add("status-update");
         update.setFocusTraversable(false);
         update.setOnAction(e -> run.accept(Command.OPEN_RELEASE));
@@ -144,5 +143,26 @@ final class StatusBar {
 
     Label unread() {
         return Objects.requireNonNull(parts, "not finished").unread();
+    }
+
+    /**
+     * A label that acts as a button: a click runs its action, and a screen reader hears a button and
+     * can press it (ACC-02). Out of the Tab order, as its command has its own keys (KBD-15).
+     */
+    static final class ActionLabel extends Label {
+
+        private final Runnable action;
+
+        ActionLabel(Runnable action) {
+            this.action = action;
+            setAccessibleRole(AccessibleRole.BUTTON);
+            setOnMouseClicked(e -> action.run());
+        }
+
+        @Override
+        public void executeAccessibleAction(AccessibleAction what, Object... parameters) {
+            if (what == AccessibleAction.FIRE) action.run();
+            else super.executeAccessibleAction(what, parameters);
+        }
     }
 }

@@ -22,7 +22,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import org.jspecify.annotations.Nullable;
@@ -53,12 +52,12 @@ public final class Trash {
     private Trash() {}
 
     /**
-     * Whether AWT must be headless on {@code osName}: everywhere but macOS, where {@code
+     * Whether AWT must be headless on {@code os}: everywhere but macOS, where {@code
      * Desktop.moveToTrash} needs it headful. Decided in {@code App.main} before any AWT class loads;
      * headful, AWT still loads only when a file is first trashed.
      */
-    public static boolean headless(@Nullable String osName) {
-        return !MacOpenFiles.isMac(osName);
+    public static boolean headless(Os.Kind os) {
+        return os != Os.Kind.MAC;
     }
 
     /**
@@ -79,17 +78,16 @@ public final class Trash {
 
     /** Whether a trashed file can be put back from here on this platform: Linux's own trash only. */
     public static boolean restores() {
-        String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-        return !os.startsWith("windows") && !os.startsWith("mac");
+        return Os.host() == Os.Kind.LINUX;
     }
 
     /** Moves {@code file} to the trash, or says why it could not. */
     public static Trashed move(Path file) throws IOException {
-        String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-        if (os.startsWith("windows")) {
+        Os.Kind os = Os.host();
+        if (os == Os.Kind.WINDOWS) {
             recycle(file);
             return Trashed.gone(file);
-        } else if (os.startsWith("mac")) {
+        } else if (os == Os.Kind.MAC) {
             if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.MOVE_TO_TRASH)) {
                 throw new IOException(tr("trashOs.notAvailable"));
             }

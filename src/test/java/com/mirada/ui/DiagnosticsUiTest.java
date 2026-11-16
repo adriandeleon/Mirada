@@ -44,12 +44,23 @@ class DiagnosticsUiTest {
         assertFalse(ViewerWindow.statusBarWanted(true, false, true));
     }
 
+    /** MLOG-03 and MLOG-04: Escape and the keymap's cancel chord close the log; the keymap's copy chord copies. */
     @Test
-    void escapeAndControlGCloseTheLog() {
-        assertTrue(MessageLogView.closes(KeyCode.ESCAPE, false, false));
-        assertTrue(MessageLogView.closes(KeyCode.G, true, false));
-        assertFalse(MessageLogView.closes(KeyCode.G, false, false));
-        assertFalse(MessageLogView.closes(KeyCode.ESCAPE, false, true));
+    void theKeymapsCancelAndCopyChordsReachTheLog() {
+        Keybindings emacs = Keybindings.layered(Keymap.load("emacs", false), false, java.util.Map.of());
+        Keybindings cua = Keybindings.layered(Keymap.load("cua", false), false, java.util.Map.of());
+        assertEquals(PaletteKeys.Action.CANCEL, PaletteKeys.resolve("escape", true, cua));
+        assertEquals(PaletteKeys.Action.CANCEL, PaletteKeys.resolve("C-g", true, emacs));
+        assertEquals(PaletteKeys.Action.NONE, PaletteKeys.resolve("C-g", true, cua), "no fixed C-g");
+        boolean mac = com.mirada.os.Os.isMac();
+        javafx.scene.input.KeyEvent shortcutC = new javafx.scene.input.KeyEvent(
+                javafx.scene.input.KeyEvent.KEY_PRESSED, "", "", KeyCode.C, false, !mac, false, mac);
+        javafx.scene.input.KeyEvent altW = new javafx.scene.input.KeyEvent(
+                javafx.scene.input.KeyEvent.KEY_PRESSED, "", "", KeyCode.W, false, false, true, false);
+        assertTrue(MessageLogView.copies(shortcutC, emacs), "the platform's copy in every keymap");
+        assertTrue(MessageLogView.copies(shortcutC, cua));
+        assertTrue(MessageLogView.copies(altW, emacs), "M-w, Emacs's copy");
+        assertFalse(MessageLogView.copies(altW, cua));
     }
 
     @Test
@@ -105,7 +116,7 @@ class DiagnosticsUiTest {
                 assertEquals(List.of(Command.MESSAGE_LOG), ran);
 
                 // The log, opened: the errors are read, and Escape closes it.
-                StackPane host = new StackPane();
+                OverlayHost host = new OverlayHost(new StackPane());
                 MessageLogView log = new MessageLogView(host, messages, ran::add);
                 log.show(StatusBar.HEIGHT);
                 assertTrue(log.isShowing());

@@ -96,4 +96,15 @@ class MessageLogTest {
         log.clear();
         assertEquals(4, heard[0]);
     }
+
+    /** MLOG-05: a key's last segment names its severity. */
+    @Test
+    void aKeyNamesItsSeverity() {
+        assertEquals(MessageLog.Severity.ERROR, MessageLog.severityOf("export.failed"));
+        assertEquals(MessageLog.Severity.ERROR, MessageLog.severityOf("status.saveError"));
+        assertEquals(MessageLog.Severity.WARNING, MessageLog.severityOf("status.cannotOpen"));
+        assertEquals(MessageLog.Severity.WARNING, MessageLog.severityOf("status.invalidName"));
+        assertEquals(MessageLog.Severity.INFO, MessageLog.severityOf("viewer.copiedMessages"));
+        assertEquals(MessageLog.Severity.INFO, MessageLog.severityOf("failed.notHere"), "the last segment only");
+    }
 }

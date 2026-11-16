@@ -12,6 +12,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -180,6 +181,21 @@ class BookmarksTest {
         assertNull(new Bookmarks(file).get(photo));
         assertFalse(bookmarks.remove(photo));
         assertEquals(1, changes[0]);
+    }
+
+    @Test
+    void restorePutsBackTheBookmarkAndTheNote(@TempDir Path dir) {
+        Path file = dir.resolve("bookmarks.properties");
+        Bookmarks bookmarks = new Bookmarks(file);
+        Path photo = dir.resolve("a.jpg");
+        bookmarks.toggle(photo, false);
+        bookmarks.setNote(photo, false, "keep?");
+        Bookmarks.Mark was = bookmarks.get(photo);
+        assertNotNull(was);
+        bookmarks.remove(photo);
+        bookmarks.restore(was);
+        assertEquals(was, bookmarks.get(photo));
+        assertEquals(was, new Bookmarks(file).get(photo), "written");
     }
 
     // ---- Off the FX thread (PERF-01), under a generation guard (PERF-03) ----

@@ -1,0 +1,39 @@
+/*
+ * High contrast (ACC-09): a scene sheet over Cupertino Dark and mirada.css that sets the -color-* roles to
+ * a black ground, white ink and saturated states, every pair 7:1 or better (StyleContrastTest). Chosen in
+ * Settings, or followed while Windows' high-contrast mode is on (Theme, Windows.SPI.HighContrast). Tokens
+ * only: the theme's rules and Mirada's draw everything from them.
+ */
+.root {
+    -color-fg-default: #ffffff;
+    -color-fg-muted: #e6e6e6;
+    -color-fg-subtle: #b3b3b3;
+    -color-fg-emphasis: #000000;
+    -color-bg-default: #000000;
+    -color-bg-overlay: #0d0d0d;
+    -color-bg-subtle: #0d0d0d;
+    -color-bg-inset: #000000;
+    -color-border-default: #ffffff;
+    -color-border-muted: #bfbfbf;
+    -color-border-subtle: #8c8c8c;
+    -color-neutral-emphasis-plus: #ffffff;
+    -color-neutral-emphasis: #b3b3b3;
+    -color-neutral-muted: #4d4d4d;
+    -color-neutral-subtle: #1a1a1a;
+    -color-accent-fg: #ffff00;
+    -color-accent-emphasis: #ffff00;
+    -color-accent-muted: rgba(255, 255, 0, 0.4);
+    -color-accent-subtle: #262600;
+    -color-success-fg: #3dff73;
+    -color-success-emphasis: #3dff73;
+    -color-success-muted: rgba(61, 255, 115, 0.4);
+    -color-success-subtle: #002b11;
+    -color-warning-fg: #ffb31a;
+    -color-warning-emphasis: #ffb31a;
+    -color-warning-muted: rgba(255, 179, 26, 0.4);
+    -color-warning-subtle: #2b1d00;
+    -color-danger-fg: #ff7070;
+    -color-danger-emphasis: #ff7070;
+    -color-danger-muted: rgba(255, 112, 112, 0.4);
+    -color-danger-subtle: #2b0000;
+}

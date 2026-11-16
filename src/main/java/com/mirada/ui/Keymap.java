@@ -24,22 +24,44 @@ import org.jspecify.annotations.Nullable;
  * {
  *   "name": "CUA",
  *   "bindings": { "go.next": ["right", "pagedown", "space"], ... },
- *   "vertical": { "go.next": ["down", "pagedown", "space"], ... }
+ *   "vertical": { "go.next": ["down", "pagedown", "space"], ... },
+ *   "lists": { "nav.lineDown": "C-n", ... }
  * }
  * }</pre>
  *
  * <p>{@code vertical} replaces those commands' keys while the thumbnails stand down the side, so the
- * folder steps along the strip ({@link Command#vertical}). A command a keymap does not name has no
+ * folder steps along the strip ({@link Command#vertical}). {@code lists} holds the keys that move the
+ * selection of a list overlay, the palette, a picker, the Message Log and the Bookmarks list, beside
+ * the arrows and Page Up and Down that always do ({@link PaletteKeys}, PAL-06, QOPEN-06): the {@code
+ * nav.*} ids, a line or a page down and up and the first and last row, which are no commands of
+ * their own, since nothing but a list runs them. A command a keymap does not name has no
  * key there; the palette still finds it. The layers on top, the user's own keys, are {@link
  * Keybindings}'.
  *
  * <p>Read the first time a key is pressed or a chord is shown, never before the first paint, and
  * each file once.
  */
-record Keymap(String id, String name, Map<String, List<String>> bindings, Map<String, List<String>> vertical) {
+record Keymap(
+        String id,
+        String name,
+        Map<String, List<String>> bindings,
+        Map<String, List<String>> vertical,
+        Map<String, List<String>> lists) {
 
     /** The bundled keymaps, in the order the settings window lists them. */
     static final List<String> PRESETS = List.of("cua", "emacs");
+
+    /**
+     * Each preset's name as Settings and the palette list it, the {@code name} its file gives: known
+     * without reading the file, so listing the keymaps reads nothing on the FX thread (PERF-01).
+     * {@code KeymapTest} holds the two the same.
+     */
+    static final Map<String, String> NAMES = Map.of("cua", "CUA", "emacs", "Emacs");
+
+    /** {@link #NAMES}' name for {@code id} ({@link #resolve}d). */
+    static String name(@Nullable String id) {
+        return NAMES.getOrDefault(resolve(id), resolve(id));
+    }
 
     /** The keymap for a setting that names none of {@link #PRESETS}: Mirada's own keys. */
     static final String DEFAULT = "cua";
@@ -75,7 +97,8 @@ record Keymap(String id, String name, Map<String, List<String>> bindings, Map<St
     static Keymap parse(String id, String json) throws Json.Malformed {
         if (!(Json.parse(json) instanceof Map<?, ?> tree)) throw new Json.Malformed("not an object", 0);
         String name = tree.get("name") instanceof String given ? given : id;
-        return new Keymap(id, name, bindings(tree.get("bindings")), bindings(tree.get("vertical")));
+        return new Keymap(
+                id, name, bindings(tree.get("bindings")), bindings(tree.get("vertical")), bindings(tree.get("lists")));
     }
 
     private static Map<String, List<String>> bindings(@Nullable Object section) throws Json.Malformed {

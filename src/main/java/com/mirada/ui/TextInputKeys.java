@@ -1,12 +1,13 @@
 package com.mirada.ui;
 
-import java.util.Locale;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import javafx.scene.control.TextInputControl;
 import javafx.scene.input.KeyEvent;
 
+import com.mirada.os.Os;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -24,9 +25,6 @@ import org.jspecify.annotations.Nullable;
  * tested ({@link #lineStart}, {@link #lineEnd}).
  */
 final class TextInputKeys {
-
-    private static final boolean MAC =
-            System.getProperty("os.name", "").toLowerCase(Locale.ROOT).startsWith("mac");
 
     /** The Emacs editing chords, in {@link KeyChord} tokens, and what each does to the field. */
     static final Map<String, Consumer<TextInputControl>> EMACS = Map.ofEntries(
@@ -60,7 +58,7 @@ final class TextInputKeys {
 
     /** Installs the Emacs chords on {@code control}. */
     static void install(TextInputControl control) {
-        install(control, MAC);
+        install(control, Os.isMac());
     }
 
     /**
@@ -72,11 +70,25 @@ final class TextInputKeys {
         return chord == null ? null : EMACS.get(chord);
     }
 
-    /** Package-visible so both platform branches are testable; {@link #MAC} is read once at load. */
+    /** Package-visible so both platform branches are testable; {@link Os#isMac} picks one. */
     static void install(TextInputControl control, boolean mac) {
+        install(control, mac, () -> true);
+    }
+
+    /**
+     * Installs the Emacs chords on {@code control} for while {@code active} says so: a find bar's
+     * field takes them under the Emacs keymap only, and the platform's own editing keys otherwise
+     * (FIND-09), so a CUA chord such as Ctrl+F stays the find bar's command.
+     */
+    static void install(TextInputControl control, BooleanSupplier active) {
+        install(control, Os.isMac(), active);
+    }
+
+    static void install(TextInputControl control, boolean mac, BooleanSupplier active) {
         boolean[] consumed = {false};
         control.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
             consumed[0] = false;
+            if (!active.getAsBoolean()) return;
             if (e.isConsumed()) {
                 // An earlier filter (the palette's list navigation) already claimed this chord.
                 // Its typed character is that chord's by-product all the same.

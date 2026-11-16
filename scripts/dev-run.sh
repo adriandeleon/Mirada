@@ -63,7 +63,7 @@ for arg in "$@"; do
         --) steps=1; app+=("$arg") ;;
         # Mirada's own options (Launch.USAGE); every other dash argument is the JVM's.
         --config-dir) value=1; app+=("$arg") ;;
-        --config-dir=*|--dev|--new-instance|--no-session|--report|--version|--help) app+=("$arg") ;;
+        --config-dir=*|--dev|--new-instance|--no-session|--report|--version|--help|-h|-v|-V) app+=("$arg") ;;
         -*) jvm+=("$arg") ;;
         *) app+=("$arg") ;;
     esac
@@ -87,4 +87,4 @@ exec java \
     "-Dprism.order=$PRISM" \
     -Dmirada.codecs=target/codecs \
     ${jvm[@]+"${jvm[@]}"} \
-    -m "${MIRADA_MAIN:-com.mirada/com.mirada.App}" ${app[@]+"${app[@]}"}
+    -m "${MIRADA_MAIN:-com.mirada/com.mirada.Launcher}" ${app[@]+"${app[@]}"}

@@ -30,7 +30,8 @@ class CommandPaletteTest {
 
     @Test
     void keywordsFindWhatTheLabelDoesNot() {
-        assertEquals(Command.CLOSE, find("quit").getFirst());
+        assertEquals(Command.QUIT, find("leave").getFirst());
+        assertTrue(find("exit").containsAll(List.of(Command.QUIT, Command.CLOSE)));
         assertEquals(Command.ACTUAL_SIZE, find("100").getFirst());
         // On Windows "Show in File Explorer" has "file" in its label, and outranks it rightly.
         List<Command> file = find("file").stream()
@@ -46,6 +47,21 @@ class CommandPaletteTest {
         // "turn" is a keyword of both rotations, but "Full Screen" contains nothing of it, and any
         // label match outranks a keyword match.
         assertTrue(CommandPalette.keywordScore(Command.ROTATE_CLOCKWISE, "turn") < -CommandPalette.KEYWORD_PENALTY / 2);
+    }
+
+    /** KBD-06: a query that spells a title, or begins one, leads every fuzzy hit. */
+    @Test
+    void aTypedTitleLeads() {
+        assertEquals(
+                Command.BOOKMARKS_LIST_BOOKMARKED,
+                find("Bookmarks: List Bookmarks Only").getFirst());
+        assertEquals(
+                Command.BOOKMARKS_LIST_BOOKMARKED, find("list bookmarks only").getFirst(), "without its prefix");
+        assertEquals(Command.UI_ZOOM_IN, find("Zoom Interface In").getFirst());
+        assertEquals(Command.UI_ZOOM_IN, find("zoom interface i").getFirst(), "a title it begins");
+        assertEquals(2, CommandPalette.titleTier("Interface Zoom…", "interface zoom"));
+        assertEquals(1, CommandPalette.titleTier("Bookmarks: List Notes Only", "Bookmarks: List"));
+        assertEquals(0, CommandPalette.titleTier("Zoom In", "zin"));
     }
 
     @Test
@@ -75,5 +91,15 @@ class CommandPaletteTest {
     @Test
     void theListShowsWholeRows() {
         assertEquals(CommandPalette.VISIBLE_ROWS * CommandPalette.ROW_HEIGHT + 4, CommandPalette.listHeight(4));
+    }
+
+    /** ACC-08: a row says its name and key, and why it cannot run when it cannot. */
+    @Test
+    void aRowTellsAScreenReaderWhyItCannotRun() {
+        assertEquals("Rotate Right, R", CommandPalette.rowText("Rotate Right", "R", null));
+        assertEquals("Next Image", CommandPalette.rowText("Next Image", "", null));
+        assertEquals(
+                "Next Image, Right, unavailable: This is the last image.",
+                CommandPalette.rowText("Next Image", "Right", "This is the last image."));
     }
 }

@@ -43,6 +43,11 @@ final class FxThrottle {
         runIfScheduled();
     }
 
+    /** Whether a run is scheduled and has not happened yet. */
+    boolean pending() {
+        return policy.scheduled();
+    }
+
     /** Drops a scheduled run. */
     void cancel() {
         timer.stop();

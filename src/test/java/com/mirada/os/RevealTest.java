@@ -16,18 +16,19 @@ class RevealTest {
 
     @Test
     void finderIsAskedToRevealIt() {
-        assertEquals(List.of(List.of("open", "-R", PHOTO.toString())), Reveal.commands("Mac OS X", PHOTO));
+        assertEquals(List.of(List.of("open", "-R", PHOTO.toString())), Reveal.commands(Os.Kind.MAC, PHOTO));
     }
 
     @Test
     void explorerIsAskedToSelectIt() {
         assertEquals(
-                List.of(List.of("explorer.exe", "/select,", PHOTO.toString())), Reveal.commands("Windows 11", PHOTO));
+                List.of(List.of("explorer.exe", "/select,", PHOTO.toString())),
+                Reveal.commands(Os.Kind.WINDOWS, PHOTO));
     }
 
     @Test
     void linuxAsksTheFileManagerOverDBusThenOpensTheFolder() {
-        List<List<String>> commands = Reveal.commands("Linux", PHOTO);
+        List<List<String>> commands = Reveal.commands(Os.Kind.LINUX, PHOTO);
         assertEquals("gdbus", commands.get(0).getFirst());
         assertEquals("dbus-send", commands.get(1).getFirst());
         assertEquals(List.of("xdg-open", PHOTO.getParent().toString()), commands.get(2));

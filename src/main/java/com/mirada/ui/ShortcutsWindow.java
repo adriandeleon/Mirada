@@ -3,13 +3,14 @@ package com.mirada.ui;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.GridPane;
@@ -23,7 +24,8 @@ import static com.mirada.i18n.Messages.tr;
 /**
  * Every command that has a key, grouped as {@link Command#group} groups them, with its keys beside
  * it: read from the keys in force ({@link Keybindings#current}: the keymap and the user's own), so
- * it cannot fall out of step with what the keys do. Built the first time it is opened.
+ * it cannot fall out of step with what the keys do. A search field over the list keeps the rows whose
+ * command or key holds what is typed (DOCS-08). Built the first time it is opened.
  */
 final class ShortcutsWindow {
 
@@ -32,15 +34,26 @@ final class ShortcutsWindow {
     private final Stage stage = new Stage();
 
     private final ScrollPane scroll = new ScrollPane();
+    private final TextField search = new TextField();
 
     ShortcutsWindow(String stylesheet) {
         stage.setTitle(tr("shortcuts.title"));
         WindowIcon.applyTo(stage);
 
-        scroll.setContent(content());
+        search.setPromptText(tr("shortcuts.search"));
+        search.setAccessibleText(tr("shortcuts.search"));
+        search.getStyleClass().add("shortcuts-search");
+        // Typed fast, the list is made once a pulse, not once a key (PERF-06).
+        Redraw redraw = new Redraw(this::refresh);
+        search.textProperty().addListener((o, was, now) -> redraw.request());
+        TextInputKeys.install(search);
+        scroll.setContent(content(""));
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        Scene scene = new Scene(scroll, WIDTH, 620);
+        VBox root = new VBox(search, scroll);
+        UiZoom.vboxMargin(search, 12, 20, 0, 20);
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        Scene scene = new Scene(root, UiZoom.px(WIDTH), UiZoom.px(620));
         scene.getStylesheets().add(stylesheet);
         scene.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.ESCAPE) stage.hide();
@@ -50,21 +63,34 @@ final class ShortcutsWindow {
 
     /** Reads the keys again, after they changed in the settings or the strip moved. */
     void refresh() {
-        scroll.setContent(content());
+        scroll.setContent(content(search.getText()));
     }
 
-    private static VBox content() {
-        VBox groups = new VBox(18);
-        groups.setPadding(new Insets(20));
+    /** Whether {@code command}'s row is kept for {@code query}: its name or one of its keys holds it. */
+    static boolean matches(Command command, String query) {
+        String wanted = query.strip().toLowerCase(Locale.ROOT);
+        if (wanted.isEmpty()) return true;
+        if (command.label().toLowerCase(Locale.ROOT).contains(wanted)) return true;
+        return keys(Keybindings.current().chords(command))
+                .toLowerCase(Locale.ROOT)
+                .contains(wanted);
+    }
+
+    private static VBox content(String query) {
+        VBox groups = UiZoom.vbox(18);
+        UiZoom.pad(groups, 20);
         groups.getStyleClass().add("shortcuts");
         for (Map.Entry<String, List<Command>> group : grouped().entrySet()) {
+            List<Command> kept =
+                    group.getValue().stream().filter(c -> matches(c, query)).toList();
+            if (kept.isEmpty()) continue;
             Label heading = new Label(group.getKey());
             heading.getStyleClass().add("shortcuts-group");
             GridPane rows = new GridPane();
-            rows.setHgap(24);
-            rows.setVgap(6);
+            UiZoom.bind(rows.hgapProperty(), 24);
+            UiZoom.bind(rows.vgapProperty(), 6);
             int row = 0;
-            for (Command command : group.getValue()) {
+            for (Command command : kept) {
                 Label name = new Label(command.label());
                 Label key = new Label(keys(Keybindings.current().chords(command)));
                 key.getStyleClass().add("shortcut-key");
@@ -72,7 +98,7 @@ final class ShortcutsWindow {
                 name.setMaxWidth(Double.MAX_VALUE);
                 rows.addRow(row++, name, key);
             }
-            groups.getChildren().add(new VBox(8, heading, rows));
+            groups.getChildren().add(UiZoom.vbox(8, heading, rows));
         }
         groups.setAlignment(Pos.TOP_LEFT);
         return groups;
@@ -112,6 +138,7 @@ final class ShortcutsWindow {
         stage.setX(from.getX() + Math.max(0, (from.getWidth() - WIDTH) / 2));
         stage.setY(from.getY() + 60);
         stage.show();
+        search.requestFocus();
     }
 
     /** Its stage, closed with the viewer's. */

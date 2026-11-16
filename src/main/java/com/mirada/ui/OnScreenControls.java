@@ -5,7 +5,6 @@ import java.util.function.Consumer;
 
 import javafx.animation.FadeTransition;
 import javafx.animation.PauseTransition;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -70,14 +69,19 @@ final class OnScreenControls {
                         item(Command.ZOOM_OUT, run));
 
         navigation = pill(previous, next);
+        // Its rows are written again as it opens, their chords the keymap's (MENU-15): the user's keys
+        // may have changed since; once shown, the chords line up in one column (MENU-18).
+        zoomMenu.setOnShowing(
+                e -> rows().forEach(row -> AppMenus.refresh(row, row.command().label(), false)));
+        zoomMenu.setOnShown(e -> AppMenus.alignChords(rows()));
         zooming = pill(zoom, zoomMenu);
         screen = pill(fullScreen);
         StackPane.setAlignment(navigation, Pos.BOTTOM_LEFT);
         StackPane.setAlignment(zooming, Pos.BOTTOM_RIGHT);
         StackPane.setAlignment(screen, Pos.TOP_LEFT);
-        StackPane.setMargin(navigation, new Insets(0, 0, 18, 18));
-        StackPane.setMargin(zooming, new Insets(0, 18, 18, 0));
-        StackPane.setMargin(screen, new Insets(18, 0, 0, 18));
+        UiZoom.stackMargin(navigation, 0, 0, 18, 18);
+        UiZoom.stackMargin(zooming, 0, 18, 18, 0);
+        UiZoom.stackMargin(screen, 18, 0, 0, 18);
         canvas.getChildren().addAll(navigation, zooming, screen);
 
         idle.setOnFinished(e -> {
@@ -178,7 +182,8 @@ final class OnScreenControls {
                     if (pill.getOpacity() == 0) setVisible(pill, false);
                 });
             }
-            transition.play();
+            // A jump to the end while the system asks for reduced motion (ACC-04).
+            Motion.play(transition);
         }
     }
 
@@ -188,7 +193,7 @@ final class OnScreenControls {
     }
 
     private static HBox pill(Node... buttons) {
-        HBox pill = new HBox(2, buttons);
+        HBox pill = UiZoom.hbox(2, buttons);
         pill.getStyleClass().add("osd");
         pill.setAlignment(Pos.CENTER);
         pill.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
@@ -196,9 +201,22 @@ final class OnScreenControls {
         return pill;
     }
 
+    /**
+     * A zoom row drawn as the menus' are (MENU-18): the glyph in the 22 px icon column, the title,
+     * and the chord at least 18 px after the widest title.
+     */
     private static MenuItem item(Command command, Consumer<Command> run) {
-        MenuItem item = new MenuItem(command.label(), Icons.menu(command));
-        item.setOnAction(e -> run.accept(command));
-        return MenuChord.on(item, command);
+        AppMenus.Row row = AppMenus.inWindowRow(command);
+        row.item().setOnAction(e -> run.accept(command));
+        return row.item();
+    }
+
+    /** The zoom menu's rows. */
+    private List<AppMenus.Row> rows() {
+        return zoomMenu.getItems().stream()
+                .map(item -> item.getProperties().get(AppMenus.ROW))
+                .filter(AppMenus.Row.class::isInstance)
+                .map(AppMenus.Row.class::cast)
+                .toList();
     }
 }

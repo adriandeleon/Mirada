@@ -10,9 +10,9 @@
 [![JavaFX 27](https://img.shields.io/badge/JavaFX-27-blue.svg)](https://openjfx.io/)
 [![platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](#installing-it)
 [![docs](https://img.shields.io/badge/docs-mirada--project.dev-0e8577)](https://mirada-project.dev/docs/)
-[![Pauta](https://img.shields.io/badge/Pauta-4.0.1-0e8577)](https://pauta-project.dev/4.0.1/)
+[![Pauta](https://img.shields.io/badge/Pauta-6.1.0%20%C2%B7%20Core-5b8def)](https://mirada-project.dev/docs/pauta/)
 
-Java 25 + JavaFX 27. Built to [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), edition [4.0.1](https://pauta-project.dev/4.0.1/).
+Java 25 + JavaFX 27. Built to [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), edition [6.1.0](https://pauta-project.dev/6.1.0/), [Pauta conformance: Core](https://mirada-project.dev/docs/pauta/).
 
 An image viewer is the app you open a hundred times a day for three seconds each. Mirada treats the
 folder as the document: open one photo and the rest of the folder is already there, in the order
@@ -57,8 +57,9 @@ and the [FAQ](https://mirada-project.dev/docs/faq). What changed in each release
   ([properties](https://mirada-project.dev/docs/properties)).
 - **Rename, Move to Trash, Copy, Show in Folder, a slideshow**, and full screen
   ([files](https://mirada-project.dev/docs/files), [viewing](https://mirada-project.dev/docs/viewing)).
-- **Native on each platform**: a header bar on Linux, a menu bar and Finder's and Preview's keys on
-  macOS, the Recycle Bin and the system's accent colour on Windows.
+- **The same on every OS, native where it counts**: the menus in the title bar on Windows and Linux
+  and in the menu bar on macOS, Finder's and Preview's keys on a Mac, the Recycle Bin on Windows, and
+  the system's accent colour everywhere.
 
 ## Installing it
 
@@ -96,38 +97,36 @@ opens the guide, and Ctrl+? lists every key.
 ## Command line
 
 ```
-Usage: mirada [options] [file-or-folder]
+Usage: mirada [options] [files...]
 
 Opens an image with its folder behind it, or a folder at its first image.
+Several images open together, to step through just those.
 
 Options:
-  --config-dir <dir>  keep settings and bookmarks in <dir>
+  -h, --help          print this, and exit
+  -v, -V, --version   print the version, build, commit and Pauta edition, and exit
+  --config-dir <dir>  keep settings and bookmarks in <dir> (default ~/.mirada)
   --dev               keep them in ~/.mirada-dev, apart from your own
   --new-instance      start a window of its own, even when Mirada is running
   --no-session        open only what is named; Mirada restores no session, so
                       this changes nothing, and is taken for scripts that pass it
-  --report            write a redacted problem report beside the settings, open
-                      a prefilled GitHub issue with it, and exit; for when
-                      Mirada will not start
-  --version           print the version, build, commit and Pauta edition, and exit
-  --help              print this, and exit
-  --                  what follows is a file, even if it starts with --
+  --report            write a redacted problem report in the current folder,
+                      open a prefilled GitHub issue with it, and exit; for
+                      when Mirada will not start
+  --                  what follows is a file, even if it starts with -
 
-One Mirada runs per config folder: a second launch hands its file to the
-running one, which opens it and comes to the front, and exits.
+One Mirada runs per config folder: a second launch hands its files to the
+running one, which opens them and comes to the front, and exits.
 
-MIRADA_CONFIG_DIR names the config folder too; an option wins over it.
+MIRADA_CONFIG_DIR names the config folder too; --config-dir and --dev win over it.
 ```
 
 ## Config folder
 
-Mirada keeps two plain files, meant to be readable and mendable by hand:
-
-| Platform | Folder |
-|---|---|
-| Linux | `~/.mirada` |
-| macOS | `~/Library/Application Support/Mirada` |
-| Windows | `%APPDATA%\Mirada` |
+Mirada keeps two plain files, meant to be readable and mendable by hand, in `~/.mirada` (your home
+folder's `.mirada`) on Linux, macOS and Windows alike. Mirada 0.x kept them in
+`~/Library/Application Support/Mirada` on macOS and `%APPDATA%\Mirada` on Windows; the first start
+that finds no `~/.mirada` moves that folder there, once.
 
 - `settings.properties` — the theme, the panels at start, the folder's order, the slideshow's pace,
   the palette's keys, the window's place and the recent folders. Every value is checked as it is
@@ -138,7 +137,8 @@ Mirada keeps two plain files, meant to be readable and mendable by hand:
 
 A file that will not read is kept beside it as `<name>.corrupt.bak`, and Mirada starts with the
 defaults. `--config-dir`, `--dev` or `MIRADA_CONFIG_DIR` point Mirada at another folder, to try
-something without touching your own settings.
+something without touching your own settings; `--config-dir` wins over `--dev`, and either over the
+variable.
 
 ## Building it
 

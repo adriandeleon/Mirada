@@ -17,11 +17,11 @@ import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -29,7 +29,9 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
 import com.mirada.AppInfo;
+import com.mirada.PautaConformance;
 import com.mirada.diagnostics.MessageLog;
+import com.mirada.os.Os;
 import com.mirada.report.Redactor;
 import com.mirada.settings.Settings;
 import com.mirada.update.ReleaseInfo;
@@ -46,6 +48,8 @@ import static com.mirada.ui.FxTestSupport.call;
 import static com.mirada.ui.FxTestSupport.fx;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -79,6 +83,7 @@ class ToolWindowsTest {
     @AfterEach
     void close() throws Exception {
         FxToolkit.cleanupStages();
+        fx(() -> Keybindings.use(Settings.DEFAULT_KEYMAP, java.util.Map.of(), Settings.defaultPaletteKeys(Os.isMac())));
     }
 
     /** The button or link under {@code root} whose text is {@code text}. */
@@ -120,43 +125,49 @@ class ToolWindowsTest {
                 () -> 0L);
     }
 
+    /** KBD-01, ABOUT-02, ABOUT-09, PWIN-04: every link and button in About runs a command. */
     @Test
-    void aboutsLinksOpenTheirPagesAndCopyDetailsCopiesTheEnvironment() throws Exception {
+    void aboutsLinksAndButtonsRunTheirCommands() throws Exception {
         UpdateCoordinator updates =
                 updates(new UpdateService.Outcome(new ReleaseInfo("99.0.0", "https://example.org/release"), null));
-        AboutWindow about = call(() -> new AboutWindow(
-                settings.file(), links::add, updates, () -> ran.add(Command.COPY_DETAILS), ViewerWindow.stylesheet()));
+        AboutWindow about = call(() -> new AboutWindow(settings.file(), ran::add, updates, ViewerWindow.stylesheet()));
         fx(() -> about.show(owner));
         Parent root = call(() -> about.stage().getScene().getRoot());
+        PautaConformance.Conformance conformance = PautaConformance.conformance();
         fx(() -> named(root, AppInfo.HOMEPAGE).fire());
+        fx(() -> named(root, "Source code and releases").fire());
         fx(() -> named(root, "Release notes").fire());
-        fx(() -> named(root, AboutWindow.pautaLink(AppInfo.PAUTA_EDITION)).fire());
-        assertEquals(List.of(AppInfo.HOMEPAGE, AppInfo.releaseNotesUrl(), AppInfo.pautaUrl()), links);
+        fx(() -> named(root, AboutWindow.pautaLink(conformance, AppInfo.PAUTA_EDITION))
+                .fire());
+        fx(() -> named(root, "Pauta conformance: " + conformance.english()).fire());
+        assertEquals(
+                List.of(Command.HOME_PAGE, Command.RELEASES, Command.RELEASE_NOTES, Command.PAUTA_RULES, Command.PAUTA),
+                ran);
+        assertTrue(
+                call(() -> all(root).stream()
+                        .anyMatch(n -> n instanceof Labeled l
+                                && Objects.equals(
+                                        l.getText(), AppInfo.environment(AppInfo.runtime(), settings.file())))),
+                "the environment block names the conformance");
+        ran.clear();
 
         ButtonBase copy = named(root, "Copy details");
         fx(copy::fire);
         assertEquals(List.of(Command.COPY_DETAILS), ran, "the button runs the command");
         assertFalse(call(copy::getText).equals("Copy details"), "it says it copied");
 
-        // A newer release, once checked, is named with a link to it.
+        // A newer release, once checked, is named in amber with a link to it (ABOUT-10).
         fx(() -> updates.checkNow(true));
-        assertTrue(call(() -> all(root).stream()
-                .anyMatch(n -> n instanceof Labeled l
+        Labeled line = call(() -> all(root).stream()
+                .filter(n -> n instanceof Labeled l
                         && l.getText() != null
-                        && l.getText().contains("99.0.0"))));
-        ButtonBase release = call(() -> all(root).stream()
-                .filter(n -> n instanceof javafx.scene.control.Hyperlink h
-                        && h.isVisible()
-                        && !links.isEmpty()
-                        && h.getText() != null
-                        && !h.getText().equals(AppInfo.HOMEPAGE)
-                        && !h.getText().equals("Release notes")
-                        && !h.getText().startsWith("Built to"))
-                .map(n -> (ButtonBase) n)
+                        && l.getText().contains("99.0.0"))
+                .map(n -> (Labeled) n)
                 .findFirst()
                 .orElseThrow());
-        fx(release::fire);
-        assertEquals("https://example.org/release", links.getLast());
+        assertTrue(call(() -> line.getStyleClass().contains("update-available")));
+        fx(() -> named(root, "Open its page").fire());
+        assertEquals(Command.OPEN_RELEASE, ran.getLast());
 
         press(about.stage(), KeyCode.ESCAPE);
         assertFalse(call(() -> about.stage().isShowing()));
@@ -164,6 +175,42 @@ class ToolWindowsTest {
         assertEquals("Copy details", call(copy::getText), "reset once closed");
         fx(() -> named(root, "Close").fire());
         assertFalse(call(() -> about.stage().isShowing()));
+    }
+
+    /** PWIN-02 to PWIN-06: the window lists every exception and its links run their commands. */
+    @Test
+    void thePautaWindowListsEveryExceptionAndItsLinksRunTheirCommands() throws Exception {
+        List<PautaConformance.Entry> exceptions = PautaConformance.exceptions();
+        PautaWindow window = call(() -> new PautaWindow(exceptions, ran::add, links::add, ViewerWindow.stylesheet()));
+        fx(() -> window.show(owner));
+        Parent root = call(() -> window.stage().getScene().getRoot());
+        PautaConformance.Entry first = PautaConformance.sorted(exceptions).getFirst();
+        fx(() -> named(root, first.rule()).fire());
+        assertEquals(List.of(first.url()), links, "a rule's ID opens its address in this edition");
+        long rows = call(() -> window.list().getChildren().stream()
+                .filter(n -> n.getStyleClass().contains("pauta-row"))
+                .count());
+        assertEquals(exceptions.size(), rows);
+
+        fx(() -> named(root, "Pauta " + AppInfo.PAUTA_EDITION + " rules").fire());
+        fx(() -> named(root, "Conformance in the docs").fire());
+        ButtonBase copy = window.copyButton();
+        fx(copy::fire);
+        assertEquals(List.of(Command.PAUTA_RULES, Command.PAUTA_DOCS, Command.COPY_PAUTA), ran);
+        assertEquals("Copied", call(copy::getText));
+        press(window.stage(), KeyCode.ESCAPE);
+        assertFalse(call(() -> window.stage().isShowing()));
+        assertEquals("Copy as text", call(copy::getText), "reset once closed");
+    }
+
+    /** PWIN-08: with no exceptions, one line says so where the list would be. */
+    @Test
+    void withNoExceptionsThePautaWindowSaysSoInOneLine() throws Exception {
+        PautaWindow window = call(() -> new PautaWindow(List.of(), ran::add, links::add, ViewerWindow.stylesheet()));
+        assertEquals(1, call(() -> window.list().getChildren().size()));
+        assertEquals(
+                "No exceptions: Mirada meets every MUST and SHOULD of Pauta " + AppInfo.PAUTA_EDITION + ".",
+                call(() -> ((Labeled) window.list().getChildren().getFirst()).getText()));
     }
 
     @Test
@@ -206,12 +253,15 @@ class ToolWindowsTest {
         }
         assertEquals(
                 List.of(
+                        Command.DEBUG_LOG_REFRESH,
                         Command.COPY_DEBUG_LOG,
                         Command.CLEAR_DEBUG_LOG,
                         Command.EXPORT_DEBUG_LOG,
                         Command.REPORT_PROBLEM),
                 ran);
+        // F5 is log.refresh's chord in the keymap (KBD-01), no key of the window's own.
         press(log.stage(), KeyCode.F5);
+        assertEquals(Command.DEBUG_LOG_REFRESH, ran.getLast());
         fx(() -> log.show(owner));
         press(log.stage(), KeyCode.ESCAPE);
         assertFalse(call(() -> log.stage().isShowing()));
@@ -222,12 +272,15 @@ class ToolWindowsTest {
         MessageLog messages = new MessageLog();
         messages.add("Copied a.png", MessageLog.Severity.INFO, LocalTime.NOON);
         messages.add("Couldn't open b.png: broken", MessageLog.Severity.ERROR, LocalTime.NOON.plusSeconds(1));
-        StackPane host = new StackPane();
+        StackPane root = new StackPane();
         fx(() -> {
             Stage stage = new Stage();
-            stage.setScene(new Scene(host, 600, 400));
+            stage.setScene(new Scene(root, 600, 400));
             stage.show();
+            // The Emacs keymap: its cancel chord, C-g, and its copy chord, M-w (MLOG-03, MLOG-04).
+            Keybindings.use("emacs", java.util.Map.of(), Settings.defaultPaletteKeys(Os.isMac()));
         });
+        OverlayHost host = new OverlayHost(root);
         MessageLogView log = call(() -> new MessageLogView(host, messages, ran::add));
         fx(() -> log.show(0));
         assertEquals(2, call(() -> log.listed().size()));
@@ -259,6 +312,17 @@ class ToolWindowsTest {
         assertEquals(Command.COPY_MESSAGES, ran.getLast());
         logKey(card, KeyCode.C, true, true); // with Shift, not a copy
         assertEquals(Command.COPY_MESSAGES, ran.getLast());
+        int copies = ran.size();
+        fx(() -> Event.fireEvent(
+                card, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.W, false, false, true, false)));
+        assertEquals(copies + 1, ran.size(), "M-w, Emacs's copy, copies too");
+        // C-n and C-p, Emacs's list moves, walk the list (QOPEN-12).
+        fx(() -> Event.fireEvent(
+                card, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.N, false, true, false, false)));
+        assertEquals(1, call(() -> list.getSelectionModel().getSelectedIndex()));
+        fx(() -> Event.fireEvent(
+                card, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.P, false, true, false, false)));
+        assertEquals(0, call(() -> list.getSelectionModel().getSelectedIndex()));
         logKey(card, KeyCode.G, false, true); // Alt+G: not C-g
         assertTrue(call(log::isShowing));
         controlKey(card, KeyCode.G); // C-g closes, as Escape does: Control on a Mac too, never Cmd
@@ -268,7 +332,7 @@ class ToolWindowsTest {
         logKey(card, KeyCode.ESCAPE, false, false);
         assertFalse(call(log::isShowing));
         fx(() -> log.show(0));
-        Node backdrop = FxTestSupport.field(log, "backdrop");
+        Node backdrop = FxTestSupport.field(host, "backdrop");
         fx(() -> backdrop.fireEvent(new MouseEvent(
                 MouseEvent.MOUSE_PRESSED,
                 1,
@@ -322,7 +386,7 @@ class ToolWindowsTest {
             Node target = card.getScene() != null && card.getScene().getFocusOwner() != null
                     ? card.getScene().getFocusOwner()
                     : card;
-            boolean mac = Command.MAC;
+            boolean mac = Os.isMac();
             Event.fireEvent(
                     target,
                     new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, shortcut && !mac, alt, shortcut && mac));
@@ -357,19 +421,25 @@ class ToolWindowsTest {
     }
 
     @Test
-    void theHeadersButtonsAndMenuRunTheirCommands() throws Exception {
+    void theHeadersButtonsAndMenuBarRunTheirCommands() throws Exception {
         SimpleBooleanProperty info = new SimpleBooleanProperty(false);
-        SimpleBooleanProperty thumbnails = new SimpleBooleanProperty(false);
-        SimpleBooleanProperty statusBar = new SimpleBooleanProperty(true);
-        TitleBar bar = call(() -> new TitleBar(owner, ran::add, info, thumbnails, statusBar));
+        TitleBar bar = call(() -> new TitleBar(owner, ran::add, info, false));
+        List<String> said = new ArrayList<>();
+        MenuBar menus = call(() -> AppMenus.inWindow(
+                ran::add,
+                command -> command == Command.COPY ? "The image is still loading." : null,
+                command -> command == Command.INFO,
+                Command::label,
+                said::add));
         fx(() -> {
             owner.setScene(new Scene(new javafx.scene.layout.BorderPane(null, bar.node(), null, null, null)));
             owner.show();
-            bar.finish();
+            bar.finish(menus);
             bar.setTitle("a.png");
             bar.setFolder(dir);
             bar.setImageShowing(true);
         });
+        assertSame(menus, call(bar::menuBar));
         ButtonBase rotate = FxTestSupport.field(bar, "rotate");
         fx(rotate::fire);
         fx(() -> {
@@ -395,15 +465,43 @@ class ToolWindowsTest {
             rotate.fire();
         });
         assertEquals(List.of(Command.ROTATE_CLOCKWISE, Command.ROTATE_COUNTERCLOCKWISE), ran);
-        MenuButton menu = FxTestSupport.field(bar, "menu");
-        List<MenuItem> items = call(() -> flatten(menu.getItems()));
-        assertFalse(items.isEmpty());
+        // The in-window bar: every row a CustomMenuItem of icon, title, spacer and chord, with no
+        // accelerator (MENU-02), its chord the keymap's (MENU-15).
         ran.clear();
-        for (MenuItem item : items) {
-            if (item instanceof javafx.scene.control.SeparatorMenuItem || item instanceof Menu) continue;
-            fx(item::fire);
+        for (Menu menu : menus.getMenus()) {
+            fx(() -> menu.getOnShowing().handle(new Event(Menu.ON_SHOWING)));
+            for (MenuItem item : menu.getItems()) {
+                if (item instanceof javafx.scene.control.SeparatorMenuItem) continue;
+                assertTrue(item instanceof javafx.scene.control.CustomMenuItem, item.toString());
+                assertNull(item.getAccelerator());
+                Command command = (Command) item.getUserData();
+                javafx.scene.layout.HBox row =
+                        (javafx.scene.layout.HBox) ((javafx.scene.control.CustomMenuItem) item).getContent();
+                javafx.scene.control.Label chord =
+                        (javafx.scene.control.Label) row.getChildren().get(3);
+                KeyCombination key = command.chord();
+                assertEquals(key == KeyCombination.NO_MATCH ? "" : key.getDisplayText(), chord.getText());
+                if (command == Command.COPY) {
+                    assertTrue(item.getStyleClass().contains("unavailable"), "greyed, and says why (KBD-04)");
+                    assertEquals("The image is still loading.", row.getAccessibleHelp());
+                }
+                if (command == Command.INFO) {
+                    javafx.scene.Node tick = row.lookup(".menu-item-tick");
+                    assertTrue(
+                            tick instanceof javafx.scene.control.Label l && AppMenus.TICK.equals(l.getText()),
+                            "ticked in the icon column");
+                    javafx.scene.control.Label title =
+                            (javafx.scene.control.Label) row.getChildren().get(1);
+                    assertEquals(Command.INFO.label(), title.getText(), "the title as any row's");
+                }
+                if (AppMenus.DESTRUCTIVE.contains(command))
+                    assertTrue(item.getStyleClass().contains("danger"));
+                fx(item::fire);
+            }
         }
-        assertTrue(ran.contains(Command.OPEN) && ran.contains(Command.PALETTE), ran.toString());
+        assertTrue(ran.contains(Command.OPEN) && ran.contains(Command.QUIT), ran.toString());
+        assertFalse(ran.contains(Command.COPY), "a row that cannot run does not");
+        assertEquals(List.of("The image is still loading."), said);
         fx(() ->
                 bar.fullScreen((javafx.scene.layout.BorderPane) owner.getScene().getRoot(), true));
         fx(() ->
@@ -411,24 +509,15 @@ class ToolWindowsTest {
         fx(() -> bar.setFolder(null));
     }
 
-    private static List<MenuItem> flatten(List<MenuItem> items) {
-        List<MenuItem> all = new ArrayList<>();
-        for (MenuItem item : items) {
-            all.add(item);
-            if (item instanceof Menu menu) all.addAll(flatten(menu.getItems()));
-        }
-        return all;
-    }
-
     @Test
     void theMacsMenuBarRunsCommandsAndGreysAndTicksThemWhileOpen() throws Exception {
-        MenuBar bar = call(() -> MacMenus.build(
+        MenuBar bar = call(() -> AppMenus.system(
                 ran::add,
                 command -> command == Command.COPY ? "The image is still loading." : null,
                 command -> command == Command.INFO,
                 command -> command == Command.FULL_SCREEN ? "Leave Full Screen" : command.label()));
         List<String> headings = bar.getMenus().stream().map(Menu::getText).toList();
-        assertEquals(MacMenus.HEADINGS.stream().map(MacMenus.Heading::title).toList(), headings);
+        assertEquals(AppMenus.HEADINGS.stream().map(AppMenus.Heading::title).toList(), headings);
         for (Menu menu : bar.getMenus()) {
             fx(() -> menu.getOnShowing().handle(new Event(Menu.ON_SHOWING)));
             for (MenuItem item : menu.getItems()) {

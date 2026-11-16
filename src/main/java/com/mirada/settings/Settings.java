@@ -18,14 +18,15 @@ import java.util.TreeMap;
 import java.util.concurrent.Executor;
 
 import com.mirada.folder.Sorting;
+import com.mirada.os.Os;
 import org.jspecify.annotations.Nullable;
 
 /**
  * Mirada's settings: theme, what opens at start, how long the floating controls stay, the folder's
- * order, whether stepping keeps the zoom, the slideshow's pace, the keys that open the palette, the
+ * order, whether stepping keeps the zoom, the slideshow's pace, the interface's zoom, the keys that open the palette, the
  * keymap and the user's own keys on top of it, the status bar, and the update check. In {@code settings.properties},
- * in the platform's folder for it ({@link #folder}; {@code MIRADA_CONFIG_DIR} moves it, for tests
- * and timing runs), Termina's way: a plain file meant to be hand-edited, every
+ * in the config folder ({@link ConfigDir}: {@code ~/.mirada} unless the command line or {@code
+ * MIRADA_CONFIG_DIR} names another), Termina's way: a plain file meant to be hand-edited, every
  * value clamped on read as well as on write, so a bad edit cannot break the next start, and every
  * change written through at once (the settings window has no OK button).
  *
@@ -34,11 +35,13 @@ import org.jspecify.annotations.Nullable;
  */
 public final class Settings {
 
-    /** The control theme: the system's light or dark setting, or one of them always. */
+    /** The control theme: the system's light or dark setting, one of them always, or high contrast. */
     public enum ThemeChoice {
         SYSTEM,
         LIGHT,
-        DARK
+        DARK,
+        /** Black ground, white ink (ACC-09); also what Windows' high-contrast mode switches to. */
+        HIGH_CONTRAST
     }
 
     static final String THEME = "theme";
@@ -61,6 +64,9 @@ public final class Settings {
     public static final int MAX_RECENT = 10;
     static final String WINDOW_MAXIMIZED = "window.maximized";
     static final String SLIDESHOW_SECONDS = "slideshow.seconds";
+    /** The interface's zoom, in percent (WIN-12): the whole chrome, not the image. */
+    static final String UI_ZOOM = "ui.zoom";
+
     static final String PALETTE_KEYS = "palette.keys";
     static final String KEYMAP = "keymap";
     /** {@code keys.<command id>}: the user's keys for a command, over the keymap's; blank for none. */
@@ -69,20 +75,25 @@ public final class Settings {
     public static final String DEFAULT_KEYMAP = "cua";
 
     static final String STATUS_BAR = "window.statusBar";
+    static final String TITLE_BAR_MENUS = "window.titleBarMenus";
     static final String CHECK_FOR_UPDATES = "updates.check";
     static final String LAST_UPDATE_CHECK = "updates.lastCheck";
 
     /**
      * The version of {@code settings.properties} this build writes ({@code schemaVersion}, SET-09):
-     * 1 for the unversioned files of 0.1 to 0.3, 2 since. A bump needs a step in {@link Migrations}.
+     * 1 for the unversioned files of 0.1 to 0.3, 2 since, 3 once the two panels' commands became
+     * {@code tool.properties} and {@code tool.thumbnails}. A bump needs a step in {@link Migrations}.
      */
-    public static final int SCHEMA_VERSION = 2;
+    public static final int SCHEMA_VERSION = 3;
 
     public static final int MIN_HIDE_SECONDS = 1;
     public static final int MAX_HIDE_SECONDS = 10;
     public static final int MIN_SLIDESHOW_SECONDS = 1;
     public static final int MAX_SLIDESHOW_SECONDS = 60;
     static final int DEFAULT_SLIDESHOW_SECONDS = 5;
+    public static final int DEFAULT_UI_ZOOM = 100;
+    public static final int MIN_UI_ZOOM = 80;
+    public static final int MAX_UI_ZOOM = 200;
 
     private final Path file;
     private final List<Runnable> listeners = new ArrayList<>();
@@ -100,10 +111,12 @@ public final class Settings {
     private @Nullable WindowPlace window;
     private List<Path> recent = List.of();
     private int slideshowSeconds = DEFAULT_SLIDESHOW_SECONDS;
-    private String paletteKeys = defaultPaletteKeys(isMac(System.getProperty("os.name", "")));
+    private int uiZoom = DEFAULT_UI_ZOOM;
+    private String paletteKeys = defaultPaletteKeys(Os.isMac());
     private String keymap = DEFAULT_KEYMAP;
     private Map<String, String> keys = Map.of();
     private boolean statusBar = true;
+    private boolean titleBarMenus = true;
     private boolean checkForUpdates = true;
     private long lastUpdateCheck;
 
@@ -112,66 +125,15 @@ public final class Settings {
     }
 
     /**
-     * The settings file in the folder the command line names ({@code --config-dir}, {@code --dev}),
-     * else under {@code MIRADA_CONFIG_DIR}, else in the platform's folder ({@link #folder}): flag,
-     * then variable, then default (SET-07, Pauta 4.0.1). A file left in {@code ~/.mirada} by 0.1.0 on
-     * macOS or Windows is moved to the default the first time ({@link #movedFrom}).
+     * The settings file in {@code folder}, the config folder the command line named ({@code
+     * --config-dir}, {@code --dev}); with none, in the one {@link ConfigDir#resolve} gives:
+     * {@code MIRADA_CONFIG_DIR}'s, else {@code ~/.mirada} (SET-07).
      */
-    public static Path defaultFile(@Nullable Path configDir) {
-        if (configDir != null) return configDir.resolve(FILE_NAME);
-        String override = System.getenv("MIRADA_CONFIG_DIR");
-        String home = System.getProperty("user.home", ".");
-        Path file = folder(override, home, System.getProperty("os.name", ""), System.getenv("APPDATA"))
-                .resolve(FILE_NAME);
-        if (override != null && !override.isBlank()) return file;
-        return movedFrom(Path.of(home, ".mirada", FILE_NAME), file);
+    public static Path defaultFile(@Nullable Path folder) {
+        return (folder != null ? folder : ConfigDir.resolve(null, false)).resolve(FILE_NAME);
     }
 
     static final String FILE_NAME = "settings.properties";
-
-    /**
-     * Where each platform keeps an application's settings: {@code ~/Library/Application
-     * Support/Mirada} on macOS, {@code %APPDATA%\Mirada} on Windows (its roaming folder, which
-     * travels with the user's account), {@code ~/.mirada} elsewhere, as Termina and Torrenta do.
-     * {@code override} wins when set.
-     */
-    static Path folder(@Nullable String override, String home, String osName, @Nullable String appData) {
-        if (override != null && !override.isBlank()) return Path.of(override.trim());
-        String os = osName.toLowerCase(Locale.ROOT);
-        if (os.startsWith("mac")) return Path.of(home, "Library", "Application Support", "Mirada");
-        if (os.startsWith("windows")) {
-            return appData != null && !appData.isBlank()
-                    ? Path.of(appData.trim(), "Mirada")
-                    : Path.of(home, "AppData", "Roaming", "Mirada");
-        }
-        return Path.of(home, ".mirada");
-    }
-
-    /**
-     * {@code file}, after moving the settings there from {@code old} if only {@code old} has them;
-     * {@code old} itself if the move fails, so the settings are never lost to a start. The emptied
-     * {@code ~/.mirada} is removed when nothing else is in it. One check when there is nothing to
-     * move, and none on Linux, where the two are the same.
-     */
-    static Path movedFrom(Path old, Path file) {
-        if (old.equals(file) || Files.exists(file) || !Files.isRegularFile(old)) return file;
-        try {
-            Path folder = file.getParent();
-            if (folder != null) Files.createDirectories(folder);
-            Files.move(old, file);
-        } catch (IOException e) {
-            return old;
-        }
-        Path oldFolder = old.getParent();
-        if (oldFolder != null) {
-            try {
-                Files.deleteIfExists(oldFolder);
-            } catch (IOException e) {
-                // Something else is in it: it stays.
-            }
-        }
-        return file;
-    }
 
     public Path file() {
         return file;
@@ -215,23 +177,15 @@ public final class Settings {
     private void apply(Properties properties) {
         theme = themeOf(properties.getProperty(THEME));
         language = languageOf(properties.getProperty(LANGUAGE));
-        startWithThumbnails = Boolean.parseBoolean(
-                properties.getProperty(START_WITH_THUMBNAILS, "false").trim());
-        startWithInfo = Boolean.parseBoolean(
-                properties.getProperty(START_WITH_INFO, "false").trim());
+        startWithThumbnails = booleanOf(properties.getProperty(START_WITH_THUMBNAILS), false);
+        startWithInfo = booleanOf(properties.getProperty(START_WITH_INFO), false);
         controlsHideSeconds = hideSecondsOf(properties.getProperty(CONTROLS_HIDE_SECONDS));
         sorting = new Sorting(
-                Sorting.byOf(properties.getProperty(SORT_BY)),
-                Boolean.parseBoolean(
-                        properties.getProperty(SORT_REVERSED, "false").trim()));
-        keepZoom =
-                Boolean.parseBoolean(properties.getProperty(KEEP_ZOOM, "false").trim());
-        thumbnailsAtSide = Boolean.parseBoolean(
-                properties.getProperty(THUMBNAILS_AT_SIDE, "false").trim());
-        thumbnailNames = Boolean.parseBoolean(
-                properties.getProperty(THUMBNAIL_NAMES, "false").trim());
-        thumbnailCaptions = Boolean.parseBoolean(
-                properties.getProperty(THUMBNAIL_CAPTIONS, "false").trim());
+                Sorting.byOf(properties.getProperty(SORT_BY)), booleanOf(properties.getProperty(SORT_REVERSED), false));
+        keepZoom = booleanOf(properties.getProperty(KEEP_ZOOM), false);
+        thumbnailsAtSide = booleanOf(properties.getProperty(THUMBNAILS_AT_SIDE), false);
+        thumbnailNames = booleanOf(properties.getProperty(THUMBNAIL_NAMES), false);
+        thumbnailCaptions = booleanOf(properties.getProperty(THUMBNAIL_CAPTIONS), false);
         window = windowOf(properties.getProperty(WINDOW_BOUNDS), properties.getProperty(WINDOW_MAXIMIZED));
         List<Path> folders = new ArrayList<>();
         for (int i = 0; i < MAX_RECENT; i++) {
@@ -245,13 +199,13 @@ public final class Settings {
         }
         recent = List.copyOf(folders);
         slideshowSeconds = slideshowSecondsOf(properties.getProperty(SLIDESHOW_SECONDS));
-        paletteKeys = paletteKeysOf(properties.getProperty(PALETTE_KEYS), isMac(System.getProperty("os.name", "")));
+        uiZoom = uiZoomOf(properties.getProperty(UI_ZOOM));
+        paletteKeys = paletteKeysOf(properties.getProperty(PALETTE_KEYS), Os.isMac());
         keymap = keymapOf(properties.getProperty(KEYMAP));
         keys = keysOf(properties);
-        statusBar =
-                Boolean.parseBoolean(properties.getProperty(STATUS_BAR, "true").trim());
-        checkForUpdates = Boolean.parseBoolean(
-                properties.getProperty(CHECK_FOR_UPDATES, "true").trim());
+        statusBar = booleanOf(properties.getProperty(STATUS_BAR), true);
+        titleBarMenus = booleanOf(properties.getProperty(TITLE_BAR_MENUS), true);
+        checkForUpdates = booleanOf(properties.getProperty(CHECK_FOR_UPDATES), true);
         lastUpdateCheck = millisOf(properties.getProperty(LAST_UPDATE_CHECK));
     }
 
@@ -311,6 +265,19 @@ public final class Settings {
         return setAside;
     }
 
+    /**
+     * {@code true} or {@code false}, in any case and with spaces around; {@code fallback}, the setting's
+     * default, for none or anything else (SET-11): a hand-typed {@code yes} must not turn on a setting
+     * whose default is off, nor {@code 1} turn off one whose default is on.
+     */
+    static boolean booleanOf(@Nullable String value, boolean fallback) {
+        if (value == null) return fallback;
+        String trimmed = value.trim();
+        if (trimmed.equalsIgnoreCase("true")) return true;
+        if (trimmed.equalsIgnoreCase("false")) return false;
+        return fallback;
+    }
+
     /** A time in milliseconds since the epoch, or 0 for none or anything that is not one. */
     static long millisOf(@Nullable String value) {
         if (value == null) return 0;
@@ -367,10 +334,6 @@ public final class Settings {
         return Collections.unmodifiableMap(out);
     }
 
-    private static boolean isMac(String osName) {
-        return osName.toLowerCase(Locale.ROOT).startsWith("mac");
-    }
-
     static int slideshowSecondsOf(@Nullable String value) {
         if (value == null) return DEFAULT_SLIDESHOW_SECONDS;
         try {
@@ -378,6 +341,21 @@ public final class Settings {
         } catch (NumberFormatException e) {
             return DEFAULT_SLIDESHOW_SECONDS;
         }
+    }
+
+    /** The UI zoom in a file: clamped to the range, a step of ten or not; the default for junk. */
+    static int uiZoomOf(@Nullable String value) {
+        if (value == null) return DEFAULT_UI_ZOOM;
+        try {
+            return clampUiZoom(Integer.parseInt(value.trim().replace("%", "")));
+        } catch (NumberFormatException e) {
+            return DEFAULT_UI_ZOOM;
+        }
+    }
+
+    /** {@code percent} in the UI zoom's range. Pure. */
+    public static int clampUiZoom(int percent) {
+        return Math.clamp(percent, MIN_UI_ZOOM, MAX_UI_ZOOM);
     }
 
     static ThemeChoice themeOf(@Nullable String value) {
@@ -485,12 +463,7 @@ public final class Settings {
         }
         for (double value : values) if (!Double.isFinite(value)) return null;
         if (values[2] < 100 || values[3] < 100) return null;
-        return new WindowPlace(
-                values[0],
-                values[1],
-                values[2],
-                values[3],
-                Boolean.parseBoolean(String.valueOf(maximized).trim()));
+        return new WindowPlace(values[0], values[1], values[2], values[3], booleanOf(maximized, false));
     }
 
     /** The folders opened lately, the latest first; some may be gone since. */
@@ -541,13 +514,25 @@ public final class Settings {
         return slideshowSeconds;
     }
 
+    /** The interface's zoom in percent, 100 by default (WIN-12). */
+    public int uiZoom() {
+        return uiZoom;
+    }
+
+    public void setUiZoom(int value) {
+        int next = clampUiZoom(value);
+        if (next == uiZoom) return;
+        uiZoom = next;
+        changed();
+    }
+
     /** The keys that open the command palette, as chord tokens separated by spaces. */
     public String paletteKeys() {
         return paletteKeys;
     }
 
     public void setPaletteKeys(String value) {
-        String keys = paletteKeysOf(value, isMac(System.getProperty("os.name", "")));
+        String keys = paletteKeysOf(value, Os.isMac());
         if (keys.equals(paletteKeys)) return;
         paletteKeys = keys;
         changed();
@@ -615,6 +600,20 @@ public final class Settings {
 
     public void setStatusBar(boolean value) {
         statusBar = value;
+        changed();
+    }
+
+    /**
+     * Whether the menu bar sits in the window's title bar (WIN-03), on by default; off, the window
+     * keeps the system's title bar and the menu bar goes under it. Read as the window is made: the
+     * window's style cannot change once it is shown, so a change takes effect at the next start.
+     */
+    public boolean titleBarMenus() {
+        return titleBarMenus;
+    }
+
+    public void setTitleBarMenus(boolean value) {
+        titleBarMenus = value;
         changed();
     }
 
@@ -699,10 +698,12 @@ public final class Settings {
             properties.setProperty(WINDOW_MAXIMIZED, Boolean.toString(place.maximized()));
         }
         properties.setProperty(SLIDESHOW_SECONDS, Integer.toString(slideshowSeconds));
+        properties.setProperty(UI_ZOOM, Integer.toString(uiZoom));
         properties.setProperty(PALETTE_KEYS, paletteKeys);
         properties.setProperty(KEYMAP, keymap);
         keys.forEach((id, chords) -> properties.setProperty(KEYS + id, chords));
         properties.setProperty(STATUS_BAR, Boolean.toString(statusBar));
+        properties.setProperty(TITLE_BAR_MENUS, Boolean.toString(titleBarMenus));
         properties.setProperty(CHECK_FOR_UPDATES, Boolean.toString(checkForUpdates));
         if (lastUpdateCheck > 0) properties.setProperty(LAST_UPDATE_CHECK, Long.toString(lastUpdateCheck));
         return properties;

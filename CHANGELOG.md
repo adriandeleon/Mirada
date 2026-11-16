@@ -10,6 +10,69 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Added
 
+- **All Metadata opens from the keyboard.** **All Metadata** in the View menu and the palette opens
+  the properties sidebar with every tag the file carries unfolded, and folds them away again; it
+  stays unfolded from image to image. The list shows its first 300 tags and says how many more the
+  file has.
+- **The empty window shows the keys of its ways in**: Open Image, Open Folder and, once there is a
+  recent folder, Open Recent, each with its key under it from the keymap in use.
+- **The window title names the folder too**, "photo.jpg — Holiday — Mirada", and starts with ● while
+  an edit is not saved.
+- **A screen reader names every control**: the thumbnails, the lists of the Message Log, Bookmarks,
+  the palette and Settings, their filter fields, each bookmark row (its name, whether it is
+  bookmarked, its folder and its note), each Settings control by its row's name, the editor's crop
+  shape, and the Debug Log and Report a Problem texts. The status bar's message and error count are
+  buttons to it, and an icon button reads its key as its tooltip shows it.
+- **AppStream metainfo of its own** (`packaging/linux/io.github.adriandeleon.Mirada.metainfo.xml`),
+  which the AppImage carries.
+
+- **Find in the Debug Log.** Ctrl+F (⌘F on a Mac, C-s in Emacs), F3, or **Find in Debug Log** in
+  the palette or the log's right-click menu opens a find bar under the log: it searches as you type
+  and counts the matches, Enter and Shift+Enter step to the next and the previous one, round the
+  ends, the find key again finds the next, and Escape or Close puts the keyboard back in the log.
+- **The Debug Log's find bar steps back and matches case from the keyboard too.** **Find Previous in
+  Debug Log** (Shift+F3, ⌘⇧G on a Mac, C-r in Emacs), **Match Case in Debug Log** (Alt+C, ⌘⌥C, M-c)
+  and **Refresh Debug Log** (F5, ⌘R) are commands, in the palette and the keymaps; the Previous and
+  Refresh buttons and Shift+Enter run them.
+- **The Menu key and Shift+F10 open the Message Log's and the Debug Log's right-click menus**, under
+  the selected message in the Message Log.
+- **A screen reader hears the palette's rows**: the row the arrows land on is announced, with its
+  key, and one that cannot run says why.
+
+- **The whole interface can be made larger or smaller.** Settings › General › **Interface zoom**
+  (or **Interface Zoom…** in the palette) draws the menus, the header, the status bar, the palette,
+  the floating controls and every window from 80 % to 200 %, at once and in every open window, and
+  keeps it for the next start. **Zoom Interface In**, **Zoom Interface Out** and **Reset Interface
+  Zoom** are in the View menu, on Ctrl+Alt+=, Ctrl+Alt+- and Ctrl+Alt+0 (⌘⌥ on a Mac); Ctrl+=,
+  Ctrl+- and Ctrl+0 still zoom the image, now in the Emacs keymap too.
+- **A high-contrast theme**: black, white and saturated colours, every text 7:1 or better. Pick it
+  in Settings › General › Theme, or let Windows' high-contrast mode switch Mirada to it and back.
+- **Motion follows the system**: with reduced motion asked for, the floating controls appear and go
+  at once instead of fading.
+- **Several images named on the command line open together**: `mirada a.jpg b.jpg c.jpg` steps
+  through just those three (a folder among them adds its images), and a second launch hands all of
+  its files to the running Mirada. `-h` is `--help`, and `-v` or `-V` is `--version`.
+- **The menus are in the title bar on Windows and Linux, as on a Mac's menu bar.** File, Edit,
+  Image, View, Go, Bookmarks and Help sit on the left of the window's top row, the same menus as
+  macOS's menu bar; F10 or Alt opens them from the keyboard in every keymap, and each row shows its
+  icon and its key. A row that cannot run now stays, greyed, and says why. Settings › General ›
+  **Menu bar in the title bar** (on by default, or **Menu Bar in the Title Bar** in the palette)
+  puts them under the system's title bar instead, from the next start. The ☰ menu is gone.
+- **Quit Mirada** (Ctrl+Q, ⌘Q on a Mac) ends File, and is in the palette; it asks first about an
+  edit not yet saved, as closing the window does.
+- **Help lists everything in one order**: Command Palette, Documentation, Keyboard Shortcuts,
+  Check for Updates, Message Log, Debug Log, Report a Problem, Pauta Conformance and About.
+- **Keyboard Shortcuts has a search field** that finds a command by its name or its key.
+- **More right-click menus.** A right-click on a thumbnail shows that image and opens its menu; the
+  Debug Log and the Message Log have Copy, Clear and their other commands on a right-click.
+
+- **Help › Pauta Conformance shows how far Mirada meets its guidelines.** Mirada is now built to
+  [Pauta 6.1.0](https://pauta-project.dev/6.1.0/), the adl desktop apps guidelines, and says how
+  fully it conforms (Core: every MUST met) and lists each rule it does not meet yet, with one plain
+  sentence and the issue that tracks it. **Copy as text** copies the list as Markdown; About links
+  the window and names the conformance, and its environment block (and Copy details) carries a
+  `Pauta conformance:` line.
+
 - **Mirada speaks Spanish, Portuguese, French, Italian and German.** It follows the system's
   language, or the one chosen in Settings › General › Language (or **Language…** in the command
   palette), from its next start. Every window, menu, message and command name is translated, and
@@ -116,6 +179,92 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
   without installing anything or needing root.
 
 ### Changed
+
+- **Default Command Palette Keys asks first** when the palette has keys of your own, and only then
+  puts its default keys back.
+- **The Debug Log's find bar searches once typing pauses**, not on the first key.
+- **The Debug Log's right-click menu closes on a click anywhere in the window**, the log included, and
+  a second right-click replaces it rather than open another.
+- **The Bookmarks window's right-click menu and the zoom menu are drawn as the other menus**: the
+  glyph column, the key in its own column, and a row that cannot run greyed with the reason as its
+  tooltip. With no folder open, the image menu's **Sort** says why instead of being greyed silently.
+- **The palette puts a command whose title you typed first**, then one whose title you began,
+  before looser matches.
+- **The sidebar's Show in Folder and note buttons name the new key** as soon as the keys change.
+- **Settings' descriptions name the keys of the keymap in use** ("T toggles it") rather than a
+  fixed letter.
+
+- **The sidebar's and the thumbnails' commands are `tool.properties` and `tool.thumbnails`**
+  (they were `view.properties` and `view.thumbnails`), and in the Emacs keymap M-1 and M-2 open
+  them, besides I and T. Keys you set for them yourself move to the new names at the next start.
+- **The editor's tooltips name their commands and keys again when the keys change**, and so do the
+  empty window's Open buttons; the crop shape's tooltip is **Next Crop Shape** with its key. The
+  bookmark badge's tooltip is **Bookmark Image** and the note badge's **Note on Image**, with the note
+  under it.
+- **Lists redraw once a frame**: a burst of messages, bookmark changes or keys typed in a search
+  makes the Message Log, the Bookmarks window, Keyboard Shortcuts and the thumbnails' marks once.
+- **Choosing a keymap or changing the interface zoom reads nothing on the window's thread**: the
+  keymaps are read after the first paint, and a new zoom's stylesheets are scaled on a thread of
+  their own before they are put on.
+- **The JVM build starts reading the settings before the window toolkit**, as the native build did;
+  the release build ships its stylesheets precompiled.
+- **No translated text names a key**: the empty Bookmarks list names the keymap's keys for
+  bookmarks and notes, and the slideshow speed's description no longer names F5.
+
+- **The palette, its pickers, the Message Log and the Bookmarks list move on your keymap's keys.**
+  In Emacs, C-n, C-p, C-v, M-v, M-< and M-> move and C-g cancels in all four; the CUA keymaps move on
+  the arrows, Page Up and Down and Ctrl+Home and End (⌘ on a Mac) alone, as before, without Emacs's
+  letters. The Message Log also copies on the keymap's copy key (M-w in Emacs). Closing the palette
+  or a picker puts the focus back where it was, a picker opened while the palette is up takes its
+  place, and Go to Image, Go to Bookmark and Open Recent name themselves over the field.
+
+- **Enter in a question never removes or discards.** Every question before something is lost opens
+  with Cancel as its default; leaving the editor with an unsaved edit now asks **Cancel**, **Save**
+  (the default) or **Discard**, and Save keeps the editor open when the save does not go through.
+  Every dialog draws its buttons in the same order on every system, Cancel on the left, and Rename
+  says **Rename** and **Cancel** in Mirada's language rather than the system's OK.
+- **Removing a bookmark in the Bookmarks and Notes window no longer asks, and can be undone.**
+  Ctrl+Z (⌘Z on a Mac, C-/ in Emacs) or **Bookmarks: Undo Remove** in the palette puts the bookmark
+  and its note back.
+- **Every tooltip shows after the same short pause**, 0.4 seconds.
+
+- **Mirada keeps its settings in `~/.mirada` on every system.** On macOS and Windows they were in
+  `~/Library/Application Support/Mirada` and `%APPDATA%\Mirada`; the first start that finds no
+  `~/.mirada` moves that folder there, once, and says so in the Debug Log. `--config-dir` now wins
+  over `--dev` whichever comes first, and either over `MIRADA_CONFIG_DIR`.
+- **`mirada --report` writes `problem-report.txt` in the folder you typed it in** (the temp folder
+  when that one can't be written), not beside the settings.
+- **An option Mirada doesn't know stops it, with one dash as with two:** `mirada -x` names `-x`,
+  says to run `mirada --help`, and exits with status 2, where it used to look for a file called
+  `-x`. The options a launcher can leave behind (`--add-exports`, `--add-opens`, `-p`) are skipped.
+- **On Windows, `--help`, `--version`, `--report` and a mistyped option print in the console** they
+  were typed in, which they did not before.
+- **Dates and numbers keep your region.** With the language left to the system, or set to the
+  system's own, an Austrian or a Mexican system's numbers and dates are written its way, and a
+  number inside a message is written as the rest of the window's; another language chosen writes
+  them that language's way. "1 older not kept" and the conformance counts are worded for one.
+- **A setting typed by hand as anything but `true` or `false` is its default**: `yes` or `1` no
+  longer turns off the status bar or the update check.
+- **A menu row that is on shows its tick in place of its icon**, so its words line up with the rows
+  around it.
+- **"A slideshow needs a folder with more than one image" is translated** with the rest.
+
+- **Escape no longer closes the window on Linux.** It stops a slideshow or leaves full screen, the
+  same on every system; Ctrl+W closes the window.
+- **The system's accent colour is followed on Linux too**, as on macOS and Windows, and the file
+  name stays in the middle of the title bar on Windows, as elsewhere.
+- **Menus look the same everywhere**: rounded cards with a soft shadow, taller rows, keys in one
+  column, and Move to Trash, Clear and Remove in red. The zoom menu's keys follow a keymap change.
+- **On a Mac, Settings in the application menu shows the keymap's key** for it, and no longer takes
+  ⌘, for itself under a keymap that binds another.
+
+- **About links the website, the source code and releases, and colours the update check.** Its
+  links are now the website, *Source code and releases*, this version's release notes, the Pauta
+  edition and the conformance, and each is a command in the palette too (Mirada Website, Source Code
+  and Releases, Release Notes, Pauta Rules). An available update is bold amber, up to date green and
+  a failed check red.
+- **Settings' Default button for the palette's keys is a command too:** *Default Command Palette
+  Keys* in the palette puts them back.
 
 - **Opening a folder, sorting it, renaming, and saving settings and bookmarks no longer hold up the
   window.** Listing a folder, the dates and sizes a sort reads, renaming a file, finding which

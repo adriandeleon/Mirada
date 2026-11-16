@@ -2,8 +2,13 @@ package com.mirada.ui;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -13,12 +18,12 @@ import java.util.function.Function;
 import javafx.application.Platform;
 import javafx.css.PseudoClass;
 import javafx.geometry.Bounds;
-import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -53,10 +58,11 @@ import static com.mirada.i18n.Messages.tr;
  * pictures: grouped by folder ({@link BookmarkList}), each image with its thumbnail and its note,
  * found by typing a word of its name, its folder's or its note.
  *
- * <p>The keys stay in the filter field, as in the palette: Up and Down (Ctrl+P and Ctrl+N) move,
- * Escape clears the filter and then closes. What can be done to a row is a command ({@link
+ * <p>The keys stay in the filter field, as in the palette, and move the list as the palette's do
+ * ({@link PaletteKeys}, QOPEN-12): the arrows, the pages and the keymap's own moves (Ctrl+N and Ctrl+P
+ * in Emacs); Escape or the keymap's cancel chord clears the filter and then closes. What can be done to a row is a command ({@link
  * Command.Context#BOOKMARKS}, {@link #run}), on its key from the keymap (Return opens in the viewer,
- * F2 edits the note, Ctrl+B bookmarks, Ctrl+Delete removes the mark, Ctrl+1–3 list all, the
+ * F2 edits the note, Ctrl+B bookmarks, Ctrl+Delete removes the mark and Ctrl+Z puts it back, Ctrl+1–3 list all, the
  * bookmarks or the notes), from the row's menu, and from the window's own command palette, which
  * the palette's keys open here as in the viewer and which lists every command. Delete also removes
  * while the filter is empty. A mark whose file has gone stays listed, dimmed, so it can be removed.
@@ -105,6 +111,15 @@ final class BookmarksWindow {
 
     private BookmarkList.Show show = BookmarkList.Show.ALL;
 
+    /** How many removals the undo goes back through. */
+    static final int UNDO_DEPTH = 20;
+
+    /** The marks removed while the window was up, the last first, for the undo. */
+    private final Deque<Bookmarks.Mark> removed = new ArrayDeque<>();
+
+    /** Whether the hint line says what was just done rather than the keys. */
+    private boolean saying;
+
     /**
      * @param runner runs any command, as the viewer's keys would: what the window's palette runs
      * @param unavailable why a command cannot run now, or null: the window's palette greys it
@@ -127,7 +142,11 @@ final class BookmarksWindow {
 
         filter.setPromptText(tr("bookmarks.filterPrompt"));
         filter.getStyleClass().add("bookmarks-filter");
-        filter.textProperty().addListener((o, was, now) -> filtering.request());
+        filter.setAccessibleText(tr("bookmarks.filterPrompt")); // the prompt goes when typing starts (ACC-01)
+        filter.textProperty().addListener((o, was, now) -> {
+            if (saying) refreshKeys();
+            filtering.request();
+        });
         HBox.setHgrow(filter, Priority.ALWAYS);
 
         HBox kinds = new HBox();
@@ -152,11 +171,12 @@ final class BookmarksWindow {
             }
         });
 
-        HBox top = new HBox(8, filter, kinds);
+        HBox top = UiZoom.hbox(8, filter, kinds);
         top.setAlignment(Pos.CENTER_LEFT);
-        top.setPadding(new Insets(12, 12, 8, 12));
+        UiZoom.pad(top, 12, 12, 8, 12);
 
         list.getStyleClass().add("bookmarks-list");
+        list.setAccessibleText(Icons.title(Command.BOOKMARKS));
         // The filter keeps the keys; a click selects without taking them from it.
         list.setFocusTraversable(false);
         list.setCellFactory(view -> new Cell());
@@ -172,24 +192,28 @@ final class BookmarksWindow {
         HBox.setHgrow(gap, Priority.ALWAYS);
         count.getStyleClass().add("bookmarks-hint");
         count.setMinWidth(Region.USE_PREF_SIZE);
-        HBox bottom = new HBox(8, hint, gap, count);
+        HBox bottom = UiZoom.hbox(8, hint, gap, count);
         bottom.setAlignment(Pos.CENTER_LEFT);
-        bottom.setPadding(new Insets(6, 12, 8, 12));
+        UiZoom.pad(bottom, 6, 12, 8, 12);
 
         BorderPane content = new BorderPane(list, top, null, bottom, null);
         content.getStyleClass().add("bookmarks-window");
         // A root the palette can lie over, as the viewer's does.
         StackPane root = new StackPane(content);
-        palette = new CommandPalette(root, runner);
-        Scene scene = new Scene(root, WIDTH, 640);
+        palette = new CommandPalette(new OverlayHost(root), runner);
+        Scene scene = new Scene(root, UiZoom.px(WIDTH), UiZoom.px(640));
         scene.getStylesheets().add(stylesheet);
         scene.addEventFilter(KeyEvent.KEY_PRESSED, this::onKey);
         Popups.closeOnPressOutside(stage, scene);
         Popups.menusByKey(scene);
         stage.setScene(scene);
 
-        bookmarks.addListener(() -> {
+        // A burst of changes (an import, a folder's worth of marks) makes the list once (PERF-06).
+        Redraw redraw = new Redraw(() -> {
             if (stage.isShowing()) marksChanged();
+        });
+        bookmarks.addListener(() -> {
+            if (stage.isShowing()) redraw.request();
         });
     }
 
@@ -237,7 +261,15 @@ final class BookmarksWindow {
                 folders == 0
                         ? counted(images, "image")
                         : tr("bookmarks.countBoth", counted(images, "image"), counted(folders, "folder")));
-        empty.setText(marks.isEmpty() ? tr("bookmarks.emptyNone") : tr("bookmarks.emptyNoMatch"));
+        empty.setText(
+                marks.isEmpty()
+                        ? tr(
+                                "bookmarks.emptyNone",
+                                keyOf(Command.BOOKMARK),
+                                keyOf(Command.NOTE),
+                                keyOf(Command.BOOKMARK_FOLDER),
+                                keyOf(Command.FOLDER_NOTE))
+                        : tr("bookmarks.emptyNoMatch"));
     }
 
     /**
@@ -264,6 +296,15 @@ final class BookmarksWindow {
         return Set.copyOf(gone);
     }
 
+    /**
+     * The key that runs {@code command} in the keymap now, or its title where it has none: the
+     * empty list names the keys that fill it, never one written into the text (KBD-13).
+     */
+    static String keyOf(Command command) {
+        KeyCombination chord = command.chord();
+        return chord == KeyCombination.NO_MATCH ? Icons.title(command) : chord.getDisplayText();
+    }
+
     /** "1 image", "3 folders": {@code n} of {@code what}, which is "image" or "folder". */
     static String counted(int n, String what) {
         return what.equals("folder") ? tr("bookmarks.folderCount", n) : tr("bookmarks.imageCount", n);
@@ -285,24 +326,22 @@ final class BookmarksWindow {
             return;
         }
         Command command = Keybindings.current().commandFor(Command.Context.BOOKMARKS, e);
+        // With no removal to undo, the undo key is the filter field's own.
+        if (command == Command.BOOKMARKS_UNDO_REMOVE && removed.isEmpty()) command = null;
         if (command != null) {
             run(command);
             e.consume();
             return;
         }
         KeyCode code = e.getCode();
-        boolean control = e.isControlDown() && !e.isAltDown();
-        if (code == KeyCode.ESCAPE) {
+        // The palette's keys (QOPEN-12): the arrows, the pages, the ends and the keymap's own moves
+        // walk the list, and Escape or the keymap's cancel chord peels the filter, then closes.
+        PaletteKeys.Action action = PaletteKeys.action(e, filter.isFocused());
+        if (action == PaletteKeys.Action.CANCEL) {
             if (filter.getText().isEmpty()) stage.hide();
             else filter.clear();
-        } else if (code == KeyCode.UP || (control && code == KeyCode.P)) {
-            move(-1);
-        } else if (code == KeyCode.DOWN || (control && code == KeyCode.N)) {
-            move(1);
-        } else if (code == KeyCode.PAGE_UP) {
-            move(-10);
-        } else if (code == KeyCode.PAGE_DOWN) {
-            move(10);
+        } else if (PaletteKeys.isNavigation(action)) {
+            move(action);
         } else if (Popups.isMenuKey(e)) {
             showMenuFromKeyboard();
         } else if (code == KeyCode.DELETE
@@ -323,6 +362,7 @@ final class BookmarksWindow {
 
     /** Shows the keys in force again after the settings changed them: the hint and the palette's chips. */
     void refreshKeys() {
+        saying = false;
         hint.setText(hintText());
         palette.refreshKeys();
     }
@@ -345,6 +385,7 @@ final class BookmarksWindow {
             case BOOKMARKS_TOGGLE -> toggle(row);
             case BOOKMARKS_SHOW_IN_FOLDER -> showInFolder(row);
             case BOOKMARKS_REMOVE -> remove(row);
+            case BOOKMARKS_UNDO_REMOVE -> undoRemove();
             case BOOKMARKS_LIST_ALL -> list(BookmarkList.Show.ALL);
             case BOOKMARKS_LIST_BOOKMARKED -> list(BookmarkList.Show.BOOKMARKS);
             case BOOKMARKS_LIST_NOTES -> list(BookmarkList.Show.NOTES);
@@ -371,6 +412,7 @@ final class BookmarksWindow {
                 row == null
                         ? tr("bookmarks.nothingSelected")
                         : markOf(row) == null ? tr("bookmarks.folderHasNoMark") : null;
+            case BOOKMARKS_UNDO_REMOVE -> removed.isEmpty() ? tr("bookmarks.nothingRemoved") : null;
             default -> null;
         };
     }
@@ -389,13 +431,18 @@ final class BookmarksWindow {
         return chord == KeyCombination.NO_MATCH ? command.label() : chord.getDisplayText();
     }
 
-    /** Moves the selection by {@code delta} rows, stopping at either end. */
-    private void move(int delta) {
+    /** Moves the selection as {@code action} says, stopping at either end; a page is ten rows. */
+    private void move(PaletteKeys.Action action) {
         int size = list.getItems().size();
         if (size == 0) return;
         int at = list.getSelectionModel().getSelectedIndex();
-        int next = at < 0 ? (delta > 0 ? 0 : size - 1) : Math.clamp(at + delta, 0, size - 1);
-        list.getSelectionModel().select(next);
+        int next =
+                switch (action) {
+                    case DOWN -> at < 0 ? 0 : Math.min(size - 1, at + 1);
+                    case UP -> at < 0 ? size - 1 : Math.max(0, at - 1);
+                    default -> PaletteKeys.target(action, at, size, 10);
+                };
+        PaletteKeys.select(list, next);
         list.scrollTo(Math.max(0, next - 2));
     }
 
@@ -427,8 +474,7 @@ final class BookmarksWindow {
                 stage,
                 tr(folder ? "bookmarks.folderNoteTitle" : "bookmarks.noteTitle"),
                 about,
-                bookmarks.note(row.path()),
-                stylesheet);
+                bookmarks.note(row.path()));
         answer.ifPresent(note -> bookmarks.setNote(row.path(), folder, note));
         filter.requestFocus();
     }
@@ -441,16 +487,34 @@ final class BookmarksWindow {
         if (row != null) bookmarks.toggle(row.path(), row instanceof BookmarkList.FolderRow);
     }
 
-    /** Takes the mark off the row; a note, which cannot be typed again from memory, asks first. */
+    /**
+     * Takes the mark off the row, its bookmark and its note, without asking: the undo puts it back
+     * (CONF-01, CONF-07), and the hint line says so with its key.
+     */
     private void remove(BookmarkList.@Nullable Row row) {
         Bookmarks.Mark mark = markOf(row);
         if (row == null || mark == null) return;
-        if (mark.hasNote()
-                && !Confirm.ask(Confirm.removeMark(BookmarkList.name(mark.path()), mark.bookmarked()), stage)) {
-            return;
-        }
         bookmarks.remove(mark.path());
+        removed.push(mark);
+        while (removed.size() > UNDO_DEPTH) removed.removeLast();
+        String name = BookmarkList.name(mark.path());
+        say(tr("bookmarks.removed", name, key(Command.BOOKMARKS_UNDO_REMOVE)));
         filter.requestFocus();
+    }
+
+    /** Puts back the mark last removed; a second time, the one before. */
+    private void undoRemove() {
+        Bookmarks.Mark mark = removed.poll();
+        if (mark == null) return;
+        bookmarks.restore(mark);
+        say(tr("bookmarks.putBack", BookmarkList.name(mark.path())));
+        filter.requestFocus();
+    }
+
+    /** Says {@code text} in the hint line, until the filter changes. */
+    private void say(String text) {
+        hint.setText(text);
+        saying = true;
     }
 
     /**
@@ -465,39 +529,46 @@ final class BookmarksWindow {
         Popups.show(menu(row), list, at.getX(), at.getY());
     }
 
+    /**
+     * The row's menu, its rows drawn as the menu bar's (MENU-18): the command's glyph in the icon
+     * column, its title in the row's words, and its chord. A row that cannot run stays, greyed, and
+     * says why (KBD-04); the window's commands act on the selected row, which the menu is for.
+     */
     private ContextMenu menu(BookmarkList.Row row) {
+        // The menu is the row's: a right-click selects it first, the keyboard opens the selected one's.
+        if (list.getSelectionModel().getSelectedItem() != row)
+            list.getSelectionModel().select(row);
         Bookmarks.Mark mark = markOf(row);
         boolean folder = row instanceof BookmarkList.FolderRow;
-        MenuItem open = new MenuItem(
-                tr(folder ? "bookmarks.menu.openFolder" : "bookmarks.menu.open"),
-                Icons.of(folder ? Icons.FOLDER_OPEN : Icons.PICTURE));
-        MenuChord.on(open, Command.BOOKMARKS_OPEN);
-        open.setOnAction(e -> open(row));
-        open.setDisable(missing.contains(row.path()));
-        MenuItem note = new MenuItem(
-                tr(mark != null && mark.hasNote() ? "bookmarks.menu.editNote" : "bookmarks.menu.addNote"),
-                Icons.of(Icons.NOTE));
-        MenuChord.on(note, Command.BOOKMARKS_EDIT_NOTE);
-        note.setOnAction(e -> editNote(row));
         boolean bookmarked = mark != null && mark.bookmarked();
-        MenuItem bookmark = new MenuItem(
+        Map<Command, String> words = new LinkedHashMap<>();
+        words.put(Command.BOOKMARKS_OPEN, tr(folder ? "bookmarks.menu.openFolder" : "bookmarks.menu.open"));
+        words.put(Command.BOOKMARKS_SHOW_IN_FOLDER, tr("bookmarks.menu.showInFolder"));
+        words.put(
+                Command.BOOKMARKS_EDIT_NOTE,
+                tr(mark != null && mark.hasNote() ? "bookmarks.menu.editNote" : "bookmarks.menu.addNote"));
+        words.put(
+                Command.BOOKMARKS_TOGGLE,
                 tr(
                         bookmarked
                                 ? "bookmarks.menu.takeBookmarkOff"
-                                : folder ? "bookmarks.menu.bookmarkFolder" : "bookmarks.menu.bookmarkImage"),
-                Icons.of(Icons.BOOKMARK));
-        MenuChord.on(bookmark, Command.BOOKMARKS_TOGGLE);
-        bookmark.setOnAction(e -> toggle(row));
-        MenuItem show = new MenuItem(tr("bookmarks.menu.showInFolder"), Icons.of(Icons.FOLDER));
-        MenuChord.on(show, Command.BOOKMARKS_SHOW_IN_FOLDER);
-        show.setOnAction(e -> showInFolder(row));
-        show.setDisable(missing.contains(row.path()));
-        MenuItem remove = new MenuItem(tr("bookmarks.menu.remove"), Icons.of(Icons.REMOVE_MARK));
-        MenuChord.on(remove, Command.BOOKMARKS_REMOVE);
-        remove.setOnAction(e -> remove(row));
-        remove.setDisable(mark == null);
-        ContextMenu menu =
-                new ContextMenu(open, show, new SeparatorMenuItem(), note, bookmark, new SeparatorMenuItem(), remove);
+                                : folder ? "bookmarks.menu.bookmarkFolder" : "bookmarks.menu.bookmarkImage"));
+        // Remove forgets the mark and its note: the row is red (MENU-12).
+        words.put(Command.BOOKMARKS_REMOVE, tr("bookmarks.menu.remove"));
+        List<MenuItem> rows = new ArrayList<>();
+        for (Map.Entry<Command, String> entry : words.entrySet()) {
+            Command command = entry.getKey();
+            if (command == Command.BOOKMARKS_EDIT_NOTE || command == Command.BOOKMARKS_REMOVE)
+                rows.add(new SeparatorMenuItem());
+            CustomMenuItem item = AppMenus.commandRow(
+                    command, this::run, this::unavailable, c -> false, c -> entry.getValue(), this::say);
+            if (command == Command.BOOKMARKS_OPEN
+                    && folder
+                    && item.getProperties().get(AppMenus.ROW) instanceof AppMenus.Row drawn)
+                drawn.icon().getChildren().setAll(Icons.of(Icons.FOLDER_OPEN));
+            rows.add(item);
+        }
+        ContextMenu menu = AppMenus.aligned(new ContextMenu(rows.toArray(MenuItem[]::new)));
         Popups.closedByWindow(menu);
         return menu;
     }
@@ -510,9 +581,9 @@ final class BookmarksWindow {
         private final Label where = new Label();
         private final Label note = new Label();
         private final Node bookmarkIcon = Icons.of(Icons.BOOKMARK);
-        private final HBox title = new HBox(6);
-        private final VBox text = new VBox(2);
-        private final HBox row = new HBox(10);
+        private final HBox title = UiZoom.hbox(6);
+        private final VBox text = UiZoom.vbox(2);
+        private final HBox row = UiZoom.hbox(10);
         /** The file whose thumbnail this cell asked for, until it shows another. */
         private @Nullable Path asked;
 
@@ -535,7 +606,7 @@ final class BookmarksWindow {
             note.setWrapText(true);
             note.setMinWidth(0);
             // A long note shows its start; the note window shows all of it.
-            note.setMaxHeight(60);
+            UiZoom.bind(note.maxHeightProperty(), 60);
             bookmarkIcon.getStyleClass().add("thumbnail-mark");
             title.setAlignment(Pos.CENTER_LEFT);
             text.setMinWidth(0);
@@ -568,6 +639,7 @@ final class BookmarksWindow {
             if (empty || item == null) {
                 setGraphic(null);
                 setText(null);
+                setAccessibleText(null);
                 pseudoClassStateChanged(MISSING, false);
                 pseudoClassStateChanged(FOLDER, false);
                 return;
@@ -594,11 +666,11 @@ final class BookmarksWindow {
                 if (!where.getText().isEmpty()) text.getChildren().add(where);
                 if (!said.isEmpty()) text.getChildren().add(note);
                 row.getChildren().setAll(folderIcon, text);
-                row.setPadding(new Insets(6, 0, 2, 0));
+                UiZoom.pad(row, 6, 0, 2, 0);
             } else {
                 if (!said.isEmpty()) text.getChildren().add(note);
                 row.getChildren().setAll(frame, text);
-                row.setPadding(new Insets(0, 0, 0, 22));
+                UiZoom.pad(row, 0, 0, 0, 22);
                 if (!gone) {
                     Path file = item.path();
                     asked = file;
@@ -619,6 +691,13 @@ final class BookmarksWindow {
             }
             setText(null);
             setGraphic(row);
+            // The row as a screen reader says it: its name, bookmarked or not, where, its note (ACC-01).
+            List<String> words = new ArrayList<>();
+            words.add(name.getText());
+            if (mark != null && mark.bookmarked()) words.add(tr("info.bookmarked"));
+            if (item instanceof BookmarkList.FolderRow && !where.getText().isEmpty()) words.add(where.getText());
+            if (!said.isEmpty()) words.add(said);
+            setAccessibleText(String.join(", ", words));
         }
     }
 

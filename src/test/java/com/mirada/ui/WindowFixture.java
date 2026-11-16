@@ -25,6 +25,7 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 
 import com.mirada.diagnostics.MessageLog;
+import com.mirada.os.Os;
 import com.mirada.settings.Settings;
 import org.jspecify.annotations.Nullable;
 
@@ -89,7 +90,7 @@ final class WindowFixture implements AutoCloseable {
     void press(KeyCode code, boolean shortcut, boolean shift) throws Exception {
         fx(() -> {
             Scene scene = Objects.requireNonNull(stage.getScene());
-            boolean mac = Command.MAC;
+            boolean mac = Os.isMac();
             KeyEvent event =
                     new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, shift, shortcut && !mac, false, shortcut && mac);
             Node target = scene.getFocusOwner() != null ? scene.getFocusOwner() : scene.getRoot();

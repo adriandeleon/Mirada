@@ -19,6 +19,7 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
 import com.mirada.folder.Sorting;
+import com.mirada.os.Os;
 import com.mirada.settings.Settings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,7 +69,7 @@ class SettingsWindowTest {
     @AfterEach
     void close() throws Exception {
         FxToolkit.cleanupStages();
-        fx(() -> Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Command.MAC)));
+        fx(() -> Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Os.isMac())));
     }
 
     /** The control in the row titled {@code title}. */
@@ -181,9 +182,9 @@ class SettingsWindowTest {
         fx(stage::hide); // closed while recording: it stops
         assertFalse(call(shown::getText).startsWith("Press"));
 
-        fx(() -> settings.setPaletteKeys("f3"));
+        // Default runs its command, which puts the keys back (KBD-01; SettingsCommandsTest).
         fx(defaults::fire);
-        assertEquals(Settings.defaultPaletteKeys(Command.MAC), settings.paletteKeys());
+        assertEquals(Command.RESET_PALETTE_KEYS, ran.getLast());
     }
 
     @Test
@@ -206,7 +207,24 @@ class SettingsWindowTest {
         fx(() -> this.<ChoiceBox<Sorting.By>>control("Sort by").setValue(Sorting.By.SIZE));
         fx(() -> this.<Spinner<Integer>>control("Hide controls after").increment(3));
         fx(() -> this.<Spinner<Integer>>control("Slideshow speed").increment(4));
-        fx(() -> settings.setPaletteKeys(settings.paletteKeys() + " f2"));
+        // The palette's keys through their control: Add, then the key pressed (QUAL-13).
+        javafx.scene.layout.VBox keys = control("Command palette");
+        Button add = (Button) ((HBox) keys.getChildren().get(1)).getChildren().get(0);
+        String keysBefore = settings.paletteKeys();
+        fx(add::fire);
+        press(KeyCode.F2);
+        assertEquals(keysBefore + " f2", settings.paletteKeys());
+        // The menu bar in the title bar, where the OS leaves the choice to Mirada (WIN-03).
+        CheckBox menus = (CheckBox)
+                this.<HBox>control("Menu bar in the title bar").getChildren().getFirst();
+        boolean menusChangeable = !call(menus::isDisabled);
+        boolean menusBefore = settings.titleBarMenus();
+        if (menusChangeable) fx(menus::fire);
+        assertEquals(menusChangeable != menusBefore, settings.titleBarMenus());
+        // The choices that change what the window says and which keys it takes (QUAL-13).
+        fx(() -> this.<ChoiceBox<String>>control("Language").setValue("es"));
+        fx(() -> this.<ChoiceBox<String>>control("Keymap").setValue("emacs"));
+        fx(() -> this.<Spinner<Integer>>control("Interface zoom").increment(2));
         Settings was = settings;
 
         // A restart: the file read again, and a new window over it.
@@ -225,6 +243,12 @@ class SettingsWindowTest {
         assertEquals(was.controlsHideSeconds(), again.controlsHideSeconds());
         assertEquals(was.slideshowSeconds(), again.slideshowSeconds());
         assertEquals(was.paletteKeys(), again.paletteKeys());
+        assertTrue(again.paletteKeys().endsWith(" f2"), again.paletteKeys());
+        assertEquals(was.titleBarMenus(), again.titleBarMenus());
+        assertEquals("es", again.language());
+        assertEquals("emacs", again.keymap());
+        assertEquals(was.uiZoom(), again.uiZoom());
+        assertTrue(again.uiZoom() > Settings.DEFAULT_UI_ZOOM);
 
         settings = again;
         SettingsWindow reopened = call(() -> new SettingsWindow(again, ViewerWindow.stylesheet(), ran::add));
@@ -244,6 +268,22 @@ class SettingsWindowTest {
                 again.slideshowSeconds(),
                 call(() -> this.<Spinner<Integer>>control("Slideshow speed").getValue()));
         assertTrue(call(() -> this.<CheckBox>control("Reverse order").isSelected()));
+        assertEquals(
+                "es", call(() -> this.<ChoiceBox<String>>control("Language").getValue()));
+        assertEquals(
+                "emacs", call(() -> this.<ChoiceBox<String>>control("Keymap").getValue()));
+        assertEquals(
+                again.uiZoom(),
+                call(() -> this.<Spinner<Integer>>control("Interface zoom").getValue()));
+        assertEquals(
+                again.titleBarMenus(),
+                call(() -> ((CheckBox) this.<HBox>control("Menu bar in the title bar")
+                                .getChildren()
+                                .getFirst())
+                        .isSelected()));
+        javafx.scene.layout.VBox keysAgain = control("Command palette");
+        assertTrue(call(() -> ((Label) keysAgain.getChildren().getFirst()).getText())
+                .contains("F2"));
     }
 
     @Test

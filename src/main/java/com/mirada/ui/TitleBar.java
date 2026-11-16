@@ -1,7 +1,6 @@
 package com.mirada.ui;
 
 import java.nio.file.Path;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -14,15 +13,10 @@ import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuButton;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.Tooltip;
-import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -32,37 +26,53 @@ import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
+import com.mirada.os.Os;
 import org.jspecify.annotations.Nullable;
 
 import static com.mirada.i18n.Messages.tr;
 
 /**
- * The window's top row, GNOME Image Viewer's: the file name in the middle, rotate, info and the main
- * menu on the right, and the window buttons after them. macOS and Windows get their own conventions
- * ({@link Layout}). Full screen is a floating control over the image ({@link OnScreenControls}).
+ * The window's top row, GNOME Image Viewer's: the menu bar on the left (Windows and Linux), the file
+ * name in the middle, rotate and info on the right, and the window buttons after them. The same on
+ * every OS (OS-04), but that a Mac's menus are in its menu bar at the top of the screen ({@link
+ * AppMenus}), as the OS's way wins there, and its header holds none (WIN-03). Full screen is a
+ * floating control over the image ({@link OnScreenControls}).
  *
- * <p>Where the platform supports JavaFX 27's extended windows this is a {@link HeaderBar}: the stage
+ * <p>Where the platform supports JavaFX 27's extended windows, and the user keeps the menus in the
+ * title bar (the setting, on by default; always on a Mac), this is a {@link HeaderBar}: the stage
  * gives up its title bar and keeps its window buttons, drawn over the right of this row. Termina's
  * three traps apply: HeaderBar has no style class (so {@code header-bar} is added), an unsupported
  * {@code EXTENDED} quietly becomes {@code DECORATED} (so it is asked first, and the same controls go
  * in an ordinary row under the native title bar instead), and full screen keeps the window buttons
- * unless their height is set to zero ({@link #fullScreen}).
+ * unless their height is set to zero ({@link #fullScreen}). With the setting off the window keeps the
+ * system's title bar and the same row, menus and all, goes under it.
  */
 final class TitleBar {
 
     /**
-     * Where the row puts the title on a platform. Windows puts it on the left, as its own title bars
-     * do; a Mac centres it, as AppKit does, and so does GNOME. Every platform has the main menu, a
-     * Mac's beside its menu bar ({@link MacMenus}), which holds the same commands.
+     * Whether the window draws its own title bar ({@code StageStyle.EXTENDED} with a {@link
+     * HeaderBar}): where the platform can, on a Mac always (its header holds no menus), elsewhere
+     * while the menus are to be in the title bar (WIN-03).
      */
-    record Layout(boolean titleLeft) {
-
-        static Layout of(String osName) {
-            return new Layout(osName.toLowerCase(Locale.ROOT).startsWith("windows"));
-        }
+    static boolean usesHeaderBar(boolean mac, boolean titleBarMenus, boolean extendedSupported) {
+        return extendedSupported && (mac || titleBarMenus);
     }
 
-    private static final Layout LAYOUT = Layout.of(System.getProperty("os.name", ""));
+    /**
+     * Why the menus can't be put in the title bar here, or null when they can: the setting and its
+     * command exist on every OS (OS-01), disabled with this reason where the system keeps the menus
+     * itself or cannot draw the title bar.
+     */
+    static @Nullable String titleBarMenusUnavailable(boolean mac, boolean extendedSupported) {
+        if (mac) return tr("reason.titleBarMenusMac");
+        if (!extendedSupported) return tr("reason.titleBarMenusUnsupported");
+        return null;
+    }
+
+    /** {@link #titleBarMenusUnavailable(boolean, boolean)} for this OS and this toolkit. */
+    static @Nullable String titleBarMenusUnavailable() {
+        return titleBarMenusUnavailable(Os.isMac(), Platform.isSupported(ConditionalFeature.EXTENDED_WINDOW));
+    }
 
     /**
      * "folder / name" on one line. Short of room, the file name keeps its width and the folder gives
@@ -137,33 +147,23 @@ final class TitleBar {
     private @Nullable Tooltip folderTip;
     private @Nullable Path folderShown;
     private final Button rotate;
-    private final Consumer<Command> run;
-    private final BooleanProperty infoShowing;
-    private final BooleanProperty thumbnailsShowing;
     private final ToggleButton info = new ToggleButton();
-    private final MenuButton menu = new MenuButton();
-    private final BooleanProperty statusBarOn;
+    /** Where the menu bar goes, on the left, once it is built ({@link #finish}). */
+    private final HBox left = UiZoom.hbox(4);
+
+    private @Nullable MenuBar menus;
     private final Region row;
     private final boolean extended;
 
     /**
      * @param run runs a command, the same as its key would
      * @param infoShowing the sidebar's state, which the info button shows and toggles
-     * @param thumbnailsShowing the strip's state, which the menu ticks and toggles
-     * @param statusBarOn whether the status bar is switched on, which the menu ticks and toggles
+     * @param extended whether the window draws its own title bar ({@link #usesHeaderBar}); decided
+     *     before the window is first shown, as a stage's style cannot change after
      */
-    TitleBar(
-            Stage stage,
-            Consumer<Command> run,
-            BooleanProperty infoShowing,
-            BooleanProperty thumbnailsShowing,
-            BooleanProperty statusBarOn) {
+    TitleBar(Stage stage, Consumer<Command> run, BooleanProperty infoShowing, boolean extended) {
         this.stage = stage;
-        this.run = run;
-        this.infoShowing = infoShowing;
-        this.thumbnailsShowing = thumbnailsShowing;
-        this.statusBarOn = statusBarOn;
-        this.extended = Platform.isSupported(ConditionalFeature.EXTENDED_WINDOW);
+        this.extended = extended;
 
         title.getStyleClass().add("header-title");
         folder.getStyleClass().add("header-folder");
@@ -174,7 +174,7 @@ final class TitleBar {
             label.setManaged(false);
         }
         heading.getStyleClass().add("header-heading");
-        heading.setAlignment(LAYOUT.titleLeft() ? Pos.CENTER_LEFT : Pos.CENTER);
+        heading.setAlignment(Pos.CENTER);
         heading.setMinWidth(0);
         // A shift-click turns the other way. An ActionEvent carries no modifiers, so the press that
         // leads to it records them.
@@ -187,20 +187,14 @@ final class TitleBar {
         info.setGraphic(Icons.menu(Command.INFO));
         info.getStyleClass().addAll("header-button", "flat");
         info.selectedProperty().bindBidirectional(infoShowing);
-        menu.setGraphic(Icons.of(Icons.MENU));
-        menu.getStyleClass().addAll("header-button", "flat", "no-arrow");
-        for (Node node : new Node[] {info, menu}) node.setFocusTraversable(false);
+        info.setFocusTraversable(false);
         // Icons only: their names are what a screen reader says (VoiceOver, Narrator, Orca).
         Icons.name(info, Command.INFO);
-        // The ☰ button's name: it runs no command, it opens the menu of them.
-        Icons.name(menu, tr("titleBar.mainMenu"), KeyCombination.NO_MATCH);
 
-        HBox right = new HBox(4, rotate, info, menu);
+        HBox right = UiZoom.hbox(4, rotate, info);
         right.setAlignment(Pos.CENTER_RIGHT);
-        HBox left = new HBox(4);
-        if (LAYOUT.titleLeft()) left.getChildren().add(heading);
         left.setAlignment(Pos.CENTER_LEFT);
-        @Nullable Heading centre = LAYOUT.titleLeft() ? null : heading;
+        Heading centre = heading;
         if (extended) {
             if (!stage.isShowing()) stage.initStyle(StageStyle.EXTENDED);
             HeaderBar bar = new HeaderBar();
@@ -222,51 +216,32 @@ final class TitleBar {
     }
 
     /**
-     * The folder's tooltip and the menu's items, added after the first image is on screen: neither is
+     * The folder's tooltip and the menu bar, added after the first image is on screen: neither is
      * seen before then, and building them first measurably delayed that image
      * (ViewerWindow.afterFirstPaint). The buttons are named as they are built ({@link Icons#button}).
+     *
+     * @param bar the in-window menu bar ({@link AppMenus#inWindow}), or null on a Mac, whose menus
+     *     are the system's
      */
-    void finish() {
-        Tooltip tip = new Tooltip(folderShown == null ? "" : folderShown.toString());
+    void finish(@Nullable MenuBar bar) {
+        Tooltip tip = Icons.tip(folderShown == null ? "" : folderShown.toString());
         folderTip = tip;
         folder.setTooltip(tip);
-        menu.getItems()
-                .addAll(
-                        item(Command.OPEN, run),
-                        item(Command.OPEN_FOLDER, run),
-                        item(Command.OPEN_RECENT, run),
-                        new SeparatorMenuItem(),
-                        item(Command.PALETTE, run),
-                        item(Command.DOCUMENTATION, run),
-                        new SeparatorMenuItem(),
-                        panel(Command.THUMBNAILS, thumbnailsShowing),
-                        panel(Command.INFO, infoShowing),
-                        panel(Command.STATUS_BAR, statusBarOn),
-                        item(Command.BOOKMARKS, run),
-                        new SeparatorMenuItem(),
-                        item(Command.EDIT, run),
-                        item(Command.ROTATE_COUNTERCLOCKWISE, run),
-                        item(Command.ROTATE_CLOCKWISE, run),
-                        item(Command.SLIDESHOW, run),
-                        new SeparatorMenuItem(),
-                        item(Command.SETTINGS, run),
-                        item(Command.SHORTCUTS, run),
-                        help(run),
-                        item(Command.ABOUT, run),
-                        new SeparatorMenuItem(),
-                        item(Command.PREVIOUS, run),
-                        item(Command.NEXT, run),
-                        new SeparatorMenuItem(),
-                        item(Command.CLOSE, run));
-        // The palette's keys, and the stepping keys with the strip's axis, may have changed since;
-        // so may Previous and Next's arrows.
-        menu.setOnShowing(e -> {
-            MenuChord.refresh(menu.getItems());
-            for (MenuItem item : menu.getItems()) {
-                if (item.getUserData() instanceof Command command && Icons.forCommand(command) != null)
-                    item.setGraphic(Icons.menu(command));
-            }
-        });
+        if (bar != null) {
+            menus = bar;
+            left.getChildren().setAll(bar);
+        }
+    }
+
+    /** The in-window menu bar, once built; null before, and on a Mac. */
+    @Nullable
+    MenuBar menuBar() {
+        return menus;
+    }
+
+    /** Whether this row is a {@link HeaderBar}, the window drawing its own title bar. */
+    boolean extended() {
+        return extended;
     }
 
     /** The buttons' names again, from the commands' chords now: the user's keys changed (TBAR-03). */
@@ -311,33 +286,5 @@ final class TitleBar {
     void fullScreen(BorderPane root, boolean full) {
         root.setTop(full ? null : row);
         if (extended) HeaderBar.setSystemButtonHeight(stage, full ? 0 : HeaderBar.USE_DEFAULT_SIZE);
-    }
-
-    /** A panel the menu ticks while it is open, and opens or closes as the key does. */
-    private static MenuItem panel(Command command, BooleanProperty showing) {
-        CheckMenuItem item = new CheckMenuItem(command.label(), Icons.menu(command));
-        item.selectedProperty().bindBidirectional(showing);
-        item.setUserData(command);
-        return MenuChord.on(item, command);
-    }
-
-    /** Help: the logs, reporting a problem and the update check (DIAG-03, DIAG-05, DIAG-06). */
-    private static Menu help(Consumer<Command> run) {
-        Menu help = new Menu(tr("titleBar.help"), Icons.of(Icons.HELP));
-        help.getItems()
-                .addAll(
-                        item(Command.MESSAGE_LOG, run),
-                        item(Command.DEBUG_LOG, run),
-                        new SeparatorMenuItem(),
-                        item(Command.REPORT_PROBLEM, run),
-                        item(Command.CHECK_FOR_UPDATES, run));
-        return help;
-    }
-
-    private static MenuItem item(Command command, Consumer<Command> run) {
-        MenuItem item = new MenuItem(command.label(), Icons.menu(command));
-        item.setOnAction(e -> run.accept(command));
-        item.setUserData(command);
-        return MenuChord.on(item, command);
     }
 }

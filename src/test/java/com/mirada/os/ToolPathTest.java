@@ -70,7 +70,7 @@ class ToolPathTest {
     void noShellOrOneThatSaysNothingIsNoPath(@TempDir Path dir) throws Exception {
         assertNull(ToolPath.ask(dir.resolve("no-such-shell").toString()));
         assertNull(ToolPath.ask("\0"));
-        if (!System.getProperty("os.name", "").toLowerCase().startsWith("windows")) {
+        if (Os.host() != Os.Kind.WINDOWS) {
             Path quiet = Files.writeString(dir.resolve("quiet"), "#!/bin/sh\nexit 0\n");
             assertTrue(quiet.toFile().setExecutable(true));
             assertNull(ToolPath.ask(quiet.toString()));

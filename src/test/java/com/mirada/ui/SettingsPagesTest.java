@@ -33,6 +33,19 @@ class SettingsPagesTest {
         assertTrue(SettingsSearch.score("theme", KEYWORDED) > 0);
     }
 
+    /** KBD-13: a description that names a chord takes it from the keymap, never from the catalog. */
+    @Test
+    void aDescriptionsChordComesFromTheKeymap() {
+        for (Row row : SettingsPages.ROWS) {
+            Command keyed = SettingsPages.TOGGLED_BY.get(row.descriptionKey());
+            if (keyed == null) continue;
+            String chord = keyed.chord().getDisplayText();
+            assertTrue(row.description().contains(chord + " "), row.description());
+            assertTrue(!com.mirada.i18n.Messages.tr(row.descriptionKey()).contains(chord + " "), row.descriptionKey());
+        }
+        assertEquals(3, SettingsPages.TOGGLED_BY.size());
+    }
+
     @Test
     void aWholeWordRanksAboveAWordStartAbovePartOfAWord() {
         assertEquals(3, SettingsSearch.field("zoom", "keep zoom when stepping"));
@@ -123,13 +136,18 @@ class SettingsPagesTest {
                         .sum());
     }
 
-    /** SET-06: each setting's own command is a row's, so none is only a Settings row. */
+    /**
+     * SET-06: each setting's own command is a row's, so none is only a Settings row. Import is the
+     * Backup row's second button, and the palette keys' Default its row's.
+     */
     @Test
     void everySettingsCommandIsARowsCommand() {
         Set<Command> rows = new HashSet<>();
         for (Row row : SettingsPages.ROWS) rows.add(row.command());
         for (Command command : Command.values()) {
-            if (command.group().equals("Settings") && command != Command.IMPORT_CONFIG)
+            if (command.group().equals("Settings")
+                    && command != Command.IMPORT_CONFIG
+                    && command != Command.RESET_PALETTE_KEYS)
                 assertTrue(rows.contains(command), command.id() + " has no row");
         }
     }

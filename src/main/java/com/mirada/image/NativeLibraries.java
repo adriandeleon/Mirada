@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
+import com.mirada.os.Os;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -124,8 +125,7 @@ public final class NativeLibraries {
      * instead ({@code $ORIGIN}, {@code @loader_path}).
      */
     private static synchronized void preloadOnWindows(Path folder) {
-        if (bundlePreloaded
-                || !System.getProperty("os.name", "").toLowerCase(Locale.ROOT).startsWith("windows")) {
+        if (bundlePreloaded || Os.host() != Os.Kind.WINDOWS) {
             return;
         }
         bundlePreloaded = true;
@@ -153,19 +153,18 @@ public final class NativeLibraries {
     }
 
     /**
-     * A library's file names on {@code os} (an {@code os.name}), for each ABI version in turn:
+     * A library's file names on {@code os}, for each ABI version in turn:
      * {@code libheif.so.1} on Linux, {@code libheif.1.dylib} on macOS, {@code heif.dll} (vcpkg) or
      * {@code libheif.dll} (MSYS2) on Windows, where the name carries no version.
      */
-    static List<String> fileNames(String os, String base, List<String> versions) {
-        String lower = os.toLowerCase(Locale.ROOT);
+    static List<String> fileNames(Os.Kind os, String base, List<String> versions) {
         List<String> out = new ArrayList<>();
-        if (lower.startsWith("windows")) {
+        if (os == Os.Kind.WINDOWS) {
             out.add(base + ".dll");
             out.add("lib" + base + ".dll");
             return out;
         }
-        boolean mac = lower.startsWith("mac");
+        boolean mac = os == Os.Kind.MAC;
         for (String version : versions) {
             out.add(mac ? "lib" + base + "." + version + ".dylib" : "lib" + base + ".so." + version);
         }
@@ -173,6 +172,6 @@ public final class NativeLibraries {
     }
 
     static List<String> fileNames(String base, List<String> versions) {
-        return fileNames(System.getProperty("os.name", ""), base, versions);
+        return fileNames(Os.host(), base, versions);
     }
 }

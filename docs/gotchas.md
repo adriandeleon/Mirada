@@ -155,11 +155,29 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   Cupertino's blue. The test reads Cupertino's palette from AtlantaFX's jar and the overrides from
   `mirada.css`, ladders resolved, and does the WCAG arithmetic. The keyboard's focus ring is one
   `:focus-visible` layer at the end of `mirada.css`, in `-focus-ring`; keep it last.
+- **The UI zoom scales pixels, and only pixels** (`UiZoom`, WIN-12, MENU-16). At any zoom but 100 %
+  every window gets a copy of `mirada.css`, `ui-font.css` and Cupertino with each `px` length
+  multiplied (a `data:` URL; Cupertino is read from AtlantaFX's jar, so the native image's metadata
+  lists `cupertino-*.css` beside the `.bss`). A bare number stays its size at every zoom: write a
+  size in `mirada.css` with `px` (or `em`), which `UiZoomTest` holds, and leave a border's width
+  and a shadow's radius bare on purpose. A size the code fixes goes through `UiZoom.bind`, `pad`,
+  `hbox`/`vbox` or the `…Margin` helpers, never a plain `setPrefWidth(620)`. At 100 % nothing is
+  read or scaled. A hidden tool window keeps the old sheet until it shows again, when `UiZoom`
+  swaps it; a dialog's own pane is swapped too. On the Headless platform a menu taller than the
+  1000-pixel screen loops in `FxTestSupport.moveOnScreen`: test a zoomed menu at 110 %.
+- **High contrast is a sheet, not a theme** (`high-contrast.css`, ACC-09): Cupertino Dark with the
+  roles set to black, white and saturated colours, added last on every window so it beats
+  `mirada.css`'s `.root`; the system's accent sheet is left off while it is on. `Theme` follows
+  `Windows.SPI.HighContrast` and goes back to the chosen theme as it ends.
+- **Tooltips come from `Icons.tip` and motion from `Motion.play`** (TBAR-14, ACC-04): the one
+  400 ms delay, and a fade that jumps to its end while the system asks for reduced motion.
+  `UiZoomTest` fails a `new Tooltip`, a `setShowDelay` or an animation started anywhere else. A
+  `PauseTransition` that only waits is no motion.
 
 - **Only what the first frame shows is built before it.** The header bar is; the floating controls
   are built on the first pointer movement over the image, the properties sidebar and the thumbnail
   strip the first time they open, About and Settings the first time they are asked for, and the
-  folder's tooltip, the header's menu's items and the window icon run from
+  folder's tooltip, the menu bar and the window icon run from
   `ViewerWindow.afterFirstPaint`, on the pulse after the first image is shown (or half a second
   after start without one). Building them first measured +40 ms; deferred, +20 ms over the old
   window. Put new chrome behind the same door. `HeaderBar` itself is not the cost: switched off, the
@@ -229,6 +247,18 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   takes images pastes the picture and a folder the file. JavaFX's clipboard refuses grey pixels (a
   grey PNG loads so): `putOnClipboard` converts those to ARGB. The metadata recording's tours copy
   every image they show (`-Dmirada.tourCopies`), as nothing else there reaches the clipboard.
+- **Every dialog goes through `Dialogs.styled`** (WIN-04): a dialog is its own scene and inherits
+  nothing. It puts `mirada.css` first on the dialog's *scene*, not its pane: a pane's stylesheets
+  outrank the scene's, so on the pane they beat `high-contrast.css`, which `Theme` adds to the
+  scene as the dialog shows. It also sets one `ButtonBar` order, `Dialogs.BUTTON_ORDER`, Cancel
+  first (WIN-11; JavaFX's default changes with the OS), and words JavaFX's stock buttons from the
+  catalog (CONF-14). `DialogsTest` fails for a file that builds a dialog without it.
+- **`ButtonData.NO` is a cancel button to JavaFX, and `OK_DONE` and `YES` are default buttons.** The
+  unsaved-edit question's Discard is `NO` (so the order draws Cancel, Save, Discard), and Escape
+  would answer it: `Confirm.dialog` calls `setCancelButton(false)` and `setDefaultButton(false)` on
+  the red action and makes Cancel, or Save, the one default (CONF-13). Answer a dialog in a test by
+  `CANCEL_CLOSE`, never `isCancelButton()`. `Confirm.answeredBy` answers a question without one
+  (CONF-12).
 - **The window buttons on Linux are JavaFX's, and follow the scene's colour scheme, not the
   stylesheet.** An extended window's minimize, maximize and close are drawn by JavaFX
   (`HeaderButtonOverlay`), light or dark by `Scene.Preferences.colorScheme`, which falls back to
@@ -242,6 +272,37 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   idle on time and only the pulses slow. Judge timing on an uncovered window, or by timestamps.
 
 ## Keys, commands and the palette
+
+- **The in-window menu bar takes F10 and a lone Alt, and then the arrows, without the focus.**
+  `MenuBarSkin` opens its menu mode from a scene accelerator (F10) and a scene handler (Alt), so the
+  window's key filter, which runs first, must leave both alone (no keymap binds them;
+  `MenusFxTest.f10AndALoneAltAreLeftToTheMenuBar`). In menu mode JavaFX gives no node the focus:
+  the arrows reach the window's filter too, and would step the folder as they walk the menus. The
+  filter steps aside while a menu is open or the skin reports a focused menu
+  (`queryAccessibleAttribute(FOCUS_NODE)`, `ViewerWindow.menuBarActive`). A test fires the key
+  events at the scene's focus owner, which the scene's accelerators see: the Robot's keys go to
+  whichever window the Headless platform holds focused, which in a full run is now and then another
+  test's, so a test driven by it failed once in a few runs.
+- **A command reaches what is out of the Tab order.** All Metadata's `TitledPane` stays out of it,
+  as the viewer's filter takes Space and Enter before a focused control would: the
+  `view.allMetadata` command unfolds it (KBD-15). Its rows are made only as it first unfolds, so a
+  test that looks for a tag's text unfolds it first.
+- **A `CustomMenuItem`'s text is not drawn, only its content.** `AppMenus.inWindowRow` sets it all
+  the same, to the title without the tick: code and tests that find a row by `getText()` keep
+  working. The row lays out its own 22 px icon column, title, spacer and chord (MENU-18), so every
+  row of a right-click menu is one too, and a submenu among them carries the same layout as its
+  graphic (`AppMenus.submenuRow`); a plain `MenuItem` beside them would put its glyph in another
+  column.
+- **A disabled menu row shows no tooltip.** A disabled node gets no mouse events, so its reason
+  (KBD-04) would never show. A row that cannot run stays enabled with the `unavailable` style class,
+  its reason as tooltip and accessible help, and choosing it says the reason
+  (`AppMenus.showAvailability`); a submenu does the same on its own row and greys the rows inside.
+- **Search that leaves the FX thread waits for typing to pause.** The Debug Log's find bar uses
+  `Debounce` (PERF-23): the search runs once the keys stop for 150 ms. `FxThrottle`, which runs the
+  first key at once, is for filters over a list in memory (the Bookmarks window, the Message Log).
+- **The stage's style is fixed before it shows.** The menu bar in the title bar (the setting, on by
+  default) is read once, as the window is made: switched off, the window keeps the system's title
+  bar and the same row goes under it, from the next start (the setting says so).
 
 - **Every command is in `Command`, with a dotted id** (`go.next`, `editor.save`, `help.copyDetails`;
   `<area>.<camelCase>`, KBD-02), its name, its description, its group and where its keys work
@@ -286,12 +347,13 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   command's glyph from `Icons.forCommand`, the menus' (ICON-20): the zoom button the glyph of Actual
   Size or Zoom to Fit, whichever it would do; full screen's is the way out while in it, in the menus
   too (`Icons.setFullScreen`). A command without a fitting glyph gets one of its own (MENU-14):
-  `MenusFxTest` opens the menus and fails on a row with none. Previous and Next are in the header's
-  menu too, so the floating arrows are never the only way (TBAR-08).
+  `MenusFxTest` opens the menus and fails on a row with none. Previous and Next are in the menu
+  bar's Go menu too, so the floating arrows are never the only way (TBAR-08).
 - **Escape is ours, not the stage's.** JavaFX's full-screen exit key would leave full screen and
   then let the same press reach the key filter, which would close the window.
-  `setFullScreenExitKeyCombination(NO_MATCH)` hands it to `Command.ESCAPE`: leave full screen if in
-  it, otherwise close — on Linux only (`Command.escapeCloses`); macOS and Windows keep the window.
+  `setFullScreenExitKeyCombination(NO_MATCH)` hands it to `Command.ESCAPE`: stop the slideshow or
+  leave full screen, and otherwise nothing, on every OS (OS-04). It used to close the window on
+  Linux only, GNOME's habit; a difference by OS that no row of Pauta's table allows.
 - **A scroll is a wheel's or a trackpad's** (`Scrolling`): macOS reports the fingers
   (`ScrollEvent.getTouchCount`), and those scrolls pan, or swipe once a gesture when there is nothing
   to pan; a wheel zooms. Windows and Linux touchpads report no fingers and so still zoom; Windows
@@ -327,9 +389,31 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   change the image under the editor). Those that work where it opened lead its list
   (`Command.inPalette(Context)`).
 - **The editor's and the Bookmarks window's own keys stay theirs where no command fits.** The arrows
-  move and size the crop (`Editor.onKey`); the Bookmarks window's filter keeps Up, Down, Ctrl+P and
-  Ctrl+N to move, Escape, and Delete to remove while the filter is empty. Everything else there is a
-  command, so it has a key in the keymap and a row in the palette.
+  move and size the crop (`Editor.onKey`); the Bookmarks window's list moves on the palette's keys
+  (`PaletteKeys`), Escape or the cancel chord peels the filter, and Delete removes while the filter
+  is empty. Everything else there is a command, so it has a key in the keymap and a row in the
+  palette.
+- **A list overlay's moves are the keymap's, but not commands.** The palette, its pickers, the
+  Message Log and the Bookmarks list move on the arrows, the pages and Ctrl/Cmd+Home and End, and on
+  the keymap's `lists` section (`nav.lineDown`, `nav.lineUp`, `nav.pageDown`, `nav.pageUp`,
+  `nav.first`, `nav.last`; only Emacs binds them, C-n, C-p, C-v, M-v, M-<, M->). They are not in
+  `Command`, so the palette does not list "Line Down" and `everyKeymapBindsCommandsToKeysOnce` stays
+  about commands; `keys.nav.*` in the settings rebinds them all the same (`Keybindings.layered`).
+  The cancel chord is whatever `window.escape` is bound to (C-g beside Escape in Emacs), and the
+  Message Log's copy chord is `image.copy`'s (M-w). CUA binds no moves, so Ctrl+N in a CUA palette is
+  nothing: the old fixed Emacs table answered in every keymap (PAL-06).
+- **One card at a time in a window's overlay** (`OverlayHost`): the palette, a picker and the
+  Message Log all show through it, a second replaces the first (QOPEN-11), and the focus owner from
+  before the *first* card is what `hide` gives back. A card shown again (the palette's card turning
+  into a picker) keeps its place and does not run its own `onHide`, which would drop the names it was
+  just given.
+- **The Debug Log's find bar takes its keys before the log and the field do.** `log.find` works in
+  `Command.Context.DEBUG_LOG`, read by a scene filter in `DebugLogWindow`, so Ctrl+F (C-s in Emacs)
+  finds the next match even from the field (FIND-04). The field's Emacs chords are on only under the
+  Emacs keymap (`TextInputKeys.install(field, Keybindings::emacs)`): under CUA, C-f is find and C-a
+  select all, not Emacs's forward and line start (FIND-09). A text area draws its selection faintly
+  when it lacks the focus, and the match is the selection while the field has the focus, so the
+  log's highlight colours are set for both states in `mirada.css` (FIND-05).
 
 ## Translations
 
@@ -338,10 +422,18 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   English for good. Constants hold keys; the text is asked for where it is shown
   (`SettingsPages.Row`, `AspectRatio`).
 - **The language is fixed for the run.** The window is built once, in one language; choosing
-  another in Settings says it applies from the next start. `App` sets the JVM's default locale to
-  it, which is how JavaFX words its own dialog buttons: JavaFX ships `de`, `es`, `fr`, `it` and
-  `pt_BR`, so Portuguese's buttons stay English (`pt` finds no `pt_BR`). Their bundles are listed
+  another in Settings says it applies from the next start. JavaFX words its own dialog buttons by
+  the JVM's default locale (below): it ships `de`, `es`, `fr`, `it` and `pt_BR`, so Portuguese
+  chosen on a system of another language has English buttons (`pt` finds no `pt_BR`). Their bundles are listed
   for the native image beside `com/mirada/i18n/messages*.properties`.
+- **The locale that formats is not the language.** `App.start` sets the JVM's default to
+  `Messages.locale`: the system's whole (region and all) unless another bundled language is chosen,
+  then the bare language; the catalog formats with `new MessageFormat(pattern)`, the default, never
+  a locale made from the language code (INTL-14). A Japanese system with English menus keeps
+  `ja_JP`, so JavaFX's own dialog buttons are Japanese there.
+- **A `choice` with a `1#` first limb words 0 as one.** `ChoiceFormat` gives a number below the
+  first limit the first limb, so `{0,choice,1#1 file|1<…}` says "1 file" for 0: every count starts
+  with a `0#` limb (`MessagesTest.aCountIsAChoiceInEveryLanguageAndNeverAnS`).
 - **A value with a placeholder is a `MessageFormat` pattern; one without is shown as written.** So
   an apostrophe is doubled only beside a `{0}` (`l''image {0}`, but `l'image`), and a count is
   `{0,number,integer}` (grouped, "1,234 images") while an identifier is `{0,number,#}`. Plurals are
@@ -372,7 +464,9 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   makes the list again through an `FxThrottle` (Editora's, PERF-06): the first key at once, then at
   most every 150 ms while typing goes on, so tests flush it (`BookmarksWindowTest.filterBy`). Whether
   each mark's file is there is looked up off the FX thread when the marks change or the window is
-  brought up (`BookmarksWindow.gone`), never per key.
+  brought up (`BookmarksWindow.gone`), never per key. Remove asks nothing (CONF-07): the window
+  keeps what it removed, 20 deep, and Undo Remove puts the last back (`Bookmarks.restore`, at the
+  end of the order). With nothing to undo its key is left to the filter field, whose own undo it is.
 
 ## Platforms
 
@@ -395,11 +489,30 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   shell (`$SHELL -l -i`) is asked once, the first time a program starts, never at start-up. Its own
   comes first so a launcher's or the headless runs' stubs still win; Java looks a program up on its
   own `PATH`, not the child's, so `ToolPath` resolves it to a full path too. Windows keeps its own.
-- **`--help` and `--version` must `System.exit`.** Started as an `Application` (the jlink image, dev
-  runs), the JDK's launcher starts the toolkit before `main`, whose thread keeps the process alive.
-  The native image starts from `Launcher`, a plain class, and starts no toolkit for them. Starting the
-  JVM from `Launcher` too reaches `main` about 80 ms sooner, but measured slower to the first paint
-  headless (median of 10: 611 against 563 ms), so `App` stays the JVM's main class.
+- **Ask `Os`, never `os.name`** (OS-02): `Os.isMac()` and its kin are what Mirada *behaves* as, which
+  `Os.override` or `-Dmirada.os=mac` move for a test (`SameOnEveryOsFxTest` runs the window as each);
+  code that loads a native library, starts a program or registers with the system asks `Os.host()`,
+  which no override moves, or a test run as macOS looks for a `.dylib` on Linux. A `static final`
+  copied from `Os.isMac()` would freeze it for the run: ask where it is used.
+- **The config folder is `~/.mirada` everywhere** (SET-07). 0.x kept it in `~/Library/Application
+  Support/Mirada` and `%APPDATA%\Mirada`; `App.main` moves that folder once when `~/.mirada` is not
+  there (`ConfigDir.adoptOldFolder`, one `exists` on macOS and Windows, none on Linux), copying it
+  when it is on another drive. Only for the default folder: a `--config-dir`, `--dev` or
+  `MIRADA_CONFIG_DIR` run moves nothing.
+- **Windows' executable has no console.** The StaticFX feature links the native image
+  `/SUBSYSTEM:WINDOWS`, and jpackage's launcher is a GUI one, so `--help` printed nowhere.
+  `WindowsConsole.attach` (`AttachConsole(ATTACH_PARENT_PROCESS)` through FFM, then `CONOUT$`) runs
+  for every launch that prints, only when standard output or error has no handle, so a redirect
+  still works. Its `jint(jint)` downcall is in the native metadata by hand. Not run on Windows yet.
+- **Every launch enters through `Launcher`, a plain class** (PERF-16): the native image, the jlink
+  image, `javafx:run`, the AOT training run and `scripts/dev-run.sh`. Started as an `Application`,
+  the JDK's launcher starts the toolkit before `main`, so the settings read `main` begins would follow
+  it instead of overlapping it. Measured headless (2026-11-16, `measure-startup.sh -n 11`, two pairs
+  run in turn): 641 against 711 ms and 491 against 572 ms to the first image from `Launcher`; an
+  earlier build had measured the other way (611 against 563), so measure again when the start-up
+  path moves. The window class stays `com.mirada.App` (`StartupWMClass`): JavaFX names it after the
+  `Application` class, not the main class. `--help` and `--version` still `System.exit`, for a
+  launch from `App` itself.
 - **`java.awt.headless` is decided in `App.main`, as the first statement**, before `HeadStart` can
   touch ImageIO: headless everywhere but macOS, where Move to Trash is AWT's `Desktop`
   (`Trash.headless`); AWT itself loads only when a file is first trashed. ImageIO and `BufferedImage` are `java.desktop` and need no display; tests are
@@ -431,12 +544,13 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   Java on a second thread while the main thread waits without AppKit, and the event comes and goes
   in between. Files sent to a running Mirada arrive; the smoke test warns there and fails the
   native image.
-- **The macOS menu bar is JavaFX's system `MenuBar`, the application menu is glass's.** `MacMenus`
-  builds File, Image, View, Go and Help from `Command` after the first paint, unmanaged in the scene
-  (it draws nothing there); the header's ☰ menu stays as well, as on the other platforms. No item
+- **The macOS menu bar is JavaFX's system `MenuBar`, the application menu is glass's.** `AppMenus`
+  builds File, Edit, Image, View, Go, Bookmarks and Help from `Command` after the first paint,
+  unmanaged in the scene (it draws nothing there); Windows and Linux get the same menus in the
+  window (`AppMenus.inWindow`), and the header holds no menu on a Mac (WIN-03). No item
   has a key equivalent (Pauta MENU-02): the native menu would take the key before `onKey`, and a
   bare one while the palette's field has focus. Each chord is written into its item's title instead
-  ("Rotate Right   R", `MacMenus.title`, MENU-15), as the native menu draws text only (and so no
+  ("Rotate Right   R", `AppMenus.title`, MENU-15), as the native menu draws text only (and so no
   icons); a Cmd key reaches `Keybindings.commandFor` like any other. Items grey, and their titles are
   written again, only while their menu is open (`onShowing`, by `Command.unavailable`). JavaFX gives no way into the application menu (Hide, Quit), so `MacAppMenu`
   gets it from `com.sun.glass.ui.mac.MacApplication.getAppleMenu`, by reflection, since that

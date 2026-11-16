@@ -18,16 +18,14 @@ class MacOpenFilesTest {
 
     @Test
     void onlyMacOsNeedsAwt() {
-        assertFalse(Trash.headless("Mac OS X"));
-        assertFalse(Trash.headless("Darwin"));
-        assertTrue(Trash.headless("Linux"));
-        assertTrue(Trash.headless("Windows 11"));
-        assertTrue(Trash.headless(null));
+        assertFalse(Trash.headless(Os.Kind.MAC));
+        assertTrue(Trash.headless(Os.Kind.LINUX));
+        assertTrue(Trash.headless(Os.Kind.WINDOWS));
     }
 
     @Test
     void listensOnlyOnMacOs() {
-        if (MacOpenFiles.isMac(System.getProperty("os.name"))) return;
+        if (Os.host() == Os.Kind.MAC) return;
         assertEquals("none (not macOS)", MacOpenFiles.listen());
     }
 
@@ -44,7 +42,7 @@ class MacOpenFilesTest {
         Path photo = folder.resolve("a photo.jpg");
         assertEquals(Optional.of(photo), MacOpenFiles.fileOf(photo.toUri().toString()));
         // AppKit's absoluteString escapes what a URI must. A Unix path, which Windows reads otherwise.
-        if (!System.getProperty("os.name", "").startsWith("Windows")) {
+        if (Os.host() != Os.Kind.WINDOWS) {
             assertEquals(
                     Optional.of(Path.of("/Users/me/Pictures/a b.jpg")),
                     MacOpenFiles.fileOf("file:///Users/me/Pictures/a%20b.jpg"));

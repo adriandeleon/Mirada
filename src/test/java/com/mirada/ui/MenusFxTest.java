@@ -17,9 +17,11 @@ import javafx.scene.control.ButtonBase;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
+import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
@@ -35,6 +37,7 @@ import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
+import com.mirada.os.Os;
 import com.mirada.settings.Bookmarks;
 import com.mirada.settings.Settings;
 import org.junit.jupiter.api.AfterAll;
@@ -79,10 +82,10 @@ class MenusFxTest {
             stage.setHeight(700);
             return null;
         });
-        // The header's menu is filled after the first paint, or half a second after start without one.
+        // The menu bar is built after the first paint, or half a second after start without one.
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-        while (fx(() -> headerMenu().getItems().isEmpty())) {
-            if (System.nanoTime() > deadline) throw new AssertionError("the header's menu was never filled");
+        while (fx(() -> FxTestSupport.field(window, "afterFirstPaint") != null)) {
+            if (System.nanoTime() > deadline) throw new AssertionError("the menu bar was never built");
             Thread.sleep(50);
         }
     }
@@ -100,7 +103,11 @@ class MenusFxTest {
     void everyRowOfEveryMenuHasAGlyph() throws Exception {
         List<String> blank = new ArrayList<>();
         fx(() -> {
-            unglyphed("header menu", headerMenu().getItems(), blank);
+            // A Mac's system menu bar draws no icons (MENU-02).
+            if (!Os.isMac()) {
+                for (Menu menu : menuBar().getMenus())
+                    unglyphed("menu bar > " + menu.getText(), menu.getItems(), blank);
+            }
             OnScreenControls controls = new OnScreenControls(new StackPane(), c -> {});
             unglyphed("zoom menu", controls.zoomMenu().getItems(), blank);
             unglyphed("image menu", rightClick(viewport()).getItems(), blank);
@@ -111,24 +118,83 @@ class MenusFxTest {
     }
 
     @Test
-    void previousAndNextAreInTheHeadersMenu() throws Exception {
-        // TBAR-08: the floating arrows are not the only way to them on Linux and Windows.
-        List<Object> commands = fx(() ->
-                headerMenu().getItems().stream().map(MenuItem::getUserData).toList());
+    void previousAndNextAreInTheMenuBar() throws Exception {
+        // TBAR-08: the floating arrows are not the only way to them.
+        List<Object> commands = fx(() -> menuBar().getMenus().stream()
+                .flatMap(menu -> menu.getItems().stream())
+                .map(MenuItem::getUserData)
+                .toList());
         assertTrue(commands.contains(Command.PREVIOUS) && commands.contains(Command.NEXT), commands.toString());
+    }
+
+    /**
+     * MENU-17: no keymap, on any OS, takes F10 or a lone Alt, so the window's key filter leaves them
+     * to JavaFX, which opens the in-window menu bar's first menu on either.
+     */
+    @Test
+    void f10AndALoneAltAreLeftToTheMenuBar() {
+        for (String keymap : Keymap.PRESETS) {
+            for (boolean mac : new boolean[] {false, true}) {
+                for (boolean vertical : new boolean[] {false, true}) {
+                    Keybindings keys = Keybindings.layered(Keymap.load(keymap, mac), vertical, java.util.Map.of());
+                    for (Command.Context where : Command.Context.values()) {
+                        assertEquals(null, keys.commandFor(where, key(KeyCode.F10, false)), keymap);
+                        assertEquals(
+                                null,
+                                keys.commandFor(
+                                        where,
+                                        new KeyEvent(
+                                                KeyEvent.KEY_PRESSED, "", "", KeyCode.ALT, false, false, true, false)),
+                                keymap);
+                    }
+                }
+            }
+        }
     }
 
     @Test
     void menusAreInterFourteenWhateverTheyOpenFrom() throws Exception {
         assertTrue(fx(Fonts::registered).contains("Inter Bold"), "Inter's faces are registered");
         fx(() -> {
-            headerMenu().show();
-            assertInter(showingMenu(), "header menu");
-            closeMenus();
+            if (!Os.isMac()) {
+                menuBar().getMenus().getFirst().show();
+                assertInter(showingMenu(), "menu bar");
+                closeMenus();
+            }
             assertInter(rightClick(viewport()), "image menu");
             closeMenus();
             return null;
         });
+    }
+
+    /** MENU-16, WIN-12: the menus' 14 and 11 px are the UI zoom's, whatever opens them. */
+    @Test
+    void theUiZoomScalesEveryMenu() throws Exception {
+        try {
+            fx(() -> {
+                // 110 %: a taller menu would pass the Headless platform's 1000-pixel screen.
+                UiZoom.apply(110);
+                return null;
+            });
+            fx(() -> {
+                if (!Os.isMac()) {
+                    Menu view = menuBar().getMenus().getFirst();
+                    view.hide();
+                    view.show();
+                    assertInter(showingMenu(), "menu bar at 110 %", 1.1);
+                    view.hide();
+                    closeMenus();
+                }
+                assertInter(rightClick(viewport()), "image menu at 110 %", 1.1);
+                closeMenus();
+                return null;
+            });
+        } finally {
+            fx(() -> {
+                UiZoom.apply(Settings.DEFAULT_UI_ZOOM);
+                return null;
+            });
+        }
     }
 
     @Test
@@ -144,6 +210,89 @@ class MenusFxTest {
             viewport().removeEventHandler(MouseEvent.MOUSE_PRESSED, count);
             assertTrue(showingMenus().isEmpty(), "a press inside the menu's own control closes it");
             assertEquals(1, pressed[0], "and is not consumed");
+            return null;
+        });
+    }
+
+    /** MENU-06, MENU-07, MENU-09 in the Debug Log's window: one menu, closed by a press, opened by key. */
+    @Test
+    void theDebugLogsMenuIsOneAtATimeClosedByAPressAndOpenedByTheMenuKey() throws Exception {
+        fx(() -> {
+            FxTestSupport.invoke(window, "run", new Class<?>[] {Command.class}, Command.DEBUG_LOG);
+            DebugLogWindow log = FxTestSupport.field(window, "debugLog");
+            Stage shown = log.stage();
+            shown.setX(0);
+            shown.setY(0);
+            shown.getScene().getRoot().applyCss();
+            shown.getScene().getRoot().layout();
+            Node text = log.text();
+            rightClick(text);
+            rightClick(text);
+            assertEquals(1, showingMenus().size(), "a second right-click replaces the first menu");
+            assertFalse(showingMenus().getFirst().isAutoHide(), "the window closes it, not the grab");
+            int[] pressed = {0};
+            var count = (javafx.event.EventHandler<MouseEvent>) e -> pressed[0]++;
+            text.addEventHandler(MouseEvent.MOUSE_PRESSED, count);
+            Event.fireEvent(text, press(text, MouseButton.PRIMARY));
+            text.removeEventHandler(MouseEvent.MOUSE_PRESSED, count);
+            assertTrue(showingMenus().isEmpty(), "a press inside the log closes its menu");
+            assertEquals(1, pressed[0], "and is not consumed");
+            for (KeyEvent key : List.of(key(KeyCode.CONTEXT_MENU, false), key(KeyCode.F10, true))) {
+                Event.fireEvent(text, key);
+                assertEquals(1, showingMenus().size(), key.getCode().toString());
+                closeMenus();
+            }
+            shown.hide();
+            return null;
+        });
+    }
+
+    /** MENU-09 in the Message Log: the keyboard's right-click opens the selected row's menu under it. */
+    @Test
+    void theMenuKeyOpensTheSelectedMessagesMenuUnderItsRow() throws Exception {
+        fx(() -> {
+            com.mirada.diagnostics.MessageLog messages = FxTestSupport.field(window, "messages");
+            for (int i = 0; i < 3; i++)
+                messages.add(
+                        "message " + i, com.mirada.diagnostics.MessageLog.Severity.INFO, java.time.LocalTime.now());
+            FxTestSupport.invoke(window, "run", new Class<?>[] {Command.class}, Command.MESSAGE_LOG);
+            stage.getScene().getRoot().applyCss();
+            stage.getScene().getRoot().layout();
+            ListView<?> list = (ListView<?>) stage.getScene().lookup(".message-log-list");
+            list.getSelectionModel().clearAndSelect(1);
+            list.requestFocus();
+            for (KeyEvent key : List.of(key(KeyCode.CONTEXT_MENU, false), key(KeyCode.F10, true))) {
+                Event.fireEvent(list, key);
+                List<ContextMenu> menus = showingMenus();
+                assertEquals(1, menus.size(), key.getCode().toString());
+                Bounds row = Popups.selectedRow(list);
+                assertNotNull(row);
+                assertEquals(row.getMaxY(), menus.getFirst().getAnchorY(), 1, "under the selected row");
+                closeMenus();
+            }
+            MessageLogView view = FxTestSupport.field(window, "messageLog");
+            view.hide();
+            return null;
+        });
+    }
+
+    /** KBD-04: with no folder, the image menu's Sort submenu stays, greyed, and says why. */
+    @Test
+    void theSortSubmenuSaysWhyItCannotRun() throws Exception {
+        fx(() -> {
+            ContextMenu menu = rightClick(viewport());
+            Menu sort = menu.getItems().stream()
+                    .filter(Menu.class::isInstance)
+                    .map(Menu.class::cast)
+                    .findFirst()
+                    .orElseThrow();
+            assertTrue(sort.getStyleClass().contains("unavailable"));
+            assertEquals(
+                    com.mirada.i18n.Messages.tr("reason.noFolder"),
+                    sort.getGraphic().getAccessibleHelp());
+            assertTrue(
+                    sort.getItems().stream().allMatch(item -> item.isDisable() || item instanceof SeparatorMenuItem));
+            closeMenus();
             return null;
         });
     }
@@ -216,13 +365,11 @@ class MenusFxTest {
                 String name = button.getAccessibleText();
                 assertNotNull(name, button.toString());
                 assertNotNull(button.getTooltip(), name);
-                Command command = byTitle(name);
-                if (command == null) {
-                    assertEquals(name, button.getTooltip().getText());
-                    continue;
-                }
+                // TBAR-01: what a screen reader says is what the tooltip shows, chord and all.
+                assertEquals(name, button.getTooltip().getText());
                 // TBAR-03: built from the title and the chord, never typed.
-                assertEquals(Icons.tooltip(command), button.getTooltip().getText(), name);
+                Command command = byTooltip(name);
+                if (command == null) continue;
                 // ICON-20: the glyph the menus give the command.
                 if (button instanceof ButtonBase labeled && !(button instanceof MenuButton)) {
                     SVGPath glyph = (SVGPath) labeled.getGraphic().lookup(".icon");
@@ -233,20 +380,33 @@ class MenusFxTest {
         });
     }
 
-    private static Command byTitle(String title) {
-        for (Command command : Command.values()) if (Icons.title(command).equals(title)) return command;
+    private static Command byTooltip(String tooltip) {
+        for (Command command : Command.values()) if (Icons.tooltip(command).equals(tooltip)) return command;
         return null;
     }
 
     private static void unglyphed(String where, List<MenuItem> items, List<String> blank) {
         for (MenuItem item : items) {
             if (item instanceof SeparatorMenuItem || item instanceof RadioMenuItem) continue;
+            if (item instanceof CustomMenuItem row) {
+                // A row Mirada draws: its glyph in the icon column, where its command has one.
+                Command command = (Command) item.getUserData();
+                Node icon = row.getContent().lookup(".menu-item-icon");
+                boolean drawn = icon instanceof javafx.scene.Parent parent
+                        && !parent.getChildrenUnmodifiable().isEmpty();
+                if (!drawn && Icons.forCommand(command) != null) blank.add(where + ": " + command);
+                continue;
+            }
             if (item.getGraphic() == null && !(item instanceof CheckMenuItem)) blank.add(where + ": " + item.getText());
             if (item instanceof Menu menu) unglyphed(where + " > " + menu.getText(), menu.getItems(), blank);
         }
     }
 
     private static void assertInter(ContextMenu menu, String where) {
+        assertInter(menu, where, 1);
+    }
+
+    private static void assertInter(ContextMenu menu, String where, double zoom) {
         Node content = menu.getSkin().getNode();
         content.applyCss();
         int rows = 0;
@@ -256,18 +416,23 @@ class MenusFxTest {
                     || label.getText().isEmpty()) continue;
             Font font = label.getFont();
             assertEquals(Fonts.FAMILY, font.getFamily(), where + ": " + label.getText());
-            double size = label.getStyleClass().contains("accelerator-text") ? 11 : 14;
-            assertEquals(size, font.getSize(), where + ": " + label.getText());
+            double size = label.getStyleClass().contains("accelerator-text")
+                            || label.getStyleClass().contains("menu-item-chord")
+                    ? 11
+                    : 14;
+            assertEquals(size * zoom, font.getSize(), 0.01, where + ": " + label.getText());
             rows++;
         }
         assertTrue(rows > 3, where + " has rows");
     }
 
-    private static MenuButton headerMenu() {
-        for (Node node : stage.getScene().getRoot().lookupAll(".header-button")) {
-            if (node instanceof MenuButton menu) return menu;
-        }
-        throw new AssertionError("no header menu");
+    /** The menu bar: in the window's title bar, or on a Mac the system's. */
+    private static MenuBar menuBar() {
+        if (Os.isMac()) return FxTestSupport.field(window, "macMenus");
+        TitleBar titleBar = FxTestSupport.field(window, "titleBar");
+        MenuBar bar = titleBar.menuBar();
+        assertNotNull(bar, "the in-window menu bar");
+        return bar;
     }
 
     private static Node viewport() {

@@ -17,6 +17,7 @@ import javafx.scene.control.DialogPane;
 import javafx.scene.control.MenuItem;
 import javafx.stage.Window;
 
+import com.mirada.os.Os;
 import com.mirada.settings.Settings;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -58,7 +59,7 @@ class CommandSweepTest {
         FxToolkit.cleanupStages();
         fx(() -> {
             Command.setVertical(false);
-            Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Command.MAC));
+            Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Os.isMac()));
         });
     }
 
@@ -111,7 +112,8 @@ class CommandSweepTest {
 
     private static void cancel(DialogPane pane) {
         for (ButtonType type : pane.getButtonTypes()) {
-            if (type.getButtonData().isCancelButton()) {
+            // CANCEL_CLOSE, not any cancel-like data: to JavaFX the unsaved-edit question's Discard (NO) is one.
+            if (type.getButtonData() == javafx.scene.control.ButtonBar.ButtonData.CANCEL_CLOSE) {
                 ((javafx.scene.control.Button) java.util.Objects.requireNonNull(pane.lookupButton(type))).fire();
                 return;
             }
@@ -151,6 +153,8 @@ class CommandSweepTest {
     @Test
     void everyCommandRunsOrSaysWhyNotInEveryStateAndNothingIsWrittenOutside() throws Exception {
         Map<String, Long> before = outside();
+        // The canceller asks the FX thread, which must be up first (run alone, nothing else starts it).
+        FxTestSupport.start();
         cancelDialogs();
         FileDialogs.answeredBy((title, folder, name) -> null);
         Path photos = WindowFixture.threeImages(dir.resolve("photos"));
@@ -176,7 +180,10 @@ class CommandSweepTest {
             }
             List<Command> done = new ArrayList<>();
             for (Command command : Command.values()) {
-                if (NOT_HERE.contains(command) || command == Command.CLOSE || command == Command.ESCAPE) continue;
+                if (NOT_HERE.contains(command)
+                        || command == Command.CLOSE
+                        || command == Command.QUIT
+                        || command == Command.ESCAPE) continue;
                 String why = unavailable(window, command);
                 if (why != null && !editing) {
                     assertTrue(why.endsWith("."), command + ": a reason is a sentence: " + why);
@@ -186,7 +193,7 @@ class CommandSweepTest {
                 done.add(command);
                 settle(window, editing, fullScreen);
             }
-            // The context menu greys exactly what cannot run.
+            // The context menu greys exactly what cannot run, and says why (KBD-04).
             ContextMenu menu =
                     call(() -> (ContextMenu) FxTestSupport.invoke(window.window, "contextMenu", new Class<?>[0]));
             for (MenuItem item : menu.getItems()) {
@@ -197,7 +204,10 @@ class CommandSweepTest {
                         .findFirst()
                         .orElse(null);
                 if (command != null && command != Command.FULL_SCREEN) {
-                    assertEquals(unavailable(window, command) != null, item.isDisable(), state + " " + command);
+                    assertEquals(
+                            unavailable(window, command) != null,
+                            item.getStyleClass().contains("unavailable"),
+                            state + " " + command);
                 }
             }
             ran.put(state, done);

@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 
+import com.mirada.os.Os;
 import com.mirada.settings.Settings;
 import org.jspecify.annotations.Nullable;
 
@@ -18,7 +19,7 @@ import org.jspecify.annotations.Nullable;
  * <p>They are the user's layer over the keymap's {@code palette.show} ({@link Keybindings#use}),
  * put on before any other, so no other command's key takes them. The key filter asks {@link
  * #opens} before anything else, in every window and while the editor is open. The first chord is
- * the one shown beside the palette, in the header's menu, the shortcuts window and the Mac's Help
+ * the one shown beside the palette, in the menu bar, the shortcuts window and the Help
  * menu ({@link Command#chord()}).
  *
  * <p>FX thread only, like the settings it follows.
@@ -30,16 +31,22 @@ final class PaletteChords {
     /** The chords in use now, never empty: the settings' when one can be read, else the default. */
     static List<KeyCombination> current() {
         List<KeyCombination> chords = Keybindings.current().chords(Command.PALETTE);
-        return chords.isEmpty() ? parse(Settings.defaultPaletteKeys(Command.MAC), Command.MAC) : chords;
+        return chords.isEmpty() ? parse(Settings.defaultPaletteKeys(Os.isMac()), Os.isMac()) : chords;
     }
 
     /**
      * Whether the open palette moves or edits by this key itself, so it must not close the palette
-     * even when it is one of the palette's keys: C-p is the row above there, M-f a word forward.
-     * Pure.
+     * even when it is one of the palette's keys: C-p is the row above there in Emacs, M-f a word
+     * forward. Under the keys in force.
      */
     static boolean keptByPalette(@Nullable String token) {
-        return PaletteKeys.resolve(token, true) != PaletteKeys.Action.NONE || TextInputKeys.actionFor(token) != null;
+        return keptByPalette(token, Keybindings.current());
+    }
+
+    /** {@link #keptByPalette} under {@code keys}. Pure. */
+    static boolean keptByPalette(@Nullable String token, Keybindings keys) {
+        return PaletteKeys.resolve(token, true, keys) != PaletteKeys.Action.NONE
+                || TextInputKeys.actionFor(token) != null;
     }
 
     /** Whether {@code e} is one of the chords that open the palette. */

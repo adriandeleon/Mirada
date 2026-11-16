@@ -9,8 +9,14 @@ How a version is tagged, built, signed and published. The installers it publishe
    into the version with its date (`## [0.4.0] - 2026-11-12`, Keep a Changelog), with a new empty
    `## [Unreleased]` above it; the release notes are that section, under
    `.github/release-notes-header.md` (`scripts/release-notes.sh`).
-2. Commit, then tag and push the tag: `git tag v0.1.0 && git push origin v0.1.0`.
-3. The **Release** workflow (`.github/workflows/release.yml`, Pauta REL-21) runs, in order:
+2. **Listen to it** (Pauta ACC-07): on Windows with Narrator and on macOS with VoiceOver, start the
+   build being released, open the Command Palette, run a command from it, and move through every
+   page of Settings with Tab, hearing each control's name and role. A control that reads as nothing
+   or as the wrong kind of thing is a bug to fix before tagging. Then record the pass as a `checked`
+   entry for `ACC-07` in `src/main/resources/com/mirada/pauta.json`, with the version (PAUTA-18).
+   CI's smoke tests cannot do this: nobody is there to listen.
+3. Commit, then tag and push the tag: `git tag v0.1.0 && git push origin v0.1.0`.
+4. The **Release** workflow (`.github/workflows/release.yml`, Pauta REL-21) runs, in order:
    - **preflight**: refuses a tag that disagrees with the pom, or a snapshot.
    - **build**, five legs: tests, packages, smoke-tests every app image, the installed msi, deb and
      AppImage, checks the MSI's size and the Linux packages (glibc floor included); on macOS signs
@@ -33,9 +39,9 @@ How a version is tagged, built, signed and published. The installers it publishe
      uploads them as `winget-manifests-<version>`.
    - **bump**: a pull request moving `main` to the next patch `-SNAPSHOT` (`chore/reopen-X.Y.Z`),
      with CI dispatched on its branch, as a pull request opened by `GITHUB_TOKEN` starts none.
-4. Open a pull request to microsoft/winget-pkgs with those manifests (one version per PR, titled
+5. Open a pull request to microsoft/winget-pkgs with those manifests (one version per PR, titled
    "New package: AdrianDeLeon.Mirada version 0.1.0", later "Update: AdrianDeLeon.Mirada to 0.2.0").
-5. Merge the bump's pull request. If it could not be opened (the setting below is off), its summary
+6. Merge the bump's pull request. If it could not be opened (the setting below is off), its summary
    links to the pushed branch.
 
 Run the workflow by hand first for a dry run: it builds, signs, checks and attests everything, and

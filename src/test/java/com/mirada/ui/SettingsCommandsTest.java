@@ -3,6 +3,7 @@ package com.mirada.ui;
 import java.awt.Color;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +13,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 
+import com.mirada.os.Os;
 import com.mirada.settings.Bookmarks;
 import com.mirada.settings.ConfigImport;
 import com.mirada.settings.Settings;
@@ -43,7 +45,7 @@ class SettingsCommandsTest {
     void cleanUp() throws Exception {
         FileDialogs.answeredBy(null);
         FxToolkit.cleanupStages();
-        fx(() -> Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Command.MAC)));
+        fx(() -> Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Os.isMac())));
     }
 
     private WindowFixture open() throws Exception {
@@ -73,6 +75,40 @@ class SettingsCommandsTest {
             window.run(Command.CHECK_DAILY);
             assertEquals(daily, settings.checkForUpdates());
             assertEquals("Mirada will check for updates once a day", window.lastSaid());
+        }
+    }
+
+    /**
+     * KBD-01: Settings' Default button for the palette's keys is a command, in the palette too; and
+     * CONF-01: the user's own keys go only once they say so.
+     */
+    @Test
+    void defaultCommandPaletteKeysPutsThemBackOnceAsked() throws Exception {
+        List<Confirm.Question> asked = new ArrayList<>();
+        try (WindowFixture window = open()) {
+            Settings settings = window.settings;
+            fx(() -> settings.setPaletteKeys("f3"));
+            Confirm.answeredBy(q -> {
+                asked.add(q);
+                return Confirm.Answer.CANCEL;
+            });
+            window.run(Command.RESET_PALETTE_KEYS);
+            assertEquals("f3", settings.paletteKeys(), "Cancel keeps the user's keys");
+            assertEquals(1, asked.size());
+            assertEquals("Put Back", asked.getFirst().action());
+            assertTrue(
+                    asked.getFirst().header().contains("F3"), asked.getFirst().header());
+            Confirm.answeredBy(q -> {
+                asked.add(q);
+                return Confirm.Answer.ACTION;
+            });
+            window.run(Command.RESET_PALETTE_KEYS);
+            assertEquals(Settings.defaultPaletteKeys(Os.isMac()), settings.paletteKeys());
+            assertEquals("The palette opens with its default keys again", window.lastSaid());
+            window.run(Command.RESET_PALETTE_KEYS);
+            assertEquals(2, asked.size(), "the defaults already: nothing to lose, nothing asked");
+        } finally {
+            Confirm.answeredBy(null);
         }
     }
 

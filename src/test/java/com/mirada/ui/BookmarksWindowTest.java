@@ -10,6 +10,8 @@ import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.CustomMenuItem;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
@@ -22,6 +24,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
 
+import com.mirada.os.Os;
 import com.mirada.settings.Bookmarks;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -47,7 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BookmarksWindowTest {
 
     /** With the shortcut key, removes a mark: Delete, or a Mac's Backspace. */
-    private static final KeyCode REMOVE = Command.MAC ? KeyCode.BACK_SPACE : KeyCode.DELETE;
+    private static final KeyCode REMOVE = Os.isMac() ? KeyCode.BACK_SPACE : KeyCode.DELETE;
 
     @TempDir
     Path dir;
@@ -109,6 +112,10 @@ class BookmarksWindowTest {
         return FxTestSupport.field(window, "list");
     }
 
+    private Label hint() {
+        return (Label) FxTestSupport.field(window, "hint");
+    }
+
     private TextField filter() {
         return FxTestSupport.field(window, "filter");
     }
@@ -126,7 +133,7 @@ class BookmarksWindowTest {
         fx(() -> {
             Scene scene = Objects.requireNonNull(stage.getScene());
             Node target = scene.getFocusOwner() != null ? scene.getFocusOwner() : scene.getRoot();
-            boolean mac = Command.MAC;
+            boolean mac = Os.isMac();
             Event.fireEvent(
                     target,
                     new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, shortcut && !mac, false, shortcut && mac));
@@ -199,7 +206,7 @@ class BookmarksWindowTest {
     }
 
     @Test
-    void aBookmarkIsToggledANoteEditedAndAMarkRemovedAskingWhenANoteGoes() throws Exception {
+    void aBookmarkIsToggledANoteEditedAndAMarkRemovedAndPutBack() throws Exception {
         filterBy("a.png");
         press(KeyCode.DOWN);
         assertEquals("a.png", selectedName());
@@ -218,18 +225,24 @@ class BookmarksWindowTest {
                 "The lighthouse, at dawn",
                 bookmarks.note(photos.resolve("b.png").toAbsolutePath()));
 
-        WindowFixture.answerNextDialog(pane -> WindowFixture.press(pane, "Cancel"));
+        // CONF-01, CONF-07: no question; the undo puts the mark and its note back.
+        Path lighthouse = photos.resolve("b.png").toAbsolutePath();
+        Bookmarks.Mark was = bookmarks.get(lighthouse);
         press(REMOVE, true);
-        assertEquals(
-                "The lighthouse, at dawn",
-                bookmarks.note(photos.resolve("b.png").toAbsolutePath()),
-                "kept");
-        WindowFixture.answerNextDialog(pane -> {
-            assertTrue(pane.getHeaderText().startsWith("Remove the note on b.png"));
-            WindowFixture.press(pane, "Remove");
-        });
+        assertEquals("", bookmarks.note(lighthouse), "removed without a question");
+        assertTrue(
+                call(() -> hint().getText()).startsWith("Removed the mark on b.png. "), call(() -> hint().getText()));
+        assertEquals(null, call(() -> window.unavailable(Command.BOOKMARKS_UNDO_REMOVE)));
+        press(KeyCode.Z, true);
+        assertEquals(was, bookmarks.get(lighthouse), "put back, note and all");
+        assertEquals("Put back the mark on b.png", call(() -> hint().getText()));
+        assertEquals("Nothing has been removed yet.", call(() -> window.unavailable(Command.BOOKMARKS_UNDO_REMOVE)));
+        filterBy("lighthouse!");
+        assertTrue(call(() -> hint().getText()).contains(" opens · "), "the keys again once the filter changes");
+        filterBy("lighthouse");
+        press(KeyCode.DOWN);
         press(REMOVE, true);
-        assertEquals("", bookmarks.note(photos.resolve("b.png").toAbsolutePath()), "removed once confirmed");
+        assertEquals("", bookmarks.note(lighthouse));
 
         // A bare bookmark goes without a question.
         filterBy("");
@@ -257,8 +270,12 @@ class BookmarksWindowTest {
                 "gone.png",
                 call(() -> String.valueOf(
                         ((BookmarkList.Row) list().getItems().get(1)).path().getFileName())));
-        assertTrue(items.get(0).isDisable(), "a missing file cannot be opened");
-        assertTrue(items.get(1).isDisable(), "nor shown in its folder");
+        // KBD-04: a row that cannot run stays, greyed, and says why.
+        for (int i : new int[] {0, 1}) {
+            CustomMenuItem row = (CustomMenuItem) items.get(i);
+            assertTrue(row.getStyleClass().contains("unavailable"), "a missing file cannot be opened, nor shown");
+            assertEquals("The file is not there.", row.getContent().getAccessibleHelp());
+        }
         fx(() -> items.getLast().fire());
         assertEquals("0 images", count(), "removed from the menu");
 

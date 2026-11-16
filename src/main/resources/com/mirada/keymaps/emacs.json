@@ -7,15 +7,18 @@
     "go.last": ["M-S-.", "end"],
     "go.toImage": "C-s",
     "view.slideshow": "f5",
-    "view.zoomIn": ["plus", "=", "S-=", "add"],
-    "view.zoomOut": ["-", "subtract"],
-    "view.zoomToFit": "0",
+    "view.zoomIn": ["plus", "=", "S-=", "add", "C-=", "C-S-="],
+    "view.zoomOut": ["-", "subtract", "C--"],
+    "view.zoomToFit": ["0", "C-0"],
     "view.actualSize": "1",
     "view.keepZoom": "z",
     "view.panLeft": ["C-b", "S-left"],
     "view.panRight": ["C-f", "S-right"],
     "view.panUp": ["C-p", "up", "S-up"],
     "view.panDown": ["C-n", "down", "S-down"],
+    "view.uiZoomIn": "C-M-=",
+    "view.uiZoomOut": "C-M--",
+    "view.uiZoomReset": "C-M-0",
     "view.fullScreen": ["f", "f11"],
     "image.rotateRight": "r",
     "image.rotateLeft": "S-r",
@@ -32,8 +35,8 @@
     "bookmark.previous": "[",
     "bookmark.goTo": "C-j",
     "bookmark.list": "C-S-j",
-    "view.properties": "i",
-    "view.thumbnails": "t",
+    "tool.properties": ["i", "M-1"],
+    "tool.thumbnails": ["t", "M-2"],
     "window.escape": ["escape", "C-g"],
     "app.settings": "C-,",
     "help.keyboardShortcuts": "C-h",
@@ -41,7 +44,8 @@
     "file.open": "C-o",
     "file.openFolder": "C-S-f",
     "file.openRecent": "C-S-o",
-    "window.close": ["q", "C-q"],
+    "window.close": "q",
+    "app.quit": "C-q",
     "palette.show": ["C-S-p", "M-x", "f1"],
 
     "editor.save": ["C-s", "enter"],
@@ -59,9 +63,15 @@
     "bookmarks.editNote": ["f2", "C-e"],
     "bookmarks.toggleBookmark": "C-b",
     "bookmarks.remove": "C-delete",
+    "bookmarks.undoRemove": ["C-/", "C-S--", "C-z"],
     "bookmarks.listAll": "C-1",
     "bookmarks.listBookmarked": "C-2",
-    "bookmarks.listNotes": "C-3"
+    "bookmarks.listNotes": "C-3",
+
+    "log.find": "C-s",
+    "log.findPrevious": "C-r",
+    "log.findMatchCase": "M-c",
+    "log.refresh": "f5"
   },
   "vertical": {
     "go.next": ["n", "space", "down", "pagedown"],
@@ -70,5 +80,13 @@
     "view.panRight": ["C-f", "right", "S-right"],
     "view.panUp": ["C-p", "S-up"],
     "view.panDown": ["C-n", "S-down"]
+  },
+  "lists": {
+    "nav.lineDown": "C-n",
+    "nav.lineUp": "C-p",
+    "nav.pageDown": "C-v",
+    "nav.pageUp": "M-v",
+    "nav.first": "M-S-,",
+    "nav.last": "M-S-."
   }
 }

@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -44,6 +45,29 @@ public record FolderImages(List<Path> images, int index) {
         Path folder = target.getParent();
         if (folder == null) return new FolderImages(List.of(target), 0);
         return select(list(folder), target, sorting);
+    }
+
+    /**
+     * What a command line names (CLI-06): one path opens as {@link #open(Path, Sorting)} does; several
+     * open together, just those images (a folder among them adds its own), sorted, on the first named.
+     */
+    public static FolderImages open(List<Path> paths, Sorting sorting) throws IOException {
+        if (paths.size() == 1) return open(paths.getFirst(), sorting);
+        Set<Path> named = new LinkedHashSet<>();
+        @Nullable Path first = null;
+        for (Path path : paths) {
+            Path target = path.toAbsolutePath().normalize();
+            if (Files.isDirectory(target)) {
+                List<Path> inside = select(list(target), null, sorting).images();
+                named.addAll(inside);
+                if (first == null && !inside.isEmpty()) first = inside.getFirst();
+            } else {
+                named.add(target);
+                if (first == null) first = target;
+            }
+        }
+        List<Path> sorted = sorting.sort(List.copyOf(named));
+        return new FolderImages(sorted, first == null ? 0 : sorted.indexOf(first));
     }
 
     static FolderImages select(List<Path> candidates, @Nullable Path selected) {

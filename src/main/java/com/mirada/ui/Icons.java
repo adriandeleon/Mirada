@@ -1,5 +1,7 @@
 package com.mirada.ui;
 
+import java.util.List;
+
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Control;
@@ -8,6 +10,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.SVGPath;
+import javafx.util.Duration;
 
 import org.jspecify.annotations.Nullable;
 
@@ -34,11 +37,9 @@ final class Icons {
     static final String LEAVE_FULL_SCREEN = "M4 14 H10 V20 M20 10 H14 V4 M14 10 L21 3 M3 21 L10 14";
     static final String ROTATE = "M20 4 V9 H15 M20 9 A8.5 8.5 0 1 0 20.5 14";
     static final String INFO = "M12 3 A9 9 0 1 1 11.99 3 Z M12 11 V16.5 M12 7.5 V7.6";
-    /** A question mark in a circle: the Help submenu, which runs no command of its own (MENU-14). */
-    static final String HELP =
-            "M12 3 A9 9 0 1 1 11.99 3 Z M9.5 9.5 Q9.5 7 12 7 Q14.5 7 14.5 9.3 Q14.5 11 12 12 V13.5 M12 16.5 V16.6";
-
+    /** Three lines: the fallback for an icon button whose command has no glyph of its own. */
     static final String MENU = "M4 6.5 H20 M4 12 H20 M4 17.5 H20";
+
     static final String PREVIOUS = "M15 18 L9 12 L15 6";
     static final String NEXT = "M9 18 L15 12 L9 6";
     /** Previous and next with the thumbnails down the side, where the folder runs top to bottom. */
@@ -51,6 +52,11 @@ final class Icons {
     static final String FOLDER_OPEN = "M3 18 V6 H9 L11 8 H18 V10.5 M3 18 L6 10.5 H21.5 L18.5 18 Z";
     static final String ROTATE_LEFT = "M4 4 V9 H9 M4 9 A8.5 8.5 0 1 1 3.5 14";
     static final String ZOOM_OUT = "M10.5 3.5 A7 7 0 1 1 10.49 3.5 Z M20.5 20.5 L15.5 15.5 M7.5 10.5 H13.5";
+    /** The interface's zoom (WIN-12): a letter with a plus or a minus, and two letters for its default. */
+    static final String UI_ZOOM_IN = "M3 19 L8 6 L13 19 M5 14.5 H11 M18.5 6.5 V13.5 M15 10 H22";
+
+    static final String UI_ZOOM_OUT = "M3 19 L8 6 L13 19 M5 14.5 H11 M15 10 H22";
+    static final String UI_ZOOM_RESET = "M3 19 L8 6 L13 19 M5 14.5 H11 M14.5 19 L18 10 L21.5 19 M15.7 16 H20.3";
     static final String FIT = "M4 9 V4 H9 M15 4 H20 V9 M20 15 V20 H15 M9 20 H4 V15";
     static final String ACTUAL_SIZE = "M5 8 L7.5 6 V18 M15 8 L17.5 6 V18 M11.5 10 V10.1 M11.5 14 V14.1";
     static final String FIRST = "M17 18 L11 12 L17 6 M7 6 V18";
@@ -100,6 +106,12 @@ final class Icons {
     static final String BOOKMARKS = "M4 3.5 H10.5 V14 L7.25 11.5 L4 14 Z M14 6 H20 M14 10.5 H20 M4 18.5 H20";
     /** A mark taken off: the bookmark with a stroke through it, not the trash a file goes to. */
     static final String REMOVE_MARK = "M6.5 3.5 H17.5 V20.5 L12 16 L6.5 20.5 Z M9.5 10 H14.5";
+    /** A door with an arrow leaving it: Quit. */
+    static final String QUIT = "M10 4 H5 V20 H10 M15 8 L19 12 L15 16 M19 12 H9";
+    /** A window with its title row ruled off: the menu bar in the title bar. */
+    static final String TITLE_BAR = "M3 5 H21 V19 H3 Z M3 9 H21 M6 7 H9";
+    /** A tick in a circle: the Pauta window, how fully Mirada meets its guidelines. */
+    static final String PAUTA = "M12 3 A9 9 0 1 1 11.99 3 Z M8 12.5 L11 15.5 L16.5 9";
     /** About Mirada: an eye, the app's name ("a look"). */
     static final String ABOUT = "M2.5 12 Q12 3.5 21.5 12 Q12 20.5 2.5 12 Z M12 9.25 A2.75 2.75 0 1 1 11.99 9.25 Z";
 
@@ -120,7 +132,8 @@ final class Icons {
             case PREVIOUS -> Command.vertical() ? UP : PREVIOUS;
             case FIRST -> FIRST;
             case LAST -> LAST;
-            case GO_TO_IMAGE -> SEARCH;
+            case GO_TO_IMAGE, DEBUG_LOG_FIND, DEBUG_LOG_FIND_PREVIOUS -> SEARCH;
+            case DEBUG_LOG_REFRESH -> UPDATE;
             case SLIDESHOW -> PLAY;
             case ZOOM_IN -> ZOOM_IN;
             case ZOOM_OUT -> ZOOM_OUT;
@@ -130,6 +143,9 @@ final class Icons {
             case ROTATE_CLOCKWISE -> ROTATE;
             case ROTATE_COUNTERCLOCKWISE -> ROTATE_LEFT;
             case FULL_SCREEN -> fullScreen ? LEAVE_FULL_SCREEN : FULL_SCREEN;
+            case UI_ZOOM_IN -> UI_ZOOM_IN;
+            case UI_ZOOM_OUT -> UI_ZOOM_OUT;
+            case UI_ZOOM_RESET, UI_ZOOM -> UI_ZOOM_RESET;
             case EDIT -> CROP;
             case RENAME -> RENAME;
             case MOVE_TO_TRASH -> TRASH;
@@ -142,6 +158,7 @@ final class Icons {
             case NEXT_BOOKMARK -> NEXT_BOOKMARK;
             case PREVIOUS_BOOKMARK -> PREVIOUS_BOOKMARK;
             case INFO -> INFO;
+            case ALL_METADATA -> LIST;
             case ABOUT -> ABOUT;
             case THUMBNAILS -> STRIP;
             case THUMBNAILS_AT_SIDE -> SIDEBAR;
@@ -164,15 +181,29 @@ final class Icons {
             case OPEN_FOLDER -> FOLDER_OPEN;
             case OPEN_RECENT -> CLOCK;
             case CLOSE -> CLOSE;
+            case QUIT -> QUIT;
+            case TITLE_BAR_MENUS -> TITLE_BAR;
             case PALETTE -> PROMPT;
             case DOCUMENTATION -> BOOK;
             case STATUS_BAR -> STATUS_BAR;
             case MESSAGE_LOG -> MESSAGES;
             case DEBUG_LOG -> LOG;
-            case COPY_MESSAGES, COPY_DEBUG_LOG, COPY_DETAILS -> COPY;
+            case COPY_MESSAGES, COPY_DEBUG_LOG, COPY_DETAILS, COPY_PAUTA -> COPY;
+            case HOME_PAGE -> LANGUAGE;
+            case RELEASE_NOTES -> LOG;
+            case RELEASES -> DOWNLOAD;
+            case PAUTA -> PAUTA;
+            case PAUTA_RULES, PAUTA_DOCS -> BOOK;
+            case RESET_PALETTE_KEYS -> UNDO;
             case CLEAR_MESSAGES, CLEAR_DEBUG_LOG -> TRASH;
             case EXPORT_DEBUG_LOG, OPEN_RELEASE -> DOWNLOAD;
             case REPORT_PROBLEM -> WARNING;
+            // The Bookmarks window's rows, each the glyph of the viewer's command it mirrors (MENU-14).
+            case BOOKMARKS_OPEN -> PICTURE;
+            case BOOKMARKS_SHOW_IN_FOLDER -> FOLDER;
+            case BOOKMARKS_EDIT_NOTE -> NOTE;
+            case BOOKMARKS_TOGGLE -> BOOKMARK;
+            case BOOKMARKS_REMOVE -> REMOVE_MARK;
             case CHECK_FOR_UPDATES -> UPDATE;
             default -> null;
         };
@@ -215,16 +246,30 @@ final class Icons {
     }
 
     /**
-     * Names an icon-only control: {@code title} is what a screen reader says, and with {@code
-     * chord}, if any, its tooltip, "Rotate Right (R)". Called again, it renames it in place.
+     * Names an icon-only control: its tooltip and what a screen reader says are one string, {@code
+     * title} with {@code chord}, if any, "Rotate Right (R)" (TBAR-01, TBAR-03). Called again, it
+     * renames it in place.
      */
     static <T extends Control> T name(T control, String title, KeyCombination chord) {
         String tip = tooltip(title, chord);
         Tooltip tooltip = control.getTooltip();
-        if (tooltip == null) control.setTooltip(new Tooltip(tip));
+        if (tooltip == null) control.setTooltip(tip(tip));
         else tooltip.setText(tip);
-        control.setAccessibleText(title);
+        control.setAccessibleText(tip);
         return control;
+    }
+
+    /** How long the pointer rests before any tooltip shows, the same for every one (TBAR-14). */
+    static final Duration TOOLTIP_DELAY = Duration.millis(400);
+
+    /**
+     * A tooltip saying {@code text}: every tooltip Mirada makes comes from here, so each shows after
+     * {@link #TOOLTIP_DELAY} (TBAR-14); mirada.css's {@code .tooltip} rule says the same.
+     */
+    static Tooltip tip(String text) {
+        Tooltip tooltip = new Tooltip(text);
+        tooltip.setShowDelay(TOOLTIP_DELAY);
+        return tooltip;
     }
 
     /** "Title (chord)", or the title alone when there is no chord: what a tooltip says (TBAR-03). */
@@ -243,18 +288,39 @@ final class Icons {
         return label.endsWith("…") ? label.substring(0, label.length() - 1) : label;
     }
 
-    /** A 16-pixel icon from one of the paths above, centred in a box of its own size. */
+    /**
+     * {@link #title} without its category prefix, "Next Crop Shape" for "Edit: Next Crop Shape", as
+     * a tooltip may show it (TBAR-03).
+     */
+    static String shortTitle(Command command) {
+        return withoutPrefix(title(command));
+    }
+
+    /** {@code title} after its "Category: " prefix, or all of it without one. Pure. */
+    static String withoutPrefix(String title) {
+        int colon = title.indexOf(": ");
+        return colon < 0 ? title : title.substring(colon + 2);
+    }
+
+    /** The icons' size at 100 %, GNOME's symbolic icon size; the UI zoom scales it (WIN-12). */
+    static final double SIZE = 16;
+
+    /** A 16-pixel icon from one of the paths above, centred in a box of its own size, both following the UI zoom. */
     static Node of(String path) {
         SVGPath glyph = new SVGPath();
         glyph.setContent(path);
         glyph.getStyleClass().add("icon");
-        // The grid is 24 units; scaled to 16 px it matches GNOME's symbolic icon size.
-        glyph.setScaleX(16 / 24.0);
-        glyph.setScaleY(16 / 24.0);
+        // The grid is 24 units, scaled to 16 px at 100 %; the stroke scales with it.
+        UiZoom.bind(glyph.scaleXProperty(), SIZE / 24.0);
+        UiZoom.bind(glyph.scaleYProperty(), SIZE / 24.0);
         StackPane box = new StackPane(glyph);
-        box.setMinSize(16, 16);
-        box.setPrefSize(16, 16);
-        box.setMaxSize(16, 16);
+        for (var property : List.of(
+                box.minWidthProperty(),
+                box.minHeightProperty(),
+                box.prefWidthProperty(),
+                box.prefHeightProperty(),
+                box.maxWidthProperty(),
+                box.maxHeightProperty())) UiZoom.bind(property, SIZE);
         return box;
     }
 }

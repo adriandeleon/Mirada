@@ -87,32 +87,34 @@ public final class Fonts {
 
     /** {@code ui-font.css}, as a stylesheet URL. */
     static String sheet() {
-        return Objects.requireNonNull(Fonts.class.getResource("/com/mirada/styles/ui-font.css"), "ui-font.css")
-                .toExternalForm();
+        return UiZoom.sheet("ui-font.css");
     }
 
     private static void installSheet() {
         if (installed) return;
         installed = true;
-        String sheet = sheet();
         Window.getWindows().addListener((ListChangeListener<Window>) change -> {
             while (change.next()) {
-                for (Window window : change.getAddedSubList()) hook(window, sheet);
+                for (Window window : change.getAddedSubList()) hook(window);
             }
         });
-        for (Window window : Window.getWindows()) hook(window, sheet);
+        for (Window window : Window.getWindows()) hook(window);
     }
 
     /** Puts the sheet on {@code window}'s scene now and on any scene it is given later. */
-    private static void hook(Window window, String sheet) {
-        add(window.getScene(), sheet);
+    private static void hook(Window window) {
+        add(window.getScene());
         if (window.getProperties().putIfAbsent(Fonts.class, Boolean.TRUE) == null) {
-            window.sceneProperty().addListener((o, was, now) -> add(now, sheet));
+            window.sceneProperty().addListener((o, was, now) -> add(now));
         }
     }
 
-    private static void add(@Nullable Scene scene, String sheet) {
-        if (scene != null && !scene.getStylesheets().contains(sheet))
-            scene.getStylesheets().add(sheet);
+    /** The sheet at the UI zoom in effect ({@link UiZoom}), which swaps it on every scene as it changes. */
+    private static void add(@Nullable Scene scene) {
+        if (scene == null) return;
+        // A window shown again after the zoom changed has the old one: swapped first, never doubled.
+        UiZoom.restyle(scene);
+        String sheet = sheet();
+        if (!scene.getStylesheets().contains(sheet)) scene.getStylesheets().add(sheet);
     }
 }

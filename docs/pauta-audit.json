@@ -1,0 +1,2442 @@
+{
+  "$schema": "https://pauta-project.dev/6.1.0/audit.schema.json",
+  "app": "Mirada",
+  "commit": "08f2ea2",
+  "edition": "6.1.0",
+  "date": "2026-11-16",
+  "scope": [],
+  "rules": "https://pauta-project.dev/6.1.0/rules.json",
+  "results": [
+    {
+      "id": "OS-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Read every caller of os/Os.java (isMac/isWindows/isLinux/host). No command, menu row or settings row is registered inside an OS check: SameOnEveryOsFxTest (src/test/java/com/mirada/ui/SameOnEveryOsFxTest.java:59) finds the same command ids, menu rows and Settings rows as each OS. The macOS system menu bar and application menu are table rows (src/main/java/com/mirada/ui/ViewerWindow.java:402, :431, :487); the only OS-dependent default is the palette chord's macOS form (src/main/java/com/mirada/settings/Settings.java:115, a default chord in its macOS form). Rows the OS can't serve stay, disabled with a reason: Menus in the title bar on macOS (src/main/java/com/mirada/ui/SettingsWindow.java:111-120, TitleBar.java:66-70), Undo Move to Trash outside Linux (src/main/java/com/mirada/os/Trash.java:80-82, ViewerWindow.java:1997)."
+    },
+    {
+      "id": "OS-02",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "check.command exits 0: only src/main/java/com/mirada/os/Os.java reads \"os.name\" (:30) and no file compares a separator with a character; About and the problem report ask Os.description() (src/main/java/com/mirada/AppInfo.java:130). Read for other stand-ins: ConfigDir.java:77 reads APPDATA only as a path behind Os.host(); Trash.java:120 reads XDG_DATA_HOME only as a path."
+    },
+    {
+      "id": "OS-03",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/os/Os.java:77 override (and the mirada.os property, :46); src/test/java/com/mirada/ui/SameOnEveryOsFxTest.java:59-111 sets each Os.Kind in turn and asserts the command ids, the menu bar's rows and the Settings pages and rows equal Linux's; @Tag(\"fx\") (:38), not @Disabled, and Surefire (pom.xml:316-358) excludes no group."
+    },
+    {
+      "id": "OS-04",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Read every OS test (the callers of os/Os.java). Each is on a row of 'Where the OS's way wins' or invisible: keymap's macOS variant and chord forms (ui/Keybindings.java:280,:296, ui/PaletteChords.java:34, ui/NoteDialog.java:66, ui/SettingsWindow.java:411, settings/Settings.java:115,:203,:535); menu bar and application menu (ui/ViewerWindow.java:356,:402,:431,:487, ui/TitleBar.java:58-74); trash and file-manager names (ui/Command.java:252-276, ViewerWindow.java:1719,:1732,:1996); trash and reveal mechanics (os/Trash.java:81-95, os/Reveal.java:24-51); TextInputKeys.java:105 only swallows macOS's Option by-product (no visible difference); the rest are library paths, process args, AWT headless and the console attach (image/NativeLibraries.java:128,:175, os/ToolPath.java:51, os/WindowsConsole.java:45, App.java:71, ConfigDir.java:77). The earlier differences are gone: Escape is one command on every OS (ui/Command.java:81), the accent follows the system on every OS alike (ui/Theme.java:24,:76,:119), and TitleBar has no Windows-only title placement."
+    },
+    {
+      "id": "PAUTA-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "check.command exits 0 (prints src/main/resources/com/mirada/pauta.json); pom.xml:26 pauta.version 6.1.0; conformance stated as Core in README.md:13,15 and computed by src/main/java/com/mirada/PautaConformance.java:223-231"
+    },
+    {
+      "id": "PAUTA-02",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/PautaConformance.java:223-231 of(exceptions): Partial for a pending MUST, Core for a pending SHOULD, else Complete; deviation/app-only/not-applicable ignored; checked list (parseChecked :191) never enters it. About calls it (ui/AboutWindow.java:80) and the Pauta window (ui/PautaWindow.java:56); nothing stores a conformance. Tests: src/test/java/com/mirada/PautaConformanceTest.java:49,54,64 cover all three; :347 theReadmeNamesTheEditionAndTheConformanceAndLinksTheDocsPage holds the README to the helper"
+    },
+    {
+      "id": "PAUTA-03",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "the rule covers an app with no release yet; Mirada has released: CHANGELOG.md:335 '## [0.3.0] - 2026-11-05' and tags v0.1.0..v0.3.0"
+    },
+    {
+      "id": "PAUTA-04",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "every unmet MUST and SHOULD has a pauta.json entry (26 pending), and no entry names a rule that passes"
+    },
+    {
+      "id": "PAUTA-05",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/pauta.json has no not-applicable entry (all 26 are pending), so none names a limited rule"
+    },
+    {
+      "id": "PAUTA-06",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/pauta.json has no deviation entry; PautaConformanceTest.java:257-265 would require a SHOULD and a decision record naming the rule"
+    },
+    {
+      "id": "PAUTA-07",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "every pending entry's link is an issue of adriandeleon/Mirada (pauta.json, #26-#39; PautaConformanceTest.java:253-256); read with gh: issues #26-#39 are all OPEN and each names every one of its entries' rules as 'XXX-NN (Pauta 6.1.0)' (checked entry by entry)"
+    },
+    {
+      "id": "PAUTA-08",
+      "level": "MUST",
+      "status": "manual",
+      "evidence": "Read each reason in the Pauta window (Help > Pauta Conformance) as a user would. Source: all 26 reasons in src/main/resources/com/mirada/pauta.json are one sentence with no rule ID or class name (PautaConformanceTest.java:268-272 guards it); rendered at src/main/java/com/mirada/ui/PautaWindow.java:159; not recorded"
+    },
+    {
+      "id": "PAUTA-16",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "no template field, no app-only entry and no pending link to another repository in src/main/resources/com/mirada/pauta.json: nothing inherited from a template (PautaConformanceTest.java:282-299 lists and, in the release build, fails such entries)"
+    },
+    {
+      "id": "PAUTA-18",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/pauta.json has no checked list: no entry to fail (PautaConformanceTest.java:304 would check each)"
+    },
+    {
+      "id": "PAUTA-09",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/pauta.json bundled under src/main/resources; all 26 exceptions have rule, level, url, kind, reason and link; no rule twice (PautaConformanceTest.java:226-240)"
+    },
+    {
+      "id": "PAUTA-10",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/test/java/com/mirada/PautaConformanceTest.java reads pauta.json against src/test/resources/pauta-rules.json (identical to 6.1.0 rules.json): copy's edition = pauta.version :214; unknown rule, level/url, duplicate :226-240; deviation on a MUST and missing link :243-266; checked entries (not by hand, twice, with an exception, newer, stale) :304-330; app-only and foreign pending links reported, failing with -Dpauta.release (pom.xml:614) :282-299. Not excluded by Surefire (pom.xml excludes only com/mirada/perf/**)"
+    },
+    {
+      "id": "PAUTA-11",
+      "level": "SHOULD",
+      "status": "manual",
+      "evidence": "Look at the change that raised pauta.version: e517e1b replaced src/test/resources/pauta-rules.json and .claude/skills/pauta-audit/SKILL.md, and changed pom.xml, pauta.json, README.md and AGENTS.md together; no checked list to make stale; not recorded"
+    },
+    {
+      "id": "PAUTA-13",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "App names its website (src/main/java/com/mirada/AppInfo.java:43,45; README.md:13). Judged from the website branch pauta-6.1.0 (/home/adl/src/adl/mirada-website-pauta-6.1.0): src/content/docs/pauta.md has the edition 6.1.0, 'Conformance: Core' and the 26 exceptions under 'Pending (26)', each ID linked to its 6.1.0 rule, with reason and issue link; its set equals pauta.json's. Note: that match is in the working tree's regenerated pauta.md (uncommitted); the committed fcd582e version still lists 43 older entries, so commit the regenerated page"
+    },
+    {
+      "id": "PAUTA-14",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "Judged from the website branch pauta-6.1.0 (/home/adl/src/adl/mirada-website-pauta-6.1.0): scripts/GenPauta.java reads Mirada's src/main/resources/com/mirada/pauta.json and writes src/content/docs/pauta.md (header comment line 8 of the page). Its output must be committed: the regenerated page that matches pauta.json is still an uncommitted change on that branch"
+    },
+    {
+      "id": "PAUTA-15",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "README.md:13 badge 'Pauta-6.1.0 · Core' (5b8def) linking https://mirada-project.dev/docs/pauta/ and README.md:15 'Built to ... edition 6.1.0, Pauta conformance: Core' linking the same page; held by src/test/java/com/mirada/PautaConformanceTest.java:347-376 against pauta.version and PautaConformance.conformance()"
+    },
+    {
+      "id": "PAUTA-17",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "AGENTS.md:7 '## Pauta' names edition 6.1.0 (= pom.xml:26) and links https://pauta-project.dev/6.1.0/llms.txt and .../6.1.0/llms-full.txt (AGENTS.md:10-11); no latest/ or other-edition link (AGENTS.md:19 mentions latest/ only as advice). Note: AGENTS.md:9 says 'works toward' while About/README say 'Built to'"
+    },
+    {
+      "id": "PLAT-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "check.command exits 0: pom.xml:17 maven.compiler.release 25; pom.xml:235-238 requireJavaVersion [25,) in the main build; formatter-needs-jdk25 (pom.xml:552, activates on JDK [26,)) holds no enforcer rule; every setup-java step names '25' (e.g. .github/workflows/ci.yml:45-49, release.yml:52-56) and the native legs set up graalvm/setup-graalvm 25.4 (release.yml:107-116)."
+    },
+    {
+      "id": "PLAT-02",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "pom.xml:814-856 the dist profile's jpackage APP_IMAGE execution builds a jlinked runtime (jLinkOptions :846-855) and scripts/build-installers.sh wraps the installers around it (pom.xml:969-981); on GraalVM targets scripts/native-app-image.sh (pom.xml:924-934) swaps the runtime for the native executable, the shape the rule's Reference names for Mirada; users install no Java either way."
+    },
+    {
+      "id": "PLAT-03",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "check.command exits 0: pom.xml:31 javafx.version 27."
+    },
+    {
+      "id": "PLAT-04",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/module-info.java:1 one named module com.mirada, not an open module, with no opens lines (no FXML or Jackson to serve)."
+    },
+    {
+      "id": "PLAT-05",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "pom.xml:36 atlantafx.version 3.0.0; pom.xml:112-113 depends on atlantafx-base."
+    },
+    {
+      "id": "PLAT-08",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "check.command exits 0: mvnw, mvnw.cmd and .mvn/wrapper/maven-wrapper.properties are committed."
+    },
+    {
+      "id": "PLAT-09",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "check.command exits 0: pom.xml:295 -Xep:NullAway:ERROR; every package under src/main/java (os included) has a @NullMarked package-info.java."
+    },
+    {
+      "id": "PLAT-10",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "check.command exits 0: pom.xml:251 palantirJavaFormat; .github/workflows/ci.yml:35-53 'format' job (workflow on pull_request, ci.yml:15) runs only ./mvnw spotless:check (:53), no build or test goal."
+    },
+    {
+      "id": "PLAT-11",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "pom.xml:330 surefire systemPropertyVariables glass.platform=Headless; JUnit Jupiter; no Monocle dependency; ci.yml:85 and release.yml:168 run Maven without xvfb (xvfb only for the packaged-app smoke tests, release.yml:137, ci.yml:217). Held by src/test/java/com/mirada/BuildHygieneTest.java:152."
+    },
+    {
+      "id": "PLAT-12",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "pom.xml:437-467 jacoco-check bound to verify, BUNDLE LINE 0.90 (:457) and METHOD 0.90 (:462) as literals; the OS profiles (pom.xml:581-604) and formatter-needs-jdk25 (:552) set neither jacoco.skip nor a floor."
+    },
+    {
+      "id": "PLAT-13",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "check.command exits 0: no slf4j/log4j/commons-logging/logback/jboss/tinylog import in src/main/java; logging is java.util.logging, captured by src/main/java/com/mirada/diagnostics/DebugLog.java:104."
+    },
+    {
+      "id": "PLAT-14",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "Mirada's settings and bookmarks are still stored as properties files, not JSON. (src/main/java/com/mirada/settings/Settings.java:136 settings.properties, written at :740-748; no ObjectMapper in src/main/java.)"
+    },
+    {
+      "id": "REPO-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "README.md is 172 lines: logo :1, badges :7-13, pitch :15-19, hero screenshot :28, Highlights :38, Installing it :64, Building it :143, Command line :97, Config folder :124, Licence :170; links the website at :12 and :32."
+    },
+    {
+      "id": "REPO-02",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "CHANGELOG.md:9 '## [Unreleased]' first, then '## [0.3.0] - 2026-11-05' :335 … '## [0.1.0] - 2026-11-01' :444; only ### Added/Changed/Fixed headings; every '- ' entry starts with '- **'."
+    },
+    {
+      "id": "REPO-03",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "check.command exits 0: LICENSE:1 'MIT License' and the 'Copyright (c) 2026 Adrián Arturo De León Saldivar' line."
+    },
+    {
+      "id": "REPO-04",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "NOTICE:1-4 name, copyright, MIT sentence; names every runtime dependency in pom.xml (atlantafx :11, metadata-extractor :16, xmpcore :21, TwelveMonkeys :26, OpenJFX :103) and the Inter font (OFL) :95; pom.xml:189 packages NOTICE into the jar and pom.xml:904 (scripts/add-notices.sh) beside every image; held by src/test/java/com/mirada/BuildHygieneTest.java:57 and :63."
+    },
+    {
+      "id": "REPO-05",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "AGENTS.md:36 '## Commands', :74 one task, one branch, one worktree, :82 '## Change checklist'; CLAUDE.md is 6 lines pointing to AGENTS.md."
+    },
+    {
+      "id": "REPO-06",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "CONTRIBUTING.md:7-17 build, test, format and verify commands; :35 '## Pull requests'."
+    },
+    {
+      "id": "REPO-07",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "docs/architecture.md, conventions.md, testing.md, gotchas.md, release.md, building-and-packaging.md and docs/decisions/ (0001-0006 + README.md) all exist."
+    },
+    {
+      "id": "REPO-08",
+      "level": "MAY",
+      "status": "pass",
+      "evidence": "TODO.md exists at the root."
+    },
+    {
+      "id": "REPO-09",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": ".github/ISSUE_TEMPLATE/bug_report.yml:22 id: environment and :28 id: report; src/main/java/com/mirada/report/ProblemReport.java:65 builds '?template=bug_report.yml&environment=…&report=…'."
+    },
+    {
+      "id": "REPO-10",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "branding/mirada-icon.svg with mirada.png/.icns/.ico beside it; pom.xml:74 (png), :587 (icns), :595 (ico) point jpackage at them."
+    },
+    {
+      "id": "REPO-11",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "A few of the developers' helper scripts are written in Python rather than Java or shell. (check.command exits 1: scripts/check-windows-dlls.py, scripts/write-heic-grid.py, scripts/write-jxl.py.)"
+    },
+    {
+      "id": "DOCS-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Website named: src/main/java/com/mirada/AppInfo.java:43-45 (help.documentation opens https://mirada-project.dev/docs/). Judged from the website branch pauta-6.1.0 (/home/adl/src/adl/mirada-website-pauta-6.1.0): src/content/docs/ has getting-started.md, keyboard.md, settings.md, faq.md and feature pages (viewing, the-folder, properties, editing, files, formats, bookmarks), with screenshots of the real window (public/screenshots/docs/*.jpg, referenced from getting-started, viewing, the-folder, properties, editing, files, keyboard, settings)"
+    },
+    {
+      "id": "DOCS-02",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "No page in docs/ tells a user how to install or use the app (docs/README.md:3-7 sends users to the website; the guides are for contributors). Judged from the website branch pauta-6.1.0 (/home/adl/src/adl/mirada-website-pauta-6.1.0): every src/content/docs/*.md has category and order in its frontmatter"
+    },
+    {
+      "id": "DOCS-03",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "Links into the user guide open the latest guide, not the one for the version you run."
+    },
+    {
+      "id": "DOCS-04",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "The website does not yet generate its roadmap from the app or check the keys and commands it quotes."
+    },
+    {
+      "id": "DOCS-05",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "jreleaser.yml:53-54 changelog.external: out/release-notes.md, written by scripts/release-notes.sh from the version's CHANGELOG.md section (.github/workflows/release.yml:456,494); no generate_release_notes anywhere; Mirada has no Welcome page"
+    },
+    {
+      "id": "DOCS-06",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "help.documentation registered (src/main/java/com/mirada/ui/Command.java:130) and opens AppInfo.DOCS_URL in the browser (ui/ViewerWindow.java:1137); the Help menu, the same on every OS (ui/AppMenus.java:117-129, in-window and system menu bar), has its row (:120); no Welcome page"
+    },
+    {
+      "id": "DOCS-07",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/AppMenus.java:117-129 Help menu, one spec for every OS: Command Palette, Documentation, Keyboard Shortcuts, Check for Updates (+Open Release), Message Log (+its commands), Debug Log (+its commands), Report a Problem, Pauta Conformance, About; no Welcome page, no Simple mode"
+    },
+    {
+      "id": "DOCS-08",
+      "level": "SHOULD",
+      "status": "manual",
+      "evidence": "Open Help > Keyboard Shortcuts (src/main/java/com/mirada/ui/AppMenus.java:120), search a command and find its key: src/main/java/com/mirada/ui/ShortcutsWindow.java:37-53 search field over keys grouped by command group; not recorded"
+    },
+    {
+      "id": "DOCS-10",
+      "level": "MAY",
+      "status": "limited",
+      "evidence": "no Search Everywhere picker in src/main/java (Go to Image is an image picker), and the rule covers an app with one"
+    },
+    {
+      "id": "DOCS-11",
+      "level": "MAY",
+      "status": "fail",
+      "evidence": "no help link on the Settings pages and no page-to-slug map (nothing in src/main/java/com/mirada/ui/SettingsPages.java or SettingsWindow.java); a MAY, no consequence"
+    },
+    {
+      "id": "DOCS-12",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "docs/README.md:3-7 says it is for contributors and user docs live on the website; docs/README.md:12-23 links every guide in docs/ (architecture, conventions, testing, gotchas, release, building-and-packaging, decisions/, reference/, competitive-landscape, pauta-audit)"
+    },
+    {
+      "id": "DOCS-13",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "docs/decisions/0001..0006-*.md, each with ## Context, ## Decision and ## Consequences"
+    },
+    {
+      "id": "DOCS-14",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "CONTRIBUTING.md:31-33 links into docs/; history (native-image experiment, jlink start-up) is under docs/reference/ (native-image.md, startup-jlink.md); no guide, AGENTS.md or CONTRIBUTING.md holds exhaustive history"
+    },
+    {
+      "id": "DOCS-15",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "scanned src/main/java and src/test/java for a doc comment followed only by blank or // lines and another doc comment: none; src/test/java/com/mirada/BuildHygieneTest.java:193 noDocCommentIsStackedOnAnother guards it"
+    },
+    {
+      "id": "DOCS-16",
+      "level": "MUST",
+      "status": "manual",
+      "evidence": "Read Mirada's recently merged feature PRs on GitHub: each should touch CHANGELOG.md, the guides concerned and TODO.md, and name the mirada-website PR when user-visible; AGENTS.md:79-80 states the rule; not recorded"
+    },
+    {
+      "id": "DOCS-17",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "AGENTS.md:76 and :107 ('When documentation and code disagree, the code wins'), docs/README.md:9"
+    },
+    {
+      "id": "DOCS-18",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "The README's screenshot has no light and dark pair and is not taken at high resolution."
+    },
+    {
+      "id": "QUAL-02",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "grep -rn '@SuppressWarnings(\"NullAway\")' src/main finds nothing."
+    },
+    {
+      "id": "QUAL-03",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "pom.xml:541: a floor for every package, com.mirada 0.78 and com.mirada.os 0.58 among them, each a few points under its measure (docs/testing.md)"
+    },
+    {
+      "id": "QUAL-04",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/test/java/com/mirada/BuildHygieneTest.java:140 theCoverageFloorsQuotedInTheTestingGuideAreTheOnesTheBuildEnforces reads jacoco-check from pom.xml and compares it with docs/testing.md:34-43; not @Disabled, and Surefire excludes no group."
+    },
+    {
+      "id": "QUAL-05",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "Whether some menu rows are available is decided inside the window rather than by tested rules. (src/main/java/com/mirada/ui/ViewerWindow.java:1964 unavailable(Command); src/main/java/com/mirada/ui/Command.java:8 imports javafx.scene.input.KeyCombination.)"
+    },
+    {
+      "id": "QUAL-06",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Every test class that starts the toolkit carries @Tag(\"fx\") (e.g. src/test/java/com/mirada/ui/CommandSweepTest.java:45, SameOnEveryOsFxTest.java:38); held by src/test/java/com/mirada/BuildHygieneTest.java:171 everyTestThatStartsTheToolkitIsTaggedFx."
+    },
+    {
+      "id": "QUAL-07",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "Some tests wait a fixed time instead of waiting for the work to finish. (grep -rn 'Thread.sleep' src/test finds 20 lines, e.g. src/test/java/com/mirada/ui/SameOnEveryOsFxTest.java:77.)"
+    },
+    {
+      "id": "QUAL-08",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/test/java/com/mirada/ui/WindowFixture.java builds each window over Settings in the test's temp folder; file dialogs are answered by the test; Surefire points the trash at target/ (pom.xml:347-349) and strips DISPLAY and the session bus (:350-354); src/test/java/com/mirada/ui/CommandSweepTest.java:154 asserts nothing is written outside after every command."
+    },
+    {
+      "id": "QUAL-09",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/test/java/com/mirada/ui/HeadlessDriver.java starts the real app through App.main on the Headless glass, with robot keys, clicks and screenshots (scripts/headless-run.sh:40); WindowFixture builds ViewerWindow as App.start does."
+    },
+    {
+      "id": "QUAL-10",
+      "level": "SHOULD",
+      "status": "manual",
+      "evidence": "Break what each drift or parity guard test checks (BuildHygieneTest, ReleaseSupplyChainTest, SameOnEveryOsFxTest, PautaConformance and Edition tests), run it, and see it fail; not recorded"
+    },
+    {
+      "id": "QUAL-11",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/test/java/com/mirada/ui/CommandSweepTest.java:154 everyCommandRunsOrSaysWhyNotInEveryStateAndNothingIsWrittenOutside iterates Command.values() (:182) in a real headless window; @Tag(\"fx\") (:45), not excluded."
+    },
+    {
+      "id": "QUAL-13",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/test/java/com/mirada/ui/SettingsWindowTest.java:191-264 sets every setting through its control, the palette keys and the title-bar menus included, and reads each back after a restart"
+    },
+    {
+      "id": "QUAL-15",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/test/java/com/mirada/ReleaseSupplyChainTest.java:259 (macOS signing, notarization, stapling), :319 (Linux package signing), :360 (checksum signature), :380 and :439 (provenance attestation before publish, same list as JReleaser) read the workflows and fail when a step moves or goes."
+    },
+    {
+      "id": "PERF-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Read every candidate of the grep (107 lines) and the handlers that reach them. start() makes only the allowed waits (src/main/java/com/mirada/App.java:193 the one join on the settings read begun in main, :258 Fonts.ready) and reads the catalog only if the read picked another language (:228); the Debug Log file is attached on its own thread (:241); settings and Debug Log writes go to FileWrites (:235-236). Handlers send disk work off the FX thread: rename (ui/ViewerWindow.java:1517), export (:1410), trash/untrash/reveal (:1713, :1866, :1848), bookmark and recent stats (:1599, :1808), editor save checks (ui/Editor.java:437), config export/import (ui/SettingsCommands.java:252,:280,:315), bookmarks' gone check (ui/BookmarksWindow.java:280). The keymap parse the old audit found on opening Settings is gone: the choice shows Keymap.name from a static map (ui/SettingsWindow.java:184) and every preset is parsed off the FX thread after the first paint (ViewerWindow.java:410-418). stop() makes only the last save (App.java:209-217)."
+    },
+    {
+      "id": "PERF-02",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Read the thread, executor and future candidates: results reach nodes only through Platform::runLater (ui/LatestOnly.java:82 deliver; ui/FindBar.java:50; ViewerWindow.java:1716, :1521; ImageCache.java:151-350 on fxThread; ui/UiZoom.java:217); off-thread bodies make Images, read files or search text but touch no live node; os/MacOpenFiles hands over in runLater; the single-instance callback is wrapped in runLater (App.java:276)."
+    },
+    {
+      "id": "PERF-03",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/LatestOnly.java:42,:68,:82 compares the generation where the result is delivered (inside the runLater); listing, sorting, details, bookmarks and recent folders go through it (ViewerWindow.java:1599, :1808), and the Debug Log search (ui/FindBar.java:191); the decoded image is applied only while its file is still wanted, checked on the FX thread; the zoom sheets are applied only while that zoom is still chosen, compared inside the runLater (ui/UiZoom.java:217-218); Bookmarks guard reads with a generation (settings/Bookmarks.java:159-164)."
+    },
+    {
+      "id": "PERF-04",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "Every Executors.new… and new Thread is named and a daemon: ui/ViewerWindow.java:113 and ui/FindBar.java:46 (named virtual), image/ImageCache.java:90-102, image/Thumbnails.java:68, settings/FileWrites.java:25-26, App.java:165 and :241-243, image/HeadStart.java:51, ui/Editor.java:455, ui/Fonts.java:48-49, diagnostics/DebugLog.java:104-105, os/SingleInstance.java:84, :137-139, :173-175, os/ToolPath.java:140-149, perf/FxSampler.java:43; every Thread.ofVirtual() is named; only shutdown hooks are non-daemon."
+    },
+    {
+      "id": "PERF-05",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Every supplyAsync/runAsync names an executor (src/main/java/com/mirada/image/ImageCache.java:151, :155, :182, :211, :213, :223, :232, :242, :350); no class extends Process."
+    },
+    {
+      "id": "PERF-06",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Mirada paints nothing itself; its list refreshes go through a pending flag: src/main/java/com/mirada/ui/Redraw.java:13-26 (one queued refresh, a request that finds it set schedules nothing), used by the Message Log (ui/MessageLogView.java:49, :105), Bookmarks (ui/BookmarksWindow.java:209-213), the marks on the image (ui/ViewerWindow.java:259-264) and Shortcuts (ui/ShortcutsWindow.java:47-48). The other listeners set controls' own properties (StatusBar.java:89-103, SettingsWindow.java:233-245)."
+    },
+    {
+      "id": "PERF-23",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/FindBar.java:68: the Debug Log search waits for a 150 ms pause (ui/Debounce.java) before LogSearch runs off the FX thread; FindBarTest.java:153"
+    },
+    {
+      "id": "PERF-07",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "No stream reaches the FX thread: the Debug Log window reads DebugLog.text() when it opens and on Refresh (src/main/java/com/mirada/ui/DebugLogWindow.java:121), as the rule's Reference notes; MessageLog entries are said one per user action; no process output or scan is shown as it arrives."
+    },
+    {
+      "id": "PERF-08",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "First grep: per-key and per-scroll handlers act on the visible rows or filter in-memory lists (ImageViewport, CommandPalette.java:121, BookmarksWindow.java:143), and the find bar narrows its last result in O(matches) (ui/LogSearch.java, FindBar.java:183); HotPathsTest holds the strip's step. Second grep: every loop that adds nodes is over a set the code fixes or a capped list: the metadata rows stop at InfoPanel.MAX_METADATA_ROWS = 300 (src/main/java/com/mirada/ui/InfoPanel.java:46, :192), the Pauta window's rows are pauta.json's bundled entries (ui/PautaWindow.java:146); growing lists (bookmarks, messages, thumbnails) are ListViews."
+    },
+    {
+      "id": "PERF-09",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/ImageViewport.java layoutChildren sets numbers only; the checker tile is made once; thumbnail cells are recycled ListView cells (ui/ThumbnailStrip.java:344); Redraw reuses one flag."
+    },
+    {
+      "id": "PERF-10",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "The only applyCss() is src/main/java/com/mirada/ui/Popups.java:130, on a virtualized ListView when a menu opens, not per keystroke; states are pseudo-classes, and no style class is toggled per keystroke."
+    },
+    {
+      "id": "PERF-11",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Named caps that drop the oldest: diagnostics/MessageLog.java:44,:65-66 (200), diagnostics/DebugLog.java:49,:219-220 (2000), edit/History.java:17 (200), image/Thumbnails.java:50 (400), image/ImageCache.java:55 (previews), ui/ViewerWindow.java:231,:1723 (trash undo), ui/BookmarksWindow.java:112,:496 (removed-mark undo), settings/Settings.java:64 (10 recent), ui/LogSearch.java:24; tests fill past the cap (ImageCacheTest, ThumbnailsTest, TrashUndoTest, DebugLogTest, MessageLogTest, HistoryTest)."
+    },
+    {
+      "id": "PERF-12",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/image/DecodeGuard.java weighs the header's pixel count against named limits (MAX_PIXELS, heap less MARGIN_BYTES, :27) before any decode, refusing with a message; config import caps entries and bytes (settings/ConfigImport.java:47, :154). Mirada runs no optional feature over content, so the guard is the whole rule."
+    },
+    {
+      "id": "PERF-13",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/ViewerWindow.java:320-324 setOnHidden stops the slideshow and calls release() (:753-766): tool windows closed, LatestOnly work cancelled, timers stopped, ImageCache, ThumbnailStrip and Bookmarks window closed; one window per process, and closing it quits, so its settings listeners go with the app. src/test/java/com/mirada/ui/ClosedWindowTest.java:66 finds nothing left running and the window collected."
+    },
+    {
+      "id": "PERF-14",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Settings, Bookmarks, Shortcuts, About, Pauta, Debug Log, Report a Problem and the editor are built on first open (fields filled on first use, e.g. src/main/java/com/mirada/ui/ViewerWindow.java:149, :1117 settingsWindow()); the menus are built after the first paint (:402); src/test/java/com/mirada/ui/StartupDeferralTest.java:76 finds none of them built before the first paint."
+    },
+    {
+      "id": "PERF-15",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "The update check, window icon, keymap preload, About's runtime line, pauta.json and the bookmarks start from afterFirstPaint (src/main/java/com/mirada/ui/ViewerWindow.java:402-430); the four Inter faces are drawn by the first window; src/test/java/com/mirada/ui/StartupDeferralTest.java:76 asserts the deferred work has not started before the first paint."
+    },
+    {
+      "id": "PERF-16",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/App.java:119 and :163-177 start the settings read on its own thread in main before launch(), and start() takes it (:188-202; a reload only when the read failed). Every launch now enters through src/main/java/com/mirada/Launcher.java:16, not the Application subclass: jpackage (pom.xml:824), javafx:run (pom.xml:389), the native image (pom.xml:1038), AOT training (scripts/aot-train.sh:62) and dev runs (scripts/dev-run.sh:90)."
+    },
+    {
+      "id": "PERF-17",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "pom.xml:869-879 the dist profile runs src/main/java/com/mirada/ui/StyleCompiler.java at process-classes, writing a .bss beside each .css in target/classes/com/mirada/styles (Stylesheet.convertToBinary, :37), which the jar, the jlink image and the native image carry (scripts/native-metadata.sh:78 adds com/mirada/styles/*.bss to the native resources)."
+    },
+    {
+      "id": "PERF-18",
+      "level": "SHOULD",
+      "status": "manual",
+      "evidence": "Read the repository's recent merged pull requests that touch a hot path (the viewport, the strip, decoding, start-up) and check each states its cost; not recorded"
+    },
+    {
+      "id": "PERF-19",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "scripts/measure-startup.sh:2 reports the median of n launches; phase marks from main (src/main/java/com/mirada/App.java:72) through start (:221, :256, :259, :266) to the first paint (src/main/java/com/mirada/perf/Startup.java:70-80)."
+    },
+    {
+      "id": "PERF-20",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/perf/FxSampler.java:22: MIRADA_PERF_SAMPLE=1 (or -Dmirada.perfSample) starts a sampler of the FX thread's stack (:43), from App.java:223."
+    },
+    {
+      "id": "PERF-21",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/test/java/com/mirada/ui/HotPathsTest.java:49 aStepAlongTheStripReadsNoneOfTheFoldersImages, headless (@Tag(\"fx\") :23, not excluded), guards the strip's per-step regression (5,000 reads a step on the old code, :61)."
+    },
+    {
+      "id": "PERF-22",
+      "level": "SHOULD",
+      "status": "manual",
+      "evidence": "Check that the pull requests fixing a suspected regression state a number before and after (docs/building-and-packaging.md and docs/reference/ hold start-up numbers); not recorded"
+    },
+    {
+      "id": "KBD-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Command.java:119-123: log.findPrevious, log.findMatchCase and log.refresh run the find bar's Previous, Match case and the log's Refresh (FindBar.java:101, :109); FindBarTest.java:176"
+    },
+    {
+      "id": "KBD-02",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Command.java:24-165: every id is <area>.<name> (go.next, view.zoomIn, file.open, help.reportProblem, bookmarks.listAll, log.find)"
+    },
+    {
+      "id": "KBD-03",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Command.java:259-261 title from command.<id>, :282-284 description from command.<id>.desc (commandOn.* platform forms); src/test/java/com/mirada/ui/CommandCatalogTest.java:19 everyCommandHasItsTitleAndDescriptionInTheCatalog walks every command"
+    },
+    {
+      "id": "KBD-04",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/AppMenus.java:378: rows and submenus that can't run are greyed with their reason, in every menu; the palette greys with a reason (CommandPalette); MenusFxTest.java:281"
+    },
+    {
+      "id": "KBD-05",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/keymaps/emacs.json:49 binds M-x, cua.json:49 C-S-p and cua.mac.json:49 Cmd-S-p to palette.show"
+    },
+    {
+      "id": "KBD-06",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/CommandPalette.java:396 titleTier ranks an exact title, then a title prefix, before fuzzy scores; descriptions are not matched; CommandPaletteTest.java:54"
+    },
+    {
+      "id": "KBD-07",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/ViewerWindow.java:367-371: the scene's root StackPane holds the one OverlayHost the palette, its pickers (CommandPalette.java:263) and the Message Log (MessageLogView.java:159) show in; the Bookmarks window likewise (BookmarksWindow.java:196-198); no javafx.stage.Popup in src/main"
+    },
+    {
+      "id": "KBD-09",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/keymaps/emacs.json, cua.json and cua.mac.json are present (Keymap.java:52 PRESETS); not a terminal app"
+    },
+    {
+      "id": "KBD-10",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "Mirada has no IntelliJ, VS Code or Sublime keymaps yet."
+    },
+    {
+      "id": "KBD-21",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/keymaps/cua.json and cua.mac.json bind the same command ids in both bindings and vertical (compared with jq); emacs.json has no .mac variant; CommandTest.java:65 loads the three files but does not compare the sets"
+    },
+    {
+      "id": "KBD-11",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Keybindings.java:60-85 layered is the one place: the base keymap (with its vertical bindings and lists), then the user's keys.<id> and palette.keys on top (use, :308-317); no plugins"
+    },
+    {
+      "id": "KBD-12",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "Settings has no keymap editor that lists every command with its keys."
+    },
+    {
+      "id": "KBD-13",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/SettingsPages.java:50: settings.*.keyHint takes the chord from the keymap and SettingsWindow.refreshKeys (:511) rewrites it; no catalog holds a chord (MessagesTest, SettingsPagesTest.java:38)"
+    },
+    {
+      "id": "KBD-14",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "No multi-key prefix exists: every binding in src/main/resources/com/mirada/keymaps/*.json is a single chord (no space-separated sequence), so there is no prefix to hint"
+    },
+    {
+      "id": "KBD-15",
+      "level": "MUST",
+      "status": "manual",
+      "evidence": "Tab through the viewer, Settings, Bookmarks, Debug Log, About, Pauta and the dialogs and work each control with Space/Enter. Source finds no mouse-only control: header and OSD buttons via Icons.button run commands (Icons.java:216-224; TitleBar.java:182-192; OnScreenControls.java:53-62, zoom menu rows run commands :201-205), the info panel's All Metadata card has view.allMetadata (InfoPanel.java:178; Command.java:72), the status bar labels run view.messageLog (StatusBar.java:64-65, :152-166) and the update link help.openRelease (:76-77), the editor tools run editor.* (Editor.java:502-508), the Bookmarks kind toggles have bookmarks.list* (BookmarksWindow.java:157), lists are driven from their fields (CommandPalette.java:141, BookmarksWindow.java:178), find-bar buttons are FIND-16's (FindBar.java:91); not recorded"
+    },
+    {
+      "id": "KBD-16",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/styles/mirada.css:1016-1048: one :focus-visible block, last in the file, covering buttons, toggle, menu and split-menu buttons, hyperlinks, combo/choice boxes, spinners, check-box and radio boxes, titled panes and text fields/areas; no rule after it, and high-contrast.css sets no border or insets"
+    },
+    {
+      "id": "KBD-22",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/styles/mirada.css:1016-1032 sets -fx-border-width: 2 and -fx-border-insets: -3px on the outside-ring controls; :1044-1048 widens text fields' focus border with -fx-background-insets: 0, 2px; no edge-flush ring"
+    },
+    {
+      "id": "KBD-18",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "On and off settings are check boxes rather than switches."
+    },
+    {
+      "id": "ACC-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/test/java/com/mirada/ui/NamedControlsFxTest.java:127 and :147 sweep every window, overlay, dialog (Confirm, Rename, Note) and menu row; NoteDialog.java:66 names the note field"
+    },
+    {
+      "id": "ACC-02",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "The panes and labels that handle a click set a role and handle its action: StatusBar.java:155-166 ActionLabel (BUTTON, FIRE in executeAccessibleAction), OverlayHost.java:28-45 backdrop (BUTTON, FIRE); ImageViewport.java:110 and CropView.java:98 set IMAGE_VIEW, a role with no actions (their drags and double-click have keyboard commands); every other click handler is on a Control or a cell (ThumbnailStrip.java:294-299, BookmarksWindow.java:610, CommandPalette.java:447)"
+    },
+    {
+      "id": "ACC-03",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No Canvas in src/main/java (images are ImageViews: ImageViewport.java:52); the rule covers an app that paints content on a Canvas"
+    },
+    {
+      "id": "ACC-04",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Motion.java:28-55: play() jumps to the end while Platform.getPreferences().isReducedMotion(), and a reducedMotionProperty listener finishes running animations; the one motion, OnScreenControls.java:173-183 FadeTransition, starts through Motion.play. The other PauseTransitions are timers that move nothing; perf/ AnimationTimers measure frames"
+    },
+    {
+      "id": "ACC-05",
+      "level": "SHOULD",
+      "status": "manual",
+      "evidence": "Look at a grayscale screenshot of each window and find every state still told apart: the status echo's error/warning colours (mirada.css:699-707) carry the message text, the unread count (mirada.css:709-714) is a number, toasts (mirada.css:675-682), About's update states (mirada.css:822-834) are words, danger menu rows (mirada.css:247-250) are named by their title. Not recorded"
+    },
+    {
+      "id": "ACC-06",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "There is no command to move the focus between the image, the thumbnails and the sidebar."
+    },
+    {
+      "id": "ACC-07",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "The release steps now ask for a pass with Narrator and VoiceOver, but no one has made it for a release yet."
+    },
+    {
+      "id": "ACC-08",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/PaletteKeys.java:177-186 select() moves selection and focus model to the row and calls list.notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM) (ListView answers FOCUS_ITEM with the focused row); used by the palette and pickers (CommandPalette.java:336, :422), Bookmarks (BookmarksWindow.java:442), Message Log (MessageLogView.java:133); a row that can't run says why in its accessible text (CommandPalette.java:476-479 rowText(label, chord, why))"
+    },
+    {
+      "id": "ACC-09",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Theme.java:78-85: a Platform.getPreferences() MapChangeListener on Windows.SPI.HighContrast switches to the high-contrast theme and back (effective(), :97-99); Settings.ThemeChoice.HIGH_CONTRAST (settings/Settings.java:43-44) applies high-contrast.css"
+    },
+    {
+      "id": "WIN-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/StatusBar.java:37-38 status-echo-error/-warn styles; :64 the echo's click runs Command.MESSAGE_LOG; shown by default (settings/Settings.java:118,206 statusBar true) and hideable (view.statusBar)"
+    },
+    {
+      "id": "WIN-03",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Windows/Linux: src/main/java/com/mirada/ui/TitleBar.java:198-209 StageStyle.EXTENDED with a HeaderBar whose left holds the menu bar (:226-232, ViewerWindow.java:402); setting window.titleBarMenus defaults on (settings/Settings.java:119,207) and off gives a plain row in a decorated window (TitleBar.java:210-213, usesHeaderBar :57-58). macOS: menus via setUseSystemMenuBar (ui/AppMenus.java:399, ViewerWindow.java:431), header holds no menus (finish(null), ViewerWindow.java:402)"
+    },
+    {
+      "id": "WIN-04",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Dialogs.java:51-63 styled() adds mirada.css to the dialog's scene; every Alert/Dialog goes through it: ui/Confirm.java:148, ui/NoteDialog.java:56, ui/ViewerWindow.java:1489"
+    },
+    {
+      "id": "WIN-11",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Dialogs.java:35 BUTTON_ORDER 'L_HE+CUYNBXIAO_R' (C before U,Y,N,B,X,I,A,O) set on every dialog's ButtonBar at :57, same on every OS"
+    },
+    {
+      "id": "WIN-08",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "The image and folder you had open are not reopened at the next start."
+    },
+    {
+      "id": "WIN-09",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "The image's zoom level is not remembered from one start to the next."
+    },
+    {
+      "id": "WIN-12",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/UiZoom.java: one setting (settings/Settings.java:68 ui.zoom, saved and read back) scales every pixel length of mirada.css/ui-font.css and the code's fixed sizes (bind/pad/hbox), swapping sheets on every open window at once; commands view.uiZoomIn/Out/Reset (ui/Command.java:46-48), bound C-M-=/-/0 while C-=/-/0 stay with the content zoom (keymaps/cua.json:10-12,19-21)"
+    },
+    {
+      "id": "WIN-13",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/ViewerWindow.java:1242-1245 quit(): asks about an unsaved edit (mayClose :1251, CONF-01) then closes; Quit/Close commands (:1094), the close request (:316-319, which macOS's app-menu and Dock Quit become) all run it; onHidden saves the place and closes tool windows (:320-324, rememberPlace :772, release)"
+    },
+    {
+      "id": "WIN-14",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "app.quit registered (src/main/java/com/mirada/ui/Command.java:126), in the palette like every command; File menu row runs it (ui/AppMenus.java:79 CLOSE, QUIT; ViewerWindow.java:1094)"
+    },
+    {
+      "id": "WIN-15",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/os/MacAppMenu.java:86-90 inserts Settings into the application menu with no key equivalent, running app.settings (ui/ViewerWindow.java:470-474); its title carries the keymap's chord (AppMenus.title) and is rewritten on a keymap change (MacAppMenu.refresh :63-67, called at ViewerWindow.java:487)"
+    },
+    {
+      "id": "WIN-10",
+      "level": "MAY",
+      "status": "fail",
+      "evidence": "no Zen/Expert/Simple chrome modes: no such commands in src/main/java/com/mirada/ui/Command.java; a MAY, no consequence"
+    },
+    {
+      "id": "ICON-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Fonts.java:96-108: a Window.getWindows() listener adds ui-font.css to each window's scene and to a new scene (sceneProperty listener :108); ui-font.css:11-14 sets the family on .root and .tooltip; mirada.css's .root (:9-80) sets no -fx-font-family (monospace only on log rules :770, :790, :814). StyleContrastTest.java:288 theUiFontIsTheSceneSheetsNotTheAppSheets"
+    },
+    {
+      "id": "ICON-02",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/fonts/inter/: Inter-Regular, -Bold, -Italic, -BoldItalic .ttf and OFL.txt; Fonts.java:81 Font.loadFont on each, started at App.java:225 and awaited by Fonts.ready() at App.java:258 before window.show() at :265; ui-font.css names Inter, not the platform font"
+    },
+    {
+      "id": "ICON-04",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "Mirada uses the AtlantaFX themes as they are rather than a theme file of its own."
+    },
+    {
+      "id": "ICON-05",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "Mirada's default theme is not yet the Caret and Ink pair the other apps share."
+    },
+    {
+      "id": "ICON-06",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/styles/mirada.css:31 -state-key is a ladder() of -color-bg-default; StyleContrastTest.java:381 theKeyboardPeriwinkleReadsInBothThemes resolves it on the default, subtle and overlay grounds of Cupertino Light and Dark at 4.5:1 or more"
+    },
+    {
+      "id": "ICON-07",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/styles/mirada.css:38-50: -state-amber/-green/-red/-accent and -state-red-emphasis/-red-osd/-amber-osd declared once on .root, each a -color-* role; component rules use only the tokens (:249, :677, :681, :701, :706, :710, :776, :780, :824, :829, :833, :838), none names -color-danger/-warning/-success. StyleContrastTest.java:178 and :203 hold it"
+    },
+    {
+      "id": "ICON-08",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "No fixed colour after the .root block of mirada.css (the grep finds only comments past :80); fixed colours on .root stand only for what is over the photo or a scrim/shadow (:62-75 -osd-*, -toast-bg, -crop-shade/-third/-handle-edge, -scrim, -shadow-*) or inside a ladder() of the ground (:18-31); the window's own ground and ink are roles (-crop-ground: -color-dark :67, -window-button-dark: -color-fg-muted :80); high-contrast.css is a .root block that sets -color-* tokens. StyleContrastTest.java:118 and :233 hold it"
+    },
+    {
+      "id": "ICON-09",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/test/java/com/mirada/ui/StyleContrastTest.java:153 textThatMustBeReadUsesTheMutedRoleNotSubtle walks every rule of mirada.css and ui-font.css and fails a text fill of -color-fg-subtle outside SUBTLE_TEXT (:135-141, disabled/ruled-out selectors only), and computes -color-fg-muted on default, subtle and overlay in Cupertino Light and Dark (the app's own pair) at 4.5:1; not @Tag(\"fx\")"
+    },
+    {
+      "id": "ICON-10",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/test/java/com/mirada/ui/StyleContrastTest.java:303 tintedTextReachesAaOnItsOwnFillAndOnBothGrounds: each role's -fg on its -subtle (over default and subtle), on bg-subtle and on bg-default, in Cupertino Light and Dark, at 4.5:1; overrides at mirada.css:18-25"
+    },
+    {
+      "id": "ICON-11",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/test/java/com/mirada/ui/StyleContrastTest.java:326 inkOnAnEmphasisFillIsTheThemesOnEmphasisColour: -color-fg-emphasis on each role's -emphasis at 4.5:1 in both themes, and the rules that paint on an emphasis fill (.menu-item:focused, .status-bar .status-unread at mirada.css:709-712) use it"
+    },
+    {
+      "id": "ICON-12",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/styles/mirada.css:54 -focus-ring: -color-accent-emphasis on .root, drawn by the :focus-visible block at the sheet's end (:1016-); StyleContrastTest.java:350 theFocusRingIsAtLeastThreeToOneOnEverySurface reads it from .root and finds 3:1 on default, subtle, inset and overlay in both themes"
+    },
+    {
+      "id": "ICON-13",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "The only state colour without an AtlantaFX role is -state-key (ICON-06's), a ladder of -color-bg-default (mirada.css:31); the role overrides are ladders of the ground too (:18-25), resolved per theme by StyleContrastTest.java's palette()/ladder"
+    },
+    {
+      "id": "ICON-14",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "The contrast tests, src/test/java/com/mirada/ui/StyleContrastTest.java and AccentTest.java, read the .css resources as text (StyleContrastTest.java:37-46) and use only javafx.scene.paint.Color; neither is @Tag(\"fx\") nor starts the toolkit"
+    },
+    {
+      "id": "ICON-15",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Theme.java:111-115: Cupertino Light or Dark applied with Application.setUserAgentStylesheet on each theme change, in the running app"
+    },
+    {
+      "id": "ICON-16",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "settings/Settings.java:40 ThemeChoice.SYSTEM; SettingsWindow.java:89-91 lists every ThemeChoice, SettingsCommands.java:72 in the palette; Theme.java:75 a colorSchemeProperty listener re-applies, Theme.java:103 SYSTEM follows the system scheme"
+    },
+    {
+      "id": "ICON-17",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/settings/Settings.java:361-368 themeOf: null or an unknown name returns ThemeChoice.SYSTEM, the first-run default, catching IllegalArgumentException"
+    },
+    {
+      "id": "ICON-18",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "Every rule using -state-red/-amber/-green marks the table's meaning: errors and warnings in the echo, Message Log and toasts (mirada.css:675-707, :776-780), the unread errors' count (:709-712), a row that deletes (:247-250, MENU-12's danger), About's update available/up to date/failed (:822-834); nothing is coloured amber, red or green to decorate"
+    },
+    {
+      "id": "ICON-19",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "One glyph family: src/main/java/com/mirada/ui/Icons.java:302-305 Icons.of adds the single class 'icon'; no second family class anywhere in src/main/java"
+    },
+    {
+      "id": "ICON-20",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Icons.java:129 forCommand is the one lookup keyed by command, used by buttons (Icons.button) and menu rows (AppMenus.java:352, OnScreenControls.java:202, ViewerWindow.java:2055); every glyph is a constant of the one class Icons (bookmark row menu at BookmarksWindow.java:534-556 takes Icons' constants too). MenusFxTest.java checks buttons wear their command's glyph"
+    },
+    {
+      "id": "ICON-23",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "Mirada shows files as thumbnails of their content (ThumbnailStrip, BookmarksWindow.java:569-571 picture, a folder glyph for folder rows), not a file-type icon per file; the rule covers an app that shows files with an icon each"
+    },
+    {
+      "id": "ICON-24",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "NOTICE:94-99 credits Inter (OFL-1.1) for src/main/resources/com/mirada/fonts/inter/; the icons are hand-drawn in Icons.java (:30, no glyph set shipped)"
+    },
+    {
+      "id": "TBAR-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Icons.java:246-253 Icons.name sets the tooltip and the accessible text from one string, chord included, and renames both in place; every icon-only button goes through it: Icons.button (:216-224), info (TitleBar.java:192, :250), zoom menu (OnScreenControls.java:60), marks badge (MarksBadge.java:57-58)"
+    },
+    {
+      "id": "TBAR-03",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/InfoPanel.java:181 relabel(), called from ViewerWindow.relabelButtons (:1038), with the editor's and empty window's buttons; ViewerWindowTest.java:134"
+    },
+    {
+      "id": "TBAR-14",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "Every tooltip comes from Icons.tip, which sets the 400 ms delay (src/main/java/com/mirada/ui/Icons.java:256-266); no new Tooltip elsewhere in src/main; mirada.css:640-642 .tooltip { -fx-show-delay: 400ms; } covers the rest"
+    },
+    {
+      "id": "TBAR-06",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "One bar at each edge, nothing to join: the top is the title bar alone, the menu bar inside it (src/main/java/com/mirada/ui/TitleBar.java:197-215, :226-233; ViewerWindow.java:359), the bottom the status bar (ViewerWindow.java:346-347) under the thumbnail strip, which is content"
+    },
+    {
+      "id": "TBAR-02",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "The header toolbar's buttons leave the Tab order: rotate via Icons.button (src/main/java/com/mirada/ui/Icons.java:221), info at src/main/java/com/mirada/ui/TitleBar.java:190"
+    },
+    {
+      "id": "TBAR-04",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "The header toolbar holds no Separator (src/main/java/com/mirada/ui/TitleBar.java:194 HBox of rotate and info)"
+    },
+    {
+      "id": "TBAR-05",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "No toolbar item's visibility ever changes: rotate is only disabled (src/main/java/com/mirada/ui/TitleBar.java:276-278); no separators to tidy"
+    },
+    {
+      "id": "TBAR-07",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "No header button opens an overlay and there is no Simple mode; the info toggle is a ToggleButton bound to the sidebar's state (src/main/java/com/mirada/ui/TitleBar.java:187-189) with a fill while on (src/main/resources/com/mirada/styles/mirada.css:181-183 .header-button:selected)"
+    },
+    {
+      "id": "TBAR-08",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Rotate runs image.rotateRight (src/main/java/com/mirada/ui/TitleBar.java:182-185), info tool.properties; both are rows of the menu bar (src/main/java/com/mirada/ui/AppMenus.java:85, :92) and in the palette (Command.inPalette)"
+    },
+    {
+      "id": "TBAR-09",
+      "level": "MAY",
+      "status": "fail",
+      "evidence": "src/main/java/com/mirada/ui/TitleBar.java:194: the header buttons are fixed; no reorder, remove or restore and nothing in the settings (MAY: no consequence)"
+    },
+    {
+      "id": "TBAR-15",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No main toolbar: Mirada's header buttons share the title bar with the file's name and the menus (src/main/java/com/mirada/ui/TitleBar.java:194-215), which the rule's Applies-to names a toolbar but not a main toolbar"
+    },
+    {
+      "id": "TBAR-16",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No main toolbar (header buttons in the title bar, src/main/java/com/mirada/ui/TitleBar.java:194-215)"
+    },
+    {
+      "id": "TBAR-17",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No main toolbar (header buttons in the title bar, src/main/java/com/mirada/ui/TitleBar.java:194-215)"
+    },
+    {
+      "id": "TBAR-18",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No main toolbar (header buttons in the title bar, src/main/java/com/mirada/ui/TitleBar.java:194-215)"
+    },
+    {
+      "id": "TBAR-19",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No main toolbar (header buttons in the title bar, src/main/java/com/mirada/ui/TitleBar.java:194-215)"
+    },
+    {
+      "id": "TBAR-12",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No tool window stripes: no stripe or tool-window stripe code in src/main/java (grep -i stripe finds nothing)"
+    },
+    {
+      "id": "TBAR-13",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No tool window stripes in src/main/java"
+    },
+    {
+      "id": "TABS-10",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/ViewerWindow.java:850-870: the stage title is windowTitle(file, folder, unsaved) = \"photo.jpg — Holiday — Mirada\" (messages.properties:319), with a \"● \" prefix while the editor holds an unsaved edit (:869, refreshed on unsavedProperty at :1701); the app alone with no image (:960)"
+    },
+    {
+      "id": "TABS-01",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "No tabs the user opens and closes: no TabPane or Tab anywhere in src/main/java; the window shows one image of a folder"
+    },
+    {
+      "id": "TABS-02",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "No document tabs (no TabPane/Tab in src/main/java)"
+    },
+    {
+      "id": "TABS-03",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "No document tabs (no TabPane/Tab in src/main/java)"
+    },
+    {
+      "id": "TABS-04",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "No document tabs (no TabPane/Tab in src/main/java)"
+    },
+    {
+      "id": "TABS-05",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "No document tabs (no TabPane/Tab in src/main/java)"
+    },
+    {
+      "id": "TABS-06",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "No document tabs (no TabPane/Tab in src/main/java)"
+    },
+    {
+      "id": "TABS-07",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No document tabs (no TabPane/Tab in src/main/java)"
+    },
+    {
+      "id": "TABS-08",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No document tabs (no TabPane/Tab in src/main/java)"
+    },
+    {
+      "id": "TABS-09",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No document tabs (no TabPane/Tab in src/main/java)"
+    },
+    {
+      "id": "TABS-12",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No document tabs, so no tab bar (no TabPane/Tab in src/main/java)"
+    },
+    {
+      "id": "TABS-13",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "The tool panels are the properties sidebar and the thumbnail strip: src/main/java/com/mirada/ui/Command.java:67 `tool.properties` and :73 `tool.thumbnails` toggle them; emacs.json:38-39 binds M-1 and M-2; no stripes. Migrations.java:44-63 moves a user's keys from the old view.* ids"
+    },
+    {
+      "id": "TABS-15",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "Which panels are open is not remembered from one start to the next."
+    },
+    {
+      "id": "TABS-19",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "No tool panel can take keyboard focus, so closing one never strands it: InfoPanel.java:70 (scroll pane) and :178 (metadata TitledPane) setFocusTraversable(false), its buttons via Icons.button (out of the Tab order), ThumbnailStrip.java:101 the strip's list; focus stays on the viewer"
+    },
+    {
+      "id": "TABS-16",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No tool window stripes: panels are toggled by commands and a header button, no stripe or dockable tool windows in src/main/java/com/mirada/ui"
+    },
+    {
+      "id": "TABS-17",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No tool window stripes in src/main/java/com/mirada/ui"
+    },
+    {
+      "id": "TABS-18",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No tool window stripes in src/main/java/com/mirada/ui"
+    },
+    {
+      "id": "TABS-20",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No tool window stripes in src/main/java/com/mirada/ui"
+    },
+    {
+      "id": "TABS-21",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No tool window stripes in src/main/java/com/mirada/ui"
+    },
+    {
+      "id": "TABS-22",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No tool window stripes in src/main/java/com/mirada/ui"
+    },
+    {
+      "id": "TABS-23",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No tool window stripes in src/main/java/com/mirada/ui"
+    },
+    {
+      "id": "MENU-14",
+      "level": "MAY",
+      "status": "fail",
+      "evidence": "Bookmark row menu glyphs don't come from the lookup keyed by the row's command: BookmarksWindow.java:532-556 uses Icons.of(PICTURE/FOLDER_OPEN/NOTE/BOOKMARK/FOLDER/REMOVE_MARK) for BOOKMARKS_OPEN etc. (no case in Icons.forCommand, :129-201), so Open wears OPEN's glyph; and in the lookup EXPORT_DEBUG_LOG wears DOWNLOAD (Icons.java:198), IMPORT_CONFIG's glyph (:177), an opposite action; an unticked check row keeps its glyph (AppMenus.java:371-374)"
+    },
+    {
+      "id": "MENU-15",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "In-window bar and right-click rows: AppMenus.java:239-273 a row's own chord label (menu-item-chord) filled from command.chord() and empty when unbound (:367-368), rewritten on each showing (:212-217) and built per request for right-click menus (ViewerWindow.java:584, :2121); the zoom drop-down (OnScreenControls.java:73) and the bookmark/sort rows use the item's accelerator text via MenuChord (MenuChord.java:36-50), refreshed on showing or built per request; drawn in -state-key (mirada.css:221, :239) at 11px (ui-font.css:28-31)"
+    },
+    {
+      "id": "MENU-16",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/styles/ui-font.css:19-31 pins Inter 14px on .context-menu, its rows and their labels, and 11px on .accelerator-text and .menu-item-chord, in px; UiZoom.java:60 lists ui-font.css among the sheets whose px values scale() (:236-250) rewrites at the UI zoom"
+    },
+    {
+      "id": "MENU-18",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/ui/mirada.css: 8 x 12 rows, radius 8, shadow 16 at Y 16; every menu's rows from AppMenus (OnScreenControls.java:209, BookmarksWindow.java:563)"
+    },
+    {
+      "id": "MENU-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/AppMenus.java:69-131 the bar's model is Command lists with separators; in-window rows (:197-224) and system rows (:400-421) take the command's label, the active chord and the enabled state from the command's gate (unavailable), and run through ViewerWindow.run (ViewerWindow.java:443, :466)"
+    },
+    {
+      "id": "MENU-02",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "No menu-bar row calls setAccelerator (only MenuChord.java:38/48, used by the zoom drop-down and right-click rows); in-window rows are CustomMenuItems of icon, title, spacer and chord (AppMenus.java:232-269); the macOS system bar's rows are MenuItems with the chord appended to the title (AppMenus.java:185-188, :406-407) and no graphic"
+    },
+    {
+      "id": "MENU-03",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/AppMenus.java:212-217 (in-window) and :414-420 (system bar): each menu's onShowing re-reads every row's enabled state and rewrites its title and chord from the keymap now; the language applies at the next start (messages.properties:573), so needs no live rewrite"
+    },
+    {
+      "id": "MENU-04",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No Simple mode in src/main/java; the rule covers an app with a Simple mode"
+    },
+    {
+      "id": "MENU-17",
+      "level": "SHOULD",
+      "status": "manual",
+      "evidence": "On Windows or Linux, in CUA and Emacs, reach the first menu with F10 or a lone Alt and walk the bar with the arrows: no keymap binds F10 (keymaps/cua.json, emacs.json); the in-window bar is AppMenus.inWindow (ViewerWindow.java:443) and the viewer's key filter steps aside while it is active (ViewerWindow.java:966-969, :1011-1016). Not recorded"
+    },
+    {
+      "id": "MENU-05",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Every list, editor and console has a menu of commands: the image (ViewerWindow.java:380, :2121-2153), the strip's rows open the clicked image's menu (ThumbnailStrip.java:117-129), Bookmarks rows (BookmarksWindow.java:613-618, commands BOOKMARKS_* at Command.java:157-161), the Message Log list (MessageLogView.java:113-118; ViewerWindow.java:1367-1370 COPY_MESSAGES, CLEAR_MESSAGES), the Debug Log text (DebugLogWindow.java:99-105; ViewerWindow.java:1381-1385); the Settings sidebar only navigates"
+    },
+    {
+      "id": "MENU-06",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/DebugLogWindow.java:125 opens its menu through Popups.show, one at a time; MenusFxTest.java:219"
+    },
+    {
+      "id": "MENU-07",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/DebugLogWindow.java:79: Popups.closeOnPressOutside, as the viewer, Message Log and Bookmarks; MenusFxTest.java:219"
+    },
+    {
+      "id": "MENU-08",
+      "level": "MUST",
+      "status": "manual",
+      "evidence": "Open a right-click menu, press Escape and type: the keys reach the control that had focus (stock hide-on-escape kept, Popups.java:62-69). Not recorded"
+    },
+    {
+      "id": "MENU-09",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/DebugLogWindow.java:84 and MessageLogView.java:141: the Menu key and Shift+F10 open the menu; MenusFxTest.java:219, :252"
+    },
+    {
+      "id": "MENU-10",
+      "level": "SHOULD",
+      "status": "manual",
+      "evidence": "In a list, select one row and right-click another: its menu acts on the clicked row (strip: ThumbnailStrip.java:120-123 picks the row first; Bookmarks: BookmarksWindow.java:616 selects first; Message Log: ListView's own selection on right-press). No editor. Not recorded"
+    },
+    {
+      "id": "MENU-11",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "Nothing exists once per open file (one viewer, one image at a time); every right-click menu is built on its request and set for that showing (ViewerWindow.java:2121 contextMenu(), :584 stripMenu(), :603 commandMenu(), BookmarksWindow.java:529 menu(row)); no row hides, so no separators collapse"
+    },
+    {
+      "id": "MENU-12",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "Rows that delete, discard or reset carry 'danger': AppMenus.java:152-157 DESTRUCTIVE (Move to Trash, Clear Messages, Clear Debug Log, Import Configuration, Remove bookmark) added at :264, the bookmark Remove row at BookmarksWindow.java:561; mirada.css:247-250 colours it -state-red (= -color-danger-fg, :40)"
+    },
+    {
+      "id": "MENU-13",
+      "level": "MAY",
+      "status": "limited",
+      "evidence": "No terminal view in Mirada; the rule covers a terminal view"
+    },
+    {
+      "id": "TRAY-01",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "no tray and no work that goes on without the window: no SystemTray, TrayIcon, StatusNotifierItem or setImplicitExit(false) in src/main; closing the window quits (src/main/java/com/mirada/ui/ViewerWindow.java:316-319)"
+    },
+    {
+      "id": "TRAY-02",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "no tray and no work that goes on without the window: no SystemTray, TrayIcon, StatusNotifierItem or setImplicitExit(false) in src/main; closing the window quits (src/main/java/com/mirada/ui/ViewerWindow.java:316-319)"
+    },
+    {
+      "id": "TRAY-03",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "no tray and no work that goes on without the window: no SystemTray, TrayIcon, StatusNotifierItem or setImplicitExit(false) in src/main; closing the window quits (src/main/java/com/mirada/ui/ViewerWindow.java:316-319)"
+    },
+    {
+      "id": "TRAY-04",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "no tray and no work that goes on without the window: no SystemTray, TrayIcon, StatusNotifierItem or setImplicitExit(false) in src/main; closing the window quits (src/main/java/com/mirada/ui/ViewerWindow.java:316-319)"
+    },
+    {
+      "id": "TRAY-05",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "no tray and no work that goes on without the window: no SystemTray, TrayIcon, StatusNotifierItem or setImplicitExit(false) in src/main; closing the window quits (src/main/java/com/mirada/ui/ViewerWindow.java:316-319); no --minimized in src/main/java/com/mirada/Launch.java"
+    },
+    {
+      "id": "TRAY-06",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "no tray and no work that goes on without the window: no SystemTray, TrayIcon, StatusNotifierItem or setImplicitExit(false) in src/main; closing the window quits (src/main/java/com/mirada/ui/ViewerWindow.java:316-319); no autostart, LaunchAgent or Run entry"
+    },
+    {
+      "id": "TRAY-07",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "no tray and no work that goes on without the window: no SystemTray, TrayIcon, StatusNotifierItem or setImplicitExit(false) in src/main; closing the window quits (src/main/java/com/mirada/ui/ViewerWindow.java:316-319); no login entry written"
+    },
+    {
+      "id": "TRAY-12",
+      "level": "MAY",
+      "status": "limited",
+      "evidence": "no tray and no work that goes on without the window: no SystemTray, TrayIcon, StatusNotifierItem or setImplicitExit(false) in src/main; closing the window quits (src/main/java/com/mirada/ui/ViewerWindow.java:316-319); no Taskbar or LauncherEntry badge"
+    },
+    {
+      "id": "TRAY-13",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "no tray and no work that goes on without the window: no SystemTray, TrayIcon, StatusNotifierItem or setImplicitExit(false) in src/main; closing the window quits (src/main/java/com/mirada/ui/ViewerWindow.java:316-319)"
+    },
+    {
+      "id": "TRAY-14",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "no tray and no work that goes on without the window: no SystemTray, TrayIcon, StatusNotifierItem or setImplicitExit(false) in src/main; closing the window quits (src/main/java/com/mirada/ui/ViewerWindow.java:316-319); the headless decision is CLI-09's (App.java:71)"
+    },
+    {
+      "id": "TRAY-09",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "sends no desktop notifications: no notify-send, osascript, gdbus or PowerShell toast in src/main"
+    },
+    {
+      "id": "TRAY-10",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "sends no desktop notifications: no notify-send, osascript, gdbus or PowerShell toast in src/main"
+    },
+    {
+      "id": "TRAY-11",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "sends no desktop notifications: no notify-send, osascript, gdbus or PowerShell toast in src/main"
+    },
+    {
+      "id": "SET-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Command.java:82 SETTINGS (`app.settings`) is a palette command; src/main/resources/com/mirada/keymaps/cua.json:41 binds `C-,`, cua.mac.json:41 `Cmd-,`"
+    },
+    {
+      "id": "SET-02",
+      "level": "MUST",
+      "status": "manual",
+      "evidence": "Open Settings (Ctrl+,): sidebar of pages with icons on the left, the page on the right, the search field above both. Code: src/main/java/com/mirada/ui/SettingsWindow.java:299 BorderPane(center scroll, top search, left sidebar), :542 each page cell gets its icon. Not recorded"
+    },
+    {
+      "id": "SET-03",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/SettingsSearch.java:27-56 matches title, description, visible text, card/page context and keywords; title x4 > description x2 > context/keywords, whole word 3 > word start 2; SettingsWindow.java:361-384 hides non-matching rows and cards (with their headings) and selects the best page; tests SettingsPagesTest.java:29, :37, :57"
+    },
+    {
+      "id": "SET-04",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/SettingsWindow.java:89-170: every control writes its setting on change, no Save/Apply button, no text-field setting (Spinners are not editable; the search field is not a setting); settings read at start say so on their row: messages.properties:573 (language, \"from its next start\"), :793 (menu bar in the title bar)"
+    },
+    {
+      "id": "SET-05",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/App.java:199 one Settings per process, passed to every ViewerWindow (:253); settings/Settings.java:641-648 tells every listener of a change; another process's change is reread when a window comes forward (ViewerWindow.java:311-312); test SettingsCommandsTest.java:250"
+    },
+    {
+      "id": "SET-06",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/SettingsPages.java ties each row to its command (e.g. :102-105 TITLE_BAR_MENUS); commands that prompt or flip in SettingsCommands.java (theme choice :72); tests SettingsPagesTest.java:106 (every row has a palette command) and :131"
+    },
+    {
+      "id": "SET-07",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/settings/ConfigDir.java:34-39 one resolver: --config-dir, then --dev (~/.mirada-dev), then MIRADA_CONFIG_DIR, then ~/.mirada (:47-49), no OS branch; Launch.java:93-102 records both flags so order typed doesn't matter; used by App.java:88 and Settings.java:133"
+    },
+    {
+      "id": "SET-08",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "Where the window was and the recent folders are kept in the settings file, not a file of their own."
+    },
+    {
+      "id": "SET-09",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/settings/Settings.java:87 SCHEMA_VERSION 3 written at :678, Bookmarks.java:80 SCHEMA_VERSION 2 written at :410; Migrations.java:40-43 steps 1 (identity) and 2 (panelCommandsRenamed) for settings, :70-71 an identity step 1 for bookmarks; MigrationsTest.java:29"
+    },
+    {
+      "id": "SET-10",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/settings/ConfigFile.java:115-137: a newer file is copied to <name>.v<n>.bak and defaults load; tests MigrationsTest.java and ConfigFileTest.java"
+    },
+    {
+      "id": "SET-11",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/settings/Settings.java:176-209 every value clamped or defaulted as read (numbers clamped :340, :350, :373; booleanOf :273-279 returns the default for an unknown value; windowOf :453-467 rejects junk); ConfigFile.java:98-110 keeps an undecodable file as .corrupt.bak and catches IllegalArgumentException; ConfigFileTest.java:23, :35"
+    },
+    {
+      "id": "SET-22",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Every whole-file config write goes to <name>.tmp beside it and Files.move with ATOMIC_MOVE (fallback REPLACE_EXISTING): settings/Settings.java:741-748, Bookmarks.java:414-424, ConfigImport.java:267-274; the debug log is a log, excluded"
+    },
+    {
+      "id": "SET-12",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/settings/ConfigExport.java:23-27 names the zip mirada-config-<yyyyMMdd-HHmmss>.zip, :53 writes the config folder's files; ConfigImport.java restores them (commands config.export/config.import); tests ConfigExportImportTest.java"
+    },
+    {
+      "id": "SET-13",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "Keeps no secret the user gave it: no password, token, key or passphrase in src/main/java, no keychain use"
+    },
+    {
+      "id": "SET-14",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "Asks the user for no credential (no login, password or passphrase prompt in src/main/java)"
+    },
+    {
+      "id": "SET-15",
+      "level": "MUST",
+      "status": "limited",
+      "evidence": "No Settings Sync: no sync page (src/main/java/com/mirada/ui/SettingsPages.java) and no git/sync code in src/main/java"
+    },
+    {
+      "id": "SET-16",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "No setting switches off a check or a question: the keys are settings/Settings.java:47-80 (theme, language, panels, sort, window, zoom, keys, status bar, menus, update check); no key skips a Confirm"
+    },
+    {
+      "id": "SET-18",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No Settings Sync (no Sync page in SettingsPages.java; no sync code in src/main/java)"
+    },
+    {
+      "id": "SET-19",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No Settings Sync (no Sync page in SettingsPages.java; no sync code in src/main/java)"
+    },
+    {
+      "id": "SET-20",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No Settings Sync (no Sync page in SettingsPages.java; no sync code in src/main/java)"
+    },
+    {
+      "id": "SET-21",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No Settings Sync (no Sync page in SettingsPages.java; no sync code in src/main/java)"
+    },
+    {
+      "id": "DIAG-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/diagnostics/MessageLog.java:44 MAX_ENTRIES 200, :64-67 newest first, oldest evicted, :100 clear(); memory only; src/main/java/com/mirada/ui/MessageLogView.java:44 HH:mm:ss, :85-87 Clear; Esc closes; test src/test/java/com/mirada/diagnostics/MessageLogTest.java"
+    },
+    {
+      "id": "DIAG-02",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/diagnostics/DebugLog.java:103 uncaught handler, :126 handler on the root logger, one buffer bounded at MAX_ENTRIES 2000 (:49,:219-220), session file mirada-session.log with the last kept as mirada-session.prev.log (:46-47,:184); tests src/test/java/com/mirada/diagnostics/DebugLogTest.java"
+    },
+    {
+      "id": "DIAG-03",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/DebugLogWindow.java:40 a plain Stage with no modality; :54-59 Refresh, Copy, Clear, Export, Report a Problem"
+    },
+    {
+      "id": "DIAG-04",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/App.java:67-68 DebugLog.install() and onUncaught are main's first statements, before Launch.parse (:75) and launch; App.uncaught (:151-157) says it in the echo area as ERROR, no dialog"
+    },
+    {
+      "id": "DIAG-05",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/ViewerWindow.java:405 afterFirstPaint(updates::scheduleStartupCheck); src/main/java/com/mirada/update/UpdateCoordinator.java:44 STARTUP_DELAY 5 s, :124-127 once per process (scheduled), skipped when off (:116) or less than a day since the kept lastUpdateCheck (UpdateCheck.isDue :78); reads releases/latest (AppInfo.java:54); only reports; tests src/test/java/com/mirada/update/UpdateCoordinatorTest.java"
+    },
+    {
+      "id": "DIAG-09",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/StatusBar.java:66,77,117-120 a status-bar Hyperlink 'status.updateAvailable' naming the version, running OPEN_RELEASE (the release's page, UpdateCoordinator.releasePage)"
+    },
+    {
+      "id": "DIAG-10",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "help.checkForUpdates (src/main/java/com/mirada/ui/Command.java:119) in the Help menu (ui/AppMenus.java:121); Settings switch updates.check (settings/Settings.java:79); scheduler skips while off (update/UpdateCoordinator.java:116,124)"
+    },
+    {
+      "id": "DIAG-06",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "help.reportProblem (src/main/java/com/mirada/ui/Command.java:118) in the Help menu (ui/AppMenus.java:128); report = AppInfo.environment (version, Java/JavaFX, OS: AppInfo.java:117-132) + ProblemReport.build (settings summary and Debug Log end, report/ProblemReport.java:28-37); ui/ReportProblemWindow.java:52-53"
+    },
+    {
+      "id": "DIAG-11",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/ReportProblemWindow.java:52-53 both texts through Redactor.redact; src/main/java/com/mirada/report/Redactor.java:18-24,49-53 tokens, credentials in URLs, e-mail, home folder, user name; tests src/test/java/com/mirada/report/RedactorTest.java"
+    },
+    {
+      "id": "DIAG-12",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/ReportProblemWindow.java:39 editable TextArea; submit puts it on the clipboard (:101-103) and opens ProblemReport.issueUrl with template=bug_report.yml and the environment/report fields (report/ProblemReport.java:65) in the browser; no network request of its own"
+    },
+    {
+      "id": "DIAG-13",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/report/ProblemReport.java:18 MAX_URL 7500, :55-56 the report in the link while it fits, else PASTE_HINT (:23); tests src/test/java/com/mirada/report/ProblemReportTest.java"
+    },
+    {
+      "id": "DIAG-07",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "There is no Doctor page to check the image codecs and other parts Mirada needs."
+    },
+    {
+      "id": "DIAG-08",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "An unsaved edit is not kept to be offered back after a crash."
+    },
+    {
+      "id": "CLI-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/App.java:75-81 --help/--version handled before launch and System.exit(0); fixed English Launch.USAGE (Launch.java:34-56) and AppInfo.versionText; test src/test/java/com/mirada/AppTest.java"
+    },
+    {
+      "id": "CLI-02",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/settings/ConfigDir.java:34-36 --config-dir, then --dev as Path.of(home, \".mirada-dev\") with no OS branch; resolved at App.java:88 before anything reads the config folder; LaunchTest.java:34,41"
+    },
+    {
+      "id": "CLI-03",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/Launch.java:90 --new-instance; handsOff() false (:113-115) skips SingleInstance.handOff (App.java:108-115); LaunchTest"
+    },
+    {
+      "id": "CLI-04",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "the rule covers an app that reopens what was open in its last session; Mirada reopens nothing (WIN-08 is pending); it still takes --no-session (src/main/java/com/mirada/Launch.java:92)"
+    },
+    {
+      "id": "CLI-05",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/App.java:95-100 --report before launch, in the current folder; src/main/java/com/mirada/report/ReportCommand.java:34-35 writes there, else in java.io.tmpdir, prints the path (:40) and opens the issue (:46); tests src/test/java/com/mirada/report/ReportCommandTest.java:29,79"
+    },
+    {
+      "id": "CLI-12",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/Launch.java:65-110: unknown options with one or two dashes are a mistake (:104), App.java:82-87 prints it and HELP_HINT on stderr and exits 2 before launch; a lone '-' and everything after '--' are files (:73); --add-exports/--add-opens/-p skipped with their value (:87) and --add-exports=/--add-opens= skipped (:100); tests src/test/java/com/mirada/LaunchTest.java:69,76,87,93"
+    },
+    {
+      "id": "CLI-13",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/Launch.java:79-84 '-h' for --help, '-v' and '-V' for --version; LaunchTest.java:28"
+    },
+    {
+      "id": "CLI-11",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/App.java:78 WindowsConsole.attach() before printing for help, version, report and the unknown-option message; src/main/java/com/mirada/os/WindowsConsole.java:48-53 calls kernel32 AttachConsole(ATTACH_PARENT_PROCESS); test src/test/java/com/mirada/os/WindowsConsoleTest.java"
+    },
+    {
+      "id": "CLI-06",
+      "level": "SHOULD",
+      "status": "manual",
+      "evidence": "Launch with two files and find both open, and run --help: usage reads 'mirada [options] [files...]' (src/main/java/com/mirada/Launch.java:35); several paths open together via ui/ViewerWindow.java:793 open(List<Path>); not recorded"
+    },
+    {
+      "id": "CLI-07",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/App.java:107-115 a second launch hands its absolute files to the running one (os/SingleInstance.java) and exits; :125 claims and listens; macOS openFiles via MacOpenFiles.listen (:128); tests src/test/java/com/mirada/os/SingleInstanceTest.java, MacOpenFilesTest.java"
+    },
+    {
+      "id": "CLI-08",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/os/InstanceLock.java advisory lock in the config folder; src/test/java/com/mirada/os/InstanceLockTest.java with a second process (InstanceLockProbe)"
+    },
+    {
+      "id": "CLI-09",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/App.java:71 sets java.awt.headless before Launch.parse and any AWT class, from Trash.headless (os/Trash.java:59-61): true except on macOS, where Move to Trash goes through AWT's Desktop"
+    },
+    {
+      "id": "CLI-10",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "every process start goes through src/main/java/com/mirada/os/ToolPath.java:50 (login shell's PATH on macOS/Linux, inherited on Windows); the only other ProcessBuilder is the login-shell probe (:133); ToolPathTest"
+    },
+    {
+      "id": "INTL-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/i18n/: messages.properties (English) and messages_es, _pt, _fr, _it, _de.properties"
+    },
+    {
+      "id": "INTL-02",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/i18n/Messages.java:34-41 the six languages, which the Settings language picker lists (Messages.available); src/test/java/com/mirada/i18n/MessagesTest.java:35,38 the parity test walks the same"
+    },
+    {
+      "id": "INTL-03",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "compared every translated value with the base (710 keys): identical values are names, terms and patterns only (Escape, Zoom, ISO, Flash, 'HTTP {0,number,#}', 'Pauta {0}', 'Version {0}' in de/fr, '{0} — {1}'); no untranslated sentence"
+    },
+    {
+      "id": "INTL-04",
+      "level": "SHOULD",
+      "status": "manual",
+      "evidence": "Run in each of the six languages at 1024 px wide and open every window and Settings page looking for a cut row (German longest); not recorded"
+    },
+    {
+      "id": "INTL-05",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "no Chinese, Japanese or Korean catalog in src/main/resources/com/mirada/i18n/"
+    },
+    {
+      "id": "INTL-06",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "no Arabic or Hebrew catalog in src/main/resources/com/mirada/i18n/"
+    },
+    {
+      "id": "INTL-07",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "grep of src/main/java for string literals in control constructors, setText/setPromptText/setTitle/setAccessibleText and tooltips finds only non-words (ui/TitleBar.java:144 '/', ui/CommandPalette.java:151 ' '); everything else is Messages.tr (src/main/java/com/mirada/i18n/Messages.java), one lookup in one class; MessagesTest.java:257 everyLiteralKeyInTheSourcesExists"
+    },
+    {
+      "id": "INTL-08",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "all five catalogs have exactly the base's 710 keys, none empty; src/test/java/com/mirada/i18n/MessagesTest.java:103 and :136"
+    },
+    {
+      "id": "INTL-09",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "no lone apostrophe in a value with a placeholder and no doubled one in a value without, in all six catalogs; no choice limb holds an apostrophe; MessagesTest.java:156,171"
+    },
+    {
+      "id": "INTL-10",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "identifiers use {n,number,#} (details.size, update.error.http, zoom.percent); MessagesTest.java:217 anIdentifierIsNeverDigitGroupedInAnyLanguage"
+    },
+    {
+      "id": "INTL-11",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "compared each catalog with the base: every file name, setting/command-like dotted name, --option, JSON/HTTP/GitHub in a base value appears unchanged in every translation (0 mismatches)"
+    },
+    {
+      "id": "INTL-12",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "counts use {0,choice,...} in every catalog, e.g. messageLog.olderNotKept (messages.properties:311 and each translation); no '(s)' with a placeholder; MessagesTest.java:355 aCountIsAChoiceInEveryLanguageAndNeverAnS"
+    },
+    {
+      "id": "INTL-13",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "chords are written by KeyCombination.getDisplayText (src/main/java/com/mirada/ui/KeyChord.java:136, PaletteChords.java:93), not the catalog; no catalog value has Strg, Umschalt, Maj, Mayús or Maiusc; MessagesTest.java:122"
+    },
+    {
+      "id": "INTL-14",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/i18n/Messages.java:155-159 locale(): the system's whole with no bundled choice, the system's when its own language is chosen, the bare language otherwise; App.java:231-233 sets it as the JVM default when it differs; Messages.java:113 new MessageFormat(pattern) uses the default; language resolve Messages.java:165-169; tests MessagesTest.java:307,318"
+    },
+    {
+      "id": "PAL-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/ViewerWindow.java:369 builds one CommandPalette per main window; palette.show (Command.java:128) opens it (ViewerWindow.java:1095)"
+    },
+    {
+      "id": "PAL-02",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Command.java:354-360 inPalette lists every command; CommandPalette.java:326-334 filters only by the query; unavailable rows stay, greyed with a reason (:476-487); each row shows command.label() (:474) and the line under the list the selected command's description (:143-146, :293-298)"
+    },
+    {
+      "id": "PAL-10",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/CommandPalette.java:62 ROW_HEIGHT 36, :65 VISIBLE_ROWS 8, :156-157 width 620 (a literal), all at the UI zoom; prompt tr(\"palette.runCommandPrompt\") (:120) = \"Run command…\" (src/main/resources/com/mirada/i18n/messages.properties:511)"
+    },
+    {
+      "id": "PAL-04",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/CommandPalette.java:261-263: open() clears the field and filters on \"\" before host.show adds the card"
+    },
+    {
+      "id": "PAL-05",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/CommandPalette.java:339 and :419-427 selectFirstEnabled after every filter; src/test/java/com/mirada/ui/PaletteKeyboardTest.java:101 steps over the greyed row"
+    },
+    {
+      "id": "PAL-06",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/PaletteKeys.java:76-115: arrows and PageUp/Down always, then the active keymap's nav.lineDown/lineUp/pageDown/pageUp moves (Keybindings.listMove; emacs.json lists C-n, C-p, C-v, M-v); CommandPalette.java:314-324 runSelected returns on a disabled row and hides before running; a row click runs it (:447-452)"
+    },
+    {
+      "id": "PAL-07",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "Esc and the keymap's window.escape chord (C-g in emacs.json:40) cancel (src/main/java/com/mirada/ui/PaletteKeys.java:89-90, :114; CommandPalette.java:304), a backdrop press hides (OverlayHost.java:48-51), and hide refocuses the node that had focus before the first card (OverlayHost.java:76-78, :106-108)"
+    },
+    {
+      "id": "PAL-08",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "The palette has no key to open the selected command's page in the user guide."
+    },
+    {
+      "id": "PAL-09",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/ViewerWindow.java:479-481 followKeys calls palette.refreshKeys, which rewrites the opener chip, the legend (built from the keymap's moves and cancel chord, PaletteKeys.java:217-238) and every row's chord (CommandPalette.java:277-282)"
+    },
+    {
+      "id": "QOPEN-01",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/CommandPalette.java:223-240: one CommandPalette.Choices picker serves Go to Image (:198-211, ViewerWindow.java:1796), Go to Bookmark (ViewerWindow.java:1618), Open Recent (:1827) and the setting values (SettingsCommands.java:225); no ChoiceDialog in src/main"
+    },
+    {
+      "id": "QOPEN-02",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/CommandPalette.java:251-255: each picker's card, shown through the palette's OverlayHost (:263), has a title naming the command that opened it over the field and a prompt in the field"
+    },
+    {
+      "id": "QOPEN-03",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/CommandPalette.java:236 snapshots the names on each showing (List.copyOf); each picker command builds its list at call time (ViewerWindow.java:1793-1796, SettingsCommands.java:220-225), and the slow sources (bookmarks, recent folders) are read before the picker opens (ViewerWindow.java:1596-1599, :1803-1808), so no source answers late"
+    },
+    {
+      "id": "QOPEN-04",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/CommandPalette.java:350-353 keeps the supplier's order for an empty query and :335-337 selects the current value (SettingsCommands.java:222-231 passes the value in force, ViewerWindow.java:1796 the image showing)"
+    },
+    {
+      "id": "QOPEN-05",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/CommandPalette.java:360-361: picker rows sort by fuzzy score, then by the supplier's index"
+    },
+    {
+      "id": "QOPEN-06",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/PaletteKeys.java:76-115: arrows, PageUp/Down and Ctrl/Cmd+Home/End always, plain Home/End left to the field (:95-98), and the keymap's nav.* line and page moves; accept hides before calling the choice (CommandPalette.java:318-322)"
+    },
+    {
+      "id": "QOPEN-07",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "Esc, the keymap's window.escape chord and a backdrop press hide the picker (src/main/java/com/mirada/ui/PaletteKeys.java:89-90, :114; OverlayHost.java:48-51), and OverlayHost.hide gives the focus back (:106-108); no picker previews"
+    },
+    {
+      "id": "QOPEN-08",
+      "level": "MAY",
+      "status": "pass",
+      "evidence": "No previewing picker: CommandPalette.java has no preview hook and no Choices caller previews a row"
+    },
+    {
+      "id": "QOPEN-09",
+      "level": "MAY",
+      "status": "pass",
+      "evidence": "No picker row action: CommandPalette.onKey (src/main/java/com/mirada/ui/CommandPalette.java:301-312) knows only move, accept and cancel"
+    },
+    {
+      "id": "QOPEN-10",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/CommandPalette.java:260 sets each picker's placeholder (Choices.nothing); Go to Bookmark and Open Recent return with a status message when empty (ViewerWindow.java:1612-1614, :1820-1823)"
+    },
+    {
+      "id": "QOPEN-11",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/OverlayHost.java:74-95: show removes the card up before adding the new one and keeps the focus owner from before the first card"
+    },
+    {
+      "id": "QOPEN-12",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "The Bookmarks list (src/main/java/com/mirada/ui/BookmarksWindow.java:336-345, Enter is bookmarks.open) and the Message Log (MessageLogView.java:120-138) move and cancel through PaletteKeys, as the pickers do"
+    },
+    {
+      "id": "WELC-01",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "the rule covers an app that opens files or projects in tabs; Mirada has no tabs (no TabPane or Tab in src/main/java): its window is its content (WELC-02)"
+    },
+    {
+      "id": "WELC-02",
+      "level": "SHOULD",
+      "status": "manual",
+      "evidence": "Start Mirada with nothing open and read the empty state: src/main/java/com/mirada/ui/ViewerWindow.java:2021-2050 shows the hint with Open's chord and Open, Open Folder and Open Recent buttons, each with its chord under it (:2053-2075), plus a Documentation link (unbound); not recorded"
+    },
+    {
+      "id": "WELC-03",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "details the Welcome page of WELC-01, which Mirada does not have (no tabs; its empty state is WELC-02)"
+    },
+    {
+      "id": "WELC-04",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "details the Welcome page of WELC-01, which Mirada does not have (no tabs; its empty state is WELC-02)"
+    },
+    {
+      "id": "WELC-05",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "details the Welcome page of WELC-01, which Mirada does not have (no tabs; its empty state is WELC-02)"
+    },
+    {
+      "id": "WELC-06",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "details the Welcome page of WELC-01, which Mirada does not have (no tabs; its empty state is WELC-02)"
+    },
+    {
+      "id": "WELC-07",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "details the Welcome page of WELC-01, which Mirada does not have (no tabs; its empty state is WELC-02)"
+    },
+    {
+      "id": "WELC-08",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "details the Welcome page of WELC-01, which Mirada does not have (no tabs; its empty state is WELC-02)"
+    },
+    {
+      "id": "WELC-09",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "details the Welcome page of WELC-01, which Mirada does not have (no tabs; its empty state is WELC-02)"
+    },
+    {
+      "id": "WELC-10",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "details the Welcome page of WELC-01, which Mirada does not have (no tabs; its empty state is WELC-02)"
+    },
+    {
+      "id": "WELC-11",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "details the Welcome page of WELC-01, which Mirada does not have (no tabs; its empty state is WELC-02)"
+    },
+    {
+      "id": "ABOUT-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "help.about (src/main/java/com/mirada/ui/Command.java:104) opens AboutWindow (ui/ViewerWindow.java:1135); Help menu row (ui/AppMenus.java:129); on macOS an About item inserted in the application menu running the same command (os/MacAppMenu.java:86, ViewerWindow.java:470-474)"
+    },
+    {
+      "id": "ABOUT-02",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/AboutWindow.java:67 version; environment block (:99, AppInfo.java:117-132) build, commit, Java/JavaFX; license :75; links home page (website, :83), 'Source code and releases' (repo releases page, :84, AppInfo.java:52), always shown; update line always shows the checker's answer (:183-191, UpdateCoordinator.summary)"
+    },
+    {
+      "id": "ABOUT-03",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/AboutWindow.java:103-108 Copy details runs help.copyDetails (copies AppInfo.environment) and sets the label to about.copied; button in the content VBox (:126), not a button bar"
+    },
+    {
+      "id": "ABOUT-04",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/update/UpdateCoordinator.java:180-184 NOT_CHECKED gives update.summary.notChecked/.switchedOff, and AVAILABLE with no result falls back to notChecked; never 'latest' without an answer"
+    },
+    {
+      "id": "ABOUT-10",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/styles/mirada.css:823-825 .about-update.update-available bold in -state-amber, the only About style using it; up-to-date -state-green :828, failed -state-red :832, muted otherwise :819; links -state-accent :836-838; classes set by ui/AboutWindow.java:172-188 (About has no separate last-checked line)"
+    },
+    {
+      "id": "ABOUT-05",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/AboutWindow.java:86 link 'Built to Pauta {0}' from the catalog (messages.properties about.pautaLink); environment block's 'Pauta:' line right after 'Commit:' (AppInfo.java:119)"
+    },
+    {
+      "id": "ABOUT-06",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "About's edition link runs help.pautaRules (ui/AboutWindow.java:86), which opens AppInfo.pautaUrl() = https://pauta-project.dev/<pauta.version>/ (AppInfo.java:100-102; ViewerWindow.java:1142), no latest"
+    },
+    {
+      "id": "ABOUT-07",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/AboutWindow.java: About says \"Built to Pauta 6.1.0\" from PautaConformance (Core); no MUST of 6.1.0 fails or is pending"
+    },
+    {
+      "id": "ABOUT-08",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "pom.xml:26 pauta.version; filtered into src/main/resources/com/mirada/build-info.properties (pauta.version=${pauta.version}); read by AppInfo.java:31 PAUTA_EDITION; no edition literal in main code outside comments"
+    },
+    {
+      "id": "ABOUT-09",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/AboutWindow.java:80 calls PautaConformance.conformance(); :87 link 'Pauta conformance: <name>' right after the edition's, running help.pauta; :162-164 'Working toward' (about.pautaWorkingToward) at Partial; environment line 'Pauta conformance: Core (26 exceptions)' after 'Pauta:' (AppInfo.java:119-120, PautaConformance.environmentLine :271-275, tested PautaConformanceTest.java:107)"
+    },
+    {
+      "id": "PWIN-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "help.pauta registered (src/main/java/com/mirada/ui/Command.java:138), opens PautaWindow (ui/ViewerWindow.java:1141); Help menu row Pauta Conformance (ui/AppMenus.java:129)"
+    },
+    {
+      "id": "PWIN-02",
+      "level": "MUST",
+      "status": "manual",
+      "evidence": "Open Help > Pauta Conformance and compare with pauta.json entry by entry: src/main/java/com/mirada/ui/PautaWindow.java:60-96 edition, conformance pill and sentence, counts by kind, and rows of ID, level, reason and link (:151-172); not recorded"
+    },
+    {
+      "id": "PWIN-03",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/PautaWindow.java takes exceptions loaded by PautaConformance.exceptions() (one loader, PautaConformance.java:151), edition from AppInfo.PAUTA_EDITION (:60), conformance from PautaConformance.of (:56); no rule ID, edition or conformance name of its own (names from the catalog)"
+    },
+    {
+      "id": "PWIN-04",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "help.pautaRules (src/main/java/com/mirada/ui/Command.java:140) opens AppInfo.pautaUrl() (ViewerWindow.java:1142); the edition link runs it in the Pauta window (PautaWindow.java:101) and in About (AboutWindow.java:86); each rule ID opens its entry's url (PautaWindow.java:154)"
+    },
+    {
+      "id": "PWIN-05",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/PautaConformance.java:251-257 sorted: kind (pending, deviation, app-only, not-applicable), MUST before SHOULD, then ID; used at PautaWindow.java:88; test PautaConformanceTest.java:91"
+    },
+    {
+      "id": "PWIN-06",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/PautaWindow.java:104-107 Copy as text runs help.copyPauta (markdown(): edition, conformance, one line per exception, :224-260) and sets pauta.copied; button in the content's footer HBox (:115), not a dialog button bar"
+    },
+    {
+      "id": "PWIN-07",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "help.pautaDocs (src/main/java/com/mirada/ui/Command.java:142) opens AppInfo.pautaDocsUrl() = DOCS_URL + 'pauta/' (AppInfo.java:108-110), the same base as Help > Documentation; the site serves no versioned docs yet, so /docs/pauta/ as the rule allows"
+    },
+    {
+      "id": "PWIN-08",
+      "level": "SHOULD",
+      "status": "manual",
+      "evidence": "With an empty exceptions array, open the Pauta window: PautaWindow.java:132-136 draws one line pauta.none naming the app and edition (:216-218), and Copy as text includes it (:234); not recorded"
+    },
+    {
+      "id": "CONF-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/SettingsCommands.java:161: Default keys asks through Confirm.resetPaletteKeys (Put Back); bookmark removal can be undone (bookmarks.undoRemove); SettingsCommandsTest.java:86"
+    },
+    {
+      "id": "CONF-02",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Confirm.java:36-66: every question takes the thing's name and says what happens (messages.properties:419-428: \"Discard the edit to {0}?\", \"Replace {0}?\", \"Import {0} over your configuration?\")"
+    },
+    {
+      "id": "CONF-03",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Confirm.java:122-123 the action ButtonType is named by its verb (Discard, Replace, Import: messages.properties:421, :425, :429), :137 the danger style class"
+    },
+    {
+      "id": "CONF-14",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Every dialog goes through Dialogs.styled, which words any stock button from the catalog (src/main/java/com/mirada/ui/Dialogs.java:38-44, :65-70); Confirm (Confirm.java:122-128), NoteDialog (NoteDialog.java:52-54) and Rename (ViewerWindow.java:1483-1488) build their buttons from catalog strings"
+    },
+    {
+      "id": "CONF-04",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Confirm.java:124 Cancel has CANCEL_CLOSE, :140 the Discard (NO) button is not a cancel button, :152-157 anything but the action or Save, an empty result included, is Cancel"
+    },
+    {
+      "id": "CONF-13",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Confirm.java:136-147: before the dialog is returned and shown, the red action gets setDefaultButton(false) and Cancel setDefaultButton(true), or Save in the unsaved-edit question"
+    },
+    {
+      "id": "CONF-05",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Confirm.java:106-147 askOrSave draws Cancel, Save (success) and Discard (danger) in the ButtonBar order L_HE+CUYNBXIAO_R (Dialogs.java:35, :57); Editor.java:241-252 on Save starts saving and keeps the editor open, so a failed save leaves it open"
+    },
+    {
+      "id": "CONF-06",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "Nothing to judge: Mirada runs no program it could ask about ending; no such question in src/main"
+    },
+    {
+      "id": "CONF-07",
+      "level": "SHOULD",
+      "status": "manual",
+      "evidence": "Trash an image and undo it with Undo Move to Trash; remove a mark in Bookmarks and undo it: src/main/java/com/mirada/ui/ViewerWindow.java:1710-1726 (no question, the undo chord in the message), :1862 undoTrash (restorable where Trash says so); BookmarksWindow.java:491-512; not recorded"
+    },
+    {
+      "id": "CONF-08",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Confirm.java:95-100 ask returns true only for the action button; every caller acts only on true (Editor.java:440, SettingsCommands.java:309) or on the answer (Editor.java:245-251); no other confirmation question"
+    },
+    {
+      "id": "CONF-09",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "Nothing to judge: no bulk destructive command and no tabs in src/main"
+    },
+    {
+      "id": "CONF-10",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/resources/com/mirada/i18n/messages.properties:428: \"This cannot be undone\" only in importing a configuration, which cannot be undone"
+    },
+    {
+      "id": "CONF-11",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "Nothing to judge: no force or anyway alternative in src/main"
+    },
+    {
+      "id": "CONF-12",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/Confirm.java:36-66 pure question builders and :78-84 answeredBy, a hook that answers ask/askOrSave without a dialog (:96-97, :107-108); DialogsTest.java:46-49 builds the dialogs from them"
+    },
+    {
+      "id": "FIND-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/DebugLogWindow.java:43, :68-70: the Debug Log has a FindBar, a node in its window under the text (FindBar.java:43, HBox), no Popup or Stage; the Message Log is a list (FIND-03)"
+    },
+    {
+      "id": "FIND-02",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/FindBar.java:96 the query listener requests the search, which updates the count (:259-267)"
+    },
+    {
+      "id": "FIND-03",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/MessageLogView.java:72, :182-195: the Message Log, a log shown as a list, has a filter field that narrows it as typed; the main content is an image, not a list"
+    },
+    {
+      "id": "FIND-04",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "log.find (src/main/java/com/mirada/ui/Command.java:117) opens the Debug Log's bar and, run while it is open, steps to the next match (FindBar.java:118-125; ViewerWindow.java:1180-1185); bound to C-s (emacs.json:71), C-f and F3 (cua.json:71), Cmd-f and Cmd-g (cua.mac.json:71); the main window shows an image, no text for find.show"
+    },
+    {
+      "id": "FIND-05",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/FindBar.java:131 saves the caret as the anchor when the bar opens, :195-209 starts at the first match at or after it; a TextArea draws one selection, so the active match and the count (:259-267)"
+    },
+    {
+      "id": "FIND-06",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/FindBar.java:98-102 Enter steps next and Shift+Enter previous; :244-251 stepFrom wraps both ways"
+    },
+    {
+      "id": "FIND-07",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/FindBar.java:146-154: Escape in the field (:103-105) and Close (:95) cancel the throttle and the running search, drop the pending step, clear the match and focus the log"
+    },
+    {
+      "id": "FIND-08",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No terminal in Mirada: the rule covers a terminal with a find bar"
+    },
+    {
+      "id": "FIND-09",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/FindBar.java:108 TextInputKeys gives the field the Emacs caret and editing chords under the Emacs keymap, the platform's otherwise; log.find's chord still runs from the field (DebugLogWindow.java:75-81 scene filter, DEBUG_LOG context only); previous and close are Shift+Enter and Escape in the field (no commands for them, see KBD-01)"
+    },
+    {
+      "id": "FIND-10",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/FindBar.java:262 no match sets the count to find.none, \"No matches\" (messages.properties:752); nothing opens"
+    },
+    {
+      "id": "FIND-11",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No find bar that replaces: the only one is over the read-only Debug Log (src/main/java/com/mirada/ui/DebugLogWindow.java:48)"
+    },
+    {
+      "id": "FIND-12",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No find bar that replaces (src/main/java/com/mirada/ui/DebugLogWindow.java:48, read-only)"
+    },
+    {
+      "id": "FIND-13",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "Main content is the image (ImageViewport), not a list"
+    },
+    {
+      "id": "FIND-14",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "Main content is the image, not a list"
+    },
+    {
+      "id": "FIND-15",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "Main content is the image, not a list"
+    },
+    {
+      "id": "FIND-16",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/FindBar.java:89-92: only Previous, Next and Close leave the Tab order, matched by Shift+Enter, Enter and Escape in the field (:98-106); Match case stays in it; the Bookmarks kind toggles out of it (BookmarksWindow.java:157) have bookmarks.listAll/listBookmarked/listNotes; the Message Log filter is traversable"
+    },
+    {
+      "id": "MLOG-08",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/MessageLogView.java:42-43 WIDTH 773, LIST_HEIGHT 336; :157-159 a card in the window's OverlayHost, bottom-anchored above the status bar, no Stage; src/main/java/com/mirada/diagnostics/MessageLog.java:44 MAX_ENTRIES 200"
+    },
+    {
+      "id": "MLOG-02",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/StatusBar.java:65 the unread count runs Command.MESSAGE_LOG on a click (the echo area :64); registered as view.messageLog (Command.java:106), run at ViewerWindow.java:1176"
+    },
+    {
+      "id": "MLOG-03",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/MessageLogView.java:120-124 closes on PaletteKeys' CANCEL, Escape and the keymap's window.escape chord (PaletteKeys.java:89-90, :114; C-g in emacs.json:40), not a fixed Ctrl+G; a backdrop press closes it (OverlayHost.java:48-51)"
+    },
+    {
+      "id": "MLOG-04",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/MessageLogView.java:125-127, :145-148 copies the selected entries on Shortcut+C and on the keymap's image.copy chord (Keybindings.java:147-150; M-w in Emacs), read from the keymap"
+    },
+    {
+      "id": "MLOG-05",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/diagnostics/MessageLog.java:37-42 severityOf: last segment with fail/error is ERROR, cannot/invalid WARNING; used at SettingsCommands.java:259, :326; MessageLogTest.java:103-108"
+    },
+    {
+      "id": "MLOG-06",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/ui/MessageLogView.java:152 opening marks read; src/main/java/com/mirada/diagnostics/MessageLog.java:100-105 clear zeroes the count; MessageLogTest.java:37, :73"
+    },
+    {
+      "id": "MLOG-07",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "src/main/java/com/mirada/diagnostics/MessageLog.java:65-69 unreadErrors is counted apart from the entries, eviction leaves it; MessageLogTest.java:79 anEvictedErrorStillCounts"
+    },
+    {
+      "id": "SYNC-01",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "There is no Settings Sync to carry your bookmarks, notes and keys to another computer."
+    },
+    {
+      "id": "SYNC-02",
+      "level": "SHOULD",
+      "status": "limited",
+      "evidence": "No Settings Sync, so no sync store (no git/sync code in src/main/java); the rule covers an app with Settings Sync"
+    },
+    {
+      "id": "REL-01",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": ".github/workflows/release.yml:95-99 matrix legs linux-x64 (ubuntu-24.04), linux-arm64 (ubuntu-24.04-arm), macos-arm64 (macos-latest), macos-x64 (macos-15-intel), windows-x64 (windows-latest); each builds with -Pdist (release.yml:165-168; pom.xml:612 dist runs jpackage)."
+    },
+    {
+      "id": "REL-02",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": ".github/workflows/release.yml:421-429 the release-asset check expects Mirada-$VERSION-<target>.<ext>."
+    },
+    {
+      "id": "REL-03",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "jreleaser.yml builds nothing: it attaches the artifacts/ globs (:76-84) with one checksums_sha256.txt (checksum.individual false, :57-58), and has no packagers. The publish job (release.yml:465-467) needs check-assets, which needs sign-linux, which needs build."
+    },
+    {
+      "id": "REL-04",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "jreleaser.yml:54 changelog external: out/release-notes.md, written from this version's CHANGELOG.md section by scripts/release-notes.sh in the release job (release.yml:491-497)."
+    },
+    {
+      "id": "REL-05",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": ".github/workflows/release.yml:62-73 preflight fails when the tag differs from the pom version, and on a -SNAPSHOT."
+    },
+    {
+      "id": "REL-06",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "main's pom.xml version is 0.4.0-SNAPSHOT (git show main:pom.xml); release.yml:593-661 bump job opens the pull request to the next -SNAPSHOT."
+    },
+    {
+      "id": "REL-07",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": ".github/workflows/release.yml:399-448 check-assets compares the gathered files with the expected list; publish needs it (:467)."
+    },
+    {
+      "id": "REL-08",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "packaging/linux/Mirada.desktop:13 StartupWMClass=com.mirada.App; src/main/java/com/mirada/App.java:44 'App extends Application'."
+    },
+    {
+      "id": "REL-09",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "packaging/linux/io.github.adriandeleon.Mirada.metainfo.xml:8 <id>io.github.adriandeleon.Mirada</id>, now committed and read by scripts/build-appimage.sh:84-91."
+    },
+    {
+      "id": "REL-10",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "pom.xml:938-949 the dist profile runs scripts/aot-train.sh, which trains with -XX:AOTCacheOutput (scripts/aot-train.sh:55) on the jlink image; Linux legs install xvfb (release.yml:137)."
+    },
+    {
+      "id": "REL-11",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "jreleaser.yml:78-84 attaches .dmg, .msi, .deb, .rpm, .AppImage, .tar.gz and .asc, with checksums_sha256.txt (:57-58); release.yml:422-428 expects them per target."
+    },
+    {
+      "id": "REL-12",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "Mirada cannot be installed with Homebrew yet. (jreleaser.yml has no brew packager.)"
+    },
+    {
+      "id": "REL-13",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "Mirada's winget manifests are written but not yet submitted on release. (jreleaser.yml has no winget packager; .github/workflows/winget.yml writes and tests manifests only.)"
+    },
+    {
+      "id": "REL-14",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "There are no Homebrew or winget packagers yet to give a token to. (release.yml:547-555 passes JReleaser no packagers' token.)"
+    },
+    {
+      "id": "REL-15",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "release.yml imports MACOS_CERT_P12/MACOS_CERT_PASSWORD (scripts/ci-signing-credentials.sh); scripts/notarize-mac.sh (release.yml:247-255) notarizes with APPLE_API_KEY_P8/ID/ISSUER, staples, runs spctl and launches the notarized app; entitlements in packaging/macos/entitlements.plist. Held by src/test/java/com/mirada/ReleaseSupplyChainTest.java:259."
+    },
+    {
+      "id": "REL-16",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": ".github/workflows/release.yml:318-393 sign-linux job, apart from the build legs, reads LINUX_GPG_KEY/LINUX_GPG_PASSPHRASE, signs with rpmsign and a debsigs-format signature (scripts/sign-linux-packages.sh) and writes an .asc beside every file; packaging/linux/signing-key.asc exists and the release attaches mirada-signing-key.asc (release.yml:429, jreleaser.yml:84)."
+    },
+    {
+      "id": "REL-17",
+      "level": "SHOULD",
+      "status": "pending",
+      "evidence": "The Windows installer is not signed yet. (No signtool step in any workflow or script.)"
+    },
+    {
+      "id": "REL-18",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": ".github/workflows/release.yml:502-514 actions/attest-build-provenance (:505) over the same patterns as jreleaser.yml:78-84, kept equal by src/test/java/com/mirada/ReleaseSupplyChainTest.java:439."
+    },
+    {
+      "id": "REL-19",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": ".github/workflows/ci.yml:12-15 push to main and pull_request; 'format' job :35-53 runs only spotless:check; 'test' (Build & Test) :55-85 runs ./mvnw verify with the coverage gate on JDK 25. gh api repos/adriandeleon/Mirada/branches/main/protection: required checks Format and Build & Test (ubuntu-latest, macos-latest, windows-latest)."
+    },
+    {
+      "id": "REL-20",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": ".github/workflows/ci.yml:15,:64,:85 every pull_request runs ./mvnw verify (pure and FX suites; Surefire excludes no group) on ubuntu-latest, macos-latest and windows-latest; the release legs run verify on Linux, macOS and Windows on the tagged commit (release.yml:160-168)."
+    },
+    {
+      "id": "REL-21",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": ".github/workflows/release.yml:24-27 tags 'v[0-9]+.[0-9]+.[0-9]+*' and workflow_dispatch; :550 JReleaser runs 'full-release --dry-run' on a dispatch; winget and bump only after publish on a tag."
+    },
+    {
+      "id": "REL-30",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": ".github/workflows/release.yml:160-168 every build leg runs ./mvnw … verify with no -DskipTests; publish (:467) needs check-assets → sign-linux → build."
+    },
+    {
+      "id": "REL-22",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "check.command exits 0: every uses: in .github/workflows is pinned to a 40-character SHA with a version comment (e.g. release.yml:505 '# v4.2.2', :547 '# 2.5.0')."
+    },
+    {
+      "id": "REL-23",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": ".github/dependabot.yml:5,:8 github-actions weekly; :9,:12 maven weekly."
+    },
+    {
+      "id": "REL-24",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Top-level 'permissions: contents: read' in ci.yml:23-24, release.yml:32-33, codecs.yml:16-17, native-metadata.yml:16-17, winget.yml:29-30; writes only in job blocks (release.yml:472-474 publish, :600-602 bump; codecs.yml:104 publish)."
+    },
+    {
+      "id": "REL-25",
+      "level": "SHOULD",
+      "status": "pass",
+      "evidence": "Every actions/setup-java step has cache: maven (ci.yml:49, :76, :164; release.yml:56, :125, :616); the setup-graalvm steps cache maven too (ci.yml:155, release.yml:116, native-metadata.yml:43)."
+    },
+    {
+      "id": "REL-26",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "Every job with steps sets timeout-minutes: ci.yml:38, :58, :130; release.yml:43, :83, :322, :403, :469, :598; codecs.yml:23, :102; native-metadata.yml:23; winget.yml:36. release.yml:577-581 winget calls a reusable workflow and is not judged."
+    },
+    {
+      "id": "REL-31",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "ci.yml is the only workflow with pull_request; its concurrency (:26-31) groups by ci-${{ github.ref }} and cancel-in-progress is ${{ github.event_name == 'pull_request' }}, false for a push, a dispatch or any run on main."
+    },
+    {
+      "id": "REL-27",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": ".github/workflows/ci.yml:87-93 uploads the surefire reports under if: always(); :99-103 uploads the JaCoCo report; :107-119 writes the coverage totals to $GITHUB_STEP_SUMMARY."
+    },
+    {
+      "id": "REL-28",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": "macOS: scripts/ci-signing-credentials.sh fails on a tag push without the four secrets and otherwise signs with a throwaway identity and skips notarizing; Linux: release.yml:347-361 (sign-linux) and :528-541 (checksums) fail on a tag without LINUX_GPG_KEY and use a throwaway key otherwise. Windows has no signing step (REL-17, pending)."
+    },
+    {
+      "id": "REL-29",
+      "level": "MUST",
+      "status": "pass",
+      "evidence": ".github/workflows/release.yml:170-182 smoke-tests the packaged launcher on every leg (Linux, macOS, Windows), plus the installed msi (:231), the deb (:263-268) and the AppImage (:276), all before publish."
+    }
+  ],
+  "problems": []
+}

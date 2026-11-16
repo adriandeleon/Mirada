@@ -9,6 +9,7 @@ import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.function.IntFunction;
 
+import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
@@ -36,18 +37,20 @@ import static com.mirada.i18n.Messages.tr;
  * Every command, findable by typing part of its name — Termina's palette, which is Editora's, in
  * shape and in behaviour, so the three apps' palettes look and rank alike.
  *
- * <p>The card has no title: the first row <em>is</em> the query, led by a chip naming the chord that
- * opened it, then eight rows of commands with the matched characters emboldened and the chord on the
+ * <p>The command palette's card has no title: the first row <em>is</em> the query, led by a chip
+ * naming the chord that opened it, then eight rows of commands with the matched characters emboldened and the chord on the
  * right, a line describing the highlighted command, and a legend of the keys. The cursor only rests
  * on a command that can run; one that cannot (Next Image on the last image) is listed greyed with
  * the reason as its tooltip.
  *
- * <p>An in-scene overlay rather than a window of its own, so the image stays where it is and the
- * next key after the palette closes reaches the viewer again.
+ * <p>A card in the window's {@link OverlayHost} rather than a window of its own, so the image stays
+ * where it is, a picker opened from it takes its place, and the next key after the palette closes
+ * reaches what had it before.
  *
  * <p>The same card finds an image of the folder by its name ({@link #showImages}, Go to Image),
  * as an editor's Ctrl+P finds a file: the rows are then the folder's file names, in the folder's
- * order until something is typed, the current one under the cursor.
+ * order until something is typed, the current one under the cursor. A picker's card has a title over
+ * the query naming the command that opened it (QOPEN-02).
  *
  * <p>The commands are {@link Command}'s; matching ({@link FuzzyMatch}), the keys ({@link
  * PaletteKeys}, {@link TextInputKeys}) and the highlighting ({@link MatchText}) are Termina's,
@@ -72,8 +75,11 @@ final class CommandPalette {
     /** The folder's image at {@code index}, by its file name. */
     record ImageRow(int index, String name) implements Row {}
 
-    private final StackPane host;
+    private final OverlayHost host;
     private final Consumer<Command> run;
+
+    /** A picker's title, naming the command that opened it (QOPEN-02); the command palette has none. */
+    private final Label title = new Label();
 
     private final TextField input = new TextField();
     private final Label prefixChip = new Label();
@@ -81,8 +87,9 @@ final class CommandPalette {
     private final ObservableList<Row> items = FXCollections.observableArrayList();
     private final Label desc = new Label();
     private final Label hint = new Label();
-    private final VBox card = new VBox(6);
-    private final Region backdrop = new Region();
+    private final VBox card = UiZoom.vbox(6);
+    /** What Enter does, for the legend, which a keymap change writes again (PAL-09). */
+    private String verb = "";
 
     private List<Command> commands = List.of();
     /** The query of the current filter pass, read by the cells to highlight the matched characters. */
@@ -101,23 +108,18 @@ final class CommandPalette {
     /** The command whose chord the chip shows, for {@link #refreshKeys}. */
     private Command openedBy = Command.PALETTE;
 
-    CommandPalette(StackPane host, Consumer<Command> run) {
+    CommandPalette(OverlayHost host, Consumer<Command> run) {
         this.host = host;
         this.run = run;
 
-        backdrop.getStyleClass().add("palette-backdrop");
-        // Dismiss on press and consume it, so the click that closes the palette does not also
-        // reach the image behind it.
-        backdrop.setOnMousePressed(e -> {
-            hide();
-            e.consume();
-        });
-
+        title.getStyleClass().add("palette-title");
+        title.setManaged(false);
+        title.setVisible(false);
         prefixChip.getStyleClass().add("palette-prefix");
         input.getStyleClass().add("palette-input");
         input.setPromptText(tr("palette.runCommandPrompt"));
         input.textProperty().addListener((o, was, now) -> filter(now));
-        HBox inputRow = new HBox(9, prefixChip, input);
+        HBox inputRow = UiZoom.hbox(9, prefixChip, input);
         inputRow.setAlignment(Pos.CENTER_LEFT);
         inputRow.getStyleClass().add("palette-input-row");
         HBox.setHgrow(input, Priority.ALWAYS);
@@ -126,9 +128,14 @@ final class CommandPalette {
         list.getStyleClass().add("palette-list");
         list.setPlaceholder(new Label(tr("palette.noMatchingCommands")));
         // A whole number of rows: a fixed pixel height cuts the last row in half.
-        list.setFixedCellSize(ROW_HEIGHT);
-        list.setPrefHeight(listHeight(0));
-        list.insetsProperty().addListener((o, was, in) -> list.setPrefHeight(listHeight(in.getTop() + in.getBottom())));
+        // The row's height and the list's follow the UI zoom (WIN-12); the insets are the CSS's, zoomed already.
+        UiZoom.bind(list.fixedCellSizeProperty(), ROW_HEIGHT);
+        list.prefHeightProperty()
+                .bind(Bindings.createDoubleBinding(
+                        () -> listHeight(
+                                list.getInsets().getTop() + list.getInsets().getBottom(), list.getFixedCellSize()),
+                        list.insetsProperty(),
+                        list.fixedCellSizeProperty()));
         list.setCellFactory(view -> new RowCell());
         // The query field keeps the keyboard; the list is driven from it.
         list.setFocusTraversable(false);
@@ -145,9 +152,10 @@ final class CommandPalette {
         hint.getStyleClass().add("palette-hint");
 
         card.getStyleClass().add("command-palette");
-        card.getChildren().addAll(inputRow, list, desc, hint);
-        card.setPrefWidth(620);
-        card.setMaxSize(620, Region.USE_PREF_SIZE); // hug the content; don't stretch to fill the overlay
+        card.getChildren().addAll(title, inputRow, list, desc, hint);
+        UiZoom.bind(card.prefWidthProperty(), 620);
+        UiZoom.bind(card.maxWidthProperty(), 620);
+        card.setMaxHeight(Region.USE_PREF_SIZE); // hug the content; don't stretch to fill the overlay
         StackPane.setAlignment(card, Pos.TOP_CENTER);
 
         // On the card, so it runs before the ListView's own Up/Down and before the TextField
@@ -159,11 +167,16 @@ final class CommandPalette {
 
     /** The list height that shows exactly {@link #VISIBLE_ROWS} rows inside {@code insets} of chrome. */
     static double listHeight(double insets) {
-        return VISIBLE_ROWS * ROW_HEIGHT + insets;
+        return listHeight(insets, ROW_HEIGHT);
+    }
+
+    /** The same with rows {@code rowHeight} tall: at the UI zoom in effect. */
+    static double listHeight(double insets, double rowHeight) {
+        return VISIBLE_ROWS * rowHeight + insets;
     }
 
     boolean isShowing() {
-        return host.getChildren().contains(card);
+        return host.isShowing(card);
     }
 
     /**
@@ -173,7 +186,6 @@ final class CommandPalette {
      *     greyed, with the reason as their tooltip, and stepped over
      */
     void show(List<Command> commands, Function<Command, @Nullable String> unavailable) {
-        if (isShowing()) return;
         this.commands = List.copyOf(commands);
         this.unavailable = unavailable;
         open(false, Command.PALETTE, tr("palette.runCommandPrompt"), tr("palette.noMatchingCommands"));
@@ -218,8 +230,8 @@ final class CommandPalette {
             IntFunction<String> describe,
             IntFunction<String> detail) {}
 
+    /** Shows a picker over {@code choices}, in place of the palette or another picker if one is up (QOPEN-11). */
     void showChoices(Choices choices, IntConsumer choose) {
-        if (isShowing()) return;
         this.choices = choices;
         this.images = List.copyOf(choices.names());
         this.currentImage = choices.current();
@@ -234,32 +246,44 @@ final class CommandPalette {
     private void open(boolean findingImages, Command openedBy, String prompt, String nothing, String verb) {
         this.findingImages = findingImages;
         this.openedBy = openedBy;
+        this.verb = verb;
+        // A picker names the command that opened it over the query; the command palette is the query.
+        title.setText(findingImages ? openedBy.label().replace("…", "") : "");
+        title.setManaged(findingImages);
+        title.setVisible(findingImages);
         prefixChip.setText(openedBy.chord().getDisplayText());
         input.setPromptText(prompt);
-        hint.setText(PaletteKeys.legend(PaletteKeys.hint(verb, "↵")));
+        // The prompt goes when typing starts; the name stays (ACC-01).
+        input.setAccessibleText(prompt);
+        list.setAccessibleText(prompt);
+        hint.setText(legend());
         list.setPlaceholder(new Label(nothing));
         input.clear();
         filter("");
-        host.getChildren().addAll(backdrop, card);
+        host.show(card, "palette-backdrop", () -> images = List.of());
         input.requestFocus();
+    }
+
+    /** The legend under the list, from the keys in force. */
+    private String legend() {
+        return PaletteKeys.legend(Keybindings.current(), PaletteKeys.hint(verb, "↵"));
     }
 
     /**
      * Shows the keys in force again, while it is up: after the keymap or the user's keys changed in
-     * the settings (PAL-09). The chip and each row's chord are read again; the legend is the
-     * palette's own keys, which no keymap changes. Closed, there is nothing to do: every open reads
-     * them.
+     * the settings (PAL-09). The chip, the legend, which names the keymap's moves and cancel chord,
+     * and each row's chord are read again. Closed, there is nothing to do: every open reads them.
      */
     void refreshKeys() {
         if (!isShowing()) return;
         prefixChip.setText(openedBy.chord().getDisplayText());
+        hint.setText(legend());
         list.refresh();
     }
 
+    /** Closes the card, and the focus goes back to where it was; a large folder's names are not kept. */
     void hide() {
-        if (!isShowing()) return;
-        host.getChildren().removeAll(backdrop, card);
-        images = List.of(); // a large folder's names are not kept while the palette is closed
+        if (isShowing()) host.hide();
     }
 
     private boolean isEnabled(Row row) {
@@ -309,7 +333,7 @@ final class CommandPalette {
         }
         items.setAll(rows);
         if (findingImages && currentQuery.isEmpty() && currentImage >= 0 && currentImage < rows.size()) {
-            list.getSelectionModel().select(currentImage);
+            PaletteKeys.select(list, currentImage);
             list.scrollTo(Math.max(0, currentImage - VISIBLE_ROWS / 2));
         } else {
             selectFirstEnabled();
@@ -340,7 +364,8 @@ final class CommandPalette {
 
     /**
      * The command ordering. An empty query keeps {@link Command#inPalette()}'s order; a real query
-     * uses the fuzzy score, then the shorter and then the alphabetical label, so equal-scoring rows
+     * puts a title it spells first, then a title it begins ({@link #titleTier}), then the fuzzy
+     * score, then the shorter and then the alphabetical label, so equal-scoring rows
      * do not shuffle under the cursor between keystrokes.
      */
     static List<Command> orderedMatches(Collection<Command> commands, @Nullable String query) {
@@ -353,13 +378,29 @@ final class CommandPalette {
             if (score == FuzzyMatch.NO_SCORE) score = keywordScore(command, q);
             if (score != FuzzyMatch.NO_SCORE) scored.add(new Scored(command, score));
         }
-        scored.sort(Comparator.comparingInt(Scored::score)
+        // A query that spells a title leads, then one that begins one, before any fuzzy hit (KBD-06).
+        scored.sort(Comparator.comparingInt((Scored s) -> titleTier(s.command().label(), q))
                 .reversed()
+                .thenComparing(Comparator.comparingInt(Scored::score).reversed())
                 .thenComparingInt((Scored s) -> s.command().label().length())
                 .thenComparing(s -> s.command().label(), String.CASE_INSENSITIVE_ORDER));
         List<Command> matches = new ArrayList<>(scored.size());
         for (Scored s : scored) matches.add(s.command());
         return matches;
+    }
+
+    /**
+     * How a query names a title, ignoring case and a trailing "…": 2 when it spells the title, whole
+     * or after its "Category: " prefix; 1 when it begins one of those; 0 otherwise. Pure.
+     */
+    static int titleTier(String label, String query) {
+        String q = query.strip();
+        if (q.isEmpty()) return 0;
+        String whole = label.endsWith("…") ? label.substring(0, label.length() - 1) : label;
+        String bare = Icons.withoutPrefix(whole);
+        if (whole.equalsIgnoreCase(q) || bare.equalsIgnoreCase(q)) return 2;
+        if (whole.regionMatches(true, 0, q, 0, q.length()) || bare.regionMatches(true, 0, q, 0, q.length())) return 1;
+        return 0;
     }
 
     /**
@@ -382,16 +423,24 @@ final class CommandPalette {
         return best;
     }
 
+    /**
+     * A command row as a screen reader reads it: the name, then its key, then why it cannot run when
+     * it cannot (ACC-08). Pure.
+     */
+    static String rowText(String label, String chord, @Nullable String why) {
+        String text = chord.isBlank() ? label : tr("palette.rowWithKey", label, chord);
+        return why == null ? text : tr("palette.rowUnavailable", text, why);
+    }
+
     /** Selects the first <em>enabled</em> result; the cursor never rests on a greyed command. */
     private void selectFirstEnabled() {
         for (int i = 0; i < items.size(); i++) {
             if (isEnabled(items.get(i))) {
-                list.getSelectionModel().select(i);
-                list.scrollTo(i);
+                PaletteKeys.select(list, i);
                 return;
             }
         }
-        list.getSelectionModel().clearSelection();
+        PaletteKeys.select(list, -1);
     }
 
     /**
@@ -401,7 +450,7 @@ final class CommandPalette {
     private final class RowCell extends ListCell<Row> {
         private final TextFlow title = new TextFlow();
         private final Label chord = new Label();
-        private final HBox layout = new HBox(10, title, spacer(), chord);
+        private final HBox layout = UiZoom.hbox(10, title, spacer(), chord);
 
         private static Region spacer() {
             Region region = new Region();
@@ -426,6 +475,7 @@ final class CommandPalette {
             if (empty || item == null) {
                 setGraphic(null);
                 setTooltip(null);
+                setAccessibleText(null);
                 return;
             }
             layout.getStyleClass().remove("palette-disabled");
@@ -433,6 +483,7 @@ final class CommandPalette {
             if (item instanceof ImageRow(int index, String name)) {
                 title.getChildren().setAll(MatchText.runs(name, currentQuery));
                 chord.setText(choices.detail().apply(index));
+                setAccessibleText(name);
                 setGraphic(layout);
                 return;
             }
@@ -440,11 +491,14 @@ final class CommandPalette {
             title.getChildren().setAll(MatchText.runs(command.label(), currentQuery));
             chord.setText(command.chord().getDisplayText());
             String why = unavailable.apply(command);
+            // What a screen reader says as the arrows land here: the name, the key, and why it can't
+            // run, which the eye reads from the grey and the tooltip (ACC-08).
+            setAccessibleText(rowText(command.label(), chord.getText(), why));
             if (why != null) {
                 layout.getStyleClass().add("palette-disabled");
-                Tooltip tip = new Tooltip(why);
+                Tooltip tip = Icons.tip(why);
                 tip.setWrapText(true);
-                tip.setMaxWidth(380);
+                UiZoom.bind(tip.maxWidthProperty(), 380);
                 tip.getStyleClass().add("palette-disabled-tooltip");
                 setTooltip(tip);
             }

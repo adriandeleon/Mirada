@@ -9,7 +9,6 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -17,13 +16,16 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -37,6 +39,7 @@ import javafx.util.StringConverter;
 
 import com.mirada.folder.Sorting;
 import com.mirada.i18n.Messages;
+import com.mirada.os.Os;
 import com.mirada.settings.Settings;
 import com.mirada.ui.SettingsPages.Page;
 import com.mirada.ui.SettingsPages.Row;
@@ -67,6 +70,8 @@ final class SettingsWindow {
     private final Map<Page, VBox> pages = new EnumMap<>(Page.class);
     /** Each row's node, by row; and each card, by page and heading. */
     private final Map<Row, HBox> rowNodes = new HashMap<>();
+    /** The descriptions that name a command's chord, written again when the keys change (KBD-13). */
+    private final Map<Row, Label> keyed = new HashMap<>();
 
     private final Map<Row, String> visibleText = new HashMap<>();
     private final List<VBox> cards = new ArrayList<>();
@@ -105,6 +110,17 @@ final class SettingsWindow {
         CheckBox updates =
                 checkBox(settings.checkForUpdates(), settings::checkForUpdates, settings::setCheckForUpdates);
         CheckBox statusBar = checkBox(settings.statusBar(), settings::statusBar, settings::setStatusBar);
+        CheckBox titleBarMenus =
+                checkBox(settings.titleBarMenus(), settings::titleBarMenus, settings::setTitleBarMenus);
+        // On every OS (OS-01), and disabled with the reason where the system keeps the menus itself.
+        String menusReason = TitleBar.titleBarMenusUnavailable();
+        HBox titleBarMenusControl = new HBox(titleBarMenus);
+        titleBarMenusControl.setAlignment(Pos.CENTER_RIGHT);
+        if (menusReason != null) {
+            titleBarMenus.setDisable(true);
+            titleBarMenus.setAccessibleHelp(menusReason);
+            Tooltip.install(titleBarMenusControl, Icons.tip(menusReason));
+        }
         CheckBox keepZoom = checkBox(settings.keepZoom(), settings::keepZoom, settings::setKeepZoom);
         CheckBox atSide =
                 checkBox(settings.thumbnailsAtSide(), settings::thumbnailsAtSide, settings::setThumbnailsAtSide);
@@ -114,7 +130,7 @@ final class SettingsWindow {
 
         Spinner<Integer> hide =
                 new Spinner<>(Settings.MIN_HIDE_SECONDS, Settings.MAX_HIDE_SECONDS, settings.controlsHideSeconds());
-        hide.setPrefWidth(110);
+        UiZoom.bind(hide.prefWidthProperty(), 110);
         hide.valueProperty().addListener((o, was, now) -> {
             if (now != null && now != settings.controlsHideSeconds()) settings.setControlsHideSeconds(now);
         });
@@ -137,15 +153,37 @@ final class SettingsWindow {
 
         Spinner<Integer> slideshow = new Spinner<>(
                 Settings.MIN_SLIDESHOW_SECONDS, Settings.MAX_SLIDESHOW_SECONDS, settings.slideshowSeconds());
-        slideshow.setPrefWidth(110);
+        UiZoom.bind(slideshow.prefWidthProperty(), 110);
         slideshow.valueProperty().addListener((o, was, now) -> {
             if (now != null && now != settings.slideshowSeconds()) settings.setSlideshowSeconds(now);
+        });
+
+        // The interface's zoom (WIN-12), in its steps; it applies to every window as it changes.
+        Spinner<Integer> uiZoom = new Spinner<>();
+        SpinnerValueFactory.IntegerSpinnerValueFactory zoomSteps = new SpinnerValueFactory.IntegerSpinnerValueFactory(
+                Settings.MIN_UI_ZOOM, Settings.MAX_UI_ZOOM, settings.uiZoom(), UiZoom.STEP);
+        zoomSteps.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(@Nullable Integer value) {
+                return value == null ? "" : SettingsCommands.percent(value);
+            }
+
+            @Override
+            public Integer fromString(String text) {
+                String digits = text.replaceAll("[^0-9]", "");
+                return digits.isEmpty() ? settings.uiZoom() : Settings.clampUiZoom(Integer.parseInt(digits));
+            }
+        });
+        uiZoom.setValueFactory(zoomSteps);
+        UiZoom.bind(uiZoom.prefWidthProperty(), 110);
+        uiZoom.valueProperty().addListener((o, was, now) -> {
+            if (now != null && now != settings.uiZoom()) settings.setUiZoom(now);
         });
 
         // The bundled keymaps by name; one the file names that is not bundled shows as the default.
         ChoiceBox<String> keymap = new ChoiceBox<>();
         keymap.getItems().addAll(Keymap.PRESETS);
-        keymap.setConverter(converter(id -> Keymap.load(id, Command.MAC).name(), Keymap.DEFAULT));
+        keymap.setConverter(converter(Keymap::name, Keymap.DEFAULT));
         keymap.setValue(Keymap.resolve(settings.keymap()));
         keymap.valueProperty().addListener((o, was, now) -> {
             if (now != null && !now.equals(Keymap.resolve(settings.keymap()))) settings.setKeymap(now);
@@ -154,11 +192,11 @@ final class SettingsWindow {
         paletteKeys.setText(shownKeys(settings));
         paletteKeys.getStyleClass().add("shortcut-key");
         Button defaultKeys = new Button(tr("settings.defaultKeys"));
-        defaultKeys.setOnAction(e -> settings.setPaletteKeys(Settings.defaultPaletteKeys(Command.MAC)));
+        defaultKeys.setOnAction(e -> run.accept(Command.RESET_PALETTE_KEYS));
         addKey.setOnAction(e -> recordKey());
-        HBox keyButtons = new HBox(6, addKey, defaultKeys);
+        HBox keyButtons = UiZoom.hbox(6, addKey, defaultKeys);
         keyButtons.setAlignment(Pos.CENTER_RIGHT);
-        VBox paletteControl = new VBox(6, paletteKeys, keyButtons);
+        VBox paletteControl = UiZoom.vbox(6, paletteKeys, keyButtons);
         paletteControl.setAlignment(Pos.CENTER_RIGHT);
 
         Label folder = new Label(String.valueOf(settings.file().toAbsolutePath().getParent()));
@@ -167,9 +205,9 @@ final class SettingsWindow {
         export.setOnAction(e -> run.accept(Command.EXPORT_CONFIG));
         Button importButton = new Button(tr("settings.import"));
         importButton.setOnAction(e -> run.accept(Command.IMPORT_CONFIG));
-        HBox backupButtons = new HBox(6, export, importButton);
+        HBox backupButtons = UiZoom.hbox(6, export, importButton);
         backupButtons.setAlignment(Pos.CENTER_RIGHT);
-        VBox backup = new VBox(6, folder, backupButtons);
+        VBox backup = UiZoom.vbox(6, folder, backupButtons);
         backup.setAlignment(Pos.CENTER_RIGHT);
 
         Map<Command, Node> controls = Map.ofEntries(
@@ -179,6 +217,7 @@ final class SettingsWindow {
                 Map.entry(Command.PROPERTIES_AT_START, info),
                 Map.entry(Command.CHECK_DAILY, updates),
                 Map.entry(Command.STATUS_BAR, statusBar),
+                Map.entry(Command.TITLE_BAR_MENUS, titleBarMenusControl),
                 Map.entry(Command.HIDE_CONTROLS_AFTER, hide),
                 Map.entry(Command.KEEP_ZOOM, keepZoom),
                 Map.entry(Command.THUMBNAILS_AT_SIDE, atSide),
@@ -187,6 +226,7 @@ final class SettingsWindow {
                 Map.entry(Command.SORT_BY_NAME, sortBy),
                 Map.entry(Command.REVERSE_ORDER, reversed),
                 Map.entry(Command.SLIDESHOW_SPEED, slideshow),
+                Map.entry(Command.UI_ZOOM, uiZoom),
                 Map.entry(Command.KEYMAP, keymap),
                 Map.entry(Command.PALETTE_KEYS, paletteControl),
                 Map.entry(Command.EXPORT_CONFIG, backup));
@@ -201,6 +241,7 @@ final class SettingsWindow {
             updates.setSelected(settings.checkForUpdates());
             hide.getValueFactory().setValue(settings.controlsHideSeconds());
             slideshow.getValueFactory().setValue(settings.slideshowSeconds());
+            uiZoom.getValueFactory().setValue(settings.uiZoom());
             sortBy.setValue(settings.sorting().by());
             reversed.setSelected(settings.sorting().reversed());
             keepZoom.setSelected(settings.keepZoom());
@@ -208,6 +249,7 @@ final class SettingsWindow {
             names.setSelected(settings.thumbnailNames());
             captions.setSelected(settings.thumbnailCaptions());
             statusBar.setSelected(settings.statusBar());
+            titleBarMenus.setSelected(settings.titleBarMenus());
             keymap.setValue(Keymap.resolve(settings.keymap()));
         });
 
@@ -216,9 +258,9 @@ final class SettingsWindow {
         for (Page page : Page.values()) {
             Label title = new Label(page.title());
             title.getStyleClass().add("settings-page-title");
-            VBox body = new VBox(18, title);
+            VBox body = UiZoom.vbox(18, title);
             body.getStyleClass().add("settings-page");
-            body.setPadding(new Insets(18, 22, 22, 22));
+            UiZoom.pad(body, 18, 22, 22, 22);
             for (Map.Entry<String, List<Row>> card :
                     layout.getOrDefault(page, Map.of()).entrySet()) {
                 List<Node> rows = new ArrayList<>();
@@ -226,6 +268,10 @@ final class SettingsWindow {
                     Node control = Objects.requireNonNull(controls.get(row.command()), row.title());
                     HBox node = row(row.title(), row.description(), control);
                     rowNodes.put(row, node);
+                    if (SettingsPages.TOGGLED_BY.containsKey(row.descriptionKey()))
+                        keyed.put(row, (Label) ((VBox) node.getChildren().getFirst())
+                                .getChildren()
+                                .get(1));
                     visibleText.put(row, visibleText(control));
                     rows.add(node);
                 }
@@ -241,7 +287,8 @@ final class SettingsWindow {
         sidebar.getItems().setAll(Page.values());
         sidebar.setCellFactory(list -> new PageCell());
         sidebar.getStyleClass().add("settings-sidebar");
-        sidebar.setPrefWidth(190);
+        sidebar.setAccessibleText(Icons.title(Command.SETTINGS));
+        UiZoom.bind(sidebar.prefWidthProperty(), 190);
         sidebar.getSelectionModel().selectedItemProperty().addListener((o, was, page) -> {
             if (page != null) showPage(page);
         });
@@ -252,12 +299,12 @@ final class SettingsWindow {
         search.textProperty().addListener((o, was, query) -> applySearch(query));
         HBox top = new HBox(search);
         HBox.setHgrow(search, Priority.ALWAYS);
-        top.setPadding(new Insets(12, 14, 10, 14));
+        UiZoom.pad(top, 12, 14, 10, 14);
         top.getStyleClass().add("settings-top");
 
         BorderPane root = new BorderPane(scroll, top, null, null, sidebar);
         root.getStyleClass().add("settings");
-        Scene scene = new Scene(root, WIDTH, HEIGHT);
+        Scene scene = new Scene(root, UiZoom.px(WIDTH), UiZoom.px(HEIGHT));
         scene.getStylesheets().add(stylesheet);
         scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
             if (recording != null) return;
@@ -367,7 +414,7 @@ final class SettingsWindow {
 
     /** The palette's keys as the platform writes keys. */
     private static String shownKeys(Settings settings) {
-        return PaletteChords.display(PaletteChords.parse(settings.paletteKeys(), Command.MAC));
+        return PaletteChords.display(PaletteChords.parse(settings.paletteKeys(), Os.isMac()));
     }
 
     /** A language by its own name, so anyone can find theirs; blank is the system's. */
@@ -380,6 +427,7 @@ final class SettingsWindow {
             case SYSTEM -> tr("settings.followTheSystem");
             case LIGHT -> tr("theme.light");
             case DARK -> tr("theme.dark");
+            case HIGH_CONTRAST -> tr("theme.highContrast");
         };
     }
 
@@ -432,7 +480,7 @@ final class SettingsWindow {
         list.getChildren().addAll(rows);
         list.getStyleClass().add("info-card");
         for (int i = 1; i < rows.size(); i++) rows.get(i).getStyleClass().add("info-row-after");
-        VBox card = new VBox(8, heading, list);
+        VBox card = UiZoom.vbox(8, heading, list);
         cards.add(card);
         return card;
     }
@@ -446,15 +494,22 @@ final class SettingsWindow {
         // A wrapping label is laid out at its one-line height unless told otherwise, and its column
         // has to be allowed to shrink for the wrap to happen: without both, the text ends in "...".
         detail.setMinHeight(Region.USE_PREF_SIZE);
-        VBox words = new VBox(2, label, detail);
+        VBox words = UiZoom.vbox(2, label, detail);
         words.setMinWidth(0);
         HBox.setHgrow(words, Priority.ALWAYS);
         // The control keeps its own width; the words give way.
         if (control instanceof Region region) region.setMinWidth(Region.USE_PREF_SIZE);
-        HBox row = new HBox(12, words, control);
+        // What a screen reader says for the control: the row's name (ACC-01).
+        if (control instanceof Control named) label.setLabelFor(named);
+        HBox row = UiZoom.hbox(12, words, control);
         row.setAlignment(Pos.CENTER_LEFT);
         row.getStyleClass().add("info-row");
         return row;
+    }
+
+    /** The descriptions that name a chord, from the keys now (KBD-13): the keymap or the user's keys changed. */
+    void refreshKeys() {
+        keyed.forEach((row, label) -> label.setText(row.description()));
     }
 
     /** Its stage, closed with the viewer's. */

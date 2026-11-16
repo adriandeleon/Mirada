@@ -16,6 +16,9 @@
     "view.panRight": "S-right",
     "view.panUp": ["up", "S-up"],
     "view.panDown": ["down", "S-down"],
+    "view.uiZoomIn": "Cmd-M-=",
+    "view.uiZoomOut": "Cmd-M--",
+    "view.uiZoomReset": "Cmd-M-0",
     "view.fullScreen": ["f", "f11", "C-Cmd-f"],
     "image.rotateRight": ["r", "Cmd-r"],
     "image.rotateLeft": ["S-r", "Cmd-S-r", "Cmd-l"],
@@ -32,8 +35,8 @@
     "bookmark.previous": "[",
     "bookmark.goTo": "Cmd-b",
     "bookmark.list": "Cmd-S-b",
-    "view.properties": ["i", "Cmd-i"],
-    "view.thumbnails": "t",
+    "tool.properties": ["i", "Cmd-i"],
+    "tool.thumbnails": "t",
     "window.escape": "escape",
     "app.settings": "Cmd-,",
     "help.keyboardShortcuts": ["Cmd-?", "Cmd-/", "Cmd-S-/"],
@@ -41,7 +44,8 @@
     "file.open": "Cmd-o",
     "file.openFolder": "Cmd-S-f",
     "file.openRecent": "Cmd-S-o",
-    "window.close": ["Cmd-w", "Cmd-q"],
+    "window.close": "Cmd-w",
+    "app.quit": "Cmd-q",
     "palette.show": ["Cmd-S-p", "M-x", "f1"],
 
     "editor.save": ["enter", "Cmd-s"],
@@ -59,9 +63,15 @@
     "bookmarks.editNote": ["f2", "Cmd-e"],
     "bookmarks.toggleBookmark": "Cmd-b",
     "bookmarks.remove": "Cmd-backspace",
+    "bookmarks.undoRemove": "Cmd-z",
     "bookmarks.listAll": "Cmd-1",
     "bookmarks.listBookmarked": "Cmd-2",
-    "bookmarks.listNotes": "Cmd-3"
+    "bookmarks.listNotes": "Cmd-3",
+
+    "log.find": ["Cmd-f", "Cmd-g"],
+    "log.findPrevious": "Cmd-S-g",
+    "log.findMatchCase": "Cmd-M-c",
+    "log.refresh": ["Cmd-r", "f5"]
   },
   "vertical": {
     "go.next": ["down", "pagedown", "space"],

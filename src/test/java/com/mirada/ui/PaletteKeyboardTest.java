@@ -44,6 +44,18 @@ class PaletteKeyboardTest {
     @AfterEach
     void close() throws Exception {
         FxToolkit.cleanupStages();
+        fx(() -> Keybindings.use(
+                com.mirada.settings.Settings.DEFAULT_KEYMAP,
+                java.util.Map.of(),
+                com.mirada.settings.Settings.defaultPaletteKeys(com.mirada.os.Os.isMac())));
+    }
+
+    /** The Emacs keymap in force: its list moves and its cancel chord, C-g (PAL-06, PAL-07). */
+    private static void emacs() throws Exception {
+        fx(() -> Keybindings.use(
+                "emacs",
+                java.util.Map.of(),
+                com.mirada.settings.Settings.defaultPaletteKeys(com.mirada.os.Os.isMac())));
     }
 
     /** A key press: {@code control}, {@code alt} and {@code shift} as named, on {@code target}. */
@@ -65,12 +77,17 @@ class PaletteKeyboardTest {
 
     @Test
     void theRowsAreWalkedByArrowsPagesAndEmacsChordsSteppingOverGreyedOnes() throws Exception {
-        StackPane host = new StackPane();
+        emacs();
+        StackPane root = new StackPane();
+        javafx.scene.control.Button before = new javafx.scene.control.Button("before");
+        root.getChildren().add(before);
         fx(() -> {
             Stage stage = new Stage();
-            stage.setScene(new Scene(host, 700, 600));
+            stage.setScene(new Scene(root, 700, 600));
             stage.show();
+            before.requestFocus();
         });
+        OverlayHost host = new OverlayHost(root);
         List<Command> ran = new ArrayList<>();
         CommandPalette palette = call(() -> new CommandPalette(host, ran::add));
         List<Command> commands = Command.inPalette(Command.Context.VIEWER);
@@ -107,12 +124,13 @@ class PaletteKeyboardTest {
         press(input, KeyCode.ENTER);
         assertEquals(List.of(commands.getFirst()), ran);
         assertFalse(call(palette::isShowing));
+        assertTrue(call(before::isFocused), "the focus is back where it was (PAL-07)");
 
         fx(() -> palette.show(commands, command -> null));
         press(input, KeyCode.G, true, false, false);
         assertFalse(call(palette::isShowing), "C-g cancels");
         fx(() -> palette.show(commands, command -> null));
-        Node backdrop = FxTestSupport.field(palette, "backdrop");
+        Node backdrop = FxTestSupport.field(host, "backdrop");
         fx(() -> backdrop.fireEvent(new MouseEvent(
                 MouseEvent.MOUSE_PRESSED,
                 1,
@@ -142,6 +160,45 @@ class PaletteKeyboardTest {
         assertEquals(1, ran.size(), "nothing to run");
         press(input, KeyCode.ESCAPE);
         assertFalse(call(palette::isShowing));
+    }
+
+    /**
+     * QOPEN-11, QOPEN-02, QOPEN-07, ACC-08: one card at a time, a picker titled by its command, the
+     * focus given back when the last goes, and the cursor's row told to a screen reader.
+     */
+    @Test
+    void aPickerReplacesThePaletteIsTitledAndGivesTheFocusBack() throws Exception {
+        StackPane root = new StackPane();
+        javafx.scene.control.Button before = new javafx.scene.control.Button("before");
+        root.getChildren().add(before);
+        fx(() -> {
+            Stage stage = new Stage();
+            stage.setScene(new Scene(root, 700, 600));
+            stage.show();
+            before.requestFocus();
+        });
+        OverlayHost host = new OverlayHost(root);
+        CommandPalette palette = call(() -> new CommandPalette(host, command -> {}));
+        List<Command> commands = Command.inPalette(Command.Context.VIEWER);
+        fx(() -> palette.show(commands, command -> command == commands.getFirst() ? "Not now." : null));
+        javafx.scene.control.Label title = FxTestSupport.field(palette, "title");
+        assertFalse(call(title::isVisible), "the command palette has no title");
+        ListView<?> list = FxTestSupport.field(palette, "list");
+        assertEquals(
+                call(() -> list.getSelectionModel().getSelectedIndex()),
+                call(() -> list.getFocusModel().getFocusedIndex()),
+                "the list's focused item is the cursor's row");
+
+        List<Integer> chosen = new ArrayList<>();
+        fx(() -> palette.showImages(List.of("a.png", "b.png"), 1, chosen::add));
+        assertTrue(call(palette::isShowing));
+        assertEquals(2, call(() -> root.getChildren().size() - 1), "one card and its backdrop, not two cards");
+        assertTrue(call(title::isVisible));
+        assertEquals(Command.GO_TO_IMAGE.label().replace("…", ""), call(title::getText));
+        TextField input = FxTestSupport.field(palette, "input");
+        press(input, KeyCode.ENTER);
+        assertEquals(List.of(1), chosen);
+        assertTrue(call(before::isFocused), "the focus from before the first card");
     }
 
     // ---- The query field ----

@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 import com.mirada.image.NativeLibraries;
+import com.mirada.os.Os;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -31,15 +32,26 @@ public final class AppInfo {
 
     public static final String COPYRIGHT = "Copyright © 2026 Adrián Arturo De León Saldivar";
     public static final String LICENSE = "MIT License";
-    public static final String HOMEPAGE = "https://github.com/adriandeleon/Mirada";
+    /**
+     * Mirada's repository on GitHub, {@code owner/name}: its source, its releases and its issues. A
+     * pending exception in {@code pauta.json} links an issue here (PAUTA-07, PAUTA-10).
+     */
+    public static final String GITHUB_REPO = "adriandeleon/Mirada";
+    /** The source code: the repository's page. */
+    public static final String REPOSITORY = "https://github.com/" + GITHUB_REPO;
+    /** The website, Mirada's home page (ABOUT-02). */
+    public static final String HOMEPAGE = "https://mirada-project.dev";
     /** The user guide, on the website (DOCS-02, DOCS-06). */
-    public static final String DOCS_URL = "https://mirada-project.dev/docs/";
+    public static final String DOCS_URL = HOMEPAGE + "/docs/";
     /** Where Report a Problem opens its prefilled issue ({@code .github/ISSUE_TEMPLATE/bug_report.yml}). */
-    public static final String NEW_ISSUE_URL = HOMEPAGE + "/issues/new";
-    /** The releases, for an update notice that has no page of its own. */
-    public static final String RELEASES_URL = HOMEPAGE + "/releases";
+    public static final String NEW_ISSUE_URL = REPOSITORY + "/issues/new";
+    /**
+     * The releases, each with its notes, installers and source: About's "Source code and releases"
+     * (ABOUT-02), and an update notice that has no page of its own.
+     */
+    public static final String RELEASES_URL = REPOSITORY + "/releases";
     /** What the update check asks: the newest release that is neither a draft nor a pre-release. */
-    public static final String LATEST_RELEASE_API = "https://api.github.com/repos/adriandeleon/Mirada/releases/latest";
+    public static final String LATEST_RELEASE_API = "https://api.github.com/repos/" + GITHUB_REPO + "/releases/latest";
 
     private AppInfo() {}
 
@@ -76,9 +88,9 @@ public final class AppInfo {
 
     static String releaseNotesUrl(String version) {
         if (version.endsWith("-SNAPSHOT") || version.equals("0.0.0")) {
-            return HOMEPAGE + "/blob/main/CHANGELOG.md";
+            return REPOSITORY + "/blob/main/CHANGELOG.md";
         }
-        return HOMEPAGE + "/releases/tag/v" + version;
+        return REPOSITORY + "/releases/tag/v" + version;
     }
 
     /**
@@ -90,13 +102,22 @@ public final class AppInfo {
     }
 
     /**
+     * The website's page on Mirada's Pauta conformance and exceptions (PAUTA-13, PWIN-07): {@code
+     * /docs/pauta/} until the site serves docs by version (DOCS-03), when it becomes this version's.
+     */
+    public static String pautaDocsUrl() {
+        return DOCS_URL + "pauta/";
+    }
+
+    /**
      * What {@code --version} prints and the environment block opens with: version and build, then
-     * the commit, then the Pauta edition (ABOUT-05). Plain English on purpose: it goes into bug
-     * reports.
+     * the commit, then the Pauta edition (ABOUT-05) and the conformance with its count of exceptions
+     * (ABOUT-09). Plain English on purpose: it goes into bug reports.
      */
     public static String versionText() {
         String build = BUILD_TIME.isEmpty() ? "" : " (built " + BUILD_TIME + ")";
-        return NAME + " " + VERSION + build + "\n" + "Commit: " + COMMIT + "\n" + "Pauta: " + PAUTA_EDITION;
+        return NAME + " " + VERSION + build + "\n" + "Commit: " + COMMIT + "\n" + "Pauta: " + PAUTA_EDITION + "\n"
+                + PautaConformance.environmentLine(PautaConformance.exceptions());
     }
 
     /**
@@ -106,8 +127,7 @@ public final class AppInfo {
     public static String environment(String runtime, Path settingsFile) {
         return versionText() + "\n"
                 + runtime + "\n"
-                + "OS: " + System.getProperty("os.name") + " " + System.getProperty("os.version") + " ("
-                + System.getProperty("os.arch") + ")\n"
+                + "OS: " + Os.description() + "\n"
                 + "Settings: " + tildeHome(settingsFile.toString());
     }
 

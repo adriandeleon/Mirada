@@ -30,6 +30,26 @@
      */
     -state-key: ladder(-color-bg-default, #b0b6e0 0%, #b8bee5 10%, #cdd1f1 20%, #e3e6f9 30%, #ecedfb 49%, #3c4380 50%);
 
+    /*
+     * The states About's update line shows (ABOUT-10), Editora's names: an available update in
+     * amber, which no link or label in About uses, up to date in green, a failed check in red; the
+     * links keep the accent.
+     */
+    -state-amber: -color-warning-fg;
+    -state-green: -color-success-fg;
+    -state-red: -color-danger-fg;
+    -state-accent: -color-accent-fg;
+
+    /*
+     * The same states wherever else they show (ICON-07): an error or a warning in the status bar
+     * and the Message Log, a row that deletes (MENU-12), the unread errors' count on its red fill,
+     * and the toasts' error and warning over the photo, in the theme's paler shades so they read on
+     * the dark pill. No rule below names the role behind a state.
+     */
+    -state-red-emphasis: -color-danger-emphasis;
+    -state-red-osd: -color-danger-3;
+    -state-amber-osd: -color-warning-3;
+
     /* The one keyboard focus ring (ICON-12), drawn by the :focus-visible block at the end. */
     -focus-ring: -color-accent-emphasis;
 
@@ -43,7 +63,7 @@
     -osd-fg-disabled: rgba(242, 242, 242, 0.35);
     -osd-hover: rgba(255, 255, 255, 0.12);
     -toast-bg: rgba(0, 0, 0, 0.72);
-    -crop-ground: #1e1e1e;
+    -crop-ground: -color-dark;
     -crop-shade: rgba(0, 0, 0, 0.55);
     -crop-third: rgba(255, 255, 255, 0.45);
     -crop-handle-edge: rgba(0, 0, 0, 0.5);
@@ -55,9 +75,9 @@
 
     /*
      * JavaFX's own window buttons (Linux, extended windows), unfocused in the dark style: its grey
-     * (#777) all but vanishes on the dark header.
+     * all but vanishes on the dark header, so they take the theme's muted ink (ICON-08).
      */
-    -window-button-dark: #a8a8a8;
+    -window-button-dark: -color-fg-muted;
 }
 
 .mirada .canvas,
@@ -73,23 +93,29 @@
 .mirada .placeholder {
     -fx-text-fill: -color-fg-muted;
     -fx-font-size: 1.15em;
-    -fx-padding: 24;
+    -fx-padding: 24px;
     -fx-text-alignment: center;
 }
 
 /* Open Image and Open Folder, under the placeholder while no folder is open. */
 .mirada .open-buttons {
-    -fx-spacing: 12;
+    -fx-spacing: 12px;
 }
 
 .mirada .open-button {
-    -fx-graphic-text-gap: 8;
-    -fx-padding: 8 16 8 16;
+    -fx-graphic-text-gap: 8px;
+    -fx-padding: 8px 16px 8px 16px;
+}
+
+/* Each way in's chord, from the keymap, under its button (WELC-02). */
+.mirada .open-chord {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 0.9em;
 }
 
 /* Help → Documentation, under the open buttons. */
 .mirada .empty-docs {
-    -fx-padding: 12 0 0 0;
+    -fx-padding: 12px 0 0 0;
 }
 
 /*
@@ -99,9 +125,9 @@
  */
 .header-bar {
     -fx-background-color: -color-border-muted, -color-bg-subtle;
-    -fx-background-insets: 0, 0 0 1 0;
-    -fx-padding: 6 8 6 8;
-    -fx-min-height: 46;
+    -fx-background-insets: 0, 0 0 1px 0;
+    -fx-padding: 6px 8px 6px 8px;
+    -fx-min-height: 46px;
 }
 
 /*
@@ -117,8 +143,8 @@
 
 /* "folder / name.jpg", on one line. */
 .header-heading {
-    -fx-spacing: 6;
-    -fx-padding: 0 12 0 12;
+    -fx-spacing: 6px;
+    -fx-padding: 0 12px 0 12px;
 }
 
 .header-title {
@@ -134,15 +160,15 @@
 .header-button,
 .osd-button,
 .info-action {
-    -fx-background-radius: 8;
+    -fx-background-radius: 8px;
     -fx-padding: 0;
     -fx-alignment: center;
-    -fx-min-width: 34;
-    -fx-min-height: 34;
-    -fx-pref-width: 34;
-    -fx-pref-height: 34;
-    -fx-max-width: 34;
-    -fx-max-height: 34;
+    -fx-min-width: 34px;
+    -fx-min-height: 34px;
+    -fx-pref-width: 34px;
+    -fx-pref-height: 34px;
+    -fx-max-width: 34px;
+    -fx-max-height: 34px;
 }
 
 /* A MenuButton's label adds its own padding around the graphic; centred like a Button's. */
@@ -205,13 +231,74 @@
 }
 
 /*
+ * The rows Mirada draws itself (AppMenus.inWindowRow): the menu bar's and the right-click menus'.
+ * The chord is the row's own label (.menu-item-chord), in the keyboard's periwinkle (MENU-15); its
+ * size is ui-font.css's (MENU-16).
+ */
+.menu-item .menu-item-chord {
+    -fx-text-fill: -state-key;
+}
+
+.menu-item:focused .menu-item-chord {
+    -fx-text-fill: -color-fg-emphasis;
+}
+
+/* A row that deletes, discards or resets (MENU-12): its title in the danger colour. */
+.menu-item.danger .menu-item-title,
+.menu-item.danger > .label {
+    -fx-text-fill: -state-red;
+}
+
+.menu-item.danger:focused .menu-item-title,
+.menu-item.danger:focused > .label {
+    -fx-text-fill: -color-fg-emphasis;
+}
+
+/* A command that can't run now: greyed, still a row, its tooltip saying why (KBD-04). */
+.menu-item.unavailable .menu-item-title,
+.menu-item.unavailable .menu-item-chord {
+    -fx-text-fill: -color-fg-subtle;
+}
+
+.menu-item.unavailable .icon {
+    -fx-stroke: -color-fg-subtle;
+}
+
+/*
+ * Every menu's card (MENU-18): a radius of 8 and a shadow of radius 16 at offset Y 16, never less
+ * than its radius, so no invisible shadow rises over the bar the menu hangs from; rows 34 px high.
+ */
+.context-menu {
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-effect: dropshadow(gaussian, -shadow-log, 16, 0, 0, 16);
+}
+
+.context-menu .menu-item {
+    -fx-padding: 8px 12px 8px 12px;
+}
+
+/* The menu bar in the title bar: on the header's ground, its headings as flat as its buttons. */
+.header-bar .menu-bar {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.header-bar .menu-bar > .container > .menu-button {
+    -fx-background-radius: 8px;
+    -fx-padding: 6px 10px 6px 10px;
+}
+
+/*
  * The floating controls over the image: dark translucent pills, the same on light and dark themes,
  * because they sit on the photo, not on the window.
  */
 .osd {
     -fx-background-color: -osd-bg;
-    -fx-background-radius: 14;
-    -fx-padding: 6;
+    -fx-background-radius: 14px;
+    -fx-padding: 6px;
 }
 
 .osd .icon {
@@ -239,16 +326,16 @@
 }
 
 .info-cards {
-    -fx-padding: 14;
+    -fx-padding: 14px;
 }
 
 .info-card {
     -fx-background-color: -color-bg-subtle;
-    -fx-background-radius: 12;
+    -fx-background-radius: 12px;
 }
 
 .info-row {
-    -fx-padding: 10 14 10 16;
+    -fx-padding: 10px 14px 10px 16px;
 }
 
 .info-row-after {
@@ -270,17 +357,17 @@
     -fx-background-color: -color-bg-subtle;
     -fx-border-color: -color-border-muted;
     -fx-border-width: 1 0 0 0;
-    -fx-padding: 6 8 6 8;
+    -fx-padding: 6px 8px 6px 8px;
 }
 
 .thumbnail-strip .list-cell {
     -fx-background-color: transparent;
-    -fx-padding: 2;
+    -fx-padding: 2px;
 }
 
 .thumbnail-strip .thumbnail {
-    -fx-background-radius: 8;
-    -fx-border-radius: 8;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
     -fx-border-width: 2;
     -fx-border-color: transparent;
 }
@@ -297,14 +384,14 @@
 /* Down the left side: the border on the image's side. */
 .thumbnail-strip:side {
     -fx-border-width: 0 1 0 0;
-    -fx-padding: 8 6 8 6;
+    -fx-padding: 8px 6px 8px 6px;
 }
 
 /* File names instead of pictures: a row each, the current one in the accent's pill. */
 .thumbnail-strip .thumbnail-name {
     -fx-text-fill: -color-fg-default;
-    -fx-padding: 4 10 4 10;
-    -fx-background-radius: 6;
+    -fx-padding: 4px 10px 4px 10px;
+    -fx-background-radius: 6px;
 }
 
 /* A name under each thumbnail: small and quiet, the current one in the accent. */
@@ -318,7 +405,7 @@
 }
 
 .thumbnail-strip:names .list-cell {
-    -fx-padding: 1 2 1 2;
+    -fx-padding: 1px 2px 1px 2px;
 }
 
 .thumbnail-strip .list-cell:hover .thumbnail-name {
@@ -333,14 +420,14 @@
 /* "All Metadata": a folded card listing every tag, smaller than the rows above it. */
 .metadata-pane > .title {
     -fx-background-color: -color-bg-subtle;
-    -fx-background-radius: 12;
-    -fx-padding: 12 14 12 16;
+    -fx-background-radius: 12px;
+    -fx-padding: 12px 14px 12px 16px;
 }
 
 .metadata-pane > .content {
     -fx-background-color: -color-bg-subtle;
     -fx-border-width: 0;
-    -fx-padding: 4 16 14 16;
+    -fx-padding: 4px 16px 14px 16px;
 }
 
 .metadata-section {
@@ -359,7 +446,7 @@
 
 .info-empty {
     -fx-text-fill: -color-fg-muted;
-    -fx-padding: 8;
+    -fx-padding: 8px;
 }
 
 /* About and Settings: Termina's About layout, and the sidebar's cards for the settings rows. */
@@ -402,8 +489,8 @@
 }
 
 .settings-sidebar > .virtual-flow > .clipped-container > .sheet > .list-cell {
-    -fx-padding: 7 12 7 12;
-    -fx-graphic-text-gap: 10;
+    -fx-padding: 7px 12px 7px 12px;
+    -fx-graphic-text-gap: 10px;
     -fx-text-fill: -color-fg-default;
 }
 
@@ -444,8 +531,8 @@
 .shortcut-key {
     -fx-text-fill: -color-fg-muted;
     -fx-background-color: -color-bg-subtle;
-    -fx-background-radius: 5;
-    -fx-padding: 1 7 1 7;
+    -fx-background-radius: 5px;
+    -fx-padding: 1px 7px 1px 7px;
     -fx-font-size: 0.92em;
 }
 
@@ -460,20 +547,28 @@
 
 .command-palette {
     -fx-background-color: -color-bg-overlay;
-    -fx-background-radius: 12;
+    -fx-background-radius: 12px;
     -fx-border-color: -color-border-default;
     -fx-border-width: 1;
-    -fx-border-radius: 12;
-    -fx-padding: 6;
+    -fx-border-radius: 12px;
+    -fx-padding: 6px;
     /* The kit layers a tight contact shadow and a wide ambient one; JavaFX takes a single
        dropshadow, so this is the wide one with a short offset, and the 1px border is the edge. */
     -fx-effect: dropshadow(gaussian, -shadow-card, 44, 0.16, 0, 18);
     /* Near the top, over the image's least-looked-at part rather than its centre. */
-    -fx-translate-y: 48;
+    -fx-translate-y: 48px;
+}
+
+/* A picker's title, naming the command that opened it (QOPEN-02); the command palette has none. */
+.command-palette .palette-title {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-muted;
+    -fx-padding: 4px 12px 0 12px;
 }
 
 .command-palette .palette-input-row {
-    -fx-padding: 4 10 8 10;
+    -fx-padding: 4px 10px 8px 10px;
 }
 
 /* The chord chip: the palette introduces itself by its keyboard identity. */
@@ -482,8 +577,8 @@
     -fx-font-weight: bold;
     -fx-text-fill: -color-accent-fg;
     -fx-background-color: -color-accent-subtle;
-    -fx-background-radius: 5;
-    -fx-padding: 2 7 2 7;
+    -fx-background-radius: 5px;
+    -fx-padding: 2px 7px 2px 7px;
 }
 
 /* The query is the first row of the card, not a boxed form field: no border, no focus ring. */
@@ -492,7 +587,7 @@
     -fx-background-color: transparent;
     -fx-background-insets: 0;
     -fx-border-width: 0;
-    -fx-padding: 4 2 4 2;
+    -fx-padding: 4px 2px 4px 2px;
     -fx-font-size: 13.5px;
 }
 
@@ -504,7 +599,7 @@
 }
 
 .command-palette .list-cell {
-    -fx-padding: 7 16 7 16;
+    -fx-padding: 7px 16px 7px 16px;
     -fx-font-size: 12.5px;
     -fx-background-color: transparent;
     -fx-background-insets: 0;
@@ -541,6 +636,11 @@
 }
 
 /* Why that row is greyed. Full opacity on purpose: it explains the dimmed row. */
+/* Every tooltip shows after the same pause (TBAR-14); Icons.tip gives the ones the code makes the same. */
+.tooltip {
+    -fx-show-delay: 400ms;
+}
+
 .palette-disabled-tooltip {
     -fx-font-size: 12px;
     -fx-background-color: -color-bg-overlay;
@@ -554,31 +654,31 @@
     -fx-font-size: 11.5px;
     -fx-font-weight: bold;
     -fx-background-color: transparent;
-    -fx-padding: 7 10 8 10;
+    -fx-padding: 7px 10px 8px 10px;
 }
 
 /* The legend of the navigation keys at the bottom of the card. */
 .command-palette .palette-hint {
     -fx-text-fill: -color-fg-muted;
     -fx-font-size: 11px;
-    -fx-padding: 7 10 2 10;
+    -fx-padding: 7px 10px 2px 10px;
 }
 
 /* What a toggle or a file operation just did, over the bottom of the image; gone after two seconds. */
 .toast {
     -fx-background-color: -toast-bg;
-    -fx-background-radius: 999;
+    -fx-background-radius: 999px;
     -fx-text-fill: -osd-fg;
-    -fx-padding: 8 16 8 16;
+    -fx-padding: 8px 16px 8px 16px;
     -fx-font-size: 1.0em;
 }
 
 .toast:error {
-    -fx-text-fill: -color-danger-3;
+    -fx-text-fill: -state-red-osd;
 }
 
 .toast:warning {
-    -fx-text-fill: -color-warning-3;
+    -fx-text-fill: -state-amber-osd;
 }
 
 /* The status bar (WIN-01): the echo area on the left, errors red and warnings amber, then the count
@@ -587,7 +687,7 @@
     -fx-background-color: -color-bg-subtle;
     -fx-border-color: -color-border-muted transparent transparent transparent;
     -fx-border-width: 1 0 0 0;
-    -fx-padding: 0 10 0 10;
+    -fx-padding: 0 10px 0 10px;
 }
 
 .status-bar .status-echo {
@@ -598,19 +698,19 @@
 
 .status-echo-error,
 .status-bar .status-echo.status-echo-error {
-    -fx-text-fill: -color-danger-fg;
+    -fx-text-fill: -state-red;
 }
 
 .status-echo-warn,
 .status-bar .status-echo.status-echo-warn {
-    -fx-text-fill: -color-warning-fg;
+    -fx-text-fill: -state-amber;
 }
 
 .status-bar .status-unread {
-    -fx-background-color: -color-danger-emphasis;
+    -fx-background-color: -state-red-emphasis;
     -fx-text-fill: -color-fg-emphasis;
-    -fx-background-radius: 999;
-    -fx-padding: 0 6 0 6;
+    -fx-background-radius: 999px;
+    -fx-padding: 0 6px 0 6px;
     -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-cursor: hand;
@@ -630,11 +730,11 @@
 
 .message-log {
     -fx-background-color: -color-bg-overlay;
-    -fx-background-radius: 12;
+    -fx-background-radius: 12px;
     -fx-border-color: -color-border-default;
     -fx-border-width: 1;
-    -fx-border-radius: 12;
-    -fx-padding: 10 12 10 12;
+    -fx-border-radius: 12px;
+    -fx-padding: 10px 12px 10px 12px;
     -fx-effect: dropshadow(gaussian, -shadow-log, 32, 0.12, 0, 10);
 }
 
@@ -652,9 +752,9 @@
 }
 
 .message-log .list-cell {
-    -fx-padding: 2 4 2 4;
+    -fx-padding: 2px 4px 2px 4px;
     -fx-background-color: transparent;
-    -fx-background-radius: 5;
+    -fx-background-radius: 5px;
     -fx-font-size: 12.5px;
 }
 
@@ -673,11 +773,11 @@
 }
 
 .message-log .list-cell .label.status-echo-error {
-    -fx-text-fill: -color-danger-fg;
+    -fx-text-fill: -state-red;
 }
 
 .message-log .list-cell .label.status-echo-warn {
-    -fx-text-fill: -color-warning-fg;
+    -fx-text-fill: -state-amber;
 }
 
 .message-log .message-log-hint {
@@ -691,6 +791,20 @@
     -fx-font-size: 12px;
 }
 
+/* The find bar's match is the log's selection (FIND-05): drawn as strongly while the field has the
+   keyboard as when the log has it, not in the faint colour of an unfocused selection. */
+.debug-log .debug-log-text,
+.debug-log .debug-log-text:focused {
+    -fx-highlight-fill: -color-accent-emphasis;
+    -fx-highlight-text-fill: -color-fg-emphasis;
+}
+
+/* The Debug Log's find bar (FIND-01): a row of the window over the buttons, never a popup. */
+.debug-log .find-bar .find-count {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 11px;
+}
+
 .debug-log .debug-log-file {
     -fx-text-fill: -color-fg-muted;
     -fx-font-size: 11px;
@@ -701,8 +815,63 @@
     -fx-font-size: 12px;
 }
 
+/* The update check's answer (ABOUT-10): muted until one has come, then by its state. */
 .about .about-update {
     -fx-text-fill: -color-fg-muted;
+}
+
+.about .about-update.update-available {
+    -fx-text-fill: -state-amber;
+    -fx-font-weight: bold;
+}
+
+.about .about-update.up-to-date {
+    -fx-text-fill: -state-green;
+}
+
+.about .about-update.update-failed {
+    -fx-text-fill: -state-red;
+}
+
+.about .hyperlink,
+.pauta .hyperlink {
+    -fx-text-fill: -state-accent;
+}
+
+/* The Pauta window: the conformance as a pill, the exceptions under a heading per kind. */
+.pauta {
+    -fx-background-color: -color-bg-default;
+}
+
+.pauta-conformance {
+    -fx-background-color: -color-bg-subtle;
+    -fx-background-radius: 999px;
+    -fx-border-color: -color-border-default;
+    -fx-border-radius: 999px;
+    -fx-padding: 2px 10px 2px 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-default;
+}
+
+.pauta-meaning,
+.pauta-counts,
+.pauta-level {
+    -fx-text-fill: -color-fg-muted;
+}
+
+.pauta-group {
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-default;
+    -fx-padding: 10px 0 2px 0;
+}
+
+.pauta-list,
+.pauta-list > .viewport {
+    -fx-background-color: -color-bg-default;
+}
+
+.pauta-reason .text {
+    -fx-fill: -color-fg-default;
 }
 
 /* The editor: the window's own surfaces for its bars, a dark canvas for the picture, and the crop
@@ -770,7 +939,7 @@
 }
 
 .note-dialog .text-area {
-    -fx-pref-width: 460;
+    -fx-pref-width: 460px;
 }
 
 .note-hint {
@@ -794,7 +963,7 @@
 }
 
 .bookmarks-list > .virtual-flow > .clipped-container > .sheet > .list-cell {
-    -fx-padding: 4 12 4 12;
+    -fx-padding: 4px 12px 4px 12px;
 }
 
 .bookmarks-list > .virtual-flow > .clipped-container > .sheet > .list-cell:selected {
@@ -821,7 +990,7 @@
 
 .bookmarks-picture {
     -fx-background-color: -color-bg-subtle;
-    -fx-background-radius: 6;
+    -fx-background-radius: 6px;
 }
 
 .bookmarks-cell:missing .bookmarks-name,
@@ -857,17 +1026,17 @@
 .titled-pane:focus-visible > .title {
     -fx-border-color: -focus-ring;
     -fx-border-width: 2;
-    -fx-border-insets: -3;
-    -fx-border-radius: 10;
+    -fx-border-insets: -3px;
+    -fx-border-radius: 10px;
     -fx-border-style: solid;
 }
 
 .check-box:focus-visible > .box {
-    -fx-border-radius: 6;
+    -fx-border-radius: 6px;
 }
 
 .radio-button:focus-visible > .radio {
-    -fx-border-radius: 999;
+    -fx-border-radius: 999px;
 }
 
 /* A text field already gets the theme's accent border on focus; from the keyboard it is thickened to

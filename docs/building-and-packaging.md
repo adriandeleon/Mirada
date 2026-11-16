@@ -21,7 +21,7 @@ new tag and the five checksums from its `SHA256SUMS` in the pom.
 
 Mirada ships as a GraalVM native image with JavaFX linked in by StaticFX, on Linux (x64, arm64),
 Windows and Apple silicon; GraalVM 25.4 has no Intel macOS, which keeps the jlink image. It starts
-in half the time of the jlink image and uses a third less memory ([native-image.md](native-image.md); [decision 0001](decisions/0001-native-image-over-jlink.md)).
+in half the time of the jlink image and uses a third less memory ([native-image.md](reference/native-image.md); [decision 0001](decisions/0001-native-image-over-jlink.md)).
 
 `-Pdist,native` builds it inside jpackage's app image: the native profile compiles `target/mirada`
 in `prepare-package`, jpackage makes the app image as before, and `scripts/native-app-image.sh`
@@ -80,6 +80,13 @@ The jlink image's numbers, before the native image and libjpeg-turbo, are kept i
   `scripts/check-windows-dlls.py` reads every PE file's imports and fails on a DLL that is neither
   in the image nor in its list of Windows' own. A new system DLL goes in that list; anything else
   goes in the image.
+- **The Windows executable is a GUI one, with no console** (CLI-11). The StaticFX feature links the
+  native image `/SUBSYSTEM:WINDOWS` (so a double-click opens no console window), and jpackage's own
+  launcher is a GUI one too. So there is no second, `win-console` launcher: `App.main` joins the
+  shell's console itself (`WindowsConsole`, `AttachConsole` through FFM) before `--help`,
+  `--version`, `--report` or an unknown option prints. cmd does not wait for a GUI program, so the
+  text comes after its next prompt. Written by the template's rule and not yet run on Windows: try
+  `Mirada.exe --version` in cmd and in PowerShell after a Windows build.
 - **jpackage puts the whole launcher in the MSI as its Add/Remove Programs icon**, uncompressed in
   the Icon table. Its own launcher is a 100 KB stub; ours is the 78 MB native image, which made the
   MSI 110 MB around 36 MB of compressed files. Its `main.wxs` takes that file from the `JpIcon`
@@ -93,7 +100,15 @@ The jlink image's numbers, before the native image and libjpeg-turbo, are kept i
   appimagetool and the runtime are release builds pinned by SHA-256, cached in
   `~/.cache/mirada/appimage`; `MIRADA_APPDIR_ONLY=1` stops at the AppDir, without them. Like the
   deb it takes GTK and the rest from the system, so the glibc floor applies to it too. GitHub's
-  runners have no FUSE: the smoke test runs it with `APPIMAGE_EXTRACT_AND_RUN=1`.
+  runners have no FUSE: the smoke test runs it with `APPIMAGE_EXTRACT_AND_RUN=1`. Its AppStream
+  metainfo is `packaging/linux/io.github.adriandeleon.Mirada.metainfo.xml` (REL-09), whose version,
+  date and media types the script fills in.
+- **The stylesheets ship precompiled** (PERF-17): `-Pdist` runs `ui/StyleCompiler` at
+  `process-classes`, which writes a `.bss` beside each `.css` in `target/classes`, so jlink and the
+  native image take both; `UiZoom.sheet` loads the `.bss` at 100 % and scales the `.css` at any
+  other zoom. A plain build has no `.bss`, and loads the `.css`. The native metadata lists
+  `com/mirada/styles/*.bss` by hand (`native-metadata.sh` adds it), as a run from the plain classes
+  never reads one.
 - **The macOS dmg is `hdiutil`, not jpackage**, whose dmg step wants the Java runtime inside the
   bundle. The document types are written into `Info.plist` by `fix-mac-bundle.sh` from
   `packaging/file-types.txt`, which the other installers' file associations read too.

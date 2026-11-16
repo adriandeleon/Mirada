@@ -30,10 +30,22 @@ import static com.mirada.i18n.Messages.tr;
 final class InfoPanel {
 
     private final ScrollPane node;
-    private final VBox cards = new VBox(14);
+    private final VBox cards = UiZoom.vbox(14);
     private final Consumer<Command> run;
     private @Nullable ImageDetails shown;
     private Marks shownMarks = Marks.NONE;
+    /** All Metadata on screen now, null when the image has none. */
+    private @Nullable TitledPane metadata;
+    /** Whether All Metadata is unfolded: the user's choice, kept from image to image. */
+    private boolean metadataExpanded;
+    /** The command buttons on screen now, renamed when the keys change (TBAR-03). */
+    private final java.util.Map<Button, Command> buttons = new java.util.LinkedHashMap<>();
+
+    /**
+     * The most tags All Metadata lists (PERF-08): a file can carry thousands (a maker note, an XMP
+     * history), each a few nodes; the count of the rest is said under the last.
+     */
+    static final int MAX_METADATA_ROWS = 300;
 
     /**
      * What the user has kept on the image and its folder ({@link com.mirada.settings.Bookmarks}):
@@ -55,8 +67,8 @@ final class InfoPanel {
         node.getStyleClass().add("info-panel");
         node.setFitToWidth(true);
         node.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        node.setPrefWidth(320);
-        node.setMinWidth(280);
+        UiZoom.bind(node.prefWidthProperty(), 320);
+        UiZoom.bind(node.minWidthProperty(), 280);
         node.setFocusTraversable(false);
     }
 
@@ -69,6 +81,8 @@ final class InfoPanel {
         shown = details;
         shownMarks = marks;
         cards.getChildren().clear();
+        buttons.clear();
+        metadata = null;
         if (details == null) {
             Label none = new Label(tr("info.noImage"));
             none.getStyleClass().add("info-empty");
@@ -79,7 +93,7 @@ final class InfoPanel {
         ZoneId zone = ZoneId.systemDefault();
 
         // The folder in the file manager, with this image selected: Show in Folder, as the menus have it.
-        Button open = Icons.button(Command.SHOW_IN_FOLDER, "info-action", () -> run.accept(Command.SHOW_IN_FOLDER));
+        Button open = commandButton(Command.SHOW_IN_FOLDER);
 
         if (marks.any()) cards.getChildren().add(marksCard(marks));
         cards.getChildren()
@@ -102,7 +116,33 @@ final class InfoPanel {
                             .map(r -> row(r.label(), r.value(), null))
                             .toArray(HBox[]::new)));
         }
-        if (!details.exif().all().isEmpty()) cards.getChildren().add(allMetadata(details.exif()));
+        if (!details.exif().all().isEmpty()) {
+            TitledPane pane = allMetadata(details.exif(), metadataExpanded);
+            pane.expandedProperty().addListener((o, was, now) -> metadataExpanded = now);
+            metadata = pane;
+            cards.getChildren().add(pane);
+        }
+    }
+
+    /** Whether All Metadata is unfolded now. */
+    boolean metadataExpanded() {
+        return metadataExpanded;
+    }
+
+    /**
+     * Unfolds All Metadata, or folds it (the {@link Command#ALL_METADATA} command, KBD-15: the
+     * keyboard's way to the folded card, which is out of the Tab order), and scrolls it into sight.
+     */
+    void setMetadataExpanded(boolean expanded) {
+        metadataExpanded = expanded;
+        TitledPane pane = metadata;
+        if (pane == null) return;
+        pane.setExpanded(expanded);
+        if (!expanded) return;
+        // Its title at the top of the sidebar, its first tags under it.
+        node.layout();
+        double room = cards.getHeight() - node.getViewportBounds().getHeight();
+        if (room > 0) node.setVvalue(Math.min(1, pane.getBoundsInParent().getMinY() / room));
     }
 
     /**
@@ -125,36 +165,98 @@ final class InfoPanel {
     }
 
     private Button editButton(Command command) {
-        return Icons.button(command, "info-action", () -> run.accept(command));
+        return commandButton(command);
+    }
+
+    private Button commandButton(Command command) {
+        Button button = Icons.button(command, "info-action", () -> run.accept(command));
+        buttons.put(button, command);
+        return button;
+    }
+
+    /**
+     * The command buttons named again from their titles and the chords now (TBAR-03): the keys
+     * changed while the same image is on screen, which {@link #show} does not build again.
+     */
+    void relabel() {
+        buttons.forEach((button, command) -> Icons.name(button, command));
+    }
+
+    /** The command buttons on screen now, for the tests. */
+    java.util.Map<Button, Command> buttons() {
+        return java.util.Collections.unmodifiableMap(buttons);
     }
 
     /**
      * Every tag, by directory, folded away until asked for: dozens of rows a photographer sometimes
-     * needs and usually does not.
+     * needs and usually does not. Its rows are made the first time it is unfolded, and at most
+     * {@link #MAX_METADATA_ROWS} of them.
      */
-    private static TitledPane allMetadata(ExifDetails exif) {
-        VBox sections = new VBox(12);
+    private static TitledPane allMetadata(ExifDetails exif, boolean expanded) {
+        TitledPane pane = new TitledPane();
+        pane.setText(tr("info.allMetadata"));
+        pane.getStyleClass().add("metadata-pane");
+        pane.setAnimated(false);
+        pane.setFocusTraversable(false);
+        if (expanded) pane.setContent(metadataRows(exif));
+        else {
+            pane.expandedProperty().addListener((o, was, now) -> {
+                if (now && pane.getContent() == null) pane.setContent(metadataRows(exif));
+            });
+        }
+        pane.setExpanded(expanded);
+        return pane;
+    }
+
+    private static VBox metadataRows(ExifDetails exif) {
+        VBox sections = UiZoom.vbox(12);
         sections.getStyleClass().add("metadata-sections");
-        for (ExifDetails.Section section : exif.all()) {
+        List<ExifDetails.Section> shown = firstRows(exif.all(), MAX_METADATA_ROWS);
+        for (ExifDetails.Section section : shown) {
             Label title = new Label(section.title());
             title.getStyleClass().add("metadata-section");
-            VBox rows = new VBox(4, title);
+            VBox rows = UiZoom.vbox(4, title);
             for (ExifDetails.Row row : section.rows()) {
                 Label name = new Label(row.label());
                 name.getStyleClass().add("metadata-label");
                 Label value = new Label(row.value());
                 value.getStyleClass().add("metadata-value");
                 value.setWrapText(true);
-                rows.getChildren().add(new VBox(0, name, value));
+                rows.getChildren().add(UiZoom.vbox(0, name, value));
             }
             sections.getChildren().add(rows);
         }
-        TitledPane pane = new TitledPane(tr("info.allMetadata"), sections);
-        pane.getStyleClass().add("metadata-pane");
-        pane.setExpanded(false);
-        pane.setAnimated(false);
-        pane.setFocusTraversable(false);
-        return pane;
+        int left = rowCount(exif.all()) - rowCount(shown);
+        if (left > 0) {
+            Label more = new Label(tr("info.moreMetadata", left));
+            more.getStyleClass().add("metadata-label");
+            more.setWrapText(true);
+            sections.getChildren().add(more);
+        }
+        return sections;
+    }
+
+    /**
+     * The sections cut to their first {@code max} rows in all, in order; a section left with no row
+     * is left out. Pure.
+     */
+    static List<ExifDetails.Section> firstRows(List<ExifDetails.Section> sections, int max) {
+        List<ExifDetails.Section> kept = new ArrayList<>();
+        int room = max;
+        for (ExifDetails.Section section : sections) {
+            if (room <= 0) break;
+            List<ExifDetails.Row> rows = section.rows();
+            if (rows.size() > room) rows = rows.subList(0, room);
+            if (!rows.isEmpty()) kept.add(new ExifDetails.Section(section.title(), List.copyOf(rows)));
+            room -= rows.size();
+        }
+        return kept;
+    }
+
+    private static int rowCount(List<ExifDetails.Section> sections) {
+        int count = 0;
+        for (ExifDetails.Section section : sections) count += section.rows().size();
+        return count;
     }
 
     private static VBox card(HBox... rows) {
@@ -170,9 +272,9 @@ final class InfoPanel {
         Label text = new Label(value);
         text.getStyleClass().add("info-value");
         text.setWrapText(true);
-        VBox words = new VBox(2, name, text);
+        VBox words = UiZoom.vbox(2, name, text);
         HBox.setHgrow(words, Priority.ALWAYS);
-        HBox row = new HBox(8, words);
+        HBox row = UiZoom.hbox(8, words);
         row.getStyleClass().add("info-row");
         row.setAlignment(Pos.CENTER_LEFT);
         if (action != null) row.getChildren().add(action);

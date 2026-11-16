@@ -3,7 +3,6 @@ package com.mirada.ui;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -55,6 +54,7 @@ final class ReportProblemWindow {
         report.setWrapText(true);
         report.setPrefRowCount(18);
         report.getStyleClass().add("report-text");
+        report.setAccessibleText(tr("report.title"));
 
         stage.setTitle(tr("report.title"));
         WindowIcon.applyTo(stage);
@@ -72,12 +72,12 @@ final class ReportProblemWindow {
         cancel.setOnAction(e -> stage.hide());
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox footer = new HBox(8, spacer, cancel, submit);
+        HBox footer = UiZoom.hbox(8, spacer, cancel, submit);
 
-        VBox root = new VBox(10, note, environmentBlock, report, footer);
+        VBox root = UiZoom.vbox(10, note, environmentBlock, report, footer);
         VBox.setVgrow(report, Priority.ALWAYS);
-        root.setPadding(new Insets(16));
-        root.setPrefWidth(WIDTH);
+        UiZoom.pad(root, 16);
+        UiZoom.bind(root.prefWidthProperty(), WIDTH);
         root.getStyleClass().add("report-problem");
         Scene scene = new Scene(root);
         scene.getStylesheets().add(stylesheet);

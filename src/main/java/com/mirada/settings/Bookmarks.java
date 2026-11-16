@@ -232,7 +232,7 @@ public final class Bookmarks {
     }
 
     private static boolean flag(@Nullable String value) {
-        return value != null && Boolean.parseBoolean(value.strip());
+        return Settings.booleanOf(value, false);
     }
 
     /** What is kept on {@code path}, or null for nothing. */
@@ -297,6 +297,13 @@ public final class Bookmarks {
         if (!marks.containsKey(key)) return false;
         change(marks -> marks.remove(key));
         return true;
+    }
+
+    /** Puts back a mark {@link #remove} took off, its bookmark and its note: the Bookmarks window's undo. */
+    public void restore(Mark mark) {
+        ensureLoaded();
+        Mark back = new Mark(key(mark.path()), mark.folder(), mark.bookmarked(), mark.note());
+        change(marks -> put(marks, back));
     }
 
     /**

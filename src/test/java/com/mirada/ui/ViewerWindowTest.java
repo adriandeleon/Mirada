@@ -10,7 +10,8 @@ import java.util.Objects;
 
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.CheckMenuItem;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
@@ -18,6 +19,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
@@ -28,7 +30,9 @@ import com.mirada.AppInfo;
 import com.mirada.diagnostics.DebugLog;
 import com.mirada.folder.FolderImages;
 import com.mirada.folder.Sorting;
+import com.mirada.os.Os;
 import com.mirada.settings.Bookmarks;
+import com.mirada.settings.Settings;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
@@ -86,6 +90,31 @@ class ViewerWindowTest {
         return window.field("root");
     }
 
+    /** A key pressed and let go on the window's focus owner, as the toolkit sends a press. */
+    private static void type(WindowFixture window, KeyCode code) throws Exception {
+        fx(() -> press(window, code));
+    }
+
+    /** {@link #type} on the FX thread. */
+    private static void press(WindowFixture window, KeyCode code) {
+        Scene scene = window.stage.getScene();
+        Node target = scene.getFocusOwner() != null ? scene.getFocusOwner() : scene.getRoot();
+        javafx.event.Event.fireEvent(
+                target, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, false, false, false));
+        Node now = scene.getFocusOwner() != null ? scene.getFocusOwner() : scene.getRoot();
+        javafx.event.Event.fireEvent(
+                now, new KeyEvent(KeyEvent.KEY_RELEASED, "", "", code, false, false, false, false));
+    }
+
+    /** The menu the in-window menu bar has the keyboard on, or null outside its menu mode. */
+    private static @Nullable Object menuFocus(javafx.scene.control.MenuBar bar) {
+        return bar.queryAccessibleAttribute(javafx.scene.AccessibleAttribute.FOCUS_NODE);
+    }
+
+    private static @Nullable Object metadataTicked(WindowFixture window) {
+        return FxTestSupport.invoke(window.window, "ticked", new Class<?>[] {Command.class}, Command.ALL_METADATA);
+    }
+
     /** Every label's text under {@code node}, for what a panel shows. */
     private static List<String> texts(Node node) {
         List<String> found = new ArrayList<>();
@@ -100,12 +129,49 @@ class ViewerWindowTest {
         if (node instanceof Parent parent) for (Node child : parent.getChildrenUnmodifiable()) collect(child, found);
     }
 
+    /** TBAR-03: the sidebar's command buttons are named again when the keys change, the image the same. */
+    @Test
+    void theSidebarsButtonsFollowTheKeys() throws Exception {
+        try (WindowFixture window = open("a.png")) {
+            window.run(Command.INFO);
+            FxTestSupport.drain();
+            InfoPanel panel = call(() -> window.field("info"));
+            waitUntil("the sidebar's cards", () -> !panel.buttons().isEmpty());
+            Button show = call(() -> panel.buttons().entrySet().stream()
+                    .filter(e -> e.getValue() == Command.SHOW_IN_FOLDER)
+                    .map(java.util.Map.Entry::getKey)
+                    .findFirst()
+                    .orElseThrow());
+            assertEquals(
+                    Icons.tooltip(Command.SHOW_IN_FOLDER),
+                    call(() -> show.getTooltip().getText()));
+            try {
+                fx(() -> {
+                    Keybindings.use(
+                            Settings.DEFAULT_KEYMAP,
+                            java.util.Map.of("file.showInFolder", "f9"),
+                            Settings.defaultPaletteKeys(com.mirada.os.Os.isMac()));
+                    FxTestSupport.invoke(window.window, "relabelButtons", new Class<?>[0]);
+                });
+                assertTrue(
+                        call(() -> show.getTooltip().getText()).endsWith("(F9)"),
+                        call(() -> show.getTooltip().getText()));
+                assertEquals(call(() -> show.getTooltip().getText()), call(show::getAccessibleText));
+            } finally {
+                fx(() -> Keybindings.use(
+                        Settings.DEFAULT_KEYMAP,
+                        java.util.Map.of(),
+                        Settings.defaultPaletteKeys(com.mirada.os.Os.isMac())));
+            }
+        }
+    }
+
     // ---- Stepping through the folder ----
 
     @Test
     void theArrowKeysHomeAndEndWalkTheFolderAndTheTitleFollows() throws Exception {
         try (WindowFixture window = open("a.png")) {
-            assertEquals("a.png — " + AppInfo.NAME, call(window.stage::getTitle));
+            assertEquals("a.png — photos — " + AppInfo.NAME, call(window.stage::getTitle));
             window.press(KeyCode.RIGHT);
             window.waitForImage("b.png");
             window.press(KeyCode.END);
@@ -165,6 +231,10 @@ class ViewerWindowTest {
                     () -> placeholder.getText().equals("Mirada can't open TXT files yet"));
             // The empty window offers to open something, and Open Image's own dialog answers.
             assertNotNull(window.field("openButtons"));
+            // WELC-02: each way in shows its chord, from the keymap.
+            List<String> ways = call(() -> texts(window.field("openButtons")));
+            assertTrue(ways.contains(Command.OPEN.chord().getDisplayText()), ways.toString());
+            assertTrue(ways.contains(Command.OPEN_FOLDER.chord().getDisplayText()), ways.toString());
             FileDialogs.answeredBy(
                     (title, folder, name) -> photos.resolve("b.png").toFile());
             window.run(Command.OPEN);
@@ -185,7 +255,8 @@ class ViewerWindowTest {
                 return title.equals("Open Folder") ? other.getParent().toFile() : null;
             });
             window.run(Command.OPEN);
-            assertEquals("a.png — " + AppInfo.NAME, call(window.stage::getTitle), "cancelled: nothing changes");
+            assertEquals(
+                    "a.png — photos — " + AppInfo.NAME, call(window.stage::getTitle), "cancelled: nothing changes");
             window.run(Command.OPEN_FOLDER);
             window.waitForImage("x.png");
             assertEquals(List.of("Open Image", "Open Folder"), titles);
@@ -365,12 +436,18 @@ class ViewerWindowTest {
             window.press(KeyCode.I);
             BorderPane root = root(window);
             assertNotNull(call(root::getRight), "the sidebar is open");
+            // KBD-15: All Metadata, out of the Tab order, unfolds from the keyboard by its command;
+            // its rows (the file's name among them) are made as it unfolds, and stay so image to image.
+            window.run(Command.ALL_METADATA);
             waitUntil("the details of a.png", () -> texts(root.getRight()).contains("a.png"));
+            assertEquals(true, call(() -> metadataTicked(window)));
             assertTrue(call(() -> texts(root.getRight())).contains("64 × 48"), "the size, as shown");
             window.run(Command.ROTATE_CLOCKWISE);
             waitUntil("the turned size", () -> texts(root.getRight()).contains("48 × 64"));
             window.run(Command.NEXT);
             waitUntil("the details of b.png", () -> texts(root.getRight()).contains("b.png"));
+            window.run(Command.ALL_METADATA);
+            assertEquals(false, call(() -> metadataTicked(window)), "folded again");
             window.run(Command.INFO);
             assertNull(call(root::getRight), "closed again");
         }
@@ -469,7 +546,8 @@ class ViewerWindowTest {
                 return exported.toFile();
             });
             window.run(Command.EXPORT_DEBUG_LOG);
-            waitUntil("the export", () -> Files.exists(exported));
+            // Saying it comes after the write: a file that merely exists may not have its text yet.
+            window.waitToSay("Saved the Debug Log");
             assertTrue(Files.readString(exported).contains("a line for the log"));
             window.run(Command.CLEAR_DEBUG_LOG);
             assertFalse(DebugLog.text().contains("a line for the log"));
@@ -591,7 +669,7 @@ class ViewerWindowTest {
             WindowFixture.answerNextDialog(pane -> {
                 assertEquals("a.png", ((TextField) pane.lookup(".text-field")).getText());
                 WindowFixture.type(pane, "harbour");
-                WindowFixture.press(pane, "OK");
+                WindowFixture.press(pane, "Rename");
             });
             window.run(Command.RENAME);
             window.waitToSay("Renamed to harbour.png"); // the extension kept
@@ -601,14 +679,14 @@ class ViewerWindowTest {
 
             WindowFixture.answerNextDialog(pane -> {
                 WindowFixture.type(pane, "b.png");
-                WindowFixture.press(pane, "OK");
+                WindowFixture.press(pane, "Rename");
             });
             window.run(Command.RENAME);
             window.waitToSay("Not renamed: b.png already exists");
 
             WindowFixture.answerNextDialog(pane -> {
                 WindowFixture.type(pane, "a/b");
-                WindowFixture.press(pane, "OK");
+                WindowFixture.press(pane, "Rename");
             });
             window.run(Command.RENAME);
             assertTrue(window.lastSaid().startsWith("Not renamed: "), window.lastSaid());
@@ -699,11 +777,44 @@ class ViewerWindowTest {
         }
     }
 
+    /**
+     * MENU-17: F10 takes the keyboard to the in-window menu bar, and the arrows then walk the menus,
+     * not the folder; Escape gives the keys back to the window.
+     */
     @Test
-    void escapeClosesTheWindowOnLinuxOnly() throws Exception {
+    void f10OpensTheMenuBarAndTheArrowsWalkItNotTheFolder() throws Exception {
+        if (Os.isMac()) return; // a Mac's menus are the system's, reached with its own keys
+        try (WindowFixture window = open("a.png")) {
+            window.waitForFirstPaint();
+            TitleBar titleBar = window.field("titleBar");
+            javafx.scene.control.MenuBar bar = call(titleBar::menuBar);
+            assertNotNull(bar);
+            // The keys go to the window's focus owner, as the toolkit would send them: no robot, whose
+            // keys reach whichever window the platform holds focused. The menu bar leaves its menu
+            // mode whenever its window loses the focus, which another test's window can take a moment
+            // after this one shows: wait until the window has it, then press F10, and again if the
+            // focus went in between.
+            waitUntil("the menu bar has the keyboard", () -> {
+                if (menuFocus(bar) != null) return true;
+                if (!window.stage.isFocused()) window.stage.requestFocus();
+                else press(window, KeyCode.F10);
+                return menuFocus(bar) != null;
+            });
+            type(window, KeyCode.RIGHT);
+            assertNotNull(call(() -> menuFocus(bar)), "the menu bar keeps the keyboard");
+            assertEquals(0, folder(window).index(), "Right walked the menus, not the folder");
+            type(window, KeyCode.ESCAPE);
+            type(window, KeyCode.RIGHT);
+            window.waitForImage("b.png");
+        }
+    }
+
+    @Test
+    void escapeNeverClosesTheWindowOnAnyOs() throws Exception {
+        // OS-04: one behaviour everywhere; a stray press never loses the user's place.
         try (WindowFixture window = open("a.png")) {
             window.press(KeyCode.ESCAPE);
-            assertEquals(Command.escapeCloses(System.getProperty("os.name")), !call(window.stage::isShowing));
+            assertTrue(call(window.stage::isShowing));
         }
     }
 
@@ -753,11 +864,13 @@ class ViewerWindowTest {
                     .filter(i -> Command.INFO.label().equals(i.getText()))
                     .findFirst()
                     .orElseThrow();
-            assertTrue(((CheckMenuItem) info).isSelected(), "the sidebar is open: ticked");
-            Menu sort = (Menu) items.stream()
-                    .filter(i -> "Sort".equals(i.getText()))
-                    .findFirst()
-                    .orElseThrow();
+            javafx.scene.Node tick =
+                    ((javafx.scene.control.CustomMenuItem) info).getContent().lookup(".menu-item-tick");
+            assertTrue(
+                    tick instanceof javafx.scene.control.Label l && AppMenus.TICK.equals(l.getText()),
+                    "the sidebar is open: ticked");
+            Menu sort = (Menu)
+                    items.stream().filter(i -> i instanceof Menu).findFirst().orElseThrow();
             assertFalse(sort.isDisable());
             fx(() -> sort.getItems().get(2).fire());
             assertEquals(Sorting.By.SIZE, window.settings.sorting().by(), "the menu's item runs its command");
@@ -765,9 +878,16 @@ class ViewerWindowTest {
                     .filter(i -> Command.COPY.label().equals(i.getText()))
                     .findFirst()
                     .orElseThrow();
-            assertFalse(copy.isDisable());
+            assertFalse(copy.getStyleClass().contains("unavailable"));
             fx(copy::fire);
             window.waitToSay("Copied a.png");
+            // Move to Trash is drawn as dangerous (MENU-12).
+            assertTrue(items.stream()
+                    .filter(i -> i.getUserData() == Command.MOVE_TO_TRASH)
+                    .findFirst()
+                    .orElseThrow()
+                    .getStyleClass()
+                    .contains("danger"));
             for (Command command : Command.values()) {
                 FxTestSupport.invoke(window.window, "ticked", new Class<?>[] {Command.class}, command);
             }
@@ -819,7 +939,7 @@ class ViewerWindowTest {
             assertTrue(call(editor::isShowing));
             window.run(Command.NEXT);
             assertEquals("Finish editing first: Save or Cancel", window.lastSaid());
-            assertEquals("a.png — " + AppInfo.NAME, call(window.stage::getTitle));
+            assertEquals("a.png — photos — " + AppInfo.NAME, call(window.stage::getTitle));
 
             window.press(KeyCode.ENTER);
             assertEquals("Nothing to save: crop, turn or flip first", window.lastSaid());
@@ -829,6 +949,8 @@ class ViewerWindowTest {
             assertEquals(said, window.said().size());
             assertTrue(call(editor::isShowing));
             window.press(KeyCode.R);
+            // TABS-10: an unsaved edit marks the title.
+            assertEquals("\u25CF a.png — photos — " + AppInfo.NAME, call(window.stage::getTitle));
             window.press(KeyCode.H);
             window.press(KeyCode.V);
             window.press(KeyCode.Z, true, false); // undo the flip
@@ -940,9 +1062,46 @@ class ViewerWindowTest {
             });
             window.press(KeyCode.ESCAPE);
             assertTrue(call(editor::isShowing), "kept: the user said Cancel");
-            WindowFixture.answerNextDialog(pane -> WindowFixture.press(pane, "Discard"));
+
+            // CONF-13: Enter on the question as it opens is Save, never Discard; the save dialog,
+            // cancelled, leaves the edit open.
+            java.util.concurrent.atomic.AtomicBoolean savedAs = new java.util.concurrent.atomic.AtomicBoolean();
+            FileDialogs.answeredBy((title, folder, name) -> {
+                savedAs.set(true);
+                return null;
+            });
+            WindowFixture.answerNextDialog(pane -> javafx.event.Event.fireEvent(
+                    pane, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.ENTER, false, false, false, false)));
+            window.press(KeyCode.ESCAPE);
+            assertTrue(savedAs.get(), "Enter is Save");
+            assertTrue(call(editor::isShowing), "nothing discarded");
+
+            // CONF-12: the rest answered without a dialog. Save, written, quits as asked.
+            Confirm.answeredBy(q -> Confirm.Answer.SAVE);
+            FileDialogs.answeredBy(
+                    (title, folder, name) -> photos.resolve("turned.png").toFile());
+            window.run(Command.CLOSE);
+            waitUntil("saved and closed", () -> !window.stage.isShowing());
+            assertTrue(Files.exists(photos.resolve("turned.png")));
+        } finally {
+            Confirm.answeredBy(null);
+            FileDialogs.answeredBy(null);
+        }
+    }
+
+    @Test
+    void discardingAnEditClosesTheWindowWithoutSaving() throws Exception {
+        try (WindowFixture window = open("a.png")) {
+            window.run(Command.EDIT);
+            window.press(KeyCode.R);
+            Confirm.answeredBy(q -> Confirm.Answer.CANCEL);
+            window.run(Command.CLOSE);
+            assertTrue(call(window.stage::isShowing), "Cancel keeps the window");
+            Confirm.answeredBy(q -> Confirm.Answer.ACTION);
             window.run(Command.CLOSE);
             assertFalse(call(window.stage::isShowing), "discarded, and the window closed");
+        } finally {
+            Confirm.answeredBy(null);
         }
     }
 

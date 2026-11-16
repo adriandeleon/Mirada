@@ -3,12 +3,12 @@ package com.mirada.ui;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import javafx.scene.input.KeyCombination;
 
 import com.mirada.i18n.Messages;
+import com.mirada.os.Os;
 import org.jspecify.annotations.Nullable;
 
 import static com.mirada.i18n.Messages.tr;
@@ -39,6 +39,13 @@ enum Command {
     ROTATE_CLOCKWISE("image.rotateRight", "turn"),
     ROTATE_COUNTERCLOCKWISE("image.rotateLeft", "turn"),
     FULL_SCREEN("view.fullScreen", "view"),
+    /**
+     * The interface's zoom (WIN-12): the whole chrome, menus and status bar included, never the
+     * image, whose zoom is {@link #ZOOM_IN} and the rest on Ctrl+=, Ctrl+- and Ctrl+0 (WIN-09).
+     */
+    UI_ZOOM_IN("view.uiZoomIn", "interface larger bigger text font size menus chrome accessibility scale"),
+    UI_ZOOM_OUT("view.uiZoomOut", "interface smaller text font size menus chrome scale"),
+    UI_ZOOM_RESET("view.uiZoomReset", "interface default normal 100 text font size menus chrome scale"),
     EDIT("image.edit", "crop rotate flip edit save"),
     RENAME("file.rename", "file name"),
     UNDO_TRASH("file.undoMoveToTrash", "restore put back undelete recover"),
@@ -57,12 +64,20 @@ enum Command {
     SORT_BY_DATE("folder.sortByDate", "order modified time"),
     SORT_BY_SIZE("folder.sortBySize", "order"),
     REVERSE_ORDER("folder.reverseOrder", "sort descending ascending"),
-    INFO("view.properties", "info details exif metadata sidebar"),
-    THUMBNAILS("view.thumbnails", "filmstrip strip gallery browse folder"),
+    INFO("tool.properties", "info details exif metadata sidebar"),
+    /**
+     * The properties sidebar with All Metadata unfolded, or folded again: the keyboard's way to that
+     * card, which stays out of the Tab order so Space keeps stepping the folder (KBD-15).
+     */
+    ALL_METADATA("view.allMetadata", "exif xmp iptc tags details info properties sidebar unfold expand"),
+    THUMBNAILS("tool.thumbnails", "filmstrip strip gallery browse folder"),
     THUMBNAILS_AT_SIDE("view.thumbnailsAtSide", "vertical column filmstrip strip left layout"),
     THUMBNAIL_NAMES("view.thumbnailNames", "names list text filmstrip strip filenames"),
     THUMBNAIL_CAPTIONS("view.thumbnailCaptions", "captions labels titles filmstrip strip filenames"),
-    /** Leaves full screen, or on Linux closes the window: look, then go ({@link #escapeCloses}). */
+    /**
+     * Stops the slideshow or leaves full screen; with nothing to leave it does nothing, on every OS
+     * (OS-04): a stray press never loses the user's place.
+     */
     ESCAPE("window.escape", ""),
     SETTINGS("app.settings", "preferences options configure"),
     // One command for each setting that has no other (SET-06, Pauta 4.0.1): it flips the setting, or
@@ -74,8 +89,13 @@ enum Command {
     PROPERTIES_AT_START("settings.propertiesAtStart", "startup launch info details sidebar open"),
     HIDE_CONTROLS_AFTER("settings.hideControlsAfter", "delay fade timeout overlay buttons seconds"),
     SLIDESHOW_SPEED("settings.slideshowSpeed", "interval delay seconds play pace"),
+    UI_ZOOM("settings.uiZoom", "interface size scale larger smaller text font menus chrome accessibility zoom"),
     PALETTE_KEYS("settings.paletteKeys", "shortcut keys bindings palette"),
+    /** Settings' Default button beside the palette's keys (KBD-01): the keys it opens with at first. */
+    RESET_PALETTE_KEYS("settings.resetPaletteKeys", "default shortcut keys bindings palette restore"),
     CHECK_DAILY("settings.checkForUpdatesDaily", "automatic update version network release"),
+    /** The menu bar in the title bar, or under the system's (WIN-03): takes effect at the next start. */
+    TITLE_BAR_MENUS("settings.titleBarMenus", "menu bar header title frame decorated window chrome"),
     /** Export Configuration (SET-12): the config folder as a timestamped zip. */
     EXPORT_CONFIG("config.export", "settings preferences backup save zip copy move"),
     /** Import Configuration (SET-12): the parts of an exported zip the user ticks. */
@@ -90,19 +110,44 @@ enum Command {
     COPY_DEBUG_LOG("help.copyDebugLog", "diagnostics clipboard logging"),
     EXPORT_DEBUG_LOG("help.exportDebugLog", "diagnostics save file logging"),
     CLEAR_DEBUG_LOG("help.clearDebugLog", "diagnostics logging empty"),
+    /**
+     * The Debug Log's find bar (FIND-04): opens it over the log, and run while it is open finds the
+     * next match. Its keys work in the Debug Log window ({@link Context#DEBUG_LOG}).
+     */
+    DEBUG_LOG_FIND("log.find", "search look text diagnostics logging next"),
+    /** The find bar's Previous button and Shift+Enter (KBD-01): the match before, wrapping. */
+    DEBUG_LOG_FIND_PREVIOUS("log.findPrevious", "search look text diagnostics logging back"),
+    /** The find bar's Match case box (KBD-01): the search tells capitals apart, or stops. */
+    DEBUG_LOG_MATCH_CASE("log.findMatchCase", "search case sensitive capitals uppercase diagnostics logging"),
+    /** The Debug Log's Refresh button (KBD-01): what is logged now. */
+    DEBUG_LOG_REFRESH("log.refresh", "reload update diagnostics logging"),
     REPORT_PROBLEM("help.reportProblem", "bug issue feedback support crash help"),
     CHECK_FOR_UPDATES("help.checkForUpdates", "update version release new upgrade"),
     OPEN_RELEASE("help.openRelease", "update download upgrade version"),
     OPEN("file.open", "file"),
     OPEN_FOLDER("file.openFolder", "directory browse"),
     OPEN_RECENT("file.openRecent", "recent history folders previous last"),
-    CLOSE("window.close", "quit exit"),
+    CLOSE("window.close", "exit"),
+    /** File → Quit (WIN-14): the one quit method, which the window's own close and macOS's Quit run too. */
+    QUIT("app.quit", "exit close leave"),
     /** Its keys are the user's ({@code palette.keys}, {@link PaletteChords}), on top of the keymap's. */
     PALETTE("palette.show", ""),
-    /** Help → Documentation (DOCS-06, Pauta 4.0.1): the user guide on the website, in the browser. */
+    /** Help → Documentation (DOCS-06): the user guide on the website, in the browser. */
     DOCUMENTATION("help.documentation", "help manual guide docs website"),
     /** About's Copy details, which needs no About window: what a bug report needs (ABOUT-03). */
     COPY_DETAILS("help.copyDetails", "about version clipboard bug report environment"),
+    // About's links, each a command so the palette reaches it too (KBD-01, ABOUT-02).
+    HOME_PAGE("help.homePage", "website web site home about"),
+    RELEASE_NOTES("help.releaseNotes", "changelog changes new version about"),
+    RELEASES("help.releases", "source code repository github download versions about"),
+    /** The Pauta window (PWIN-01): the edition, the conformance and every exception. */
+    PAUTA("help.pauta", "guidelines conformance rules standard exceptions about"),
+    /** The edition's own page, never latest/ (PWIN-04, ABOUT-06). */
+    PAUTA_RULES("help.pautaRules", "guidelines edition rules standard"),
+    /** The website's page on Mirada's conformance (PWIN-07). */
+    PAUTA_DOCS("help.pautaDocs", "guidelines conformance website exceptions"),
+    /** The Pauta window's Copy as text (PWIN-06), which needs no window. */
+    COPY_PAUTA("help.copyPauta", "guidelines conformance clipboard markdown exceptions"),
     // The editor's tools: they run while the editor is open (Command.Context.EDITOR).
     EDITOR_ROTATE_LEFT("editor.rotateLeft", "turn crop"),
     EDITOR_ROTATE_RIGHT("editor.rotateRight", "turn crop"),
@@ -120,26 +165,22 @@ enum Command {
     BOOKMARKS_TOGGLE("bookmarks.toggleBookmark", "mark favourite favorite star"),
     BOOKMARKS_SHOW_IN_FOLDER("bookmarks.showInFolder", "reveal finder explorer files locate"),
     BOOKMARKS_REMOVE("bookmarks.remove", "delete forget"),
+    BOOKMARKS_UNDO_REMOVE("bookmarks.undoRemove", "restore put back undelete recover"),
     BOOKMARKS_LIST_ALL("bookmarks.listAll", "filter show everything"),
     BOOKMARKS_LIST_BOOKMARKED("bookmarks.listBookmarked", "filter show marked"),
     BOOKMARKS_LIST_NOTES("bookmarks.listNotes", "filter show comments");
 
-    /** Whether this is macOS, read once: its keymap is the {@code .mac.json} one ({@link Keymap#load}). */
-    static final boolean MAC = isMac(System.getProperty("os.name", ""));
-
-    /** Whether this is Windows, read once: its trash is the Recycle Bin ({@link #label(boolean, boolean)}). */
-    static final boolean WINDOWS =
-            System.getProperty("os.name", "").toLowerCase(Locale.ROOT).startsWith("windows");
-
     /**
-     * Where a command's keys work: the viewer, the editor while it is open, or the Bookmarks and
-     * Notes window. One key can mean a different command in each (R turns the image in the viewer
+     * Where a command's keys work: the viewer, the editor while it is open, the Bookmarks and Notes
+     * window, or the Debug Log window. One key can mean a different command in each (R turns the image in the viewer
      * and the picture being edited in the editor); the palette lists every command in all of them.
      */
     enum Context {
         VIEWER,
         EDITOR,
-        BOOKMARKS
+        BOOKMARKS,
+        /** The Debug Log window, whose find command takes the keys a find takes. */
+        DEBUG_LOG
     }
 
     /** Every command by its id, built once when first asked. */
@@ -204,15 +245,17 @@ enum Command {
                     BOOKMARKS_TOGGLE,
                     BOOKMARKS_SHOW_IN_FOLDER,
                     BOOKMARKS_REMOVE,
+                    BOOKMARKS_UNDO_REMOVE,
                     BOOKMARKS_LIST_ALL,
                     BOOKMARKS_LIST_BOOKMARKED,
                     BOOKMARKS_LIST_NOTES -> Context.BOOKMARKS;
+            case DEBUG_LOG_FIND, DEBUG_LOG_FIND_PREVIOUS, DEBUG_LOG_MATCH_CASE, DEBUG_LOG_REFRESH -> Context.DEBUG_LOG;
             default -> Context.VIEWER;
         };
     }
 
     String label() {
-        return label(MAC, WINDOWS);
+        return label(Os.isMac(), Os.isWindows());
     }
 
     /**
@@ -243,7 +286,7 @@ enum Command {
 
     /** One line, shown under the palette's list for the highlighted command. */
     String description() {
-        return tr(platformKey("command." + id + ".desc", MAC, WINDOWS));
+        return tr(platformKey("command." + id + ".desc", Os.isMac(), Os.isWindows()));
     }
 
     /**
@@ -301,7 +344,7 @@ enum Command {
                     SHOW_IN_FOLDER -> imageShowing ? null : tr("reason.noImage");
             case BOOKMARK, BOOKMARK_FOLDER, NOTE, FOLDER_NOTE, NEXT_BOOKMARK, PREVIOUS_BOOKMARK ->
                 size == 0 ? tr("reason.noFolder") : null;
-            case SLIDESHOW -> size < 2 ? "A slideshow needs a folder with more than one image." : null;
+            case SLIDESHOW -> size < 2 ? tr("reason.slideshowNeedsImages") : null;
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER, GO_TO_IMAGE ->
                 size == 0 ? tr("reason.noFolder") : null;
             default -> null;
@@ -326,8 +369,19 @@ enum Command {
     String group() {
         return switch (this) {
             case NEXT, PREVIOUS, FIRST, LAST, GO_TO_IMAGE, SLIDESHOW -> tr("group.folder");
-            case ZOOM_IN, ZOOM_OUT, FIT, ACTUAL_SIZE, KEEP_ZOOM, PAN_LEFT, PAN_RIGHT, PAN_UP, PAN_DOWN, FULL_SCREEN ->
-                tr("group.view");
+            case ZOOM_IN,
+                    ZOOM_OUT,
+                    FIT,
+                    ACTUAL_SIZE,
+                    KEEP_ZOOM,
+                    PAN_LEFT,
+                    PAN_RIGHT,
+                    PAN_UP,
+                    PAN_DOWN,
+                    FULL_SCREEN,
+                    UI_ZOOM_IN,
+                    UI_ZOOM_OUT,
+                    UI_ZOOM_RESET -> tr("group.view");
             case ROTATE_CLOCKWISE,
                     ROTATE_COUNTERCLOCKWISE,
                     EDIT,
@@ -345,7 +399,7 @@ enum Command {
                     GO_TO_BOOKMARK,
                     BOOKMARKS -> tr("group.bookmarks");
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER -> tr("group.order");
-            case INFO, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES, THUMBNAIL_CAPTIONS, STATUS_BAR ->
+            case INFO, ALL_METADATA, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES, THUMBNAIL_CAPTIONS, STATUS_BAR ->
                 tr("group.panels");
             case MESSAGE_LOG,
                     COPY_MESSAGES,
@@ -354,11 +408,22 @@ enum Command {
                     COPY_DEBUG_LOG,
                     EXPORT_DEBUG_LOG,
                     CLEAR_DEBUG_LOG,
+                    DEBUG_LOG_FIND,
+                    DEBUG_LOG_FIND_PREVIOUS,
+                    DEBUG_LOG_MATCH_CASE,
+                    DEBUG_LOG_REFRESH,
                     REPORT_PROBLEM,
                     CHECK_FOR_UPDATES,
                     OPEN_RELEASE,
-                    COPY_DETAILS -> tr("group.help");
-            case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, OPEN_FOLDER, OPEN_RECENT, CLOSE, PALETTE ->
+                    COPY_DETAILS,
+                    HOME_PAGE,
+                    RELEASE_NOTES,
+                    RELEASES,
+                    PAUTA,
+                    PAUTA_RULES,
+                    PAUTA_DOCS,
+                    COPY_PAUTA -> tr("group.help");
+            case ESCAPE, SETTINGS, SHORTCUTS, ABOUT, OPEN, OPEN_FOLDER, OPEN_RECENT, CLOSE, QUIT, PALETTE ->
                 tr("group.mirada");
             case THEME,
                     LANGUAGE,
@@ -367,8 +432,11 @@ enum Command {
                     PROPERTIES_AT_START,
                     HIDE_CONTROLS_AFTER,
                     SLIDESHOW_SPEED,
+                    UI_ZOOM,
                     PALETTE_KEYS,
+                    RESET_PALETTE_KEYS,
                     CHECK_DAILY,
+                    TITLE_BAR_MENUS,
                     EXPORT_CONFIG,
                     IMPORT_CONFIG -> tr("group.settings");
             case DOCUMENTATION -> tr("group.help");
@@ -387,22 +455,10 @@ enum Command {
                     BOOKMARKS_TOGGLE,
                     BOOKMARKS_SHOW_IN_FOLDER,
                     BOOKMARKS_REMOVE,
+                    BOOKMARKS_UNDO_REMOVE,
                     BOOKMARKS_LIST_ALL,
                     BOOKMARKS_LIST_BOOKMARKED,
                     BOOKMARKS_LIST_NOTES -> tr("group.bookmarksWindow");
         };
-    }
-
-    /**
-     * Whether Escape, with nothing to leave, closes the window. GNOME's viewer does, and Linux keeps
-     * it; on macOS and Windows no viewer does, and a stray press would lose the user's place.
-     */
-    static boolean escapeCloses(String osName) {
-        String os = osName.toLowerCase(Locale.ROOT);
-        return !os.startsWith("mac") && !os.startsWith("windows");
-    }
-
-    static boolean isMac(String osName) {
-        return osName.toLowerCase(Locale.ROOT).startsWith("mac");
     }
 }

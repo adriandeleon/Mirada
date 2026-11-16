@@ -4,6 +4,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 
+import com.mirada.os.Os;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,7 +52,7 @@ class MenuChordTest {
     }
 
     private static KeyEvent press(KeyCode code, boolean shortcut) {
-        boolean mac = System.getProperty("os.name", "").startsWith("Mac");
+        boolean mac = Os.host() == Os.Kind.MAC;
         return new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, shortcut && !mac, false, shortcut && mac);
     }
 }

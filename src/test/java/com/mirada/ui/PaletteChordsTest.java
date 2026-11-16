@@ -61,8 +61,12 @@ class PaletteChordsTest {
 
     @Test
     void thePaletteKeepsTheKeysItMovesAndEditsBy() {
-        assertTrue(PaletteChords.keptByPalette("C-p"));
-        assertTrue(PaletteChords.keptByPalette("C-n"));
+        Keybindings emacs = Keybindings.layered(Keymap.load("emacs", false), false, java.util.Map.of());
+        assertTrue(PaletteChords.keptByPalette("C-p", emacs));
+        assertTrue(PaletteChords.keptByPalette("C-n", emacs));
+        assertTrue(PaletteChords.keptByPalette("C-g", emacs));
+        Keybindings cua = Keybindings.layered(Keymap.load("cua", false), false, java.util.Map.of());
+        assertFalse(PaletteChords.keptByPalette("C-n", cua), "CUA moves no list by C-n");
         assertTrue(PaletteChords.keptByPalette("M-f"));
         assertTrue(PaletteChords.keptByPalette("escape"));
         assertFalse(PaletteChords.keptByPalette("M-x"));
@@ -80,7 +84,7 @@ class PaletteChordsTest {
 
     @Test
     void theMacMenuShowsTheFirstKey() {
-        assertTrue(MacMenus.title("Command Palette", Command.PALETTE)
+        assertTrue(AppMenus.title("Command Palette", Command.PALETTE)
                 .endsWith("   " + PaletteChords.current().getFirst().getDisplayText()));
     }
 

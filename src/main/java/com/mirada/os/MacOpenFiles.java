@@ -1,6 +1,5 @@
 package com.mirada.os;
 
-import java.io.IOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
@@ -11,11 +10,9 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.net.URI;
 import java.nio.file.FileSystemNotFoundException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -70,7 +67,7 @@ public final class MacOpenFiles {
      * the launch.
      */
     public static String listen() {
-        if (!isMac(System.getProperty("os.name"))) return "none (not macOS)";
+        if (Os.host() != Os.Kind.MAC) return "none (not macOS)";
         try {
             Observer.register();
             return "files";
@@ -117,11 +114,6 @@ public final class MacOpenFiles {
         file.ifPresent(to);
     }
 
-    static boolean isMac(@Nullable String osName) {
-        String os = osName == null ? "" : osName.toLowerCase(Locale.ROOT);
-        return os.contains("mac") || os.contains("darwin");
-    }
-
     /** One window shows one folder, so of several files opened at once the first is the one shown. */
     static Optional<Path> first(List<Path> files) {
         return files.stream().findFirst();
@@ -154,13 +146,12 @@ public final class MacOpenFiles {
         };
     }
 
-    /** The same file, however each was spelled (AppKit's is absolute, the argument as typed). */
+    /**
+     * The same file, however each was spelled (AppKit's is absolute, the argument as typed): compared
+     * as absolute, normalised paths, never by asking the disk, as this runs on the FX thread (PERF-01).
+     */
     static boolean same(Path a, Path b) {
-        try {
-            return Files.isSameFile(a, b);
-        } catch (IOException | SecurityException e) {
-            return a.toAbsolutePath().normalize().equals(b.toAbsolutePath().normalize());
-        }
+        return a.toAbsolutePath().normalize().equals(b.toAbsolutePath().normalize());
     }
 
     /**

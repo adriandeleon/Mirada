@@ -107,6 +107,8 @@ public final class ImageViewport extends Region {
         setOnZoom(this::onZoom);
         setOnSwipeLeft(e -> swipe(1));
         setOnSwipeRight(e -> swipe(-1));
+        // The picture, to a screen reader; what a press or a drag does, the keyboard's commands do (ACC-02).
+        setAccessibleRole(javafx.scene.AccessibleRole.IMAGE_VIEW);
         setOnMousePressed(this::onPressed);
         setOnMouseDragged(this::onDragged);
         // Back to none of its own, so the window's (hidden in full screen) shows through.

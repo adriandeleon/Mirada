@@ -19,7 +19,7 @@
 # Each platform's AWT reaches its own JNI (Windows' calls back into java.awt.Toolkit as it loads, for
 # one), so the committed file is the union of runs on Linux, macOS and Windows. MIRADA_METADATA_MERGE=1
 # merges this run into the committed file instead of replacing it; the Native metadata workflow does
-# that on macOS and Windows, and native-image-configure joins the results (docs/native-image.md).
+# that on macOS and Windows, and native-image-configure joins the results (docs/reference/native-image.md).
 #
 # Usage: GRAALVM_HOME=~/.sdkman/candidates/java/25.4.4.1+1-graal scripts/native-metadata.sh
 set -euo pipefail
@@ -73,7 +73,9 @@ if any(str(r.get("glob", "")).startswith(themes) for r in resources):
     resources = [r for r in resources if not str(r.get("glob", "")).startswith(themes)]
     resources.append({"glob": themes + "*.properties"})
 globs = {r.get("glob") for r in resources}
-for theme in ("atlantafx/base/theme/cupertino-light.bss", "atlantafx/base/theme/cupertino-dark.bss"):
+# Mirada's own stylesheets precompiled (PERF-17, -Pdist), which a run from the plain classes never reads.
+for theme in ("atlantafx/base/theme/cupertino-light.bss", "atlantafx/base/theme/cupertino-dark.bss",
+              "com/mirada/styles/*.bss"):
     if theme not in globs:
         resources.append({"glob": theme})
 data["resources"] = resources

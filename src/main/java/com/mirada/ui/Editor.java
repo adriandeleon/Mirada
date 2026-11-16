@@ -5,18 +5,19 @@ import java.io.IOException;
 import java.nio.IntBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import javafx.application.Platform;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
-import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelBuffer;
 import javafx.scene.image.PixelFormat;
@@ -95,6 +96,12 @@ final class Editor {
     private Raster uprightPreview = new Raster(1, 1, new int[] {0});
     private Edit edit = Edit.NONE;
     private final History<Step> history = new History<>(new Step(Edit.NONE, AspectRatio.FREE));
+    /** Whether the image has an edit not yet saved: the window title's ● (TABS-10). */
+    private final javafx.beans.property.ReadOnlyBooleanWrapper unsaved =
+            new javafx.beans.property.ReadOnlyBooleanWrapper();
+    /** The controls whose tooltip names a command, and that command, for {@link #relabel} (TBAR-03). */
+    private final Map<Control, Command> tipped = new LinkedHashMap<>();
+
     private final Button undoButton = tool(tr("editor.undo"), Command.EDITOR_UNDO);
     private final Button redoButton = tool(tr("editor.redo"), Command.EDITOR_REDO);
     /** True while the editor sets the shape itself, so the shape's listener records no step. */
@@ -125,9 +132,9 @@ final class Editor {
         Region right = new Region();
         HBox.setHgrow(left, Priority.ALWAYS);
         HBox.setHgrow(right, Priority.ALWAYS);
-        HBox top = new HBox(12, cancel, left, title, right, save);
+        HBox top = UiZoom.hbox(12, cancel, left, title, right, save);
         top.setAlignment(Pos.CENTER);
-        top.setPadding(new Insets(10, 14, 10, 14));
+        UiZoom.pad(top, 10, 14, 10, 14);
         top.getStyleClass().add("editor-bar");
 
         shape.getItems().addAll(AspectRatio.values());
@@ -148,23 +155,40 @@ final class Editor {
             shapeChanged();
             record();
         });
-        shape.setTooltip(new Tooltip(Icons.tooltip(tr("editor.shapeTooltip"), Command.EDITOR_NEXT_SHAPE.chord())));
+        tipped.put(shape, Command.EDITOR_NEXT_SHAPE);
         // Three groups that wrap to a second row rather than cut a word, in any language (INTL-04).
-        HBox shapeGroup = group(new Label(tr("editor.crop")), shape);
+        Label cropLabel = new Label(tr("editor.crop"));
+        cropLabel.setLabelFor(shape); // what a screen reader calls the shape (ACC-01)
+        HBox shapeGroup = group(cropLabel, shape);
         HBox turnGroup = group(
                 tool(tr("editor.rotateLeft"), Command.EDITOR_ROTATE_LEFT),
                 tool(tr("editor.rotateRight"), Command.EDITOR_ROTATE_RIGHT),
                 tool(tr("editor.flipHorizontally"), Command.EDITOR_FLIP_HORIZONTALLY),
                 tool(tr("editor.flipVertically"), Command.EDITOR_FLIP_VERTICALLY));
         HBox historyGroup = group(undoButton, redoButton, tool(tr("editor.reset"), Command.EDITOR_RESET));
-        FlowPane bottom = new FlowPane(28, 8, shapeGroup, turnGroup, historyGroup);
+        FlowPane bottom = new FlowPane(shapeGroup, turnGroup, historyGroup);
+        UiZoom.bind(bottom.hgapProperty(), 28);
+        UiZoom.bind(bottom.vgapProperty(), 8);
         bottom.setAlignment(Pos.CENTER);
-        bottom.setPadding(new Insets(10, 14, 10, 14));
+        UiZoom.pad(bottom, 10, 14, 10, 14);
         bottom.getStyleClass().add("editor-bar");
 
         node.setTop(top);
         node.setCenter(crop);
         node.setBottom(bottom);
+        relabel();
+    }
+
+    /**
+     * Every tool's tooltip from its command's title and its chord now (TBAR-03): at first, and again
+     * when the keys change.
+     */
+    void relabel() {
+        tipped.forEach((control, command) -> {
+            String text = Icons.tooltip(Icons.shortTitle(command), command.chord());
+            if (control.getTooltip() == null) control.setTooltip(Icons.tip(text));
+            else control.getTooltip().setText(text);
+        });
     }
 
     boolean isShowing() {
@@ -196,21 +220,36 @@ final class Editor {
     void close() {
         if (isShowing()) window.setCenter(viewer);
         full = null;
+        unsaved.set(false);
+    }
+
+    /** Whether the image has an edit not yet saved, while the editor is open. */
+    javafx.beans.property.ReadOnlyBooleanProperty unsavedProperty() {
+        return unsaved.getReadOnlyProperty();
     }
 
     /** Cancel and Escape: closes, after asking when there is an edit to lose (CONF-01). */
     private void cancel() {
-        if (mayDiscard()) close();
+        if (mayDiscard(() -> {})) close();
     }
 
     /**
      * Whether the editor may go without saving: true when it is closed or has nothing to lose, or
-     * when the user answers Discard. The window asks it before closing.
+     * when the user answers Discard. The window asks it before closing. Save, the question's
+     * default (CONF-05, CONF-13), starts saving and answers false: once the edit is written the
+     * editor closes and {@code afterSaving} runs; a save that fails or is cancelled leaves it open.
      */
-    boolean mayDiscard() {
+    boolean mayDiscard(Runnable afterSaving) {
         Path file = source;
         if (!isShowing() || edit.isNone() || file == null) return true;
-        return Confirm.ask(Confirm.discardEdit(name(file)), owner());
+        return switch (Confirm.askOrSave(Confirm.discardEdit(name(file)), owner())) {
+            case ACTION -> true;
+            case SAVE -> {
+                save(afterSaving);
+                yield false;
+            }
+            case CANCEL -> false;
+        };
     }
 
     private @Nullable Window owner() {
@@ -232,7 +271,7 @@ final class Editor {
             case EDITOR_RESET -> reset();
             case EDITOR_UNDO -> undo();
             case EDITOR_REDO -> redo();
-            case EDITOR_SAVE -> save();
+            case EDITOR_SAVE -> save(() -> {});
             case EDITOR_CANCEL -> cancel();
             default -> {}
         }
@@ -324,6 +363,7 @@ final class Editor {
     private void updateUndo() {
         undoButton.setDisable(!history.canUndo());
         redoButton.setDisable(!history.canRedo());
+        unsaved.set(!edit.isNone());
     }
 
     /** The preview turned and flipped as the edit says, with its crop box. */
@@ -361,7 +401,7 @@ final class Editor {
      * Asks where, then applies the edit to the full image and writes it, off the FX thread. The
      * suggested name is the original's with "(edited)", in a format Mirada can write.
      */
-    private void save() {
+    private void save(Runnable afterSaving) {
         Image image = full;
         Path file = source;
         if (image == null || file == null || saving) return;
@@ -389,7 +429,7 @@ final class Editor {
         Orientation turnedBy = orientation;
         saving = true;
         if (target.equals(chosen.toPath())) {
-            write(image, file, target, applied, turnedBy);
+            write(image, file, target, applied, turnedBy, afterSaving);
             return;
         }
         // The dialog asked about the name typed, not the one an added extension made (CONF-01);
@@ -401,13 +441,16 @@ final class Editor {
                     saving = false;
                     return;
                 }
-                write(image, file, target, applied, turnedBy);
+                write(image, file, target, applied, turnedBy, afterSaving);
             });
         });
     }
 
-    /** Applies {@code applied} to the full image and writes it to {@code target}, off the FX thread. */
-    private void write(Image image, Path file, Path target, Edit applied, Orientation turnedBy) {
+    /**
+     * Applies {@code applied} to the full image and writes it to {@code target}, off the FX thread;
+     * written, the editor closes and {@code afterSaving} runs.
+     */
+    private void write(Image image, Path file, Path target, Edit applied, Orientation turnedBy, Runnable afterSaving) {
         say.accept(tr("editor.saving", name(target)), MessageLog.Severity.INFO);
         Thread.ofPlatform().daemon().name("save").start(() -> {
             try {
@@ -422,6 +465,7 @@ final class Editor {
                     saving = false;
                     close();
                     saved.accept(target);
+                    afterSaving.run();
                 });
             } catch (IOException | RuntimeException | OutOfMemoryError e) {
                 Platform.runLater(() -> {
@@ -454,10 +498,10 @@ final class Editor {
                 raster.width(), raster.height(), IntBuffer.wrap(raster.pixels()), PixelFormat.getIntArgbPreInstance()));
     }
 
-    /** A tool's button, running its command; the tooltip names the key the keymap gives it. */
+    /** A tool's button, running its command; the tooltip names the command and its key ({@link #relabel}). */
     private Button tool(String label, Command command) {
         Button button = new Button(label);
-        button.setTooltip(new Tooltip(Icons.tooltip(label, command.chord())));
+        tipped.put(button, command);
         button.setOnAction(e -> run(command));
         button.setFocusTraversable(false);
         return button;
@@ -466,7 +510,7 @@ final class Editor {
     /** Controls side by side, none narrower than its text. */
     private static HBox group(Node... controls) {
         for (Node control : controls) if (control instanceof Region region) region.setMinWidth(Region.USE_PREF_SIZE);
-        HBox group = new HBox(8, controls);
+        HBox group = UiZoom.hbox(8, controls);
         group.setAlignment(Pos.CENTER_LEFT);
         return group;
     }

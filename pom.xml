@@ -23,7 +23,10 @@
              About and the version text, through build-info.properties. The README's badge and
              "Built to" line and AGENTS.md name the same number (EditionTest checks). Moving to a
              newer edition is its own change: meet its new MUSTs, then change all of them together. -->
-        <pauta.version>4.0.1</pauta.version>
+        <pauta.version>6.1.0</pauta.version>
+        <!-- The dist profile sets it: PautaConformanceTest then fails on an exception that is not
+             this repository's (PAUTA-16), where the everyday build only lists it. -->
+        <pauta.release>false</pauta.release>
 
         <javafx.version>27</javafx.version>
         <!-- One more JVM option for every launcher, macOS's export of glass's Mac package
@@ -333,6 +336,7 @@
                              by hand goes to a closed local port (UpdateCoordinator, UpdateService). -->
                         <mirada.updateCheck>off</mirada.updateCheck>
                         <mirada.updateUrl>http://127.0.0.1:9/releases/latest</mirada.updateUrl>
+                        <pauta.release>${pauta.release}</pauta.release>
                     </systemPropertyVariables>
                     <!-- JavaFX loads its native libraries from the classpath here; without this the
                          JDK warns that it will refuse in a future release. -->
@@ -382,7 +386,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>${javafx.plugin.version}</version>
                 <configuration>
-                    <mainClass>com.mirada/com.mirada.App</mainClass>
+                    <mainClass>com.mirada/com.mirada.Launcher</mainClass>
                     <options>
                         <option>--enable-native-access=javafx.graphics,com.mirada</option>
                         <option>--add-exports=javafx.graphics/com.sun.glass.ui=com.mirada</option>
@@ -518,6 +522,7 @@
                                     </limits>
                                 </rule>
                                 <rule>
+                                    <!-- Windows measures os lowest (0.54): it skips the Trash tests. -->
                                     <element>PACKAGE</element>
                                     <includes>
                                         <include>com.mirada.os</include>
@@ -526,7 +531,21 @@
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.35</minimum>
+                                            <minimum>0.51</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                                <rule>
+                                    <!-- The root package, com.mirada: App, AppInfo, Launch, PautaConformance. -->
+                                    <element>PACKAGE</element>
+                                    <includes>
+                                        <include>com.mirada</include>
+                                    </includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.78</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
@@ -606,6 +625,9 @@
         -->
         <profile>
             <id>dist</id>
+            <properties>
+                <pauta.release>true</pauta.release>
+            </properties>
             <build>
                 <plugins>
                     <!-- jlink links only explicit modules. These ten are automatic (a name in the
@@ -814,7 +836,7 @@
                                     <vendor>Mirada</vendor>
                                     <icon>${jpackage.icon}</icon>
                                     <destination>${project.build.directory}/dist</destination>
-                                    <module>com.mirada/com.mirada.App</module>
+                                    <module>com.mirada/com.mirada.Launcher</module>
                                     <modulePaths>
                                         <modulePath>${project.build.directory}/mods</modulePath>
                                     </modulePaths>
@@ -856,6 +878,19 @@
                         <artifactId>exec-maven-plugin</artifactId>
                         <version>3.6.4</version>
                         <executions>
+                            <!-- PERF-17: the stylesheets precompiled to .bss beside the .css in the
+                                 classes jlink and the native image read (ui/StyleCompiler). -->
+                            <execution>
+                                <id>precompile-styles</id>
+                                <phase>process-classes</phase>
+                                <goals><goal>java</goal></goals>
+                                <configuration>
+                                    <mainClass>com.mirada.ui.StyleCompiler</mainClass>
+                                    <arguments>
+                                        <argument>${project.build.outputDirectory}/com/mirada/styles</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
                             <!-- All after jpackage (same phase, so POM order), and the codecs before
                                  training, so the training run decodes HEIC, AVIF and JPEG XL. -->
                             <execution>

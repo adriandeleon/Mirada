@@ -68,6 +68,9 @@ final class ThumbnailStrip {
     private static final PseudoClass NAMES = PseudoClass.getPseudoClass("names");
 
     private final ListView<Path> list = new ListView<>();
+    /** Shows the image at an index of the folder: a click, or a right-click before its menu opens. */
+    private final IntConsumer pick;
+
     private final ObservableList<Path> items = FXCollections.observableArrayList();
     private final Thumbnails thumbnails = new Thumbnails();
     private boolean side;
@@ -90,28 +93,48 @@ final class ThumbnailStrip {
      * @param drag starts a drag of a cell's file out of the window
      */
     ThumbnailStrip(IntConsumer pick, Dragger drag) {
+        this.pick = pick;
         list.setItems(items);
         list.getStyleClass().add("thumbnail-strip");
+        list.setAccessibleText(Icons.title(Command.THUMBNAILS));
         // The keyboard is the viewer's: arrows step the folder, not the list's selection.
         list.setFocusTraversable(false);
         list.setCellFactory(view -> new Cell(pick, drag));
         setLayout(false, false, false);
     }
 
-    /**
-     * What a right-click on the strip opens: closing it, and where it stands and what it shows. Made
-     * when asked for, so it ticks what is on now.
-     */
     /** Stops making thumbnails, for a window that has closed. */
     void close() {
         thumbnails.close();
     }
 
-    void setMenu(Supplier<ContextMenu> menu) {
+    /**
+     * What a right-click on the strip opens. On an image it selects first (MENU-10): that image is
+     * shown, and its menu opens, the same as the image's own right-click (MENU-05). Past the last
+     * image it is the strip's menu: closing it, and where it stands and what it shows. Each is made
+     * when asked for, so it ticks what is on now.
+     */
+    void setMenu(Supplier<ContextMenu> strip, Supplier<ContextMenu> image) {
         list.setOnContextMenuRequested(e -> {
-            Popups.show(menu.get(), list, e.getScreenX(), e.getScreenY());
+            Cell cell = cellAt(e.getPickResult().getIntersectedNode());
+            ContextMenu menu;
+            if (cell != null && !cell.isEmpty()) {
+                if (cell.getIndex() != list.getSelectionModel().getSelectedIndex()) pick.accept(cell.getIndex());
+                menu = image.get();
+            } else {
+                menu = strip.get();
+            }
+            Popups.show(menu, list, e.getScreenX(), e.getScreenY());
             e.consume();
         });
+    }
+
+    /** The cell {@code node} is in, or null for none. */
+    private static @Nullable Cell cellAt(@Nullable Node node) {
+        for (Node at = node; at != null; at = at.getParent()) {
+            if (at instanceof Cell cell) return cell;
+        }
+        return null;
     }
 
     ListView<Path> node() {
@@ -266,8 +289,8 @@ final class ThumbnailStrip {
             caption.setTextOverrun(OverrunStyle.CENTER_ELLIPSIS);
             caption.setAlignment(Pos.CENTER);
             captioned.setAlignment(Pos.TOP_CENTER);
-            // The selected cell is the image on screen: a right-click opens the menu, it never
-            // moves the selection to another.
+            // The selected cell is the image on screen: a right-click picks its image itself, as its
+            // menu opens ({@link #setMenu}), so the list's own selection never moves on a press.
             addEventFilter(MouseEvent.MOUSE_PRESSED, e -> {
                 if (e.getButton() != MouseButton.PRIMARY) e.consume();
             });
@@ -304,10 +327,12 @@ final class ThumbnailStrip {
             showMark();
             if (empty || file == null) {
                 setGraphic(null);
+                setAccessibleText(null);
                 return;
             }
             Path fileName = file.getFileName();
             String text = fileName == null ? file.toString() : fileName.toString();
+            setAccessibleText(text); // a picture reads as its file's name (ACC-01)
             if (names) {
                 name.setText(text);
                 setGraphic(name);

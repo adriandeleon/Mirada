@@ -10,10 +10,12 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 
+import com.mirada.os.Os;
 import com.mirada.settings.Settings;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
+import static com.mirada.i18n.Messages.tr;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -69,6 +71,23 @@ class CommandTest {
         assertEquals("Emacs", Keymap.load("emacs", false).name());
         assertEquals("cua", Keymap.resolve("vim"));
         assertEquals("cua", Keymap.resolve(null));
+        // PERF-01: the names Settings lists without reading a file are the files' own.
+        assertEquals(Set.copyOf(Keymap.PRESETS), Keymap.NAMES.keySet());
+        for (String id : Keymap.PRESETS) {
+            for (boolean mac : new boolean[] {false, true}) {
+                assertEquals(Keymap.load(id, mac).name(), Keymap.name(id), id);
+            }
+        }
+        assertEquals("CUA", Keymap.name("vim"));
+    }
+
+    /** TABS-13: each tool panel's command is tool.<id>, and Emacs's M-1 and M-2 open them in order. */
+    @Test
+    void theToolPanelsAreToolCommandsOnEmacsMetaDigits() {
+        assertEquals("tool.properties", Command.INFO.id());
+        assertEquals("tool.thumbnails", Command.THUMBNAILS.id());
+        assertEquals(Command.INFO, EMACS.commandFor(Command.Context.VIEWER, "M-1"));
+        assertEquals(Command.THUMBNAILS, EMACS.commandFor(Command.Context.VIEWER, "M-2"));
     }
 
     /** Every binding names a command, every key is a key, and no key is bound twice where it works. */
@@ -159,7 +178,7 @@ class CommandTest {
         assertNull(Keybindings.canonical("nonsense"));
         assertNull(Keybindings.canonical(" "));
         // The Mac's keymap has Cmd where the others have Ctrl, and JavaFX writes it as the symbol.
-        assertEquals(Command.MAC ? "⌘?" : "Ctrl+?", Command.SHORTCUTS.chord().getDisplayText());
+        assertEquals(Os.isMac() ? "⌘?" : "Ctrl+?", Command.SHORTCUTS.chord().getDisplayText());
     }
 
     // --- the layers (KBD-11) ---
@@ -255,6 +274,7 @@ class CommandTest {
             if (command.id().startsWith("editor.")) assertEquals(Command.Context.EDITOR, context, command.id());
             else if (command.id().startsWith("bookmarks."))
                 assertEquals(Command.Context.BOOKMARKS, context, command.id());
+            else if (command.id().startsWith("log.")) assertEquals(Command.Context.DEBUG_LOG, context, command.id());
             else assertEquals(Command.Context.VIEWER, context, command.id());
         }
     }
@@ -326,7 +346,8 @@ class CommandTest {
     void windowCommandsNeedTheShortcut() {
         assertEquals(Command.OPEN, key("C-o"));
         assertEquals(Command.CLOSE, key("C-w"));
-        assertEquals(Command.CLOSE, key("C-q"));
+        assertEquals(Command.QUIT, key("C-q"));
+        assertEquals(Command.QUIT, mac("Cmd-q"));
         assertEquals(Command.OPEN_FOLDER, key("C-S-f"));
         assertEquals(Command.OPEN_FOLDER, mac("Cmd-S-f"));
         // Ctrl+F alone is nothing; bare F is full screen, as is Ctrl-Cmd-F on a Mac.
@@ -345,7 +366,7 @@ class CommandTest {
             assertEquals(new KeyCodeCombination(KeyCode.K, KeyCombination.CONTROL_DOWN), Command.PALETTE.chord());
             assertEquals(List.of(Command.PALETTE.chord()), PaletteChords.current());
         } finally {
-            Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Command.MAC));
+            Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Os.isMac()));
         }
         assertEquals(PaletteChords.current().getFirst(), Command.PALETTE.chord());
         assertEquals(Command.GO_TO_IMAGE, key("C-p"));
@@ -509,13 +530,6 @@ class CommandTest {
     }
 
     @Test
-    void escapeClosesTheWindowOnlyOnLinux() {
-        assertTrue(Command.escapeCloses("Linux"));
-        assertFalse(Command.escapeCloses("Mac OS X"));
-        assertFalse(Command.escapeCloses("Windows 11"));
-    }
-
-    @Test
     void everyCommandHasAGroupAndTheShortcutsWindowListsEveryKey() {
         int keyed = 0;
         for (Command command : Command.values()) {
@@ -526,6 +540,17 @@ class CommandTest {
                 keyed,
                 ShortcutsWindow.grouped().values().stream().mapToInt(List::size).sum());
         assertEquals("Editor", Command.EDITOR_SAVE.group());
+    }
+
+    /** DOCS-08: the keyboard reference is searchable, by a command's name or by its key. */
+    @Test
+    void theShortcutsWindowFindsACommandByItsNameOrItsKey() {
+        assertTrue(ShortcutsWindow.matches(Command.ROTATE_CLOCKWISE, ""));
+        assertTrue(ShortcutsWindow.matches(Command.ROTATE_CLOCKWISE, "rotate"));
+        assertTrue(ShortcutsWindow.matches(Command.ROTATE_CLOCKWISE, " ROTATE "));
+        assertFalse(ShortcutsWindow.matches(Command.ROTATE_CLOCKWISE, "trash"));
+        String key = Command.MOVE_TO_TRASH.chord().getDisplayText();
+        assertTrue(ShortcutsWindow.matches(Command.MOVE_TO_TRASH, key), key);
     }
 
     @Test
@@ -561,7 +586,7 @@ class CommandTest {
     void fileCommandsNeedAnImageAndASlideshowTwo() {
         assertEquals("No image is showing.", Command.MOVE_TO_TRASH.unavailable(0, 1, false));
         assertNull(Command.RENAME.unavailable(0, 1, true));
-        assertEquals("A slideshow needs a folder with more than one image.", Command.SLIDESHOW.unavailable(0, 1, true));
+        assertEquals(tr("reason.slideshowNeedsImages"), Command.SLIDESHOW.unavailable(0, 1, true));
         assertNull(Command.SLIDESHOW.unavailable(0, 2, true));
     }
 
