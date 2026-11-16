@@ -1,6 +1,15 @@
 {
   "reflection": [
     {
+      "type": "apple.security.AppleProvider",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "com.drew.metadata.exif.ExifIFD0Directory",
       "methods": [
         {
@@ -2665,6 +2674,17 @@
       ]
     },
     {
+      "type": "sun.security.provider.DRBG",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.security.SecureRandomParameters"
+          ]
+        }
+      ]
+    },
+    {
       "type": "sun.security.provider.DSA$SHA224withDSA",
       "methods": [
         {
@@ -2711,6 +2731,17 @@
     },
     {
       "type": "sun.security.provider.NativePRNG",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.security.SecureRandomParameters"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.NativePRNG$NonBlocking",
       "methods": [
         {
           "name": "<init>",
@@ -3014,6 +3045,9 @@
   ],
   "resources": [
     {
+      "glob": "META-INF/fonts.mf"
+    },
+    {
       "glob": "META-INF/services/java.net.spi.InetAddressResolverProvider"
     },
     {
@@ -3053,9 +3087,6 @@
       "glob": "com/mirada/build-info.properties"
     },
     {
-      "glob": "com/mirada/i18n/messages*.properties"
-    },
-    {
       "glob": "com/mirada/fonts/inter/Inter-Bold.ttf"
     },
     {
@@ -3066,6 +3097,12 @@
     },
     {
       "glob": "com/mirada/fonts/inter/Inter-Regular.ttf"
+    },
+    {
+      "glob": "com/mirada/i18n/messages*.properties"
+    },
+    {
+      "glob": "com/mirada/i18n/messages.properties"
     },
     {
       "glob": "com/mirada/icon.png"
@@ -3095,6 +3132,9 @@
       "glob": "com/sun/glass/ui/win/WindowDecoration.css"
     },
     {
+      "glob": "com/sun/glass/ui/win/themes*.properties"
+    },
+    {
       "glob": "com/sun/glass/utils/NativeLibLoader.class"
     },
     {
@@ -3102,6 +3142,12 @@
     },
     {
       "glob": "com/sun/javafx/scene/control/skin/resources/controls_de.properties"
+    },
+    {
+      "glob": "com/sun/javafx/scene/control/skin/resources/controls_en.properties"
+    },
+    {
+      "glob": "com/sun/javafx/scene/control/skin/resources/controls_en_US.properties"
     },
     {
       "glob": "com/sun/javafx/scene/control/skin/resources/controls_es.properties"
@@ -3114,12 +3160,6 @@
     },
     {
       "glob": "com/sun/javafx/scene/control/skin/resources/controls_pt_BR.properties"
-    },
-    {
-      "glob": "com/sun/javafx/scene/control/skin/resources/controls_en.properties"
-    },
-    {
-      "glob": "com/sun/javafx/scene/control/skin/resources/controls_en_US.properties"
     },
     {
       "glob": "com/sun/javafx/tk/quantum/QuantumMessagesBundle.properties"
@@ -3141,6 +3181,9 @@
     },
     {
       "glob": "com/sun/prism/d3d/hlsl/FillRoundRect_Color.obj"
+    },
+    {
+      "glob": "com/sun/prism/d3d/hlsl/Solid_ImagePattern.obj"
     },
     {
       "glob": "com/sun/prism/d3d/hlsl/Solid_TextureFirstPassLCD.obj"
@@ -3195,6 +3238,10 @@
     },
     {
       "glob": "com/twelvemonkeys/imageio/color/icc_profiles_win.properties"
+    },
+    {
+      "module": "java.base",
+      "glob": "jdk/internal/icu/impl/data/icudt76b/nfc.nrm"
     },
     {
       "module": "java.base",
@@ -3261,9 +3308,6 @@
     },
     {
       "bundle": "sun.util.logging.resources.logging"
-    },
-    {
-      "glob": "com/sun/glass/ui/win/themes*.properties"
     }
   ],
   "foreign": {
@@ -3291,6 +3335,30 @@
     ],
     "downcalls": [
       {
+        "returnType": "void*",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "jlong"
+        ]
+      },
+      {
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "void*",
+        "parameterTypes": [
+          "void*",
+          "jint",
+          "void*"
+        ]
+      },
+      {
         "returnType": "jint",
         "parameterTypes": [
           "void*",
@@ -3299,30 +3367,6 @@
           "void*",
           "jint",
           "jint"
-        ]
-      },
-      {
-        "returnType": "void*",
-        "parameterTypes": [
-          "void*",
-          "jint",
-          "void*"
-        ]
-      },
-      {
-        "returnType": "jint",
-        "parameterTypes": [
-          "void*",
-          "void*",
-          "void*"
-        ]
-      },
-      {
-        "returnType": "void*",
-        "parameterTypes": [
-          "void*",
-          "void*",
-          "jlong"
         ]
       },
       {
@@ -3348,14 +3392,14 @@
         "returnType": "jint",
         "parameterTypes": [
           "void*",
-          "struct(jint,jint)"
+          "jint"
         ]
       },
       {
         "returnType": "jint",
         "parameterTypes": [
           "void*",
-          "jint"
+          "struct(jint,jint)"
         ]
       },
       {
