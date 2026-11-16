@@ -87,7 +87,7 @@ jobs:
       - name: Upload test reports
         # Always, pass or fail (REL-27): a passing run's reports say what ran and how long it took.
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: surefire-${{ matrix.os }}
           path: target/surefire-reports/
@@ -97,7 +97,7 @@ jobs:
       # tests, so it is there to keep and to sum up even when the floors failed the build.
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: jacoco-${{ matrix.os }}
           path: target/site/jacoco/
@@ -242,7 +242,7 @@ jobs:
       # A week's worth of the app as built, to try on a machine CI does not have.
       - name: Upload the app image
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mirada-${{ matrix.target }}
           path: target/dist/

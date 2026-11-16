@@ -296,7 +296,7 @@ jobs:
 
       # The Linux files unsigned: sign-linux replaces them with the signed ones.
       - name: Upload
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Mirada-${{ matrix.target }}
           path: target/installers/*
@@ -367,7 +367,7 @@ jobs:
           echo "- Linux: signed with \`$fpr\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload signed (linux-x64)
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Mirada-linux-x64
           path: linux/Mirada-linux-x64/*
@@ -376,7 +376,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload signed (linux-arm64)
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Mirada-linux-arm64
           path: linux/Mirada-linux-arm64/*
@@ -385,7 +385,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload the public key
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Mirada-signing-key
           path: key/mirada-signing-key.asc
@@ -556,7 +556,7 @@ jobs:
 
       - name: Upload the JReleaser output
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: jreleaser-output
           path: |
