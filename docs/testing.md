@@ -40,14 +40,15 @@ table and the pom disagree, so change both together.
 | `com.mirada.ui` | LINE | 0.93 |
 | `com.mirada.settings` | LINE | 0.92 |
 | `com.mirada.image` | LINE | 0.86 |
-| `com.mirada.os` | LINE | 0.58 |
+| `com.mirada.os` | LINE | 0.51 |
 | `com.mirada` | LINE | 0.78 |
 
 - **A floor is a regression net, not a target.** The whole build is held to Pauta's 0.90 of lines
   and methods and 0.79 of branches; each package of 300 lines or more has a floor about three
   points under what Linux measured (2026-11-16: lines 0.93, methods 0.93, branches 0.81; edit 0.98,
   ui 0.96, settings 0.95, image 0.90, os 0.62, the root package `com.mirada` 0.81). macOS and Windows skip the Linux-only trash tests and
-  measure about half a point less (branches 0.796 without them). When a package's coverage rises,
+  measure about half a point less (branches 0.796 without them); `os` drops most, to 0.54 on
+  Windows, so its floor sits under Windows' figure. When a package's coverage rises,
   raise its floor.
 - **Branches are the tightest.** Many of them are defences against damaged files, which
   `DamagedFilesTest` and `DamagedImagesTest` reach by cutting and overwriting real fixtures; a new
