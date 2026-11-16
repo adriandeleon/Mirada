@@ -1,28 +1,12 @@
 {
   "exceptions": [
     {
-      "rule": "PAUTA-13",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/conformance/#pauta-13",
-      "kind": "pending",
-      "reason": "Mirada's website has no page yet listing its Pauta conformance and exceptions.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "PAUTA-14",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/conformance/#pauta-14",
-      "kind": "pending",
-      "reason": "The website's conformance page is not yet generated from the list Mirada carries.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
       "rule": "PLAT-14",
       "level": "SHOULD",
       "url": "https://pauta-project.dev/6.1.0/platform/#plat-14",
       "kind": "pending",
       "reason": "Mirada's settings and bookmarks are still stored as properties files, not JSON.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/26"
     },
     {
       "rule": "REPO-11",
@@ -30,15 +14,7 @@
       "url": "https://pauta-project.dev/6.1.0/repository/#repo-11",
       "kind": "pending",
       "reason": "A few of the developers' helper scripts are written in Python rather than Java or shell.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "DOCS-01",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/documentation/#docs-01",
-      "kind": "pending",
-      "reason": "The user guide has no screenshots of the real window yet.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/27"
     },
     {
       "rule": "DOCS-03",
@@ -46,7 +22,7 @@
       "url": "https://pauta-project.dev/6.1.0/documentation/#docs-03",
       "kind": "pending",
       "reason": "Links into the user guide open the latest guide, not the one for the version you run.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/28"
     },
     {
       "rule": "DOCS-04",
@@ -54,7 +30,7 @@
       "url": "https://pauta-project.dev/6.1.0/documentation/#docs-04",
       "kind": "pending",
       "reason": "The website does not yet generate its roadmap from the app or check the keys and commands it quotes.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/28"
     },
     {
       "rule": "DOCS-18",
@@ -62,7 +38,7 @@
       "url": "https://pauta-project.dev/6.1.0/documentation/#docs-18",
       "kind": "pending",
       "reason": "The README's screenshot has no light and dark pair and is not taken at high resolution.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/28"
     },
     {
       "rule": "QUAL-05",
@@ -70,7 +46,7 @@
       "url": "https://pauta-project.dev/6.1.0/quality/#qual-05",
       "kind": "pending",
       "reason": "Whether some menu rows are available is decided inside the window rather than by tested rules.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/29"
     },
     {
       "rule": "QUAL-07",
@@ -78,7 +54,7 @@
       "url": "https://pauta-project.dev/6.1.0/quality/#qual-07",
       "kind": "pending",
       "reason": "Some tests wait a fixed time instead of waiting for the work to finish.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/29"
     },
     {
       "rule": "KBD-10",
@@ -86,7 +62,7 @@
       "url": "https://pauta-project.dev/6.1.0/keyboard/#kbd-10",
       "kind": "pending",
       "reason": "Mirada has no IntelliJ, VS Code or Sublime keymaps yet.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/30"
     },
     {
       "rule": "KBD-12",
@@ -94,7 +70,7 @@
       "url": "https://pauta-project.dev/6.1.0/keyboard/#kbd-12",
       "kind": "pending",
       "reason": "Settings has no keymap editor that lists every command with its keys.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/30"
     },
     {
       "rule": "KBD-18",
@@ -102,7 +78,7 @@
       "url": "https://pauta-project.dev/6.1.0/keyboard/#kbd-18",
       "kind": "pending",
       "reason": "On and off settings are check boxes rather than switches.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/30"
     },
     {
       "rule": "ACC-06",
@@ -110,7 +86,7 @@
       "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-06",
       "kind": "pending",
       "reason": "There is no command to move the focus between the image, the thumbnails and the sidebar.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/31"
     },
     {
       "rule": "ACC-07",
@@ -118,7 +94,7 @@
       "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-07",
       "kind": "pending",
       "reason": "The release steps now ask for a pass with Narrator and VoiceOver, but no one has made it for a release yet.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/31"
     },
     {
       "rule": "WIN-08",
@@ -126,7 +102,7 @@
       "url": "https://pauta-project.dev/6.1.0/window-shell/#win-08",
       "kind": "pending",
       "reason": "The image and folder you had open are not reopened at the next start.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/32"
     },
     {
       "rule": "WIN-09",
@@ -134,7 +110,7 @@
       "url": "https://pauta-project.dev/6.1.0/window-shell/#win-09",
       "kind": "pending",
       "reason": "The image's zoom level is not remembered from one start to the next.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/32"
     },
     {
       "rule": "ICON-04",
@@ -142,7 +118,7 @@
       "url": "https://pauta-project.dev/6.1.0/icons-and-color/#icon-04",
       "kind": "pending",
       "reason": "Mirada uses the AtlantaFX themes as they are rather than a theme file of its own.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/33"
     },
     {
       "rule": "ICON-05",
@@ -150,7 +126,7 @@
       "url": "https://pauta-project.dev/6.1.0/icons-and-color/#icon-05",
       "kind": "pending",
       "reason": "Mirada's default theme is not yet the Caret and Ink pair the other apps share.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/33"
     },
     {
       "rule": "TABS-15",
@@ -158,7 +134,7 @@
       "url": "https://pauta-project.dev/6.1.0/tabs-and-panels/#tabs-15",
       "kind": "pending",
       "reason": "Which panels are open is not remembered from one start to the next.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/34"
     },
     {
       "rule": "SET-08",
@@ -166,7 +142,7 @@
       "url": "https://pauta-project.dev/6.1.0/settings/#set-08",
       "kind": "pending",
       "reason": "Where the window was and the recent folders are kept in the settings file, not a file of their own.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/35"
     },
     {
       "rule": "DIAG-07",
@@ -174,7 +150,7 @@
       "url": "https://pauta-project.dev/6.1.0/diagnostics/#diag-07",
       "kind": "pending",
       "reason": "There is no Doctor page to check the image codecs and other parts Mirada needs.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/36"
     },
     {
       "rule": "DIAG-08",
@@ -182,7 +158,7 @@
       "url": "https://pauta-project.dev/6.1.0/diagnostics/#diag-08",
       "kind": "pending",
       "reason": "An unsaved edit is not kept to be offered back after a crash.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/36"
     },
     {
       "rule": "PAL-08",
@@ -190,7 +166,7 @@
       "url": "https://pauta-project.dev/6.1.0/templates/command-palette/#pal-08",
       "kind": "pending",
       "reason": "The palette has no key to open the selected command's page in the user guide.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/37"
     },
     {
       "rule": "SYNC-01",
@@ -198,7 +174,7 @@
       "url": "https://pauta-project.dev/6.1.0/templates/settings-sync/#sync-01",
       "kind": "pending",
       "reason": "There is no Settings Sync to carry your bookmarks, notes and keys to another computer.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/38"
     },
     {
       "rule": "REL-12",
@@ -206,7 +182,7 @@
       "url": "https://pauta-project.dev/6.1.0/release/#rel-12",
       "kind": "pending",
       "reason": "Mirada cannot be installed with Homebrew yet.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/39"
     },
     {
       "rule": "REL-13",
@@ -214,7 +190,7 @@
       "url": "https://pauta-project.dev/6.1.0/release/#rel-13",
       "kind": "pending",
       "reason": "Mirada's winget manifests are written but not yet submitted on release.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/39"
     },
     {
       "rule": "REL-14",
@@ -222,7 +198,7 @@
       "url": "https://pauta-project.dev/6.1.0/release/#rel-14",
       "kind": "pending",
       "reason": "There are no Homebrew or winget packagers yet to give a token to.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/39"
     },
     {
       "rule": "REL-17",
@@ -230,7 +206,7 @@
       "url": "https://pauta-project.dev/6.1.0/release/#rel-17",
       "kind": "pending",
       "reason": "The Windows installer is not signed yet.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
+      "link": "https://github.com/adriandeleon/Mirada/issues/39"
     }
   ]
 }

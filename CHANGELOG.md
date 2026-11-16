@@ -60,9 +60,9 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 - **More right-click menus.** A right-click on a thumbnail shows that image and opens its menu; the
   Debug Log and the Message Log have Copy, Clear and their other commands on a right-click.
 
-- **Help › Pauta Conformance shows how far Mirada meets its guidelines.** Mirada now works toward
+- **Help › Pauta Conformance shows how far Mirada meets its guidelines.** Mirada is now built to
   [Pauta 6.1.0](https://pauta-project.dev/6.1.0/), the adl desktop apps guidelines, and says how
-  fully it conforms (Partial for now) and lists each rule it does not meet yet, with one plain
+  fully it conforms (Core: every MUST met) and lists each rule it does not meet yet, with one plain
   sentence and the issue that tracks it. **Copy as text** copies the list as Markdown; About links
   the window and names the conformance, and its environment block (and Copy details) carries a
   `Pauta conformance:` line.

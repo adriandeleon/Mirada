@@ -10,9 +10,9 @@
 [![JavaFX 27](https://img.shields.io/badge/JavaFX-27-blue.svg)](https://openjfx.io/)
 [![platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](#installing-it)
 [![docs](https://img.shields.io/badge/docs-mirada--project.dev-0e8577)](https://mirada-project.dev/docs/)
-[![Pauta](https://img.shields.io/badge/Pauta-6.1.0%20%C2%B7%20Partial-d29922)](https://mirada-project.dev/docs/pauta/)
+[![Pauta](https://img.shields.io/badge/Pauta-6.1.0%20%C2%B7%20Core-5b8def)](https://mirada-project.dev/docs/pauta/)
 
-Java 25 + JavaFX 27. Working toward [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), edition [6.1.0](https://pauta-project.dev/6.1.0/), [Pauta conformance: Partial](https://mirada-project.dev/docs/pauta/).
+Java 25 + JavaFX 27. Built to [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), edition [6.1.0](https://pauta-project.dev/6.1.0/), [Pauta conformance: Core](https://mirada-project.dev/docs/pauta/).
 
 An image viewer is the app you open a hundred times a day for three seconds each. Mirada treats the
 folder as the document: open one photo and the rest of the folder is already there, in the order
