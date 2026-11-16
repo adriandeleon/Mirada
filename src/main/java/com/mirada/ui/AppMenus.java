@@ -89,7 +89,7 @@ final class AppMenus {
                     List.of(
                             List.of(Command.ZOOM_IN, Command.ZOOM_OUT, Command.FIT, Command.ACTUAL_SIZE),
                             List.of(Command.KEEP_ZOOM),
-                            List.of(Command.INFO, Command.THUMBNAILS, Command.STATUS_BAR),
+                            List.of(Command.INFO, Command.ALL_METADATA, Command.THUMBNAILS, Command.STATUS_BAR),
                             List.of(Command.THUMBNAILS_AT_SIDE, Command.THUMBNAIL_CAPTIONS, Command.THUMBNAIL_NAMES),
                             List.of(Command.UI_ZOOM_IN, Command.UI_ZOOM_OUT, Command.UI_ZOOM_RESET),
                             List.of(Command.FULL_SCREEN))),
@@ -134,6 +134,7 @@ final class AppMenus {
             Command.BOOKMARK_FOLDER,
             Command.KEEP_ZOOM,
             Command.INFO,
+            Command.ALL_METADATA,
             Command.THUMBNAILS,
             Command.STATUS_BAR,
             Command.THUMBNAILS_AT_SIDE,

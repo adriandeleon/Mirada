@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.nio.IntBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -14,6 +16,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelBuffer;
@@ -93,6 +96,12 @@ final class Editor {
     private Raster uprightPreview = new Raster(1, 1, new int[] {0});
     private Edit edit = Edit.NONE;
     private final History<Step> history = new History<>(new Step(Edit.NONE, AspectRatio.FREE));
+    /** Whether the image has an edit not yet saved: the window title's ● (TABS-10). */
+    private final javafx.beans.property.ReadOnlyBooleanWrapper unsaved =
+            new javafx.beans.property.ReadOnlyBooleanWrapper();
+    /** The controls whose tooltip names a command, and that command, for {@link #relabel} (TBAR-03). */
+    private final Map<Control, Command> tipped = new LinkedHashMap<>();
+
     private final Button undoButton = tool(tr("editor.undo"), Command.EDITOR_UNDO);
     private final Button redoButton = tool(tr("editor.redo"), Command.EDITOR_REDO);
     /** True while the editor sets the shape itself, so the shape's listener records no step. */
@@ -146,9 +155,11 @@ final class Editor {
             shapeChanged();
             record();
         });
-        shape.setTooltip(Icons.tip(Icons.tooltip(tr("editor.shapeTooltip"), Command.EDITOR_NEXT_SHAPE.chord())));
+        tipped.put(shape, Command.EDITOR_NEXT_SHAPE);
         // Three groups that wrap to a second row rather than cut a word, in any language (INTL-04).
-        HBox shapeGroup = group(new Label(tr("editor.crop")), shape);
+        Label cropLabel = new Label(tr("editor.crop"));
+        cropLabel.setLabelFor(shape); // what a screen reader calls the shape (ACC-01)
+        HBox shapeGroup = group(cropLabel, shape);
         HBox turnGroup = group(
                 tool(tr("editor.rotateLeft"), Command.EDITOR_ROTATE_LEFT),
                 tool(tr("editor.rotateRight"), Command.EDITOR_ROTATE_RIGHT),
@@ -165,6 +176,19 @@ final class Editor {
         node.setTop(top);
         node.setCenter(crop);
         node.setBottom(bottom);
+        relabel();
+    }
+
+    /**
+     * Every tool's tooltip from its command's title and its chord now (TBAR-03): at first, and again
+     * when the keys change.
+     */
+    void relabel() {
+        tipped.forEach((control, command) -> {
+            String text = Icons.tooltip(Icons.shortTitle(command), command.chord());
+            if (control.getTooltip() == null) control.setTooltip(Icons.tip(text));
+            else control.getTooltip().setText(text);
+        });
     }
 
     boolean isShowing() {
@@ -196,6 +220,12 @@ final class Editor {
     void close() {
         if (isShowing()) window.setCenter(viewer);
         full = null;
+        unsaved.set(false);
+    }
+
+    /** Whether the image has an edit not yet saved, while the editor is open. */
+    javafx.beans.property.ReadOnlyBooleanProperty unsavedProperty() {
+        return unsaved.getReadOnlyProperty();
     }
 
     /** Cancel and Escape: closes, after asking when there is an edit to lose (CONF-01). */
@@ -333,6 +363,7 @@ final class Editor {
     private void updateUndo() {
         undoButton.setDisable(!history.canUndo());
         redoButton.setDisable(!history.canRedo());
+        unsaved.set(!edit.isNone());
     }
 
     /** The preview turned and flipped as the edit says, with its crop box. */
@@ -467,10 +498,10 @@ final class Editor {
                 raster.width(), raster.height(), IntBuffer.wrap(raster.pixels()), PixelFormat.getIntArgbPreInstance()));
     }
 
-    /** A tool's button, running its command; the tooltip names the key the keymap gives it. */
+    /** A tool's button, running its command; the tooltip names the command and its key ({@link #relabel}). */
     private Button tool(String label, Command command) {
         Button button = new Button(label);
-        button.setTooltip(Icons.tip(Icons.tooltip(label, command.chord())));
+        tipped.put(button, command);
         button.setOnAction(e -> run(command));
         button.setFocusTraversable(false);
         return button;

@@ -81,9 +81,10 @@ public final class Settings {
 
     /**
      * The version of {@code settings.properties} this build writes ({@code schemaVersion}, SET-09):
-     * 1 for the unversioned files of 0.1 to 0.3, 2 since. A bump needs a step in {@link Migrations}.
+     * 1 for the unversioned files of 0.1 to 0.3, 2 since, 3 once the two panels' commands became
+     * {@code tool.properties} and {@code tool.thumbnails}. A bump needs a step in {@link Migrations}.
      */
-    public static final int SCHEMA_VERSION = 2;
+    public static final int SCHEMA_VERSION = 3;
 
     public static final int MIN_HIDE_SECONDS = 1;
     public static final int MAX_HIDE_SECONDS = 10;

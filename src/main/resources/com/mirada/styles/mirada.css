@@ -107,6 +107,12 @@
     -fx-padding: 8px 16px 8px 16px;
 }
 
+/* Each way in's chord, from the keymap, under its button (WELC-02). */
+.mirada .open-chord {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 0.9em;
+}
+
 /* Help → Documentation, under the open buttons. */
 .mirada .empty-docs {
     -fx-padding: 12px 0 0 0;

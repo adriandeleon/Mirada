@@ -87,4 +87,4 @@ exec java \
     "-Dprism.order=$PRISM" \
     -Dmirada.codecs=target/codecs \
     ${jvm[@]+"${jvm[@]}"} \
-    -m "${MIRADA_MAIN:-com.mirada/com.mirada.App}" ${app[@]+"${app[@]}"}
+    -m "${MIRADA_MAIN:-com.mirada/com.mirada.Launcher}" ${app[@]+"${app[@]}"}

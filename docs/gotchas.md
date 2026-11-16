@@ -279,8 +279,14 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   `MenusFxTest.f10AndALoneAltAreLeftToTheMenuBar`). In menu mode JavaFX gives no node the focus:
   the arrows reach the window's filter too, and would step the folder as they walk the menus. The
   filter steps aside while a menu is open or the skin reports a focused menu
-  (`queryAccessibleAttribute(FOCUS_NODE)`, `ViewerWindow.menuBarActive`); a test drives it with
-  the Robot, as fired events never reach the accelerator.
+  (`queryAccessibleAttribute(FOCUS_NODE)`, `ViewerWindow.menuBarActive`). A test fires the key
+  events at the scene's focus owner, which the scene's accelerators see: the Robot's keys go to
+  whichever window the Headless platform holds focused, which in a full run is now and then another
+  test's, so a test driven by it failed once in a few runs.
+- **A command reaches what is out of the Tab order.** All Metadata's `TitledPane` stays out of it,
+  as the viewer's filter takes Space and Enter before a focused control would: the
+  `view.allMetadata` command unfolds it (KBD-15). Its rows are made only as it first unfolds, so a
+  test that looks for a tag's text unfolds it first.
 - **A `CustomMenuItem`'s text is not drawn, only its content.** `AppMenus.inWindowRow` sets it all
   the same, to the title without the tick: code and tests that find a row by `getText()` keep
   working. The row lays out its own 22 px icon column, title, spacer and chord (MENU-18), so every
@@ -491,11 +497,15 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   `WindowsConsole.attach` (`AttachConsole(ATTACH_PARENT_PROCESS)` through FFM, then `CONOUT$`) runs
   for every launch that prints, only when standard output or error has no handle, so a redirect
   still works. Its `jint(jint)` downcall is in the native metadata by hand. Not run on Windows yet.
-- **`--help` and `--version` must `System.exit`.** Started as an `Application` (the jlink image, dev
-  runs), the JDK's launcher starts the toolkit before `main`, whose thread keeps the process alive.
-  The native image starts from `Launcher`, a plain class, and starts no toolkit for them. Starting the
-  JVM from `Launcher` too reaches `main` about 80 ms sooner, but measured slower to the first paint
-  headless (median of 10: 611 against 563 ms), so `App` stays the JVM's main class.
+- **Every launch enters through `Launcher`, a plain class** (PERF-16): the native image, the jlink
+  image, `javafx:run`, the AOT training run and `scripts/dev-run.sh`. Started as an `Application`,
+  the JDK's launcher starts the toolkit before `main`, so the settings read `main` begins would follow
+  it instead of overlapping it. Measured headless (2026-11-16, `measure-startup.sh -n 11`, two pairs
+  run in turn): 641 against 711 ms and 491 against 572 ms to the first image from `Launcher`; an
+  earlier build had measured the other way (611 against 563), so measure again when the start-up
+  path moves. The window class stays `com.mirada.App` (`StartupWMClass`): JavaFX names it after the
+  `Application` class, not the main class. `--help` and `--version` still `System.exit`, for a
+  launch from `App` itself.
 - **`java.awt.headless` is decided in `App.main`, as the first statement**, before `HeadStart` can
   touch ImageIO: headless everywhere but macOS, where Move to Trash is AWT's `Desktop`
   (`Trash.headless`); AWT itself loads only when a file is first trashed. ImageIO and `BufferedImage` are `java.desktop` and need no display; tests are

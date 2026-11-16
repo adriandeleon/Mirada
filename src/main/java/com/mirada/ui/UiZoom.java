@@ -139,14 +139,22 @@ public final class UiZoom {
         }
     }
 
-    /** The URL of one of the app's stylesheets at the zoom in effect: the bundled file at 100 %. */
+    /**
+     * The URL of one of the app's stylesheets at the zoom in effect: the bundled file at 100 %, its
+     * precompiled {@code .bss} where the build made one (PERF-17, {@link StyleCompiler}).
+     */
     static String sheet(String name) {
-        String url = percent == Settings.DEFAULT_UI_ZOOM
-                ? Objects.requireNonNull(UiZoom.class.getResource(STYLES + name), name)
-                        .toExternalForm()
-                : scaled(name, STYLES + name, UiZoom.class);
+        String url = percent == Settings.DEFAULT_UI_ZOOM ? bundled(name) : scaled(name, STYLES + name, UiZoom.class);
         NAME_OF.putIfAbsent(url, name);
         return url;
+    }
+
+    /** A bundled sheet's URL: its {@code .bss} when the release build precompiled it, else the {@code .css}. */
+    static String bundled(String name) {
+        java.net.URL binary = UiZoom.class.getResource(STYLES + StyleCompiler.binaryName(name));
+        if (binary != null) return binary.toExternalForm();
+        return Objects.requireNonNull(UiZoom.class.getResource(STYLES + name), name)
+                .toExternalForm();
     }
 
     /**
@@ -159,8 +167,57 @@ public final class UiZoom {
     }
 
     private static String scaled(String name, String resource, Class<?> owner) {
-        int at = percent;
+        return scaledAt(name, resource, owner, percent);
+    }
+
+    private static String scaledAt(String name, String resource, Class<?> owner, int at) {
         return SCALED.computeIfAbsent(name + "@" + at, k -> dataUrl(scale(text(resource, owner), at)));
+    }
+
+    /** The control theme's two sheets, light and dark: the ones {@link Theme} hands {@link #userAgent}. */
+    private static List<String> themeSheets() {
+        return List.of(
+                new atlantafx.base.theme.CupertinoLight().getUserAgentStylesheet(),
+                new atlantafx.base.theme.CupertinoDark().getUserAgentStylesheet());
+    }
+
+    /**
+     * Reads and scales every sheet at {@code value} ahead of {@link #apply}, the control theme's light
+     * and dark ones too, so a change of the zoom or the theme on the FX thread only swaps URLs
+     * (PERF-01). At 100 % there is nothing to do. Any thread.
+     */
+    static void prepare(int value) {
+        int at = Settings.clampUiZoom(value);
+        if (at == Settings.DEFAULT_UI_ZOOM) return;
+        for (String name : SHEETS) scaledAt(name, STYLES + name, UiZoom.class, at);
+        for (String sheet : themeSheets()) scaledAt(sheet, sheet, atlantafx.base.theme.Theme.class, at);
+    }
+
+    /** Whether {@link #prepare} has been done for {@code value}: {@link #apply} then reads nothing. */
+    static boolean prepared(int value) {
+        int at = Settings.clampUiZoom(value);
+        if (at == Settings.DEFAULT_UI_ZOOM) return true;
+        for (String name : SHEETS) if (!SCALED.containsKey(name + "@" + at)) return false;
+        for (String sheet : themeSheets()) if (!SCALED.containsKey(sheet + "@" + at)) return false;
+        return true;
+    }
+
+    /**
+     * Applies the zoom {@code value} once its sheets are read and scaled: at once when they are
+     * ({@link #prepared}), else after {@link #prepare} on a thread of its own, back on the FX thread,
+     * unless {@code still} says by then that another zoom was asked for (PERF-01).
+     */
+    public static void applySoon(int value, java.util.function.IntPredicate still) {
+        if (prepared(value)) {
+            apply(value);
+            return;
+        }
+        Thread.ofVirtual().name("ui-zoom").start(() -> {
+            prepare(value);
+            javafx.application.Platform.runLater(() -> {
+                if (still.test(value)) apply(value);
+            });
+        });
     }
 
     private static String text(String resource, Class<?> owner) {

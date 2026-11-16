@@ -54,6 +54,7 @@ final class ReportProblemWindow {
         report.setWrapText(true);
         report.setPrefRowCount(18);
         report.getStyleClass().add("report-text");
+        report.setAccessibleText(tr("report.title"));
 
         stage.setTitle(tr("report.title"));
         WindowIcon.applyTo(stage);

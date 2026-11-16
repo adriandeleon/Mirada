@@ -49,6 +49,7 @@ final class DebugLogWindow {
         // A long path or a stack frame wraps, rather than scroll the start of every line out of sight.
         text.setWrapText(true);
         text.getStyleClass().add("debug-log-text");
+        text.setAccessibleText(Icons.title(Command.DEBUG_LOG));
 
         Button refresh = new Button(tr("debugLog.refresh"));
         refresh.setOnAction(e -> refresh());

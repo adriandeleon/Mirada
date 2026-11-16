@@ -91,7 +91,7 @@ final class SettingsCommands {
                         command,
                         tr("keymap.prompt"),
                         Keymap.PRESETS,
-                        id -> Keymap.load(id, Os.isMac()).name(),
+                        Keymap::name,
                         Keymap.resolve(settings.keymap()),
                         settings::setKeymap);
             case HIDE_CONTROLS_AFTER ->

@@ -51,6 +51,18 @@ record Keymap(
     /** The bundled keymaps, in the order the settings window lists them. */
     static final List<String> PRESETS = List.of("cua", "emacs");
 
+    /**
+     * Each preset's name as Settings and the palette list it, the {@code name} its file gives: known
+     * without reading the file, so listing the keymaps reads nothing on the FX thread (PERF-01).
+     * {@code KeymapTest} holds the two the same.
+     */
+    static final Map<String, String> NAMES = Map.of("cua", "CUA", "emacs", "Emacs");
+
+    /** {@link #NAMES}' name for {@code id} ({@link #resolve}d). */
+    static String name(@Nullable String id) {
+        return NAMES.getOrDefault(resolve(id), resolve(id));
+    }
+
     /** The keymap for a setting that names none of {@link #PRESETS}: Mirada's own keys. */
     static final String DEFAULT = "cua";
 

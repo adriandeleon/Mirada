@@ -146,8 +146,7 @@ public final class Theme {
     private static String highContrastSheet() {
         String sheet = highContrastSheet;
         if (sheet == null) {
-            sheet = Objects.requireNonNull(Theme.class.getResource("/com/mirada/styles/high-contrast.css"))
-                    .toExternalForm();
+            sheet = UiZoom.bundled("high-contrast.css");
             highContrastSheet = sheet;
         }
         return sheet;

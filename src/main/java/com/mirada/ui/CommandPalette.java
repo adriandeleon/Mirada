@@ -253,6 +253,9 @@ final class CommandPalette {
         title.setVisible(findingImages);
         prefixChip.setText(openedBy.chord().getDisplayText());
         input.setPromptText(prompt);
+        // The prompt goes when typing starts; the name stays (ACC-01).
+        input.setAccessibleText(prompt);
+        list.setAccessibleText(prompt);
         hint.setText(legend());
         list.setPlaceholder(new Label(nothing));
         input.clear();

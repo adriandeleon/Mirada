@@ -246,7 +246,8 @@ public final class App extends Application {
         UiZoom.apply(settings.uiZoom());
         Theme.apply(settings.theme());
         settings.addListener(() -> {
-            UiZoom.apply(settings.uiZoom());
+            // A new zoom's sheets are read and scaled off the FX thread first (PERF-01).
+            UiZoom.applySoon(settings.uiZoom(), zoom -> settings.uiZoom() == zoom);
             Theme.apply(settings.theme());
         });
         ViewerWindow window = new ViewerWindow(stage, settings, getHostServices()::showDocument);

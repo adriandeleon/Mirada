@@ -282,13 +282,11 @@ class MenusFxTest {
                 String name = button.getAccessibleText();
                 assertNotNull(name, button.toString());
                 assertNotNull(button.getTooltip(), name);
-                Command command = byTitle(name);
-                if (command == null) {
-                    assertEquals(name, button.getTooltip().getText());
-                    continue;
-                }
+                // TBAR-01: what a screen reader says is what the tooltip shows, chord and all.
+                assertEquals(name, button.getTooltip().getText());
                 // TBAR-03: built from the title and the chord, never typed.
-                assertEquals(Icons.tooltip(command), button.getTooltip().getText(), name);
+                Command command = byTooltip(name);
+                if (command == null) continue;
                 // ICON-20: the glyph the menus give the command.
                 if (button instanceof ButtonBase labeled && !(button instanceof MenuButton)) {
                     SVGPath glyph = (SVGPath) labeled.getGraphic().lookup(".icon");
@@ -299,8 +297,8 @@ class MenusFxTest {
         });
     }
 
-    private static Command byTitle(String title) {
-        for (Command command : Command.values()) if (Icons.title(command).equals(title)) return command;
+    private static Command byTooltip(String tooltip) {
+        for (Command command : Command.values()) if (Icons.tooltip(command).equals(tooltip)) return command;
         return null;
     }
 

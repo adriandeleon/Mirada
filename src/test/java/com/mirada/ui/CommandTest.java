@@ -71,6 +71,23 @@ class CommandTest {
         assertEquals("Emacs", Keymap.load("emacs", false).name());
         assertEquals("cua", Keymap.resolve("vim"));
         assertEquals("cua", Keymap.resolve(null));
+        // PERF-01: the names Settings lists without reading a file are the files' own.
+        assertEquals(Set.copyOf(Keymap.PRESETS), Keymap.NAMES.keySet());
+        for (String id : Keymap.PRESETS) {
+            for (boolean mac : new boolean[] {false, true}) {
+                assertEquals(Keymap.load(id, mac).name(), Keymap.name(id), id);
+            }
+        }
+        assertEquals("CUA", Keymap.name("vim"));
+    }
+
+    /** TABS-13: each tool panel's command is tool.<id>, and Emacs's M-1 and M-2 open them in order. */
+    @Test
+    void theToolPanelsAreToolCommandsOnEmacsMetaDigits() {
+        assertEquals("tool.properties", Command.INFO.id());
+        assertEquals("tool.thumbnails", Command.THUMBNAILS.id());
+        assertEquals(Command.INFO, EMACS.commandFor(Command.Context.VIEWER, "M-1"));
+        assertEquals(Command.THUMBNAILS, EMACS.commandFor(Command.Context.VIEWER, "M-2"));
     }
 
     /** Every binding names a command, every key is a key, and no key is bound twice where it works. */

@@ -5,12 +5,11 @@ import java.util.function.Consumer;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
-
-import static com.mirada.i18n.Messages.tr;
 
 /**
  * The image's own marks near its top-left corner, in a floating control's pill, right of where the
@@ -51,12 +50,12 @@ final class MarksBadge {
     }
 
     /**
-     * The buttons' names from the commands' chords now (TBAR-03): the bookmark's says what a click
-     * does, takes it off; the note's is the note itself, as clicking it edits it.
+     * The buttons' names from the commands' titles and chords now (TBAR-01, TBAR-03): the command a
+     * click runs, and under the note's the note itself, as clicking it edits it.
      */
     void relabel() {
-        Icons.name(bookmark, tr("marks.takeBookmarkOff"), Command.BOOKMARK.chord());
-        Icons.name(note, tr("marks.note", noteText), Command.NOTE.chord());
+        Icons.name(bookmark, Command.BOOKMARK);
+        Icons.name(note, Icons.tooltip(Command.NOTE) + "\n" + noteText, KeyCombination.NO_MATCH);
     }
 
     /** Shows the marks of the image on screen; nothing at all while {@code hidden} (a slideshow). */

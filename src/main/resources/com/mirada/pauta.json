@@ -81,54 +81,6 @@
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
-      "rule": "QUAL-13",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/quality/#qual-13",
-      "kind": "pending",
-      "reason": "The test that restarts with every setting changed does not change the language yet.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "PERF-01",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/performance/#perf-01",
-      "kind": "pending",
-      "reason": "A few actions still do slow work on the thread that draws the window.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "PERF-06",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/performance/#perf-06",
-      "kind": "pending",
-      "reason": "The Message Log and other lists redraw on every change instead of once per frame.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "PERF-08",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/performance/#perf-08",
-      "kind": "pending",
-      "reason": "The properties sidebar still does work for the whole list when only part of it changes.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "PERF-16",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/performance/#perf-16",
-      "kind": "pending",
-      "reason": "Only the native build starts reading the settings before the window toolkit starts.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "PERF-17",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/performance/#perf-17",
-      "kind": "pending",
-      "reason": "The stylesheets are not shipped precompiled, which would start the window a little sooner.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
       "rule": "KBD-10",
       "level": "SHOULD",
       "url": "https://pauta-project.dev/6.1.0/keyboard/#kbd-10",
@@ -145,43 +97,11 @@
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
-      "rule": "KBD-13",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/keyboard/#kbd-13",
-      "kind": "pending",
-      "reason": "A few translated descriptions name a key in their text instead of showing the current one.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "KBD-15",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/keyboard/#kbd-15",
-      "kind": "pending",
-      "reason": "The All metadata section of the properties sidebar can only be opened with the mouse.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
       "rule": "KBD-18",
       "level": "SHOULD",
       "url": "https://pauta-project.dev/6.1.0/keyboard/#kbd-18",
       "kind": "pending",
       "reason": "On and off settings are check boxes rather than switches.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "ACC-01",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-01",
-      "kind": "pending",
-      "reason": "No test yet opens every window to check that each control has a name a screen reader can read.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "ACC-02",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-02",
-      "kind": "pending",
-      "reason": "The status bar's message and count act like buttons but do not tell a screen reader so.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
@@ -197,7 +117,7 @@
       "level": "SHOULD",
       "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-07",
       "kind": "pending",
-      "reason": "The release steps do not yet include a pass with Narrator and VoiceOver.",
+      "reason": "The release steps now ask for a pass with Narrator and VoiceOver, but no one has made it for a release yet.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
@@ -230,38 +150,6 @@
       "url": "https://pauta-project.dev/6.1.0/icons-and-color/#icon-05",
       "kind": "pending",
       "reason": "Mirada's default theme is not yet the Caret and Ink pair the other apps share.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "TBAR-01",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/toolbars-and-tooltips/#tbar-01",
-      "kind": "pending",
-      "reason": "A screen reader reads a button's name without the key shown in its tooltip.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "TBAR-03",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/toolbars-and-tooltips/#tbar-03",
-      "kind": "pending",
-      "reason": "Some buttons in the editor keep their old key in the tooltip after you change your keys.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "TABS-10",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/tabs-and-panels/#tabs-10",
-      "kind": "pending",
-      "reason": "The window title names the file and Mirada but not the folder.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "TABS-13",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/tabs-and-panels/#tabs-13",
-      "kind": "pending",
-      "reason": "The commands that show the sidebar and the thumbnails do not yet use the shared panel names.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
@@ -305,27 +193,11 @@
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
-      "rule": "WELC-02",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/welcome/#welc-02",
-      "kind": "pending",
-      "reason": "The empty window shows the key for Open but not for its other actions.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
       "rule": "SYNC-01",
       "level": "SHOULD",
       "url": "https://pauta-project.dev/6.1.0/templates/settings-sync/#sync-01",
       "kind": "pending",
       "reason": "There is no Settings Sync to carry your bookmarks, notes and keys to another computer.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "REL-09",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/release/#rel-09",
-      "kind": "pending",
-      "reason": "The Linux packages carry no AppStream metainfo of their own.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {

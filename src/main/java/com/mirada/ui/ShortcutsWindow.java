@@ -43,7 +43,9 @@ final class ShortcutsWindow {
         search.setPromptText(tr("shortcuts.search"));
         search.setAccessibleText(tr("shortcuts.search"));
         search.getStyleClass().add("shortcuts-search");
-        search.textProperty().addListener((o, was, now) -> refresh());
+        // Typed fast, the list is made once a pulse, not once a key (PERF-06).
+        Redraw redraw = new Redraw(this::refresh);
+        search.textProperty().addListener((o, was, now) -> redraw.request());
         TextInputKeys.install(search);
         scroll.setContent(content(""));
         scroll.setFitToWidth(true);

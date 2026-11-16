@@ -1,6 +1,5 @@
 package com.mirada.os;
 
-import java.io.IOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
@@ -11,7 +10,6 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.net.URI;
 import java.nio.file.FileSystemNotFoundException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -148,13 +146,12 @@ public final class MacOpenFiles {
         };
     }
 
-    /** The same file, however each was spelled (AppKit's is absolute, the argument as typed). */
+    /**
+     * The same file, however each was spelled (AppKit's is absolute, the argument as typed): compared
+     * as absolute, normalised paths, never by asking the disk, as this runs on the FX thread (PERF-01).
+     */
     static boolean same(Path a, Path b) {
-        try {
-            return Files.isSameFile(a, b);
-        } catch (IOException | SecurityException e) {
-            return a.toAbsolutePath().normalize().equals(b.toAbsolutePath().normalize());
-        }
+        return a.toAbsolutePath().normalize().equals(b.toAbsolutePath().normalize());
     }
 
     /**

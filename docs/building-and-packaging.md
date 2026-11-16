@@ -100,7 +100,15 @@ The jlink image's numbers, before the native image and libjpeg-turbo, are kept i
   appimagetool and the runtime are release builds pinned by SHA-256, cached in
   `~/.cache/mirada/appimage`; `MIRADA_APPDIR_ONLY=1` stops at the AppDir, without them. Like the
   deb it takes GTK and the rest from the system, so the glibc floor applies to it too. GitHub's
-  runners have no FUSE: the smoke test runs it with `APPIMAGE_EXTRACT_AND_RUN=1`.
+  runners have no FUSE: the smoke test runs it with `APPIMAGE_EXTRACT_AND_RUN=1`. Its AppStream
+  metainfo is `packaging/linux/io.github.adriandeleon.Mirada.metainfo.xml` (REL-09), whose version,
+  date and media types the script fills in.
+- **The stylesheets ship precompiled** (PERF-17): `-Pdist` runs `ui/StyleCompiler` at
+  `process-classes`, which writes a `.bss` beside each `.css` in `target/classes`, so jlink and the
+  native image take both; `UiZoom.sheet` loads the `.bss` at 100 % and scales the `.css` at any
+  other zoom. A plain build has no `.bss`, and loads the `.css`. The native metadata lists
+  `com/mirada/styles/*.bss` by hand (`native-metadata.sh` adds it), as a run from the plain classes
+  never reads one.
 - **The macOS dmg is `hdiutil`, not jpackage**, whose dmg step wants the Java runtime inside the
   bundle. The document types are written into `Info.plist` by `fix-mac-bundle.sh` from
   `packaging/file-types.txt`, which the other installers' file associations read too.

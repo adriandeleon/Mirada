@@ -157,6 +157,7 @@ final class Icons {
             case NEXT_BOOKMARK -> NEXT_BOOKMARK;
             case PREVIOUS_BOOKMARK -> PREVIOUS_BOOKMARK;
             case INFO -> INFO;
+            case ALL_METADATA -> LIST;
             case ABOUT -> ABOUT;
             case THUMBNAILS -> STRIP;
             case THUMBNAILS_AT_SIDE -> SIDEBAR;
@@ -238,15 +239,16 @@ final class Icons {
     }
 
     /**
-     * Names an icon-only control: {@code title} is what a screen reader says, and with {@code
-     * chord}, if any, its tooltip, "Rotate Right (R)". Called again, it renames it in place.
+     * Names an icon-only control: its tooltip and what a screen reader says are one string, {@code
+     * title} with {@code chord}, if any, "Rotate Right (R)" (TBAR-01, TBAR-03). Called again, it
+     * renames it in place.
      */
     static <T extends Control> T name(T control, String title, KeyCombination chord) {
         String tip = tooltip(title, chord);
         Tooltip tooltip = control.getTooltip();
         if (tooltip == null) control.setTooltip(tip(tip));
         else tooltip.setText(tip);
-        control.setAccessibleText(title);
+        control.setAccessibleText(tip);
         return control;
     }
 
@@ -277,6 +279,20 @@ final class Icons {
     static String title(Command command) {
         String label = command == Command.FULL_SCREEN && fullScreen ? tr("icons.leaveFullScreen") : command.label();
         return label.endsWith("…") ? label.substring(0, label.length() - 1) : label;
+    }
+
+    /**
+     * {@link #title} without its category prefix, "Next Crop Shape" for "Edit: Next Crop Shape", as
+     * a tooltip may show it (TBAR-03).
+     */
+    static String shortTitle(Command command) {
+        return withoutPrefix(title(command));
+    }
+
+    /** {@code title} after its "Category: " prefix, or all of it without one. Pure. */
+    static String withoutPrefix(String title) {
+        int colon = title.indexOf(": ");
+        return colon < 0 ? title : title.substring(colon + 2);
     }
 
     /** The icons' size at 100 %, GNOME's symbolic icon size; the UI zoom scales it (WIN-12). */

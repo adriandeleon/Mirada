@@ -16,6 +16,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.ListCell;
@@ -180,7 +181,7 @@ final class SettingsWindow {
         // The bundled keymaps by name; one the file names that is not bundled shows as the default.
         ChoiceBox<String> keymap = new ChoiceBox<>();
         keymap.getItems().addAll(Keymap.PRESETS);
-        keymap.setConverter(converter(id -> Keymap.load(id, Os.isMac()).name(), Keymap.DEFAULT));
+        keymap.setConverter(converter(Keymap::name, Keymap.DEFAULT));
         keymap.setValue(Keymap.resolve(settings.keymap()));
         keymap.valueProperty().addListener((o, was, now) -> {
             if (now != null && !now.equals(Keymap.resolve(settings.keymap()))) settings.setKeymap(now);
@@ -280,6 +281,7 @@ final class SettingsWindow {
         sidebar.getItems().setAll(Page.values());
         sidebar.setCellFactory(list -> new PageCell());
         sidebar.getStyleClass().add("settings-sidebar");
+        sidebar.setAccessibleText(Icons.title(Command.SETTINGS));
         UiZoom.bind(sidebar.prefWidthProperty(), 190);
         sidebar.getSelectionModel().selectedItemProperty().addListener((o, was, page) -> {
             if (page != null) showPage(page);
@@ -491,6 +493,8 @@ final class SettingsWindow {
         HBox.setHgrow(words, Priority.ALWAYS);
         // The control keeps its own width; the words give way.
         if (control instanceof Region region) region.setMinWidth(Region.USE_PREF_SIZE);
+        // What a screen reader says for the control: the row's name (ACC-01).
+        if (control instanceof Control named) label.setLabelFor(named);
         HBox row = UiZoom.hbox(12, words, control);
         row.setAlignment(Pos.CENTER_LEFT);
         row.getStyleClass().add("info-row");

@@ -386,7 +386,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>${javafx.plugin.version}</version>
                 <configuration>
-                    <mainClass>com.mirada/com.mirada.App</mainClass>
+                    <mainClass>com.mirada/com.mirada.Launcher</mainClass>
                     <options>
                         <option>--enable-native-access=javafx.graphics,com.mirada</option>
                         <option>--add-exports=javafx.graphics/com.sun.glass.ui=com.mirada</option>
@@ -821,7 +821,7 @@
                                     <vendor>Mirada</vendor>
                                     <icon>${jpackage.icon}</icon>
                                     <destination>${project.build.directory}/dist</destination>
-                                    <module>com.mirada/com.mirada.App</module>
+                                    <module>com.mirada/com.mirada.Launcher</module>
                                     <modulePaths>
                                         <modulePath>${project.build.directory}/mods</modulePath>
                                     </modulePaths>
@@ -863,6 +863,19 @@
                         <artifactId>exec-maven-plugin</artifactId>
                         <version>3.6.4</version>
                         <executions>
+                            <!-- PERF-17: the stylesheets precompiled to .bss beside the .css in the
+                                 classes jlink and the native image read (ui/StyleCompiler). -->
+                            <execution>
+                                <id>precompile-styles</id>
+                                <phase>process-classes</phase>
+                                <goals><goal>java</goal></goals>
+                                <configuration>
+                                    <mainClass>com.mirada.ui.StyleCompiler</mainClass>
+                                    <arguments>
+                                        <argument>${project.build.outputDirectory}/com/mirada/styles</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
                             <!-- All after jpackage (same phase, so POM order), and the codecs before
                                  training, so the training run decodes HEIC, AVIF and JPEG XL. -->
                             <execution>

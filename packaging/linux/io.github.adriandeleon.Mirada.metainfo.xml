@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Mirada's AppStream metainfo (Pauta REL-09), which software centres and AppImage catalogues read.
+  scripts/build-appimage.sh fills @VERSION@ and @DATE@ from the release and @MEDIATYPES@ from the
+  menu entry's MimeType line, so the two cannot disagree.
+-->
+<component type="desktop-application">
+  <id>io.github.adriandeleon.Mirada</id>
+  <name>Mirada</name>
+  <summary>A fast, folder-oriented image viewer</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <developer id="io.github.adriandeleon">
+    <name>Adrian De Leon</name>
+  </developer>
+  <description>
+    <p>
+      Mirada opens a photo and the folder it is in, and steps through them as fast as the disk
+      allows: JPEG, PNG, GIF, WebP, TIFF, PSD, HEIC, AVIF and JPEG XL, animations included.
+      Everything is on the keyboard and in a command palette.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.adriandeleon.Mirada.desktop</launchable>
+  <url type="homepage">https://github.com/adriandeleon/Mirada</url>
+  <url type="bugtracker">https://github.com/adriandeleon/Mirada/issues</url>
+  <content_rating type="oars-1.1"/>
+  <provides>
+@MEDIATYPES@
+  </provides>
+  <releases>
+    <release version="@VERSION@" date="@DATE@"/>
+  </releases>
+</component>

@@ -154,6 +154,15 @@ class ChromeTest {
             if (node instanceof Hyperlink link) fx(link::fire);
         }
         assertEquals(List.of(Command.MESSAGE_LOG, Command.MESSAGE_LOG, Command.OPEN_RELEASE), ran);
+        // ACC-02: to a screen reader each label is a button it can press.
+        ran.clear();
+        for (Node node : call(() -> List.copyOf(((javafx.scene.Parent) bar.node()).getChildrenUnmodifiable()))) {
+            if (node instanceof Label label) {
+                assertEquals(javafx.scene.AccessibleRole.BUTTON, label.getAccessibleRole());
+                fx(() -> label.executeAccessibleAction(javafx.scene.AccessibleAction.FIRE));
+            }
+        }
+        assertEquals(List.of(Command.MESSAGE_LOG, Command.MESSAGE_LOG), ran);
     }
 
     /** MENU-07 (Pauta 4.0.1): the press closes the menu and is not consumed. */

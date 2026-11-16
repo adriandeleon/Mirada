@@ -94,6 +94,8 @@ final class CropView extends Region {
         getChildren().addAll(handles);
 
         setOnMouseMoved(e -> setCursor(cursorFor(handleAt(e.getX(), e.getY()))));
+        // The picture, to a screen reader; what a press or a drag does, the keyboard's commands do (ACC-02).
+        setAccessibleRole(javafx.scene.AccessibleRole.IMAGE_VIEW);
         setOnMousePressed(this::onPressed);
         setOnMouseDragged(this::onDragged);
         setOnMouseReleased(this::onReleased);

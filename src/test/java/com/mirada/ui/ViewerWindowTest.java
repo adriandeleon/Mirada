@@ -10,6 +10,7 @@ import java.util.Objects;
 
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
@@ -87,6 +88,31 @@ class ViewerWindowTest {
         return window.field("root");
     }
 
+    /** A key pressed and let go on the window's focus owner, as the toolkit sends a press. */
+    private static void type(WindowFixture window, KeyCode code) throws Exception {
+        fx(() -> press(window, code));
+    }
+
+    /** {@link #type} on the FX thread. */
+    private static void press(WindowFixture window, KeyCode code) {
+        Scene scene = window.stage.getScene();
+        Node target = scene.getFocusOwner() != null ? scene.getFocusOwner() : scene.getRoot();
+        javafx.event.Event.fireEvent(
+                target, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, false, false, false));
+        Node now = scene.getFocusOwner() != null ? scene.getFocusOwner() : scene.getRoot();
+        javafx.event.Event.fireEvent(
+                now, new KeyEvent(KeyEvent.KEY_RELEASED, "", "", code, false, false, false, false));
+    }
+
+    /** The menu the in-window menu bar has the keyboard on, or null outside its menu mode. */
+    private static @Nullable Object menuFocus(javafx.scene.control.MenuBar bar) {
+        return bar.queryAccessibleAttribute(javafx.scene.AccessibleAttribute.FOCUS_NODE);
+    }
+
+    private static @Nullable Object metadataTicked(WindowFixture window) {
+        return FxTestSupport.invoke(window.window, "ticked", new Class<?>[] {Command.class}, Command.ALL_METADATA);
+    }
+
     /** Every label's text under {@code node}, for what a panel shows. */
     private static List<String> texts(Node node) {
         List<String> found = new ArrayList<>();
@@ -106,7 +132,7 @@ class ViewerWindowTest {
     @Test
     void theArrowKeysHomeAndEndWalkTheFolderAndTheTitleFollows() throws Exception {
         try (WindowFixture window = open("a.png")) {
-            assertEquals("a.png — " + AppInfo.NAME, call(window.stage::getTitle));
+            assertEquals("a.png — photos — " + AppInfo.NAME, call(window.stage::getTitle));
             window.press(KeyCode.RIGHT);
             window.waitForImage("b.png");
             window.press(KeyCode.END);
@@ -166,6 +192,10 @@ class ViewerWindowTest {
                     () -> placeholder.getText().equals("Mirada can't open TXT files yet"));
             // The empty window offers to open something, and Open Image's own dialog answers.
             assertNotNull(window.field("openButtons"));
+            // WELC-02: each way in shows its chord, from the keymap.
+            List<String> ways = call(() -> texts(window.field("openButtons")));
+            assertTrue(ways.contains(Command.OPEN.chord().getDisplayText()), ways.toString());
+            assertTrue(ways.contains(Command.OPEN_FOLDER.chord().getDisplayText()), ways.toString());
             FileDialogs.answeredBy(
                     (title, folder, name) -> photos.resolve("b.png").toFile());
             window.run(Command.OPEN);
@@ -186,7 +216,8 @@ class ViewerWindowTest {
                 return title.equals("Open Folder") ? other.getParent().toFile() : null;
             });
             window.run(Command.OPEN);
-            assertEquals("a.png — " + AppInfo.NAME, call(window.stage::getTitle), "cancelled: nothing changes");
+            assertEquals(
+                    "a.png — photos — " + AppInfo.NAME, call(window.stage::getTitle), "cancelled: nothing changes");
             window.run(Command.OPEN_FOLDER);
             window.waitForImage("x.png");
             assertEquals(List.of("Open Image", "Open Folder"), titles);
@@ -366,12 +397,18 @@ class ViewerWindowTest {
             window.press(KeyCode.I);
             BorderPane root = root(window);
             assertNotNull(call(root::getRight), "the sidebar is open");
+            // KBD-15: All Metadata, out of the Tab order, unfolds from the keyboard by its command;
+            // its rows (the file's name among them) are made as it unfolds, and stay so image to image.
+            window.run(Command.ALL_METADATA);
             waitUntil("the details of a.png", () -> texts(root.getRight()).contains("a.png"));
+            assertEquals(true, call(() -> metadataTicked(window)));
             assertTrue(call(() -> texts(root.getRight())).contains("64 × 48"), "the size, as shown");
             window.run(Command.ROTATE_CLOCKWISE);
             waitUntil("the turned size", () -> texts(root.getRight()).contains("48 × 64"));
             window.run(Command.NEXT);
             waitUntil("the details of b.png", () -> texts(root.getRight()).contains("b.png"));
+            window.run(Command.ALL_METADATA);
+            assertEquals(false, call(() -> metadataTicked(window)), "folded again");
             window.run(Command.INFO);
             assertNull(call(root::getRight), "closed again");
         }
@@ -710,26 +747,25 @@ class ViewerWindowTest {
         if (Os.isMac()) return; // a Mac's menus are the system's, reached with its own keys
         try (WindowFixture window = open("a.png")) {
             window.waitForFirstPaint();
-            fx(() -> window.stage.requestFocus());
-            javafx.scene.robot.Robot robot = call(javafx.scene.robot.Robot::new);
             TitleBar titleBar = window.field("titleBar");
             javafx.scene.control.MenuBar bar = call(titleBar::menuBar);
             assertNotNull(bar);
-            for (KeyCode code : List.of(KeyCode.F10, KeyCode.RIGHT)) {
-                fx(() -> {
-                    robot.keyPress(code);
-                    robot.keyRelease(code);
-                });
-            }
-            Object focused = call(() -> bar.queryAccessibleAttribute(javafx.scene.AccessibleAttribute.FOCUS_NODE));
-            assertNotNull(focused, "the menu bar has the keyboard");
+            // The keys go to the window's focus owner, as the toolkit would send them: no robot, whose
+            // keys reach whichever window the platform holds focused. The menu bar leaves its menu
+            // mode whenever its window loses the focus, which another test's window can take a moment
+            // after this one shows: wait until the window has it, then press F10, and again if the
+            // focus went in between.
+            waitUntil("the menu bar has the keyboard", () -> {
+                if (menuFocus(bar) != null) return true;
+                if (!window.stage.isFocused()) window.stage.requestFocus();
+                else press(window, KeyCode.F10);
+                return menuFocus(bar) != null;
+            });
+            type(window, KeyCode.RIGHT);
+            assertNotNull(call(() -> menuFocus(bar)), "the menu bar keeps the keyboard");
             assertEquals(0, folder(window).index(), "Right walked the menus, not the folder");
-            for (KeyCode code : List.of(KeyCode.ESCAPE, KeyCode.RIGHT)) {
-                fx(() -> {
-                    robot.keyPress(code);
-                    robot.keyRelease(code);
-                });
-            }
+            type(window, KeyCode.ESCAPE);
+            type(window, KeyCode.RIGHT);
             window.waitForImage("b.png");
         }
     }
@@ -864,7 +900,7 @@ class ViewerWindowTest {
             assertTrue(call(editor::isShowing));
             window.run(Command.NEXT);
             assertEquals("Finish editing first: Save or Cancel", window.lastSaid());
-            assertEquals("a.png — " + AppInfo.NAME, call(window.stage::getTitle));
+            assertEquals("a.png — photos — " + AppInfo.NAME, call(window.stage::getTitle));
 
             window.press(KeyCode.ENTER);
             assertEquals("Nothing to save: crop, turn or flip first", window.lastSaid());
@@ -874,6 +910,8 @@ class ViewerWindowTest {
             assertEquals(said, window.said().size());
             assertTrue(call(editor::isShowing));
             window.press(KeyCode.R);
+            // TABS-10: an unsaved edit marks the title.
+            assertEquals("\u25CF a.png — photos — " + AppInfo.NAME, call(window.stage::getTitle));
             window.press(KeyCode.H);
             window.press(KeyCode.V);
             window.press(KeyCode.Z, true, false); // undo the flip

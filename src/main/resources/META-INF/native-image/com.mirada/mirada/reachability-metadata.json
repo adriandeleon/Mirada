@@ -3126,6 +3126,9 @@
       "glob": "com/mirada/pauta.json"
     },
     {
+      "glob": "com/mirada/styles/*.bss"
+    },
+    {
       "glob": "com/mirada/styles/high-contrast.css"
     },
     {

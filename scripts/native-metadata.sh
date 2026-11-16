@@ -73,7 +73,9 @@ if any(str(r.get("glob", "")).startswith(themes) for r in resources):
     resources = [r for r in resources if not str(r.get("glob", "")).startswith(themes)]
     resources.append({"glob": themes + "*.properties"})
 globs = {r.get("glob") for r in resources}
-for theme in ("atlantafx/base/theme/cupertino-light.bss", "atlantafx/base/theme/cupertino-dark.bss"):
+# Mirada's own stylesheets precompiled (PERF-17, -Pdist), which a run from the plain classes never reads.
+for theme in ("atlantafx/base/theme/cupertino-light.bss", "atlantafx/base/theme/cupertino-dark.bss",
+              "com/mirada/styles/*.bss"):
     if theme not in globs:
         resources.append({"glob": theme})
 data["resources"] = resources

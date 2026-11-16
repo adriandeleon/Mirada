@@ -3,6 +3,7 @@ package com.mirada.ui;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
@@ -138,6 +139,7 @@ final class BookmarksWindow {
 
         filter.setPromptText(tr("bookmarks.filterPrompt"));
         filter.getStyleClass().add("bookmarks-filter");
+        filter.setAccessibleText(tr("bookmarks.filterPrompt")); // the prompt goes when typing starts (ACC-01)
         filter.textProperty().addListener((o, was, now) -> {
             if (saying) refreshKeys();
             filtering.request();
@@ -171,6 +173,7 @@ final class BookmarksWindow {
         UiZoom.pad(top, 12, 12, 8, 12);
 
         list.getStyleClass().add("bookmarks-list");
+        list.setAccessibleText(Icons.title(Command.BOOKMARKS));
         // The filter keeps the keys; a click selects without taking them from it.
         list.setFocusTraversable(false);
         list.setCellFactory(view -> new Cell());
@@ -202,8 +205,12 @@ final class BookmarksWindow {
         Popups.menusByKey(scene);
         stage.setScene(scene);
 
-        bookmarks.addListener(() -> {
+        // A burst of changes (an import, a folder's worth of marks) makes the list once (PERF-06).
+        Redraw redraw = new Redraw(() -> {
             if (stage.isShowing()) marksChanged();
+        });
+        bookmarks.addListener(() -> {
+            if (stage.isShowing()) redraw.request();
         });
     }
 
@@ -251,7 +258,15 @@ final class BookmarksWindow {
                 folders == 0
                         ? counted(images, "image")
                         : tr("bookmarks.countBoth", counted(images, "image"), counted(folders, "folder")));
-        empty.setText(marks.isEmpty() ? tr("bookmarks.emptyNone") : tr("bookmarks.emptyNoMatch"));
+        empty.setText(
+                marks.isEmpty()
+                        ? tr(
+                                "bookmarks.emptyNone",
+                                keyOf(Command.BOOKMARK),
+                                keyOf(Command.NOTE),
+                                keyOf(Command.BOOKMARK_FOLDER),
+                                keyOf(Command.FOLDER_NOTE))
+                        : tr("bookmarks.emptyNoMatch"));
     }
 
     /**
@@ -276,6 +291,15 @@ final class BookmarksWindow {
             if (!there) gone.add(mark.path());
         }
         return Set.copyOf(gone);
+    }
+
+    /**
+     * The key that runs {@code command} in the keymap now, or its title where it has none: the
+     * empty list names the keys that fill it, never one written into the text (KBD-13).
+     */
+    static String keyOf(Command command) {
+        KeyCombination chord = command.chord();
+        return chord == KeyCombination.NO_MATCH ? Icons.title(command) : chord.getDisplayText();
     }
 
     /** "1 image", "3 folders": {@code n} of {@code what}, which is "image" or "folder". */
@@ -607,6 +631,7 @@ final class BookmarksWindow {
             if (empty || item == null) {
                 setGraphic(null);
                 setText(null);
+                setAccessibleText(null);
                 pseudoClassStateChanged(MISSING, false);
                 pseudoClassStateChanged(FOLDER, false);
                 return;
@@ -658,6 +683,13 @@ final class BookmarksWindow {
             }
             setText(null);
             setGraphic(row);
+            // The row as a screen reader says it: its name, bookmarked or not, where, its note (ACC-01).
+            List<String> words = new ArrayList<>();
+            words.add(name.getText());
+            if (mark != null && mark.bookmarked()) words.add(tr("info.bookmarked"));
+            if (item instanceof BookmarkList.FolderRow && !where.getText().isEmpty()) words.add(where.getText());
+            if (!said.isEmpty()) words.add(said);
+            setAccessibleText(String.join(", ", words));
         }
     }
 

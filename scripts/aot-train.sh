@@ -59,7 +59,7 @@ opts=(-XX:AOTCacheOutput="$(native "$cache")"
       --enable-native-access=javafx.graphics,com.mirada
       --add-exports=javafx.graphics/com.sun.glass.ui=com.mirada
       ${mac_exports[@]+"${mac_exports[@]}"}
-      -m com.mirada/com.mirada.App
+      -m com.mirada/com.mirada.Launcher
       "$(native "$training")")
 
 # A bound on a training run that never reaches its last image; macOS has no `timeout`.

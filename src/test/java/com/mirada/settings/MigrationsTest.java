@@ -38,6 +38,17 @@ class MigrationsTest {
     }
 
     @Test
+    void aUsersKeysForThePanelsFollowTheirCommandsToTheToolIds() {
+        Properties migrated = Migrations.migrate(
+                properties("schemaVersion", "2", "keys.view.properties", "C-i", "keys.view.thumbnails", "C-t"),
+                Migrations.SETTINGS);
+        assertEquals("C-i", migrated.getProperty("keys.tool.properties"));
+        assertEquals("C-t", migrated.getProperty("keys.tool.thumbnails"));
+        assertNull(migrated.getProperty("keys.view.properties"));
+        assertNull(migrated.getProperty("keys.view.thumbnails"));
+    }
+
+    @Test
     void aFileWithoutAVersionIsTheFirstAndAHandEditedOneIsReadAsWellAsItCanBe() {
         assertEquals(1, Migrations.versionOf(properties()));
         assertEquals(2, Migrations.versionOf(properties("schemaVersion", " 2 ")));

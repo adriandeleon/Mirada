@@ -28,6 +28,7 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
@@ -120,6 +121,8 @@ public final class ViewerWindow {
     private final VBox emptyState = new VBox(placeholder);
     /** Those two buttons, built the first time the window has no folder to show. */
     private @Nullable HBox openButtons;
+    /** The empty window's hint as last written, to write again with the keys now. */
+    private String emptyHint = "";
 
     private final BorderPane root;
     private final TitleBar titleBar;
@@ -252,9 +255,13 @@ public final class ViewerWindow {
         FileWrites writes = settings.writes();
         this.bookmarks = new Bookmarks(
                 Bookmarks.fileBeside(settings.file()), writes, writes.isDirect() ? Runnable::run : Platform::runLater);
-        bookmarks.addListener(() -> {
+        // The strip's marks and the sidebar follow the marks once a pulse, however many changed (PERF-06).
+        Redraw marksShown = new Redraw(() -> {
             showMarks();
             refreshInfo();
+        });
+        bookmarks.addListener(() -> {
+            marksShown.request();
             // A bookmarks file this read could not use was kept aside: say where (SET-10, SET-11).
             String marksKept = SettingsCommands.setAside("bookmarks", bookmarks.takeSetAside());
             if (marksKept != null) say(marksKept, MessageLog.Severity.WARNING);
@@ -400,9 +407,14 @@ public final class ViewerWindow {
         // What a first key press, About or Copy Details would read: read now, off the FX thread.
         afterFirstPaint(() -> {
             String keymap = settings.keymap();
+            int zoom = UiZoom.percent();
             FILES.execute(() -> {
+                // The other theme's sheet at a zoom other than 100 %, for a change of theme (PERF-01).
+                UiZoom.prepare(zoom);
                 Keybindings.preload(keymap);
                 AppInfo.runtime();
+                // The other keymaps too, so choosing one in Settings parses nothing on the FX thread.
+                for (String preset : Keymap.PRESETS) Keybindings.preload(preset);
                 PautaConformance.exceptions();
             });
         });
@@ -834,11 +846,34 @@ public final class ViewerWindow {
         if (opened != null) afterFirstPaint(() -> settings.addRecent(opened));
     }
 
+    /** The window's title for the image on screen, its folder, and whether an edit is unsaved (TABS-10). */
+    private void showTitle() {
+        Path file = folder.current();
+        if (file == null) return;
+        Editor open = editor;
+        Path parent = file.toAbsolutePath().getParent();
+        stage.setTitle(windowTitle(
+                fileName(file),
+                parent == null ? null : fileName(parent),
+                open != null && open.unsavedProperty().get()));
+    }
+
+    /**
+     * "photo.jpg — Holiday — Mirada": the file, its folder and the app, after a ● while an edit of it
+     * is unsaved (TABS-10). A file at the root of a drive has no folder to name. Pure.
+     */
+    static String windowTitle(String file, @Nullable String folder, boolean unsaved) {
+        String title = folder == null || folder.isEmpty()
+                ? tr("viewer.windowTitle", file, AppInfo.NAME)
+                : tr("viewer.windowTitleInFolder", file, folder, AppInfo.NAME);
+        return unsaved ? "\u25CF " + title : title;
+    }
+
     private void showCurrent() {
         Path file = folder.current();
         if (file == null || released) return;
         wanted = file;
-        stage.setTitle(tr("viewer.windowTitle", fileName(file), AppInfo.NAME));
+        showTitle();
         titleBar.setTitle(fileName(file));
         titleBar.setFolder(file.toAbsolutePath().getParent());
         refreshStrip();
@@ -997,6 +1032,16 @@ public final class ViewerWindow {
         if (built != null) built.relabel();
         MarksBadge badge = marksBadge;
         if (badge != null) badge.relabel();
+        Editor open = editor;
+        if (open != null) open.relabel();
+        HBox buttons = openButtons;
+        if (buttons != null) {
+            for (Node child : buttons.getChildren()) if (child instanceof VBox way) labelWayIn(way);
+            if (placeholder.getText().equals(emptyHint)) {
+                emptyHint = tr("viewer.emptyHint", Command.OPEN.chord().getDisplayText());
+                placeholder.setText(emptyHint);
+            }
+        }
     }
 
     /**
@@ -1051,6 +1096,11 @@ public final class ViewerWindow {
             case GO_TO_IMAGE -> goToImage();
             case OPEN_RECENT -> openRecent();
             case INFO -> infoShowing.set(!infoShowing.get());
+            case ALL_METADATA -> {
+                boolean unfold = !(infoShowing.get() && infoPanel().metadataExpanded());
+                infoShowing.set(true);
+                infoPanel().setMetadataExpanded(unfold);
+            }
             case THUMBNAILS -> thumbnailsShowing.set(!thumbnailsShowing.get());
             case THUMBNAILS_AT_SIDE -> {
                 settings.setThumbnailsAtSide(!settings.thumbnailsAtSide());
@@ -1211,6 +1261,7 @@ public final class ViewerWindow {
                     COPY_DETAILS,
                     FULL_SCREEN,
                     INFO,
+                    ALL_METADATA,
                     THUMBNAILS,
                     SETTINGS,
                     SHORTCUTS,
@@ -1647,6 +1698,7 @@ public final class ViewerWindow {
         if (made == null) {
             made = new Editor(root, canvas, this::say);
             editor = made;
+            made.unsavedProperty().addListener((o, was, now) -> showTitle());
         }
         made.open(image, shownOrientation, file, saved -> {
             open(saved);
@@ -1974,10 +2026,14 @@ public final class ViewerWindow {
             if (buttons != null) buttons.setVisible(false);
             return;
         }
-        if (placeholder.getText().isEmpty())
-            placeholder.setText(tr("viewer.emptyHint", Command.OPEN.chord().getDisplayText()));
+        if (placeholder.getText().isEmpty() || placeholder.getText().equals(emptyHint)) {
+            emptyHint = tr("viewer.emptyHint", Command.OPEN.chord().getDisplayText());
+            placeholder.setText(emptyHint);
+        }
         if (buttons == null) {
-            buttons = new HBox(openButton(Command.OPEN), openButton(Command.OPEN_FOLDER));
+            // The ways in, each with its chord under it (WELC-02); Open Recent while there is one.
+            buttons = new HBox(
+                    openButton(Command.OPEN), openButton(Command.OPEN_FOLDER), openButton(Command.OPEN_RECENT));
             buttons.getStyleClass().add("open-buttons");
             buttons.setAlignment(Pos.CENTER);
             buttons.managedProperty().bind(buttons.visibleProperty());
@@ -1990,15 +2046,35 @@ public final class ViewerWindow {
             docs.managedProperty().bind(buttons.visibleProperty());
             emptyState.getChildren().addAll(buttons, docs);
         }
+        buttons.getChildren().getLast().setVisible(!settings.recent().isEmpty());
         buttons.setVisible(true);
     }
 
-    private Button openButton(Command command) {
+    /** A way in for the empty window: the command's button, and its chord under it. */
+    private VBox openButton(Command command) {
         Button button = new Button(command.label(), Icons.menu(command));
         button.getStyleClass().add("open-button");
-        button.setTooltip(Icons.tip(Icons.tooltip(command)));
+        button.setTooltip(Icons.tip(""));
         button.setOnAction(e -> run(command));
-        return button;
+        Label chord = new Label();
+        chord.getStyleClass().add("open-chord");
+        VBox way = UiZoom.vbox(4, button, chord);
+        way.setAlignment(Pos.TOP_CENTER);
+        way.managedProperty().bind(way.visibleProperty());
+        way.setUserData(command); // relabelButtons names it again when the keys change (TBAR-03)
+        labelWayIn(way);
+        return way;
+    }
+
+    /** A way in's tooltip and chord from the keys now (TBAR-03, KBD-13). */
+    private static void labelWayIn(VBox way) {
+        if (!(way.getUserData() instanceof Command command)) return;
+        if (way.getChildren().getFirst() instanceof Button button)
+            button.getTooltip().setText(Icons.tooltip(command));
+        if (way.getChildren().getLast() instanceof Label chord) {
+            KeyCombination keys = command.chord();
+            chord.setText(keys == KeyCombination.NO_MATCH ? "" : keys.getDisplayText());
+        }
     }
 
     private void chooseFolder() {
@@ -2131,6 +2207,10 @@ public final class ViewerWindow {
                 yield shown != null && bookmarks.isBookmarked(shown);
             }
             case INFO -> infoShowing.get();
+            case ALL_METADATA -> {
+                InfoPanel panel = info;
+                yield infoShowing.get() && panel != null && panel.metadataExpanded();
+            }
             case STATUS_BAR -> settings.statusBar();
             case THUMBNAILS -> thumbnailsShowing.get();
             case THUMBNAILS_AT_SIDE -> settings.thumbnailsAtSide();

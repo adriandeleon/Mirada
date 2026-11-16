@@ -114,6 +114,23 @@ class MessagesTest {
         }
     }
 
+    /**
+     * KBD-13: no value names a command's chord; the keys come from the keymap in force ({@code {0}}).
+     * A control's own fixed keys (Enter, Esc, Tab, the arrows) may be written.
+     */
+    @Test
+    void noValueWritesAChordIn() {
+        Pattern chord = Pattern.compile(
+                "\\b(Ctrl|Cmd|Shift|Alt|Option|Strg|Maj|Mayús|Umschalt)\\+|\\bF\\d{1,2}\\b|\\b[CM]-[a-zA-Z0-9]");
+        for (String language : ALL) {
+            Properties catalog = catalog(language);
+            for (String key : catalog.stringPropertyNames()) {
+                String value = catalog.getProperty(key);
+                assertFalse(chord.matcher(value).find(), name(language) + " " + key + ": " + value);
+            }
+        }
+    }
+
     /** INTL-08: no value is empty, in any catalog. */
     @Test
     void noValueIsEmpty() {

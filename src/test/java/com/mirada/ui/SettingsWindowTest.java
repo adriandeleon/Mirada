@@ -208,6 +208,10 @@ class SettingsWindowTest {
         fx(() -> this.<Spinner<Integer>>control("Hide controls after").increment(3));
         fx(() -> this.<Spinner<Integer>>control("Slideshow speed").increment(4));
         fx(() -> settings.setPaletteKeys(settings.paletteKeys() + " f2"));
+        // The choices that change what the window says and which keys it takes (QUAL-13).
+        fx(() -> this.<ChoiceBox<String>>control("Language").setValue("es"));
+        fx(() -> this.<ChoiceBox<String>>control("Keymap").setValue("emacs"));
+        fx(() -> this.<Spinner<Integer>>control("Interface zoom").increment(2));
         Settings was = settings;
 
         // A restart: the file read again, and a new window over it.
@@ -226,6 +230,10 @@ class SettingsWindowTest {
         assertEquals(was.controlsHideSeconds(), again.controlsHideSeconds());
         assertEquals(was.slideshowSeconds(), again.slideshowSeconds());
         assertEquals(was.paletteKeys(), again.paletteKeys());
+        assertEquals("es", again.language());
+        assertEquals("emacs", again.keymap());
+        assertEquals(was.uiZoom(), again.uiZoom());
+        assertTrue(again.uiZoom() > Settings.DEFAULT_UI_ZOOM);
 
         settings = again;
         SettingsWindow reopened = call(() -> new SettingsWindow(again, ViewerWindow.stylesheet(), ran::add));
@@ -245,6 +253,13 @@ class SettingsWindowTest {
                 again.slideshowSeconds(),
                 call(() -> this.<Spinner<Integer>>control("Slideshow speed").getValue()));
         assertTrue(call(() -> this.<CheckBox>control("Reverse order").isSelected()));
+        assertEquals(
+                "es", call(() -> this.<ChoiceBox<String>>control("Language").getValue()));
+        assertEquals(
+                "emacs", call(() -> this.<ChoiceBox<String>>control("Keymap").getValue()));
+        assertEquals(
+                again.uiZoom(),
+                call(() -> this.<Spinner<Integer>>control("Interface zoom").getValue()));
     }
 
     @Test

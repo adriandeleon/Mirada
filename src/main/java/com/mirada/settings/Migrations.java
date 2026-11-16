@@ -37,8 +37,31 @@ final class Migrations {
      * {@code settings.properties}. Version 2 only adds {@code schemaVersion} itself: the identity
      * step.
      */
-    static final Schema SETTINGS =
-            new Schema(Settings.FILE_NAME, Settings.SCHEMA_VERSION, Map.of(1, UnaryOperator.identity()));
+    static final Schema SETTINGS = new Schema(
+            Settings.FILE_NAME,
+            Settings.SCHEMA_VERSION,
+            Map.of(1, UnaryOperator.identity(), 2, Migrations::panelCommandsRenamed));
+
+    /**
+     * The two tool panels' commands moved from {@code view.*} to {@code tool.*} (TABS-13, Pauta
+     * 6.1.0), the ids a user's own keys are stored under ({@code keys.<id>}).
+     */
+    static final Map<String, String> RENAMED_COMMANDS =
+            Map.of("view.properties", "tool.properties", "view.thumbnails", "tool.thumbnails");
+
+    /**
+     * Version 3: a user's keys for a renamed command move to its new id; keys already under the new
+     * id win.
+     */
+    static Properties panelCommandsRenamed(Properties properties) {
+        RENAMED_COMMANDS.forEach((from, to) -> {
+            String keys = (String) properties.remove(Settings.KEYS + from);
+            if (keys != null && properties.getProperty(Settings.KEYS + to) == null) {
+                properties.setProperty(Settings.KEYS + to, keys);
+            }
+        });
+        return properties;
+    }
 
     /**
      * {@code bookmarks.properties}. Version 2 only adds {@code schemaVersion} itself: the identity

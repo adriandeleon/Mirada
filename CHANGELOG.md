@@ -10,6 +10,22 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Added
 
+- **All Metadata opens from the keyboard.** **All Metadata** in the View menu and the palette opens
+  the properties sidebar with every tag the file carries unfolded, and folds them away again; it
+  stays unfolded from image to image. The list shows its first 300 tags and says how many more the
+  file has.
+- **The empty window shows the keys of its ways in**: Open Image, Open Folder and, once there is a
+  recent folder, Open Recent, each with its key under it from the keymap in use.
+- **The window title names the folder too**, "photo.jpg — Holiday — Mirada", and starts with ● while
+  an edit is not saved.
+- **A screen reader names every control**: the thumbnails, the lists of the Message Log, Bookmarks,
+  the palette and Settings, their filter fields, each bookmark row (its name, whether it is
+  bookmarked, its folder and its note), each Settings control by its row's name, the editor's crop
+  shape, and the Debug Log and Report a Problem texts. The status bar's message and error count are
+  buttons to it, and an icon button reads its key as its tooltip shows it.
+- **AppStream metainfo of its own** (`packaging/linux/io.github.adriandeleon.Mirada.metainfo.xml`),
+  which the AppImage carries.
+
 - **Find in the Debug Log.** Ctrl+F (⌘F on a Mac, C-s in Emacs), F3, or **Find in Debug Log** in
   the palette or the log's right-click menu opens a find bar under the log: it searches as you type
   and counts the matches, Enter and Shift+Enter step to the next and the previous one, round the
@@ -157,6 +173,23 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
   without installing anything or needing root.
 
 ### Changed
+
+- **The sidebar's and the thumbnails' commands are `tool.properties` and `tool.thumbnails`**
+  (they were `view.properties` and `view.thumbnails`), and in the Emacs keymap M-1 and M-2 open
+  them, besides I and T. Keys you set for them yourself move to the new names at the next start.
+- **The editor's tooltips name their commands and keys again when the keys change**, and so do the
+  empty window's Open buttons; the crop shape's tooltip is **Next Crop Shape** with its key. The
+  bookmark badge's tooltip is **Bookmark Image** and the note badge's **Note on Image**, with the note
+  under it.
+- **Lists redraw once a frame**: a burst of messages, bookmark changes or keys typed in a search
+  makes the Message Log, the Bookmarks window, Keyboard Shortcuts and the thumbnails' marks once.
+- **Choosing a keymap or changing the interface zoom reads nothing on the window's thread**: the
+  keymaps are read after the first paint, and a new zoom's stylesheets are scaled on a thread of
+  their own before they are put on.
+- **The JVM build starts reading the settings before the window toolkit**, as the native build did;
+  the release build ships its stylesheets precompiled.
+- **No translated text names a key**: the empty Bookmarks list names the keymap's keys for
+  bookmarks and notes, and the slideshow speed's description no longer names F5.
 
 - **The palette, its pickers, the Message Log and the Bookmarks list move on your keymap's keys.**
   In Emacs, C-n, C-p, C-v, M-v, M-< and M-> move and C-g cancels in all four; the CUA keymaps move on

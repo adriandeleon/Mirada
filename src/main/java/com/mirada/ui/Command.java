@@ -64,8 +64,13 @@ enum Command {
     SORT_BY_DATE("folder.sortByDate", "order modified time"),
     SORT_BY_SIZE("folder.sortBySize", "order"),
     REVERSE_ORDER("folder.reverseOrder", "sort descending ascending"),
-    INFO("view.properties", "info details exif metadata sidebar"),
-    THUMBNAILS("view.thumbnails", "filmstrip strip gallery browse folder"),
+    INFO("tool.properties", "info details exif metadata sidebar"),
+    /**
+     * The properties sidebar with All Metadata unfolded, or folded again: the keyboard's way to that
+     * card, which stays out of the Tab order so Space keeps stepping the folder (KBD-15).
+     */
+    ALL_METADATA("view.allMetadata", "exif xmp iptc tags details info properties sidebar unfold expand"),
+    THUMBNAILS("tool.thumbnails", "filmstrip strip gallery browse folder"),
     THUMBNAILS_AT_SIDE("view.thumbnailsAtSide", "vertical column filmstrip strip left layout"),
     THUMBNAIL_NAMES("view.thumbnailNames", "names list text filmstrip strip filenames"),
     THUMBNAIL_CAPTIONS("view.thumbnailCaptions", "captions labels titles filmstrip strip filenames"),
@@ -388,7 +393,7 @@ enum Command {
                     GO_TO_BOOKMARK,
                     BOOKMARKS -> tr("group.bookmarks");
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER -> tr("group.order");
-            case INFO, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES, THUMBNAIL_CAPTIONS, STATUS_BAR ->
+            case INFO, ALL_METADATA, THUMBNAILS, THUMBNAILS_AT_SIDE, THUMBNAIL_NAMES, THUMBNAIL_CAPTIONS, STATUS_BAR ->
                 tr("group.panels");
             case MESSAGE_LOG,
                     COPY_MESSAGES,

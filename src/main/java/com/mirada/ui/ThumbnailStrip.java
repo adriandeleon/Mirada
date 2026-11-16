@@ -96,6 +96,7 @@ final class ThumbnailStrip {
         this.pick = pick;
         list.setItems(items);
         list.getStyleClass().add("thumbnail-strip");
+        list.setAccessibleText(Icons.title(Command.THUMBNAILS));
         // The keyboard is the viewer's: arrows step the folder, not the list's selection.
         list.setFocusTraversable(false);
         list.setCellFactory(view -> new Cell(pick, drag));
@@ -326,10 +327,12 @@ final class ThumbnailStrip {
             showMark();
             if (empty || file == null) {
                 setGraphic(null);
+                setAccessibleText(null);
                 return;
             }
             Path fileName = file.getFileName();
             String text = fileName == null ? file.toString() : fileName.toString();
+            setAccessibleText(text); // a picture reads as its file's name (ACC-01)
             if (names) {
                 name.setText(text);
                 setGraphic(name);

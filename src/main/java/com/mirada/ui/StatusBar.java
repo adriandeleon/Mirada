@@ -4,6 +4,8 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import javafx.geometry.Pos;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleRole;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
@@ -59,18 +61,16 @@ final class StatusBar {
     /** Adds the echo area, the unread count and the update notice: after the first paint. */
     void finish() {
         if (parts != null) return;
-        Label echo = new Label();
-        Label unread = new Label();
+        Label echo = new ActionLabel(() -> run.accept(Command.MESSAGE_LOG));
+        Label unread = new ActionLabel(() -> run.accept(Command.MESSAGE_LOG));
         Hyperlink update = new Hyperlink();
         parts = new Parts(echo, unread, update);
         echo.getStyleClass().add("status-echo");
         echo.setMaxWidth(Double.MAX_VALUE);
         echo.setMinWidth(0);
         // A click runs the Message Log command, as its menu item and the palette do (WIN-01, MLOG-02).
-        echo.setOnMouseClicked(e -> run.accept(Command.MESSAGE_LOG));
         echo.setTooltip(Icons.tip(tr("status.messageLogTip")));
         unread.getStyleClass().add("status-unread");
-        unread.setOnMouseClicked(e -> run.accept(Command.MESSAGE_LOG));
         unread.setTooltip(Icons.tip(tr("status.unreadTip")));
         update.getStyleClass().add("status-update");
         update.setFocusTraversable(false);
@@ -143,5 +143,26 @@ final class StatusBar {
 
     Label unread() {
         return Objects.requireNonNull(parts, "not finished").unread();
+    }
+
+    /**
+     * A label that acts as a button: a click runs its action, and a screen reader hears a button and
+     * can press it (ACC-02). Out of the Tab order, as its command has its own keys (KBD-15).
+     */
+    static final class ActionLabel extends Label {
+
+        private final Runnable action;
+
+        ActionLabel(Runnable action) {
+            this.action = action;
+            setAccessibleRole(AccessibleRole.BUTTON);
+            setOnMouseClicked(e -> action.run());
+        }
+
+        @Override
+        public void executeAccessibleAction(AccessibleAction what, Object... parameters) {
+            if (what == AccessibleAction.FIRE) action.run();
+            else super.executeAccessibleAction(what, parameters);
+        }
     }
 }

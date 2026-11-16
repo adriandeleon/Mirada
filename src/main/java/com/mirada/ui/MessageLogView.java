@@ -45,6 +45,8 @@ final class MessageLogView {
 
     /** Makes the list again as the filter is typed, coalesced as the Bookmarks window's is. */
     private final FxThrottle filtering = new FxThrottle(BookmarksWindow.FILTER_PAUSE_MS, this::refresh);
+    /** Makes the list again as messages come, once a pulse however many came (PERF-06). */
+    private final Redraw redraw = new Redraw(this::refreshIfShowing);
 
     private final OverlayHost host;
     private final MessageLog messages;
@@ -65,11 +67,13 @@ final class MessageLogView {
         title.getStyleClass().add("message-log-title");
         filter.setPromptText(tr("messageLog.filterPrompt"));
         filter.getStyleClass().add("message-log-filter");
+        filter.setAccessibleText(tr("messageLog.filterPrompt")); // the prompt goes when typing starts (ACC-01)
         // As the Bookmarks window's filter: the first key at once, then at most one list a pause (PERF-06).
         filter.textProperty().addListener((o, was, now) -> filtering.request());
         TextInputKeys.install(filter);
 
         list.getStyleClass().add("message-log-list");
+        list.setAccessibleText(tr("messageLog.title"));
         UiZoom.bind(list.prefHeightProperty(), LIST_HEIGHT);
         list.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         list.setPlaceholder(new Label(tr("messageLog.empty")));
@@ -98,7 +102,7 @@ final class MessageLogView {
         // On the card, before the field and the list take the keys.
         card.addEventFilter(KeyEvent.KEY_PRESSED, this::onKey);
         messages.addListener(() -> {
-            if (isShowing()) refresh();
+            if (isShowing()) redraw.request();
         });
     }
 
@@ -171,6 +175,10 @@ final class MessageLogView {
         return List.copyOf(selected.isEmpty() ? list.getItems() : selected);
     }
 
+    private void refreshIfShowing() {
+        if (isShowing()) refresh();
+    }
+
     private void refresh() {
         int dropped = messages.dropped();
         cut.setText(dropped == 0 ? "" : tr("messageLog.olderNotKept", dropped));
@@ -200,6 +208,7 @@ final class MessageLogView {
             if (empty || entry == null) {
                 setGraphic(null);
                 setText(null);
+                setAccessibleText(null);
                 return;
             }
             Label time = new Label(TIME.format(entry.time()));
@@ -213,6 +222,7 @@ final class MessageLogView {
             row.setAlignment(Pos.TOP_LEFT);
             setText(null);
             setGraphic(row);
+            setAccessibleText(TIME.format(entry.time()) + "  " + entry.text()); // the row as it reads (ACC-01)
         }
     }
 }
