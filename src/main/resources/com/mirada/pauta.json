@@ -209,22 +209,6 @@
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
-      "rule": "WIN-04",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/window-shell/#win-04",
-      "kind": "pending",
-      "reason": "Dialogs are not all built by one helper that gives them the same look.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "WIN-11",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/window-shell/#win-11",
-      "kind": "pending",
-      "reason": "Dialog buttons follow each system's own order instead of the same order everywhere.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
       "rule": "WIN-08",
       "level": "SHOULD",
       "url": "https://pauta-project.dev/6.1.0/window-shell/#win-08",
@@ -390,46 +374,6 @@
       "url": "https://pauta-project.dev/6.1.0/templates/welcome/#welc-02",
       "kind": "pending",
       "reason": "The empty window shows the key for Open but not for its other actions.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "CONF-01",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/templates/confirm-dialog/#conf-01",
-      "kind": "pending",
-      "reason": "Removing a bookmark without a note does not ask first and cannot be undone.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "CONF-14",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/templates/confirm-dialog/#conf-14",
-      "kind": "pending",
-      "reason": "The Rename dialog's buttons are worded in the system's language rather than Mirada's.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "CONF-13",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/templates/confirm-dialog/#conf-13",
-      "kind": "pending",
-      "reason": "In a question before something is removed, Enter runs the red action instead of Cancel.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "CONF-05",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/confirm-dialog/#conf-05",
-      "kind": "pending",
-      "reason": "Leaving the editor with an unsaved edit offers Discard and Cancel but not Save.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "CONF-12",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/templates/confirm-dialog/#conf-12",
-      "kind": "pending",
-      "reason": "The questions Mirada asks cannot be answered by a test without a screen.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {

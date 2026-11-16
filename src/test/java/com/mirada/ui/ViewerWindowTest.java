@@ -17,6 +17,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
@@ -591,7 +592,7 @@ class ViewerWindowTest {
             WindowFixture.answerNextDialog(pane -> {
                 assertEquals("a.png", ((TextField) pane.lookup(".text-field")).getText());
                 WindowFixture.type(pane, "harbour");
-                WindowFixture.press(pane, "OK");
+                WindowFixture.press(pane, "Rename");
             });
             window.run(Command.RENAME);
             window.waitToSay("Renamed to harbour.png"); // the extension kept
@@ -601,14 +602,14 @@ class ViewerWindowTest {
 
             WindowFixture.answerNextDialog(pane -> {
                 WindowFixture.type(pane, "b.png");
-                WindowFixture.press(pane, "OK");
+                WindowFixture.press(pane, "Rename");
             });
             window.run(Command.RENAME);
             window.waitToSay("Not renamed: b.png already exists");
 
             WindowFixture.answerNextDialog(pane -> {
                 WindowFixture.type(pane, "a/b");
-                WindowFixture.press(pane, "OK");
+                WindowFixture.press(pane, "Rename");
             });
             window.run(Command.RENAME);
             assertTrue(window.lastSaid().startsWith("Not renamed: "), window.lastSaid());
@@ -983,9 +984,46 @@ class ViewerWindowTest {
             });
             window.press(KeyCode.ESCAPE);
             assertTrue(call(editor::isShowing), "kept: the user said Cancel");
-            WindowFixture.answerNextDialog(pane -> WindowFixture.press(pane, "Discard"));
+
+            // CONF-13: Enter on the question as it opens is Save, never Discard; the save dialog,
+            // cancelled, leaves the edit open.
+            java.util.concurrent.atomic.AtomicBoolean savedAs = new java.util.concurrent.atomic.AtomicBoolean();
+            FileDialogs.answeredBy((title, folder, name) -> {
+                savedAs.set(true);
+                return null;
+            });
+            WindowFixture.answerNextDialog(pane -> javafx.event.Event.fireEvent(
+                    pane, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.ENTER, false, false, false, false)));
+            window.press(KeyCode.ESCAPE);
+            assertTrue(savedAs.get(), "Enter is Save");
+            assertTrue(call(editor::isShowing), "nothing discarded");
+
+            // CONF-12: the rest answered without a dialog. Save, written, quits as asked.
+            Confirm.answeredBy(q -> Confirm.Answer.SAVE);
+            FileDialogs.answeredBy(
+                    (title, folder, name) -> photos.resolve("turned.png").toFile());
+            window.run(Command.CLOSE);
+            waitUntil("saved and closed", () -> !window.stage.isShowing());
+            assertTrue(Files.exists(photos.resolve("turned.png")));
+        } finally {
+            Confirm.answeredBy(null);
+            FileDialogs.answeredBy(null);
+        }
+    }
+
+    @Test
+    void discardingAnEditClosesTheWindowWithoutSaving() throws Exception {
+        try (WindowFixture window = open("a.png")) {
+            window.run(Command.EDIT);
+            window.press(KeyCode.R);
+            Confirm.answeredBy(q -> Confirm.Answer.CANCEL);
+            window.run(Command.CLOSE);
+            assertTrue(call(window.stage::isShowing), "Cancel keeps the window");
+            Confirm.answeredBy(q -> Confirm.Answer.ACTION);
             window.run(Command.CLOSE);
             assertFalse(call(window.stage::isShowing), "discarded, and the window closed");
+        } finally {
+            Confirm.answeredBy(null);
         }
     }
 

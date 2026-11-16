@@ -299,6 +299,13 @@ public final class Bookmarks {
         return true;
     }
 
+    /** Puts back a mark {@link #remove} took off, its bookmark and its note: the Bookmarks window's undo. */
+    public void restore(Mark mark) {
+        ensureLoaded();
+        Mark back = new Mark(key(mark.path()), mark.folder(), mark.bookmarked(), mark.note());
+        change(marks -> put(marks, back));
+    }
+
     /**
      * Carries the mark on {@code from} to {@code to}, after a rename: in its place in the order, as
      * the same image. Nothing is written when there is none.

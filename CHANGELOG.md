@@ -151,6 +151,14 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Changed
 
+- **Enter in a question never removes or discards.** Every question before something is lost opens
+  with Cancel as its default; leaving the editor with an unsaved edit now asks **Cancel**, **Save**
+  (the default) or **Discard**, and Save keeps the editor open when the save does not go through.
+  Every dialog draws its buttons in the same order on every system, Cancel on the left, and Rename
+  says **Rename** and **Cancel** in Mirada's language rather than the system's OK.
+- **Removing a bookmark in the Bookmarks and Notes window no longer asks, and can be undone.**
+  Ctrl+Z (⌘Z on a Mac, C-/ in Emacs) or **Bookmarks: Undo Remove** in the palette puts the bookmark
+  and its note back.
 - **Every tooltip shows after the same short pause**, 0.4 seconds.
 
 - **Mirada keeps its settings in `~/.mirada` on every system.** On macOS and Windows they were in

@@ -112,7 +112,8 @@ class CommandSweepTest {
 
     private static void cancel(DialogPane pane) {
         for (ButtonType type : pane.getButtonTypes()) {
-            if (type.getButtonData().isCancelButton()) {
+            // CANCEL_CLOSE, not any cancel-like data: to JavaFX the unsaved-edit question's Discard (NO) is one.
+            if (type.getButtonData() == javafx.scene.control.ButtonBar.ButtonData.CANCEL_CLOSE) {
                 ((javafx.scene.control.Button) java.util.Objects.requireNonNull(pane.lookupButton(type))).fire();
                 return;
             }

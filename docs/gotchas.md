@@ -247,6 +247,18 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   takes images pastes the picture and a folder the file. JavaFX's clipboard refuses grey pixels (a
   grey PNG loads so): `putOnClipboard` converts those to ARGB. The metadata recording's tours copy
   every image they show (`-Dmirada.tourCopies`), as nothing else there reaches the clipboard.
+- **Every dialog goes through `Dialogs.styled`** (WIN-04): a dialog is its own scene and inherits
+  nothing. It puts `mirada.css` first on the dialog's *scene*, not its pane: a pane's stylesheets
+  outrank the scene's, so on the pane they beat `high-contrast.css`, which `Theme` adds to the
+  scene as the dialog shows. It also sets one `ButtonBar` order, `Dialogs.BUTTON_ORDER`, Cancel
+  first (WIN-11; JavaFX's default changes with the OS), and words JavaFX's stock buttons from the
+  catalog (CONF-14). `DialogsTest` fails for a file that builds a dialog without it.
+- **`ButtonData.NO` is a cancel button to JavaFX, and `OK_DONE` and `YES` are default buttons.** The
+  unsaved-edit question's Discard is `NO` (so the order draws Cancel, Save, Discard), and Escape
+  would answer it: `Confirm.dialog` calls `setCancelButton(false)` and `setDefaultButton(false)` on
+  the red action and makes Cancel, or Save, the one default (CONF-13). Answer a dialog in a test by
+  `CANCEL_CLOSE`, never `isCancelButton()`. `Confirm.answeredBy` answers a question without one
+  (CONF-12).
 - **The window buttons on Linux are JavaFX's, and follow the scene's colour scheme, not the
   stylesheet.** An extended window's minimize, maximize and close are drawn by JavaFX
   (`HeaderButtonOverlay`), light or dark by `Scene.Preferences.colorScheme`, which falls back to
@@ -417,7 +429,9 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   makes the list again through an `FxThrottle` (Editora's, PERF-06): the first key at once, then at
   most every 150 ms while typing goes on, so tests flush it (`BookmarksWindowTest.filterBy`). Whether
   each mark's file is there is looked up off the FX thread when the marks change or the window is
-  brought up (`BookmarksWindow.gone`), never per key.
+  brought up (`BookmarksWindow.gone`), never per key. Remove asks nothing (CONF-07): the window
+  keeps what it removed, 20 deep, and Undo Remove puts the last back (`Bookmarks.restore`, at the
+  end of the order). With nothing to undo its key is left to the filter field, whose own undo it is.
 
 ## Platforms
 

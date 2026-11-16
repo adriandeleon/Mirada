@@ -2,6 +2,8 @@ package com.mirada.ui;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -55,7 +57,7 @@ import static com.mirada.i18n.Messages.tr;
  * <p>The keys stay in the filter field, as in the palette: Up and Down (Ctrl+P and Ctrl+N) move,
  * Escape clears the filter and then closes. What can be done to a row is a command ({@link
  * Command.Context#BOOKMARKS}, {@link #run}), on its key from the keymap (Return opens in the viewer,
- * F2 edits the note, Ctrl+B bookmarks, Ctrl+Delete removes the mark, Ctrl+1–3 list all, the
+ * F2 edits the note, Ctrl+B bookmarks, Ctrl+Delete removes the mark and Ctrl+Z puts it back, Ctrl+1–3 list all, the
  * bookmarks or the notes), from the row's menu, and from the window's own command palette, which
  * the palette's keys open here as in the viewer and which lists every command. Delete also removes
  * while the filter is empty. A mark whose file has gone stays listed, dimmed, so it can be removed.
@@ -104,6 +106,15 @@ final class BookmarksWindow {
 
     private BookmarkList.Show show = BookmarkList.Show.ALL;
 
+    /** How many removals the undo goes back through. */
+    static final int UNDO_DEPTH = 20;
+
+    /** The marks removed while the window was up, the last first, for the undo. */
+    private final Deque<Bookmarks.Mark> removed = new ArrayDeque<>();
+
+    /** Whether the hint line says what was just done rather than the keys. */
+    private boolean saying;
+
     /**
      * @param runner runs any command, as the viewer's keys would: what the window's palette runs
      * @param unavailable why a command cannot run now, or null: the window's palette greys it
@@ -126,7 +137,10 @@ final class BookmarksWindow {
 
         filter.setPromptText(tr("bookmarks.filterPrompt"));
         filter.getStyleClass().add("bookmarks-filter");
-        filter.textProperty().addListener((o, was, now) -> filtering.request());
+        filter.textProperty().addListener((o, was, now) -> {
+            if (saying) refreshKeys();
+            filtering.request();
+        });
         HBox.setHgrow(filter, Priority.ALWAYS);
 
         HBox kinds = new HBox();
@@ -284,6 +298,8 @@ final class BookmarksWindow {
             return;
         }
         Command command = Keybindings.current().commandFor(Command.Context.BOOKMARKS, e);
+        // With no removal to undo, the undo key is the filter field's own.
+        if (command == Command.BOOKMARKS_UNDO_REMOVE && removed.isEmpty()) command = null;
         if (command != null) {
             run(command);
             e.consume();
@@ -322,6 +338,7 @@ final class BookmarksWindow {
 
     /** Shows the keys in force again after the settings changed them: the hint and the palette's chips. */
     void refreshKeys() {
+        saying = false;
         hint.setText(hintText());
         palette.refreshKeys();
     }
@@ -344,6 +361,7 @@ final class BookmarksWindow {
             case BOOKMARKS_TOGGLE -> toggle(row);
             case BOOKMARKS_SHOW_IN_FOLDER -> showInFolder(row);
             case BOOKMARKS_REMOVE -> remove(row);
+            case BOOKMARKS_UNDO_REMOVE -> undoRemove();
             case BOOKMARKS_LIST_ALL -> list(BookmarkList.Show.ALL);
             case BOOKMARKS_LIST_BOOKMARKED -> list(BookmarkList.Show.BOOKMARKS);
             case BOOKMARKS_LIST_NOTES -> list(BookmarkList.Show.NOTES);
@@ -370,6 +388,7 @@ final class BookmarksWindow {
                 row == null
                         ? tr("bookmarks.nothingSelected")
                         : markOf(row) == null ? tr("bookmarks.folderHasNoMark") : null;
+            case BOOKMARKS_UNDO_REMOVE -> removed.isEmpty() ? tr("bookmarks.nothingRemoved") : null;
             default -> null;
         };
     }
@@ -426,8 +445,7 @@ final class BookmarksWindow {
                 stage,
                 tr(folder ? "bookmarks.folderNoteTitle" : "bookmarks.noteTitle"),
                 about,
-                bookmarks.note(row.path()),
-                stylesheet);
+                bookmarks.note(row.path()));
         answer.ifPresent(note -> bookmarks.setNote(row.path(), folder, note));
         filter.requestFocus();
     }
@@ -440,16 +458,34 @@ final class BookmarksWindow {
         if (row != null) bookmarks.toggle(row.path(), row instanceof BookmarkList.FolderRow);
     }
 
-    /** Takes the mark off the row; a note, which cannot be typed again from memory, asks first. */
+    /**
+     * Takes the mark off the row, its bookmark and its note, without asking: the undo puts it back
+     * (CONF-01, CONF-07), and the hint line says so with its key.
+     */
     private void remove(BookmarkList.@Nullable Row row) {
         Bookmarks.Mark mark = markOf(row);
         if (row == null || mark == null) return;
-        if (mark.hasNote()
-                && !Confirm.ask(Confirm.removeMark(BookmarkList.name(mark.path()), mark.bookmarked()), stage)) {
-            return;
-        }
         bookmarks.remove(mark.path());
+        removed.push(mark);
+        while (removed.size() > UNDO_DEPTH) removed.removeLast();
+        String name = BookmarkList.name(mark.path());
+        say(tr("bookmarks.removed", name, key(Command.BOOKMARKS_UNDO_REMOVE)));
         filter.requestFocus();
+    }
+
+    /** Puts back the mark last removed; a second time, the one before. */
+    private void undoRemove() {
+        Bookmarks.Mark mark = removed.poll();
+        if (mark == null) return;
+        bookmarks.restore(mark);
+        say(tr("bookmarks.putBack", BookmarkList.name(mark.path())));
+        filter.requestFocus();
+    }
+
+    /** Says {@code text} in the hint line, until the filter changes. */
+    private void say(String text) {
+        hint.setText(text);
+        saying = true;
     }
 
     /**

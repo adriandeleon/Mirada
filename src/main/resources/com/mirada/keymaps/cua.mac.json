@@ -63,6 +63,7 @@
     "bookmarks.editNote": ["f2", "Cmd-e"],
     "bookmarks.toggleBookmark": "Cmd-b",
     "bookmarks.remove": "Cmd-backspace",
+    "bookmarks.undoRemove": "Cmd-z",
     "bookmarks.listAll": "Cmd-1",
     "bookmarks.listBookmarked": "Cmd-2",
     "bookmarks.listNotes": "Cmd-3"

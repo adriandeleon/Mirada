@@ -10,6 +10,7 @@ import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
@@ -110,6 +111,10 @@ class BookmarksWindowTest {
         return FxTestSupport.field(window, "list");
     }
 
+    private Label hint() {
+        return (Label) FxTestSupport.field(window, "hint");
+    }
+
     private TextField filter() {
         return FxTestSupport.field(window, "filter");
     }
@@ -200,7 +205,7 @@ class BookmarksWindowTest {
     }
 
     @Test
-    void aBookmarkIsToggledANoteEditedAndAMarkRemovedAskingWhenANoteGoes() throws Exception {
+    void aBookmarkIsToggledANoteEditedAndAMarkRemovedAndPutBack() throws Exception {
         filterBy("a.png");
         press(KeyCode.DOWN);
         assertEquals("a.png", selectedName());
@@ -219,18 +224,24 @@ class BookmarksWindowTest {
                 "The lighthouse, at dawn",
                 bookmarks.note(photos.resolve("b.png").toAbsolutePath()));
 
-        WindowFixture.answerNextDialog(pane -> WindowFixture.press(pane, "Cancel"));
+        // CONF-01, CONF-07: no question; the undo puts the mark and its note back.
+        Path lighthouse = photos.resolve("b.png").toAbsolutePath();
+        Bookmarks.Mark was = bookmarks.get(lighthouse);
         press(REMOVE, true);
-        assertEquals(
-                "The lighthouse, at dawn",
-                bookmarks.note(photos.resolve("b.png").toAbsolutePath()),
-                "kept");
-        WindowFixture.answerNextDialog(pane -> {
-            assertTrue(pane.getHeaderText().startsWith("Remove the note on b.png"));
-            WindowFixture.press(pane, "Remove");
-        });
+        assertEquals("", bookmarks.note(lighthouse), "removed without a question");
+        assertTrue(
+                call(() -> hint().getText()).startsWith("Removed the mark on b.png. "), call(() -> hint().getText()));
+        assertEquals(null, call(() -> window.unavailable(Command.BOOKMARKS_UNDO_REMOVE)));
+        press(KeyCode.Z, true);
+        assertEquals(was, bookmarks.get(lighthouse), "put back, note and all");
+        assertEquals("Put back the mark on b.png", call(() -> hint().getText()));
+        assertEquals("Nothing has been removed yet.", call(() -> window.unavailable(Command.BOOKMARKS_UNDO_REMOVE)));
+        filterBy("lighthouse!");
+        assertTrue(call(() -> hint().getText()).contains(" opens · "), "the keys again once the filter changes");
+        filterBy("lighthouse");
+        press(KeyCode.DOWN);
         press(REMOVE, true);
-        assertEquals("", bookmarks.note(photos.resolve("b.png").toAbsolutePath()), "removed once confirmed");
+        assertEquals("", bookmarks.note(lighthouse));
 
         // A bare bookmark goes without a question.
         filterBy("");

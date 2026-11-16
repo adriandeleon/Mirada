@@ -149,6 +149,7 @@ enum Command {
     BOOKMARKS_TOGGLE("bookmarks.toggleBookmark", "mark favourite favorite star"),
     BOOKMARKS_SHOW_IN_FOLDER("bookmarks.showInFolder", "reveal finder explorer files locate"),
     BOOKMARKS_REMOVE("bookmarks.remove", "delete forget"),
+    BOOKMARKS_UNDO_REMOVE("bookmarks.undoRemove", "restore put back undelete recover"),
     BOOKMARKS_LIST_ALL("bookmarks.listAll", "filter show everything"),
     BOOKMARKS_LIST_BOOKMARKED("bookmarks.listBookmarked", "filter show marked"),
     BOOKMARKS_LIST_NOTES("bookmarks.listNotes", "filter show comments");
@@ -226,6 +227,7 @@ enum Command {
                     BOOKMARKS_TOGGLE,
                     BOOKMARKS_SHOW_IN_FOLDER,
                     BOOKMARKS_REMOVE,
+                    BOOKMARKS_UNDO_REMOVE,
                     BOOKMARKS_LIST_ALL,
                     BOOKMARKS_LIST_BOOKMARKED,
                     BOOKMARKS_LIST_NOTES -> Context.BOOKMARKS;
@@ -430,6 +432,7 @@ enum Command {
                     BOOKMARKS_TOGGLE,
                     BOOKMARKS_SHOW_IN_FOLDER,
                     BOOKMARKS_REMOVE,
+                    BOOKMARKS_UNDO_REMOVE,
                     BOOKMARKS_LIST_ALL,
                     BOOKMARKS_LIST_BOOKMARKED,
                     BOOKMARKS_LIST_NOTES -> tr("group.bookmarksWindow");

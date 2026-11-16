@@ -15,6 +15,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 
 import com.mirada.os.Os;
+import org.jspecify.annotations.Nullable;
 
 import static com.mirada.i18n.Messages.tr;
 
@@ -32,17 +33,27 @@ final class NoteDialog {
      *
      * @param about what the note is on, for the header: "IMG_0412.jpg", "the folder Holiday"
      */
-    static Optional<String> ask(Window owner, String title, String about, String note, String stylesheet) {
+    static Optional<String> ask(Window owner, String title, String about, String note) {
+        Dialog<String> dialog = dialog(owner, title, about, note);
+        TextArea text = (TextArea) dialog.getDialogPane().lookup(".text-area");
+        Platform.runLater(() -> {
+            text.requestFocus();
+            text.end();
+        });
+        return dialog.showAndWait();
+    }
+
+    /** The note's dialog, not yet shown. */
+    static Dialog<String> dialog(@Nullable Window owner, String title, String about, String note) {
         Dialog<String> dialog = new Dialog<>();
-        dialog.initOwner(owner);
         dialog.setTitle(title);
         dialog.setHeaderText(tr("note.header", about));
         dialog.setResizable(true);
         ButtonType save = new ButtonType(tr("note.save"), ButtonBar.ButtonData.OK_DONE);
         ButtonType cancel = new ButtonType(tr("note.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE);
         dialog.getDialogPane().getButtonTypes().addAll(save, cancel);
-        dialog.getDialogPane().getStylesheets().add(stylesheet);
         dialog.getDialogPane().getStyleClass().add("note-dialog");
+        Dialogs.styled(dialog, owner);
 
         TextArea text = new TextArea(note);
         text.setWrapText(true);
@@ -64,10 +75,6 @@ final class NoteDialog {
             }
         });
         dialog.setResultConverter(button -> button == save ? text.getText() : null);
-        Platform.runLater(() -> {
-            text.requestFocus();
-            text.end();
-        });
-        return dialog.showAndWait();
+        return dialog;
     }
 }

@@ -200,17 +200,26 @@ final class Editor {
 
     /** Cancel and Escape: closes, after asking when there is an edit to lose (CONF-01). */
     private void cancel() {
-        if (mayDiscard()) close();
+        if (mayDiscard(() -> {})) close();
     }
 
     /**
      * Whether the editor may go without saving: true when it is closed or has nothing to lose, or
-     * when the user answers Discard. The window asks it before closing.
+     * when the user answers Discard. The window asks it before closing. Save, the question's
+     * default (CONF-05, CONF-13), starts saving and answers false: once the edit is written the
+     * editor closes and {@code afterSaving} runs; a save that fails or is cancelled leaves it open.
      */
-    boolean mayDiscard() {
+    boolean mayDiscard(Runnable afterSaving) {
         Path file = source;
         if (!isShowing() || edit.isNone() || file == null) return true;
-        return Confirm.ask(Confirm.discardEdit(name(file)), owner());
+        return switch (Confirm.askOrSave(Confirm.discardEdit(name(file)), owner())) {
+            case ACTION -> true;
+            case SAVE -> {
+                save(afterSaving);
+                yield false;
+            }
+            case CANCEL -> false;
+        };
     }
 
     private @Nullable Window owner() {
@@ -232,7 +241,7 @@ final class Editor {
             case EDITOR_RESET -> reset();
             case EDITOR_UNDO -> undo();
             case EDITOR_REDO -> redo();
-            case EDITOR_SAVE -> save();
+            case EDITOR_SAVE -> save(() -> {});
             case EDITOR_CANCEL -> cancel();
             default -> {}
         }
@@ -361,7 +370,7 @@ final class Editor {
      * Asks where, then applies the edit to the full image and writes it, off the FX thread. The
      * suggested name is the original's with "(edited)", in a format Mirada can write.
      */
-    private void save() {
+    private void save(Runnable afterSaving) {
         Image image = full;
         Path file = source;
         if (image == null || file == null || saving) return;
@@ -389,7 +398,7 @@ final class Editor {
         Orientation turnedBy = orientation;
         saving = true;
         if (target.equals(chosen.toPath())) {
-            write(image, file, target, applied, turnedBy);
+            write(image, file, target, applied, turnedBy, afterSaving);
             return;
         }
         // The dialog asked about the name typed, not the one an added extension made (CONF-01);
@@ -401,13 +410,16 @@ final class Editor {
                     saving = false;
                     return;
                 }
-                write(image, file, target, applied, turnedBy);
+                write(image, file, target, applied, turnedBy, afterSaving);
             });
         });
     }
 
-    /** Applies {@code applied} to the full image and writes it to {@code target}, off the FX thread. */
-    private void write(Image image, Path file, Path target, Edit applied, Orientation turnedBy) {
+    /**
+     * Applies {@code applied} to the full image and writes it to {@code target}, off the FX thread;
+     * written, the editor closes and {@code afterSaving} runs.
+     */
+    private void write(Image image, Path file, Path target, Edit applied, Orientation turnedBy, Runnable afterSaving) {
         say.accept(tr("editor.saving", name(target)), MessageLog.Severity.INFO);
         Thread.ofPlatform().daemon().name("save").start(() -> {
             try {
@@ -422,6 +434,7 @@ final class Editor {
                     saving = false;
                     close();
                     saved.accept(target);
+                    afterSaving.run();
                 });
             } catch (IOException | RuntimeException | OutOfMemoryError e) {
                 Platform.runLater(() -> {

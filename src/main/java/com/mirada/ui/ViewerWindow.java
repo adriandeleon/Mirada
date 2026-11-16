@@ -31,6 +31,8 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Hyperlink;
@@ -58,6 +60,7 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 import javafx.stage.WindowEvent;
 import javafx.util.Duration;
 
@@ -1161,6 +1164,7 @@ public final class ViewerWindow {
                     BOOKMARKS_TOGGLE,
                     BOOKMARKS_SHOW_IN_FOLDER,
                     BOOKMARKS_REMOVE,
+                    BOOKMARKS_UNDO_REMOVE,
                     BOOKMARKS_LIST_ALL,
                     BOOKMARKS_LIST_BOOKMARKED,
                     BOOKMARKS_LIST_NOTES -> {
@@ -1182,10 +1186,13 @@ public final class ViewerWindow {
         stage.close();
     }
 
-    /** Whether the window may close: an edit in progress is discarded only when the user says so. */
+    /**
+     * Whether the window may close: an edit in progress is discarded only when the user says so; saved
+     * instead, the window quits once it is written.
+     */
     private boolean mayClose() {
         Editor open = editor;
-        return open == null || open.mayDiscard();
+        return open == null || open.mayDiscard(this::quit);
     }
 
     /** The commands that leave the image alone, so they can run while the editor is open: its own too. */
@@ -1408,6 +1415,21 @@ public final class ViewerWindow {
                 });
     }
 
+    /** Rename's prompt for the file {@code old}, not yet shown. */
+    static TextInputDialog renameDialog(String old, @Nullable Window owner) {
+        TextInputDialog dialog = new TextInputDialog(old);
+        dialog.setTitle(tr("rename.title"));
+        dialog.setHeaderText(tr("rename.header", old));
+        dialog.setContentText(tr("rename.newName"));
+        // Mirada's words, not JavaFX's OK and Cancel in the JVM's language (CONF-14).
+        dialog.getDialogPane()
+                .getButtonTypes()
+                .setAll(
+                        new ButtonType(tr("rename.action"), ButtonBar.ButtonData.OK_DONE),
+                        new ButtonType(tr("button.cancel"), ButtonBar.ButtonData.CANCEL_CLOSE));
+        return Dialogs.styled(dialog, owner);
+    }
+
     /**
      * Asks for a new name, in the same folder, and renames the file. The extension is kept unless the
      * new name gives one; an existing file is never replaced.
@@ -1416,12 +1438,7 @@ public final class ViewerWindow {
         Path file = folder.current();
         if (file == null) return;
         String old = fileName(file);
-        TextInputDialog dialog = new TextInputDialog(old);
-        dialog.initOwner(stage);
-        dialog.setTitle(tr("rename.title"));
-        dialog.setHeaderText(tr("rename.header", old));
-        dialog.setContentText(tr("rename.newName"));
-        dialog.getDialogPane().getStylesheets().add(stylesheet());
+        TextInputDialog dialog = renameDialog(old, stage);
         // The name without its extension selected, ready to be typed over.
         Platform.runLater(() -> dialog.getEditor().selectRange(0, Renaming.stemLength(old)));
         Optional<String> answer = dialog.showAndWait();
@@ -1488,8 +1505,8 @@ public final class ViewerWindow {
         String was = bookmarks.note(target);
         String name = fileName(target);
         String what = ofFolder ? tr("viewer.theFolder", name) : name;
-        Optional<String> answer = NoteDialog.ask(
-                stage, ofFolder ? tr("viewer.folderNoteTitle") : tr("viewer.noteTitle"), what, was, stylesheet());
+        Optional<String> answer =
+                NoteDialog.ask(stage, ofFolder ? tr("viewer.folderNoteTitle") : tr("viewer.noteTitle"), what, was);
         if (answer.isEmpty()) return;
         bookmarks.setNote(target, ofFolder, answer.get());
         String now = bookmarks.note(target);

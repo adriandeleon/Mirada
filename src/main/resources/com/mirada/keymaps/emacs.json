@@ -63,6 +63,7 @@
     "bookmarks.editNote": ["f2", "C-e"],
     "bookmarks.toggleBookmark": "C-b",
     "bookmarks.remove": "C-delete",
+    "bookmarks.undoRemove": ["C-/", "C-S--", "C-z"],
     "bookmarks.listAll": "C-1",
     "bookmarks.listBookmarked": "C-2",
     "bookmarks.listNotes": "C-3"
