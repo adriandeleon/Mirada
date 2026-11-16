@@ -26,6 +26,7 @@ import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
+import com.mirada.os.Os;
 import org.jspecify.annotations.Nullable;
 
 import static com.mirada.i18n.Messages.tr;
@@ -70,7 +71,7 @@ final class TitleBar {
 
     /** {@link #titleBarMenusUnavailable(boolean, boolean)} for this OS and this toolkit. */
     static @Nullable String titleBarMenusUnavailable() {
-        return titleBarMenusUnavailable(Command.MAC, Platform.isSupported(ConditionalFeature.EXTENDED_WINDOW));
+        return titleBarMenusUnavailable(Os.isMac(), Platform.isSupported(ConditionalFeature.EXTENDED_WINDOW));
     }
 
     /**

@@ -10,6 +10,9 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Added
 
+- **Several images named on the command line open together**: `mirada a.jpg b.jpg c.jpg` steps
+  through just those three (a folder among them adds its images), and a second launch hands all of
+  its files to the running Mirada. `-h` is `--help`, and `-v` or `-V` is `--version`.
 - **The menus are in the title bar on Windows and Linux, as on a Mac's menu bar.** File, Edit,
   Image, View, Go, Bookmarks and Help sit on the left of the window's top row, the same menus as
   macOS's menu bar; F10 or Alt opens them from the keyboard in every keymap, and each row shows its
@@ -137,6 +140,27 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
   without installing anything or needing root.
 
 ### Changed
+
+- **Mirada keeps its settings in `~/.mirada` on every system.** On macOS and Windows they were in
+  `~/Library/Application Support/Mirada` and `%APPDATA%\Mirada`; the first start that finds no
+  `~/.mirada` moves that folder there, once, and says so in the Debug Log. `--config-dir` now wins
+  over `--dev` whichever comes first, and either over `MIRADA_CONFIG_DIR`.
+- **`mirada --report` writes `problem-report.txt` in the folder you typed it in** (the temp folder
+  when that one can't be written), not beside the settings.
+- **An option Mirada doesn't know stops it, with one dash as with two:** `mirada -x` names `-x`,
+  says to run `mirada --help`, and exits with status 2, where it used to look for a file called
+  `-x`. The options a launcher can leave behind (`--add-exports`, `--add-opens`, `-p`) are skipped.
+- **On Windows, `--help`, `--version`, `--report` and a mistyped option print in the console** they
+  were typed in, which they did not before.
+- **Dates and numbers keep your region.** With the language left to the system, or set to the
+  system's own, an Austrian or a Mexican system's numbers and dates are written its way, and a
+  number inside a message is written as the rest of the window's; another language chosen writes
+  them that language's way. "1 older not kept" and the conformance counts are worded for one.
+- **A setting typed by hand as anything but `true` or `false` is its default**: `yes` or `1` no
+  longer turns off the status bar or the update check.
+- **A menu row that is on shows its tick in place of its icon**, so its words line up with the rows
+  around it.
+- **"A slideshow needs a folder with more than one image" is translated** with the rest.
 
 - **Escape no longer closes the window on Linux.** It stops a slideshow or leaves full screen, the
   same on every system; Ctrl+W closes the window.

@@ -22,6 +22,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
 
+import com.mirada.os.Os;
 import com.mirada.settings.Bookmarks;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -47,7 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BookmarksWindowTest {
 
     /** With the shortcut key, removes a mark: Delete, or a Mac's Backspace. */
-    private static final KeyCode REMOVE = Command.MAC ? KeyCode.BACK_SPACE : KeyCode.DELETE;
+    private static final KeyCode REMOVE = Os.isMac() ? KeyCode.BACK_SPACE : KeyCode.DELETE;
 
     @TempDir
     Path dir;
@@ -126,7 +127,7 @@ class BookmarksWindowTest {
         fx(() -> {
             Scene scene = Objects.requireNonNull(stage.getScene());
             Node target = scene.getFocusOwner() != null ? scene.getFocusOwner() : scene.getRoot();
-            boolean mac = Command.MAC;
+            boolean mac = Os.isMac();
             Event.fireEvent(
                     target,
                     new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, shortcut && !mac, false, shortcut && mac));

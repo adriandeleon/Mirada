@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import static com.mirada.i18n.Messages.tr;
@@ -22,7 +21,7 @@ public final class Reveal {
 
     /** Shows {@code file} selected in its folder, or says why no file manager would. */
     public static void show(Path file) throws IOException {
-        String os = System.getProperty("os.name", "");
+        Os.Kind os = Os.host();
         IOException failure = null;
         for (List<String> command : commands(os, file)) {
             try {
@@ -31,7 +30,7 @@ public final class Reveal {
                         .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                         .start();
                 // explorer.exe exits with 1 when it has done what it was asked; there is no telling.
-                if (os.toLowerCase(Locale.ROOT).startsWith("windows")) return;
+                if (os == Os.Kind.WINDOWS) return;
                 if (process.waitFor(5, TimeUnit.SECONDS) && process.exitValue() == 0) return;
                 failure = new IOException(tr("reveal.didNotShow", command.getFirst()));
             } catch (IOException e) {
@@ -44,13 +43,12 @@ public final class Reveal {
         throw failure != null ? failure : new IOException(tr("reveal.noFileManager"));
     }
 
-    /** The commands that show {@code file} on {@code osName}, in the order they are tried. */
-    static List<List<String>> commands(String osName, Path file) {
-        String os = osName.toLowerCase(Locale.ROOT);
+    /** The commands that show {@code file} on {@code os}, in the order they are tried. */
+    static List<List<String>> commands(Os.Kind os, Path file) {
         Path absolute = file.toAbsolutePath();
-        if (os.startsWith("mac")) return List.of(List.of("open", "-R", absolute.toString()));
+        if (os == Os.Kind.MAC) return List.of(List.of("open", "-R", absolute.toString()));
         // "/select," and the path apart: Java quotes a path with spaces, and explorer takes it so.
-        if (os.startsWith("windows")) return List.of(List.of("explorer.exe", "/select,", absolute.toString()));
+        if (os == Os.Kind.WINDOWS) return List.of(List.of("explorer.exe", "/select,", absolute.toString()));
         String uri = uri(absolute);
         List<List<String>> commands = new ArrayList<>();
         commands.add(List.of(

@@ -357,10 +357,18 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   English for good. Constants hold keys; the text is asked for where it is shown
   (`SettingsPages.Row`, `AspectRatio`).
 - **The language is fixed for the run.** The window is built once, in one language; choosing
-  another in Settings says it applies from the next start. `App` sets the JVM's default locale to
-  it, which is how JavaFX words its own dialog buttons: JavaFX ships `de`, `es`, `fr`, `it` and
-  `pt_BR`, so Portuguese's buttons stay English (`pt` finds no `pt_BR`). Their bundles are listed
+  another in Settings says it applies from the next start. JavaFX words its own dialog buttons by
+  the JVM's default locale (below): it ships `de`, `es`, `fr`, `it` and `pt_BR`, so Portuguese
+  chosen on a system of another language has English buttons (`pt` finds no `pt_BR`). Their bundles are listed
   for the native image beside `com/mirada/i18n/messages*.properties`.
+- **The locale that formats is not the language.** `App.start` sets the JVM's default to
+  `Messages.locale`: the system's whole (region and all) unless another bundled language is chosen,
+  then the bare language; the catalog formats with `new MessageFormat(pattern)`, the default, never
+  a locale made from the language code (INTL-14). A Japanese system with English menus keeps
+  `ja_JP`, so JavaFX's own dialog buttons are Japanese there.
+- **A `choice` with a `1#` first limb words 0 as one.** `ChoiceFormat` gives a number below the
+  first limit the first limb, so `{0,choice,1#1 file|1<…}` says "1 file" for 0: every count starts
+  with a `0#` limb (`MessagesTest.aCountIsAChoiceInEveryLanguageAndNeverAnS`).
 - **A value with a placeholder is a `MessageFormat` pattern; one without is shown as written.** So
   an apostrophe is doubled only beside a `{0}` (`l''image {0}`, but `l'image`), and a count is
   `{0,number,integer}` (grouped, "1,234 images") while an identifier is `{0,number,#}`. Plurals are
@@ -414,6 +422,21 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   shell (`$SHELL -l -i`) is asked once, the first time a program starts, never at start-up. Its own
   comes first so a launcher's or the headless runs' stubs still win; Java looks a program up on its
   own `PATH`, not the child's, so `ToolPath` resolves it to a full path too. Windows keeps its own.
+- **Ask `Os`, never `os.name`** (OS-02): `Os.isMac()` and its kin are what Mirada *behaves* as, which
+  `Os.override` or `-Dmirada.os=mac` move for a test (`SameOnEveryOsFxTest` runs the window as each);
+  code that loads a native library, starts a program or registers with the system asks `Os.host()`,
+  which no override moves, or a test run as macOS looks for a `.dylib` on Linux. A `static final`
+  copied from `Os.isMac()` would freeze it for the run: ask where it is used.
+- **The config folder is `~/.mirada` everywhere** (SET-07). 0.x kept it in `~/Library/Application
+  Support/Mirada` and `%APPDATA%\Mirada`; `App.main` moves that folder once when `~/.mirada` is not
+  there (`ConfigDir.adoptOldFolder`, one `exists` on macOS and Windows, none on Linux), copying it
+  when it is on another drive. Only for the default folder: a `--config-dir`, `--dev` or
+  `MIRADA_CONFIG_DIR` run moves nothing.
+- **Windows' executable has no console.** The StaticFX feature links the native image
+  `/SUBSYSTEM:WINDOWS`, and jpackage's launcher is a GUI one, so `--help` printed nowhere.
+  `WindowsConsole.attach` (`AttachConsole(ATTACH_PARENT_PROCESS)` through FFM, then `CONOUT$`) runs
+  for every launch that prints, only when standard output or error has no handle, so a redirect
+  still works. Its `jint(jint)` downcall is in the native metadata by hand. Not run on Windows yet.
 - **`--help` and `--version` must `System.exit`.** Started as an `Application` (the jlink image, dev
   runs), the JDK's launcher starts the toolkit before `main`, whose thread keeps the process alive.
   The native image starts from `Launcher`, a plain class, and starts no toolkit for them. Starting the

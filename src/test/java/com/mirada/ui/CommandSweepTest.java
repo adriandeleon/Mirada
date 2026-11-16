@@ -17,6 +17,7 @@ import javafx.scene.control.DialogPane;
 import javafx.scene.control.MenuItem;
 import javafx.stage.Window;
 
+import com.mirada.os.Os;
 import com.mirada.settings.Settings;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -58,7 +59,7 @@ class CommandSweepTest {
         FxToolkit.cleanupStages();
         fx(() -> {
             Command.setVertical(false);
-            Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Command.MAC));
+            Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Os.isMac()));
         });
     }
 

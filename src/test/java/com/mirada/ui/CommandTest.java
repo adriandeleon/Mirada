@@ -10,10 +10,12 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 
+import com.mirada.os.Os;
 import com.mirada.settings.Settings;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
+import static com.mirada.i18n.Messages.tr;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -159,7 +161,7 @@ class CommandTest {
         assertNull(Keybindings.canonical("nonsense"));
         assertNull(Keybindings.canonical(" "));
         // The Mac's keymap has Cmd where the others have Ctrl, and JavaFX writes it as the symbol.
-        assertEquals(Command.MAC ? "⌘?" : "Ctrl+?", Command.SHORTCUTS.chord().getDisplayText());
+        assertEquals(Os.isMac() ? "⌘?" : "Ctrl+?", Command.SHORTCUTS.chord().getDisplayText());
     }
 
     // --- the layers (KBD-11) ---
@@ -346,7 +348,7 @@ class CommandTest {
             assertEquals(new KeyCodeCombination(KeyCode.K, KeyCombination.CONTROL_DOWN), Command.PALETTE.chord());
             assertEquals(List.of(Command.PALETTE.chord()), PaletteChords.current());
         } finally {
-            Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Command.MAC));
+            Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Os.isMac()));
         }
         assertEquals(PaletteChords.current().getFirst(), Command.PALETTE.chord());
         assertEquals(Command.GO_TO_IMAGE, key("C-p"));
@@ -566,7 +568,7 @@ class CommandTest {
     void fileCommandsNeedAnImageAndASlideshowTwo() {
         assertEquals("No image is showing.", Command.MOVE_TO_TRASH.unavailable(0, 1, false));
         assertNull(Command.RENAME.unavailable(0, 1, true));
-        assertEquals("A slideshow needs a folder with more than one image.", Command.SLIDESHOW.unavailable(0, 1, true));
+        assertEquals(tr("reason.slideshowNeedsImages"), Command.SLIDESHOW.unavailable(0, 1, true));
         assertNull(Command.SLIDESHOW.unavailable(0, 2, true));
     }
 

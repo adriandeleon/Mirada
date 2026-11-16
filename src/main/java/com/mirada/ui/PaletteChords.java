@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 
+import com.mirada.os.Os;
 import com.mirada.settings.Settings;
 import org.jspecify.annotations.Nullable;
 
@@ -30,7 +31,7 @@ final class PaletteChords {
     /** The chords in use now, never empty: the settings' when one can be read, else the default. */
     static List<KeyCombination> current() {
         List<KeyCombination> chords = Keybindings.current().chords(Command.PALETTE);
-        return chords.isEmpty() ? parse(Settings.defaultPaletteKeys(Command.MAC), Command.MAC) : chords;
+        return chords.isEmpty() ? parse(Settings.defaultPaletteKeys(Os.isMac()), Os.isMac()) : chords;
     }
 
     /**

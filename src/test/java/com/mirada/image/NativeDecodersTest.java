@@ -12,6 +12,7 @@ import javafx.scene.image.WritableImage;
 import com.mirada.edit.ExifBlock;
 import com.mirada.edit.IccProfile;
 import com.mirada.folder.ImageFormats;
+import com.mirada.os.Os;
 import com.mirada.ui.FxTestSupport;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -191,11 +192,12 @@ class NativeDecodersTest {
 
     @Test
     void libraryFileNamesPerPlatform() {
-        assertEquals(List.of("libheif.so.1"), NativeLibraries.fileNames("Linux", "heif", List.of("1")));
+        assertEquals(List.of("libheif.so.1"), NativeLibraries.fileNames(Os.Kind.LINUX, "heif", List.of("1")));
         assertEquals(
                 List.of("libjxl.0.11.dylib", "libjxl.0.7.dylib"),
-                NativeLibraries.fileNames("Mac OS X", "jxl", List.of("0.11", "0.7")));
-        assertEquals(List.of("heif.dll", "libheif.dll"), NativeLibraries.fileNames("Windows 11", "heif", List.of("1")));
+                NativeLibraries.fileNames(Os.Kind.MAC, "jxl", List.of("0.11", "0.7")));
+        assertEquals(
+                List.of("heif.dll", "libheif.dll"), NativeLibraries.fileNames(Os.Kind.WINDOWS, "heif", List.of("1")));
     }
 
     @Test

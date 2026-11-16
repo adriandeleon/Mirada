@@ -80,6 +80,13 @@ The jlink image's numbers, before the native image and libjpeg-turbo, are kept i
   `scripts/check-windows-dlls.py` reads every PE file's imports and fails on a DLL that is neither
   in the image nor in its list of Windows' own. A new system DLL goes in that list; anything else
   goes in the image.
+- **The Windows executable is a GUI one, with no console** (CLI-11). The StaticFX feature links the
+  native image `/SUBSYSTEM:WINDOWS` (so a double-click opens no console window), and jpackage's own
+  launcher is a GUI one too. So there is no second, `win-console` launcher: `App.main` joins the
+  shell's console itself (`WindowsConsole`, `AttachConsole` through FFM) before `--help`,
+  `--version`, `--report` or an unknown option prints. cmd does not wait for a GUI program, so the
+  text comes after its next prompt. Written by the template's rule and not yet run on Windows: try
+  `Mirada.exe --version` in cmd and in PowerShell after a Windows build.
 - **jpackage puts the whole launcher in the MSI as its Add/Remove Programs icon**, uncompressed in
   the Icon table. Its own launcher is a 100 KB stub; ours is the 78 MB native image, which made the
   MSI 110 MB around 36 MB of compressed files. Its `main.wxs` takes that file from the `JpIcon`

@@ -76,6 +76,7 @@ import com.mirada.image.Animation;
 import com.mirada.image.ImageCache;
 import com.mirada.image.Orientation;
 import com.mirada.os.MacAppMenu;
+import com.mirada.os.Os;
 import com.mirada.os.Reveal;
 import com.mirada.os.Trash;
 import com.mirada.perf.Startup;
@@ -343,7 +344,7 @@ public final class ViewerWindow {
                 this::run,
                 infoShowing,
                 TitleBar.usesHeaderBar(
-                        Command.MAC,
+                        Os.isMac(),
                         settings.titleBarMenus(),
                         Platform.isSupported(javafx.application.ConditionalFeature.EXTENDED_WINDOW)));
         root.setTop(titleBar.node());
@@ -388,7 +389,7 @@ public final class ViewerWindow {
         });
         updateControls();
         // The menu bar: in the window on Windows and Linux (WIN-03), the system's on a Mac.
-        afterFirstPaint(() -> titleBar.finish(Command.MAC ? null : inWindowMenus()));
+        afterFirstPaint(() -> titleBar.finish(Os.isMac() ? null : inWindowMenus()));
         afterFirstPaint(statusBar::finish);
         // A few seconds after the image, never on the way to it; not on a timing or training tour.
         if (tour == null) afterFirstPaint(updates::scheduleStartupCheck);
@@ -412,7 +413,7 @@ public final class ViewerWindow {
             String settingsKept = SettingsCommands.setAside("settings", settings.setAside());
             if (settingsKept != null) say(settingsKept, MessageLog.Severity.WARNING);
         });
-        if (Command.MAC) afterFirstPaint(() -> installMacMenus(overlay));
+        if (Os.isMac()) afterFirstPaint(() -> installMacMenus(overlay));
         // A window opened without an image has no first paint to wait for.
         PauseTransition fallback = new PauseTransition(Duration.millis(500));
         fallback.setOnFinished(e -> releaseAfterFirstPaint());
@@ -468,7 +469,7 @@ public final class ViewerWindow {
         // The menus write their chords as they open; the buttons' tooltips are written now, and the
         // Mac's Settings item, which has no menu of Mirada's to open (WIN-15).
         relabelButtons();
-        if (Command.MAC) MacAppMenu.refresh();
+        if (Os.isMac()) MacAppMenu.refresh();
         ShortcutsWindow shortcuts = shortcutsWindow;
         if (shortcuts != null) shortcuts.refresh();
     }
@@ -770,6 +771,20 @@ public final class ViewerWindow {
         listing.submit(() -> Listed.of(path, order), listed -> opened(path, listed));
     }
 
+    /**
+     * Opens what a command line names (CLI-06): one path as {@link #open(Path)}; several together,
+     * just those images to step through, on the first.
+     */
+    public void open(List<Path> paths) {
+        if (paths.isEmpty()) return;
+        if (paths.size() == 1) {
+            open(paths.getFirst());
+            return;
+        }
+        Sorting order = settings.sorting();
+        listing.submit(() -> Listed.of(paths, order), listed -> opened(paths.getFirst(), listed));
+    }
+
     /** A folder listed off the FX thread, or why it could not be. */
     record Listed(
             FolderImages images, Sorting order, @Nullable String error) {
@@ -777,6 +792,14 @@ public final class ViewerWindow {
         static Listed of(Path path, Sorting order) {
             try {
                 return new Listed(FolderImages.open(path, order), order, null);
+            } catch (IOException | UncheckedIOException e) {
+                return new Listed(FolderImages.EMPTY, order, e.getMessage());
+            }
+        }
+
+        static Listed of(List<Path> paths, Sorting order) {
+            try {
+                return new Listed(FolderImages.open(paths, order), order, null);
             } catch (IOException | UncheckedIOException e) {
                 return new Listed(FolderImages.EMPTY, order, e.getMessage());
             }
@@ -1610,7 +1633,7 @@ public final class ViewerWindow {
                 Platform.runLater(() -> {
                     FolderImages rest = folder.without(file);
                     folder = rest;
-                    String trash = Command.trash(Command.WINDOWS);
+                    String trash = Command.trash(Os.isWindows());
                     String said = tr("viewer.movedToTrash", fileName(file), trash);
                     if (moved.restorable()) {
                         trashed.push(moved);
@@ -1623,7 +1646,7 @@ public final class ViewerWindow {
                     else showCurrent();
                 });
             } catch (IOException | RuntimeException e) {
-                String trash = Command.trash(Command.WINDOWS);
+                String trash = Command.trash(Os.isWindows());
                 Platform.runLater(() -> say(
                         tr("viewer.couldNotMoveToTrash", fileName(file), trash, e.getMessage()),
                         MessageLog.Severity.ERROR));
@@ -1885,7 +1908,7 @@ public final class ViewerWindow {
         if (command == Command.COPY_DEBUG_LOG && DebugLog.text().isEmpty()) return tr("viewer.nothingLogged");
         if (command == Command.COPY_MESSAGES && messages.entries().isEmpty()) return tr("viewer.nothingSaid");
         if (command == Command.UNDO_TRASH && trashed.isEmpty()) {
-            String trash = Command.trash(Command.WINDOWS);
+            String trash = Command.trash(Os.isWindows());
             return Trash.restores() ? tr("viewer.nothingTrashed", trash) : tr("viewer.putBackFromTrash", trash);
         }
         return folderReason;

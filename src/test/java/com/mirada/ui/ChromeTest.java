@@ -25,6 +25,7 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
 import com.mirada.diagnostics.MessageLog;
+import com.mirada.os.Os;
 import com.mirada.settings.Settings;
 import com.mirada.update.UpdateCoordinator;
 import com.mirada.update.UpdateService;
@@ -191,7 +192,7 @@ class ChromeTest {
                 .anyMatch(n -> n instanceof Label l
                         && l.getText() != null
                         && l.getText().contains("F9"))));
-        fx(() -> Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Command.MAC)));
+        fx(() -> Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Os.isMac())));
         fx(() -> window.show(owner));
         fx(() -> Event.fireEvent(
                 window.stage().getScene().getRoot(),

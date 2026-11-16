@@ -108,7 +108,9 @@ public final class Messages {
         String pattern = tr(key);
         if (args == null || args.length == 0 || pattern.indexOf('{') < 0) return pattern;
         try {
-            return new MessageFormat(pattern, Locale.forLanguageTag(current)).format(args);
+            // The JVM's default locale, which App sets (locale): never one built from the bare language,
+            // so a number in a message keeps the region the rest of the window has (INTL-14).
+            return new MessageFormat(pattern).format(args);
         } catch (RuntimeException e) {
             return pattern; // a malformed pattern never takes the window down
         }
@@ -142,6 +144,18 @@ public final class Messages {
     /** A language's own name ({@code "es"} is "Español"), or the code if it is not bundled. */
     public static String languageName(String code) {
         return LANGUAGES.getOrDefault(code, code);
+    }
+
+    /**
+     * The locale that formats dates and numbers, the JVM's default once Mirada has started (INTL-14,
+     * Pauta 6.1.0): the system's whole when no bundled language is chosen, whatever language the
+     * interface is in; the system's still when {@code chosen} is the system's own language, so its
+     * region is kept; the bare language only when another one is chosen. Pure.
+     */
+    public static Locale locale(@Nullable String chosen, Set<String> available, Locale system) {
+        if (chosen == null || !available.contains(chosen)) return system;
+        if (chosen.equals(system.getLanguage())) return system;
+        return Locale.of(chosen);
     }
 
     /**

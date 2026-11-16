@@ -295,4 +295,60 @@ class MessagesTest {
         assertEquals("en", Messages.resolve("", bundled, "ja"));
         assertEquals("en", Messages.resolve("ru", bundled, "ja"));
     }
+
+    /** INTL-14: the four cases, and the catalog formats with the default locale, region and all. */
+    @Test
+    void theFormattingLocaleKeepsTheSystemsRegion() {
+        Set<String> bundled = Messages.available().keySet();
+        Locale austria = Locale.of("de", "AT");
+        // None chosen, a catalog for the system's language: the system's locale whole.
+        assertEquals(austria, Messages.locale("", bundled, austria));
+        // None chosen and none for it: English menus, the system's locale whole all the same.
+        Locale japan = Locale.of("ja", "JP");
+        assertEquals(japan, Messages.locale("", bundled, japan));
+        assertEquals(japan, Messages.locale(null, bundled, japan));
+        // A language Mirada does not ship counts as none.
+        assertEquals(japan, Messages.locale("ru", bundled, japan));
+        // The system's own language chosen: its region kept.
+        assertEquals(austria, Messages.locale("de", bundled, austria));
+        // Another language chosen: the bare language.
+        assertEquals(Locale.of("fr"), Messages.locale("fr", bundled, austria));
+
+        Locale before = Locale.getDefault();
+        try {
+            Locale.setDefault(Locale.of("de", "CH"));
+            Messages.init("de");
+            String key = "messageLog.olderNotKept";
+            // Swiss German groups thousands with an apostrophe-like mark; German German with a dot.
+            String formatted = Messages.tr(key, 12345);
+            assertTrue(
+                    formatted.startsWith(java.text.NumberFormat.getIntegerInstance(Locale.of("de", "CH"))
+                            .format(12345)),
+                    formatted);
+        } finally {
+            Locale.setDefault(before);
+        }
+    }
+
+    /**
+     * INTL-12: no value words a count as "(s)", and a key whose English is a {@code choice} pattern is
+     * one in every language, so each can give the forms it needs.
+     */
+    @Test
+    void aCountIsAChoiceInEveryLanguageAndNeverAnS() {
+        Properties base = catalog("");
+        List<String> wrong = new ArrayList<>();
+        for (String language : ALL) {
+            Properties catalog = catalog(language);
+            for (String key : catalog.stringPropertyNames()) {
+                String value = catalog.getProperty(key);
+                if (PLACEHOLDER.matcher(value).find() && value.contains("(s)"))
+                    wrong.add(name(language) + " " + key + " has (s): " + value);
+                String english = base.getProperty(key, "");
+                if (english.contains(",choice,") && !value.contains(",choice,"))
+                    wrong.add(name(language) + " " + key + " is no choice: " + value);
+            }
+        }
+        assertTrue(wrong.isEmpty(), String.join("\n", wrong));
+    }
 }

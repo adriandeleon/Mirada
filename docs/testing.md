@@ -74,7 +74,13 @@ table and the pom disagree, so change both together.
 - **Orientation**: `ExifTest.mirrorThenTurnPutsTheCornerWhereTheTagSays`, all eight against the tag's
   definition.
 - **Saving an edit**: `EncoderTest`, `ExifBlockTest`, `IccProfileTest`, `XmpTest`, `HistoryTest`.
-- **Settings and bookmarks**: `SettingsTest`, `BookmarksTest`, `ConfigFileTest`.
+- **Settings and bookmarks**: `SettingsTest`, `BookmarksTest`, `ConfigFileTest`, `ConfigDirTest`
+  (the config folder's order and the move from 0.x's folder).
+- **The same on every OS** (OS-03): `SameOnEveryOsFxTest` builds the window as Windows, macOS and
+  Linux in turn (`Os.override`, or `-Dmirada.os=mac` for a whole run) and compares the command ids,
+  the menu bar's rows and the Settings pages' rows.
+- **The command line**: `LaunchTest` (every option, an unknown one with one dash or two, the
+  launcher's JVM options skipped), `AppTest`, `ReportCommandTest`.
 - **Trash**: `TrashTest`, Linux's only, against a temporary trash; `TrashUndoTest` through the
   window, against surefire's trash under `target/`.
 - **The window, as a user drives it** (`WindowFixture`): `ViewerWindowTest` (stepping, the image,

@@ -232,7 +232,7 @@ public final class Bookmarks {
     }
 
     private static boolean flag(@Nullable String value) {
-        return value != null && Boolean.parseBoolean(value.strip());
+        return Settings.booleanOf(value, false);
     }
 
     /** What is kept on {@code path}, or null for nothing. */

@@ -2,8 +2,8 @@ package com.mirada.report;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Locale;
 
+import com.mirada.os.Os;
 import com.mirada.os.ToolPath;
 
 /**
@@ -14,18 +14,19 @@ public final class Browser {
 
     private Browser() {}
 
-    /** The command that opens {@code url} on {@code osName}. */
-    static List<String> command(String osName, String url) {
-        String os = osName.toLowerCase(Locale.ROOT);
-        if (os.startsWith("mac")) return List.of("open", url);
-        if (os.startsWith("windows")) return List.of("rundll32", "url.dll,FileProtocolHandler", url);
-        return List.of("xdg-open", url);
+    /** The command that opens {@code url} on {@code os}. */
+    static List<String> command(Os.Kind os, String url) {
+        return switch (os) {
+            case MAC -> List.of("open", url);
+            case WINDOWS -> List.of("rundll32", "url.dll,FileProtocolHandler", url);
+            case LINUX -> List.of("xdg-open", url);
+        };
     }
 
     /** Starts the browser; false when it could not be started. */
     public static boolean open(String url) {
         try {
-            ToolPath.process(command(System.getProperty("os.name", ""), url))
+            ToolPath.process(command(Os.host(), url))
                     .redirectErrorStream(true)
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .start();

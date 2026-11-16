@@ -31,6 +31,7 @@ import javafx.stage.Stage;
 import com.mirada.AppInfo;
 import com.mirada.PautaConformance;
 import com.mirada.diagnostics.MessageLog;
+import com.mirada.os.Os;
 import com.mirada.report.Redactor;
 import com.mirada.settings.Settings;
 import com.mirada.update.ReleaseInfo;
@@ -367,7 +368,7 @@ class ToolWindowsTest {
             Node target = card.getScene() != null && card.getScene().getFocusOwner() != null
                     ? card.getScene().getFocusOwner()
                     : card;
-            boolean mac = Command.MAC;
+            boolean mac = Os.isMac();
             Event.fireEvent(
                     target,
                     new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, shortcut && !mac, alt, shortcut && mac));
@@ -467,9 +468,13 @@ class ToolWindowsTest {
                     assertEquals("The image is still loading.", row.getAccessibleHelp());
                 }
                 if (command == Command.INFO) {
+                    javafx.scene.Node tick = row.lookup(".menu-item-tick");
+                    assertTrue(
+                            tick instanceof javafx.scene.control.Label l && AppMenus.TICK.equals(l.getText()),
+                            "ticked in the icon column");
                     javafx.scene.control.Label title =
                             (javafx.scene.control.Label) row.getChildren().get(1);
-                    assertTrue(title.getText().startsWith(AppMenus.TICK), "ticked: " + title.getText());
+                    assertEquals(Command.INFO.label(), title.getText(), "the title as any row's");
                 }
                 if (AppMenus.DESTRUCTIVE.contains(command))
                     assertTrue(item.getStyleClass().contains("danger"));

@@ -38,6 +38,7 @@ import javafx.util.StringConverter;
 
 import com.mirada.folder.Sorting;
 import com.mirada.i18n.Messages;
+import com.mirada.os.Os;
 import com.mirada.settings.Settings;
 import com.mirada.ui.SettingsPages.Page;
 import com.mirada.ui.SettingsPages.Row;
@@ -157,7 +158,7 @@ final class SettingsWindow {
         // The bundled keymaps by name; one the file names that is not bundled shows as the default.
         ChoiceBox<String> keymap = new ChoiceBox<>();
         keymap.getItems().addAll(Keymap.PRESETS);
-        keymap.setConverter(converter(id -> Keymap.load(id, Command.MAC).name(), Keymap.DEFAULT));
+        keymap.setConverter(converter(id -> Keymap.load(id, Os.isMac()).name(), Keymap.DEFAULT));
         keymap.setValue(Keymap.resolve(settings.keymap()));
         keymap.valueProperty().addListener((o, was, now) -> {
             if (now != null && !now.equals(Keymap.resolve(settings.keymap()))) settings.setKeymap(now);
@@ -381,7 +382,7 @@ final class SettingsWindow {
 
     /** The palette's keys as the platform writes keys. */
     private static String shownKeys(Settings settings) {
-        return PaletteChords.display(PaletteChords.parse(settings.paletteKeys(), Command.MAC));
+        return PaletteChords.display(PaletteChords.parse(settings.paletteKeys(), Os.isMac()));
     }
 
     /** A language by its own name, so anyone can find theirs; blank is the system's. */

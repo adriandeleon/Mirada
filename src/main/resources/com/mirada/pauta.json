@@ -1,22 +1,6 @@
 {
   "exceptions": [
     {
-      "rule": "OS-02",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/same-on-every-os/#os-02",
-      "kind": "pending",
-      "reason": "Mirada asks which system it runs on in many places instead of in one.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "OS-03",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/same-on-every-os/#os-03",
-      "kind": "pending",
-      "reason": "Mirada's tests cannot yet pretend to run on each system in turn to show it behaves the same on all three.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
       "rule": "PAUTA-13",
       "level": "MUST",
       "url": "https://pauta-project.dev/6.1.0/conformance/#pauta-13",
@@ -377,27 +361,11 @@
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
-      "rule": "SET-07",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/settings/#set-07",
-      "kind": "pending",
-      "reason": "On macOS and Windows the settings are not yet in a folder in your home named after Mirada.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
       "rule": "SET-08",
       "level": "SHOULD",
       "url": "https://pauta-project.dev/6.1.0/settings/#set-08",
       "kind": "pending",
       "reason": "Where the window was and the recent folders are kept in the settings file, not a file of their own.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "SET-11",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/settings/#set-11",
-      "kind": "pending",
-      "reason": "A setting whose value cannot be read may not fall back to its default.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
@@ -414,62 +382,6 @@
       "url": "https://pauta-project.dev/6.1.0/diagnostics/#diag-08",
       "kind": "pending",
       "reason": "An unsaved edit is not kept to be offered back after a crash.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "CLI-05",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/command-line/#cli-05",
-      "kind": "pending",
-      "reason": "The problem report from the command line is written beside the settings, not in the current folder.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "CLI-12",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/command-line/#cli-12",
-      "kind": "pending",
-      "reason": "A short option Mirada does not know is taken for a file name instead of stopping the launch.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "CLI-13",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/command-line/#cli-13",
-      "kind": "pending",
-      "reason": "The short flags for help and version are not understood yet.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "CLI-11",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/command-line/#cli-11",
-      "kind": "pending",
-      "reason": "On Windows, help and version text are not printed in the console you typed them in.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "CLI-06",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/command-line/#cli-06",
-      "kind": "pending",
-      "reason": "Only the first file named on the command line is opened.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "INTL-12",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/i18n/#intl-12",
-      "kind": "pending",
-      "reason": "One message in the Message Log does not change its wording for one item.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "INTL-14",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/i18n/#intl-14",
-      "kind": "pending",
-      "reason": "The system's region is dropped, so dates and numbers may not be written your way.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {

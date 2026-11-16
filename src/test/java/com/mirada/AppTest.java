@@ -52,8 +52,7 @@ class AppTest {
 
     private static String printed(String... args) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        boolean printed =
-                App.printed(Launch.parse(List.of(args), "/home/u"), new PrintStream(out, true, StandardCharsets.UTF_8));
+        boolean printed = App.printed(Launch.parse(List.of(args)), new PrintStream(out, true, StandardCharsets.UTF_8));
         return printed ? out.toString(StandardCharsets.UTF_8) : "(nothing: it starts)";
     }
 

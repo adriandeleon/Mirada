@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
@@ -49,7 +48,7 @@ public final class ToolPath {
      */
     public static ProcessBuilder process(List<String> command) {
         ProcessBuilder builder = new ProcessBuilder(command);
-        if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).startsWith("windows")) return builder;
+        if (Os.host() == Os.Kind.WINDOWS) return builder;
         String path = merged(System.getenv("PATH"), loginPath(), File.pathSeparator);
         builder.environment().put("PATH", path);
         builder.command(resolved(command, path, File.separator, ToolPath::executable));

@@ -16,14 +16,17 @@ import com.mirada.diagnostics.MessageLog;
 import com.mirada.i18n.Messages;
 import com.mirada.image.HeadStart;
 import com.mirada.os.MacOpenFiles;
+import com.mirada.os.Os;
 import com.mirada.os.SingleInstance;
 import com.mirada.os.Trash;
+import com.mirada.os.WindowsConsole;
 import com.mirada.perf.FxSampler;
 import com.mirada.perf.Startup;
 import com.mirada.perf.Tour;
 import com.mirada.report.Browser;
 import com.mirada.report.Redactor;
 import com.mirada.report.ReportCommand;
+import com.mirada.settings.ConfigDir;
 import com.mirada.settings.FileWrites;
 import com.mirada.settings.Settings;
 import com.mirada.ui.Fonts;
@@ -38,6 +41,9 @@ import static com.mirada.i18n.Messages.tr;
  * opens at its first image, and nothing opens an empty window that takes a drop or Ctrl+O.
  */
 public final class App extends Application {
+
+    /** The locale the JVM started with: the system's, before {@link #start} sets the one it formats with. */
+    private static final Locale SYSTEM_LOCALE = Locale.getDefault();
 
     /** What {@link MacOpenFiles#listen} did, for the perf trace. */
     private static String openFiles = "none (not started)";
@@ -61,33 +67,37 @@ public final class App extends Application {
         DebugLog.onUncaught(App::uncaught);
         // Before any AWT class can load. ImageIO and BufferedImage are java.desktop and need no
         // display, so AWT is headless — except on macOS, where Move to Trash is AWT's Desktop (Trash).
-        System.setProperty("java.awt.headless", String.valueOf(Trash.headless(System.getProperty("os.name"))));
+        System.setProperty("java.awt.headless", String.valueOf(Trash.headless(Os.host())));
         Startup.mark("main");
         // --help and --version print and exit before anything starts (CLI-01); --config-dir and --dev
         // are settled before anything reads the config folder (CLI-02).
-        Launch launch = Launch.parse(List.of(args), System.getProperty("user.home", "."));
+        Launch launch = Launch.parse(List.of(args));
+        // On Windows a GUI executable has no console: what follows prints in the one it was typed in
+        // (CLI-11). A plain start never looks.
+        if (launch.action() != Launch.Action.START) WindowsConsole.attach();
         // Exit, not return: started as an Application (the jlink image, dev runs) the launcher has
         // already started the toolkit, whose thread would keep the process alive.
         if (printed(launch, System.out)) System.exit(0);
-        switch (launch.action()) {
-            case HELP, VERSION -> {}
-            case REPORT -> {
-                // No window: for when Mirada will not start (CLI-05).
-                System.exit(ReportCommand.run(
-                        Settings.defaultFile(launch.configDir()),
-                        System.out,
-                        Browser::open,
-                        Redactor.forThisMachine()));
-            }
-            case MISTAKE -> {
-                System.err.println("mirada: " + launch.error());
-                System.err.print(Launch.USAGE);
-                System.exit(2);
-            }
-            case START -> {}
+        if (launch.action() == Launch.Action.MISTAKE) {
+            // CLI-12: the option, how to get help, and status 2, before anything starts.
+            System.err.println("mirada: " + launch.error());
+            System.err.println(Launch.HELP_HINT);
+            System.exit(2);
+        }
+        Path configFolder = ConfigDir.resolve(launch.configDir(), launch.dev());
+        // A folder an older Mirada kept in the OS's own place comes to ~/.mirada, once (SET-07): one
+        // check of ~/.mirada on macOS and Windows, none elsewhere or for a named folder.
+        if (configFolder.equals(ConfigDir.defaultFolder(System.getProperty("user.home", ".")))) {
+            ConfigDir.adoptOldFolder();
+        }
+        Path settings = Settings.defaultFile(configFolder);
+        if (launch.action() == Launch.Action.REPORT) {
+            // No window: for when Mirada will not start (CLI-05). The report goes in the folder the
+            // command was typed in.
+            System.exit(ReportCommand.run(
+                    settings, Path.of("").toAbsolutePath(), System.out, Browser::open, Redactor.forThisMachine()));
         }
         files = launch.files();
-        Path settings = Settings.defaultFile(launch.configDir());
         settingsFile = settings;
         Path folder = settings.toAbsolutePath().getParent();
         // One Mirada per config folder (CLI-07): a running one takes this launch's file and this
@@ -170,10 +180,7 @@ public final class App extends Application {
      * else English (INTL-02).
      */
     static String language(Settings settings) {
-        return Messages.resolve(
-                settings.language(),
-                Messages.available().keySet(),
-                Locale.getDefault().getLanguage());
+        return Messages.resolve(settings.language(), Messages.available().keySet(), SYSTEM_LOCALE.getLanguage());
     }
 
     /** The settings {@link #main} started reading, or read here if it did not or could not. */
@@ -218,8 +225,11 @@ public final class App extends Application {
         Settings settings = settings();
         String language = language(settings);
         if (!Messages.initialized() || !Messages.current().equals(language)) Messages.init(language);
-        // JavaFX words its own dialogs' buttons by the default locale: the interface's language.
-        Locale.setDefault(Locale.forLanguageTag(Messages.current()));
+        // Dates and numbers, the catalog's among them, and JavaFX's own dialogs' buttons follow the
+        // default locale: the system's, with its region, unless another language is chosen (INTL-14).
+        Locale formats =
+                Messages.locale(settings.language(), Messages.available().keySet(), SYSTEM_LOCALE);
+        if (!formats.equals(Locale.getDefault())) Locale.setDefault(formats);
         // Written on the files' thread from now on, never the FX thread (PERF-01).
         settings.writeOn(FileWrites.background(), Platform::runLater);
         DebugLog.writeOn(FileWrites.background());
@@ -243,7 +253,8 @@ public final class App extends Application {
         if (Startup.enabled()) System.out.println("[perf] fonts: " + Fonts.registered());
         List<String> args = files;
         // Listed off the FX thread while the window is shown, which takes the FX thread some 60 ms.
-        if (!args.isEmpty()) window.open(Path.of(args.getFirst()));
+        // Every file named, to step through together (CLI-06).
+        if (!args.isEmpty()) window.open(paths(args));
         window.show();
         Startup.mark("window-shown");
         // After the first image is asked for, so a launch with an argument starts decoding first. A
@@ -259,13 +270,17 @@ public final class App extends Application {
     }
 
     /**
-     * A later launch's files, on the FX thread: the window comes to the front and opens the first, as
-     * a launch with it would have. A launch with none only brings the window forward.
+     * A later launch's files, on the FX thread: the window comes to the front and opens them, as a
+     * launch with them would have. A launch with none only brings the window forward.
      */
     private static void handedOver(Stage stage, ViewerWindow window, List<String> args) {
         if (stage.isIconified()) stage.setIconified(false);
         stage.toFront();
         stage.requestFocus();
-        if (!args.isEmpty()) window.open(Path.of(args.getFirst()));
+        if (!args.isEmpty()) window.open(paths(args));
+    }
+
+    private static List<Path> paths(List<String> args) {
+        return args.stream().map(Path::of).toList();
     }
 }

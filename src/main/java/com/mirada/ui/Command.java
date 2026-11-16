@@ -3,12 +3,12 @@ package com.mirada.ui;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import javafx.scene.input.KeyCombination;
 
 import com.mirada.i18n.Messages;
+import com.mirada.os.Os;
 import org.jspecify.annotations.Nullable;
 
 import static com.mirada.i18n.Messages.tr;
@@ -145,13 +145,6 @@ enum Command {
     BOOKMARKS_LIST_BOOKMARKED("bookmarks.listBookmarked", "filter show marked"),
     BOOKMARKS_LIST_NOTES("bookmarks.listNotes", "filter show comments");
 
-    /** Whether this is macOS, read once: its keymap is the {@code .mac.json} one ({@link Keymap#load}). */
-    static final boolean MAC = isMac(System.getProperty("os.name", ""));
-
-    /** Whether this is Windows, read once: its trash is the Recycle Bin ({@link #label(boolean, boolean)}). */
-    static final boolean WINDOWS =
-            System.getProperty("os.name", "").toLowerCase(Locale.ROOT).startsWith("windows");
-
     /**
      * Where a command's keys work: the viewer, the editor while it is open, or the Bookmarks and
      * Notes window. One key can mean a different command in each (R turns the image in the viewer
@@ -233,7 +226,7 @@ enum Command {
     }
 
     String label() {
-        return label(MAC, WINDOWS);
+        return label(Os.isMac(), Os.isWindows());
     }
 
     /**
@@ -264,7 +257,7 @@ enum Command {
 
     /** One line, shown under the palette's list for the highlighted command. */
     String description() {
-        return tr(platformKey("command." + id + ".desc", MAC, WINDOWS));
+        return tr(platformKey("command." + id + ".desc", Os.isMac(), Os.isWindows()));
     }
 
     /**
@@ -322,7 +315,7 @@ enum Command {
                     SHOW_IN_FOLDER -> imageShowing ? null : tr("reason.noImage");
             case BOOKMARK, BOOKMARK_FOLDER, NOTE, FOLDER_NOTE, NEXT_BOOKMARK, PREVIOUS_BOOKMARK ->
                 size == 0 ? tr("reason.noFolder") : null;
-            case SLIDESHOW -> size < 2 ? "A slideshow needs a folder with more than one image." : null;
+            case SLIDESHOW -> size < 2 ? tr("reason.slideshowNeedsImages") : null;
             case SORT_BY_NAME, SORT_BY_DATE, SORT_BY_SIZE, REVERSE_ORDER, GO_TO_IMAGE ->
                 size == 0 ? tr("reason.noFolder") : null;
             default -> null;
@@ -421,9 +414,5 @@ enum Command {
                     BOOKMARKS_LIST_BOOKMARKED,
                     BOOKMARKS_LIST_NOTES -> tr("group.bookmarksWindow");
         };
-    }
-
-    static boolean isMac(String osName) {
-        return osName.toLowerCase(Locale.ROOT).startsWith("mac");
     }
 }

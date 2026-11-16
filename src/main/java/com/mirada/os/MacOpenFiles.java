@@ -15,7 +15,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -70,7 +69,7 @@ public final class MacOpenFiles {
      * the launch.
      */
     public static String listen() {
-        if (!isMac(System.getProperty("os.name"))) return "none (not macOS)";
+        if (Os.host() != Os.Kind.MAC) return "none (not macOS)";
         try {
             Observer.register();
             return "files";
@@ -115,11 +114,6 @@ public final class MacOpenFiles {
             arrived.clear();
         }
         file.ifPresent(to);
-    }
-
-    static boolean isMac(@Nullable String osName) {
-        String os = osName == null ? "" : osName.toLowerCase(Locale.ROOT);
-        return os.contains("mac") || os.contains("darwin");
     }
 
     /** One window shows one folder, so of several files opened at once the first is the one shown. */

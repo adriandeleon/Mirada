@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 import com.mirada.image.NativeLibraries;
+import com.mirada.os.Os;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -126,8 +127,7 @@ public final class AppInfo {
     public static String environment(String runtime, Path settingsFile) {
         return versionText() + "\n"
                 + runtime + "\n"
-                + "OS: " + System.getProperty("os.name") + " " + System.getProperty("os.version") + " ("
-                + System.getProperty("os.arch") + ")\n"
+                + "OS: " + Os.description() + "\n"
                 + "Settings: " + tildeHome(settingsFile.toString());
     }
 

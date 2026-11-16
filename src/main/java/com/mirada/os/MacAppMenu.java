@@ -49,7 +49,7 @@ public final class MacAppMenu {
      * what it did, or why it did nothing.
      */
     public static String install(String aboutTitle, Runnable about, Supplier<String> settingsTitle, Runnable settings) {
-        if (!MacOpenFiles.isMac(System.getProperty("os.name"))) return "none (not macOS)";
+        if (Os.host() != Os.Kind.MAC) return "none (not macOS)";
         Module ours = MacAppMenu.class.getModule();
         Module javafx = Platform.class.getModule();
         if (!javafx.isExported("com.sun.glass.ui", ours) || !javafx.isExported("com.sun.glass.ui.mac", ours)) {

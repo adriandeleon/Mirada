@@ -97,38 +97,36 @@ opens the guide, and Ctrl+? lists every key.
 ## Command line
 
 ```
-Usage: mirada [options] [file-or-folder]
+Usage: mirada [options] [files...]
 
 Opens an image with its folder behind it, or a folder at its first image.
+Several images open together, to step through just those.
 
 Options:
-  --config-dir <dir>  keep settings and bookmarks in <dir>
+  -h, --help          print this, and exit
+  -v, -V, --version   print the version, build, commit and Pauta edition, and exit
+  --config-dir <dir>  keep settings and bookmarks in <dir> (default ~/.mirada)
   --dev               keep them in ~/.mirada-dev, apart from your own
   --new-instance      start a window of its own, even when Mirada is running
   --no-session        open only what is named; Mirada restores no session, so
                       this changes nothing, and is taken for scripts that pass it
-  --report            write a redacted problem report beside the settings, open
-                      a prefilled GitHub issue with it, and exit; for when
-                      Mirada will not start
-  --version           print the version, build, commit and Pauta edition, and exit
-  --help              print this, and exit
-  --                  what follows is a file, even if it starts with --
+  --report            write a redacted problem report in the current folder,
+                      open a prefilled GitHub issue with it, and exit; for
+                      when Mirada will not start
+  --                  what follows is a file, even if it starts with -
 
-One Mirada runs per config folder: a second launch hands its file to the
-running one, which opens it and comes to the front, and exits.
+One Mirada runs per config folder: a second launch hands its files to the
+running one, which opens them and comes to the front, and exits.
 
-MIRADA_CONFIG_DIR names the config folder too; an option wins over it.
+MIRADA_CONFIG_DIR names the config folder too; --config-dir and --dev win over it.
 ```
 
 ## Config folder
 
-Mirada keeps two plain files, meant to be readable and mendable by hand:
-
-| Platform | Folder |
-|---|---|
-| Linux | `~/.mirada` |
-| macOS | `~/Library/Application Support/Mirada` |
-| Windows | `%APPDATA%\Mirada` |
+Mirada keeps two plain files, meant to be readable and mendable by hand, in `~/.mirada` (your home
+folder's `.mirada`) on Linux, macOS and Windows alike. Mirada 0.x kept them in
+`~/Library/Application Support/Mirada` on macOS and `%APPDATA%\Mirada` on Windows; the first start
+that finds no `~/.mirada` moves that folder there, once.
 
 - `settings.properties` — the theme, the panels at start, the folder's order, the slideshow's pace,
   the palette's keys, the window's place and the recent folders. Every value is checked as it is
@@ -139,7 +137,8 @@ Mirada keeps two plain files, meant to be readable and mendable by hand:
 
 A file that will not read is kept beside it as `<name>.corrupt.bak`, and Mirada starts with the
 defaults. `--config-dir`, `--dev` or `MIRADA_CONFIG_DIR` point Mirada at another folder, to try
-something without touching your own settings.
+something without touching your own settings; `--config-dir` wins over `--dev`, and either over the
+variable.
 
 ## Building it
 

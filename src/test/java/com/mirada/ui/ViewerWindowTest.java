@@ -27,6 +27,7 @@ import com.mirada.AppInfo;
 import com.mirada.diagnostics.DebugLog;
 import com.mirada.folder.FolderImages;
 import com.mirada.folder.Sorting;
+import com.mirada.os.Os;
 import com.mirada.settings.Bookmarks;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -704,7 +705,7 @@ class ViewerWindowTest {
      */
     @Test
     void f10OpensTheMenuBarAndTheArrowsWalkItNotTheFolder() throws Exception {
-        if (Command.MAC) return; // a Mac's menus are the system's, reached with its own keys
+        if (Os.isMac()) return; // a Mac's menus are the system's, reached with its own keys
         try (WindowFixture window = open("a.png")) {
             window.waitForFirstPaint();
             fx(() -> window.stage.requestFocus());
@@ -786,9 +787,11 @@ class ViewerWindowTest {
                     .filter(i -> Command.INFO.label().equals(i.getText()))
                     .findFirst()
                     .orElseThrow();
-            javafx.scene.control.Label infoTitle = (javafx.scene.control.Label)
-                    ((javafx.scene.control.CustomMenuItem) info).getContent().lookup(".menu-item-title");
-            assertTrue(infoTitle.getText().startsWith(AppMenus.TICK), "the sidebar is open: ticked");
+            javafx.scene.Node tick =
+                    ((javafx.scene.control.CustomMenuItem) info).getContent().lookup(".menu-item-tick");
+            assertTrue(
+                    tick instanceof javafx.scene.control.Label l && AppMenus.TICK.equals(l.getText()),
+                    "the sidebar is open: ticked");
             Menu sort = (Menu)
                     items.stream().filter(i -> i instanceof Menu).findFirst().orElseThrow();
             assertFalse(sort.isDisable());

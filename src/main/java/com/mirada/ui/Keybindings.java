@@ -14,6 +14,7 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 
+import com.mirada.os.Os;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -229,7 +230,7 @@ final class Keybindings {
      * thread; the parsed keymap is kept by {@link Keymap#load}.
      */
     static void preload(String keymapId) {
-        Keymap.load(keymapId, Command.MAC);
+        Keymap.load(keymapId, Os.isMac());
     }
 
     /**
@@ -240,7 +241,7 @@ final class Keybindings {
         boolean vertical = Command.vertical();
         Keybindings made = vertical ? sideways : along;
         if (made == null) {
-            made = layered(Keymap.load(keymap, Command.MAC), vertical, user);
+            made = layered(Keymap.load(keymap, Os.isMac()), vertical, user);
             if (vertical) sideways = made;
             else along = made;
         }

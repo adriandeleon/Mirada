@@ -164,10 +164,11 @@ final class AppMenus {
     /** The least room between the widest title and the chord column (MENU-18). */
     static final double CHORD_GAP = 18;
 
-    /** The mark a ticked row's title starts with, and the blank that keeps the others in line. */
-    static final String TICK = "\u2713 ";
-
-    static final String NO_TICK = "\u2002\u2002";
+    /**
+     * The mark a ticked row shows in its icon column, in place of its glyph while it is on: in the
+     * title it pushed a toggle's words right of the rows around it.
+     */
+    static final String TICK = "\u2713";
 
     private static final String REASON_TIP = AppMenus.class.getName() + ".reason";
 
@@ -251,13 +252,19 @@ final class AppMenus {
         box.setAlignment(Pos.CENTER_LEFT);
         box.setMaxWidth(Double.MAX_VALUE);
         // A row drawn from nodes reads as its title and chord to a screen reader (ACC-01).
+        // A ticked row's tick, in the icon column, is heard before its title.
         box.accessibleTextProperty()
                 .bind(Bindings.createStringBinding(
-                        () -> chord.getText().isEmpty()
-                                ? title.getText().strip()
-                                : title.getText().strip() + ", " + chord.getText(),
+                        () -> {
+                            boolean ticked = icon.getChildren().stream()
+                                    .anyMatch(n -> n.getStyleClass().contains("menu-item-tick"));
+                            String words =
+                                    (ticked ? TICK + " " : "") + title.getText().strip();
+                            return chord.getText().isEmpty() ? words : words + ", " + chord.getText();
+                        },
                         title.textProperty(),
-                        chord.textProperty()));
+                        chord.textProperty(),
+                        icon.getChildren()));
         CustomMenuItem item = new CustomMenuItem(box);
         item.setHideOnClick(true);
         item.setUserData(command);
@@ -323,15 +330,24 @@ final class AppMenus {
 
     private static final String ROW = AppMenus.class.getName() + ".row";
 
-    /** Writes a row's glyph, title and chord as they are now: a tick's mark, the keymap's chord. */
+    /**
+     * Writes a row's glyph, title and chord as they are now: the tick in the glyph's place while its
+     * setting or panel is on, the keymap's chord.
+     */
     static void refresh(Row row, String label, boolean ticked) {
         Command command = row.command();
-        String prefix = TICKED.contains(command) ? (ticked ? TICK : NO_TICK) : "";
-        row.title().setText(prefix + label);
+        boolean on = ticked && TICKED.contains(command);
+        row.title().setText(label);
         // Not drawn (the content is), but what the row is called to code that asks it.
         row.item().setText(label);
         KeyCombination chord = command.chord();
         row.chord().setText(chord == KeyCombination.NO_MATCH ? "" : chord.getDisplayText());
+        if (on) {
+            Label tick = new Label(TICK);
+            tick.getStyleClass().add("menu-item-tick");
+            row.icon().getChildren().setAll(tick);
+            return;
+        }
         Node glyph = Icons.menu(command);
         if (glyph == null) row.icon().getChildren().clear();
         else row.icon().getChildren().setAll(glyph);

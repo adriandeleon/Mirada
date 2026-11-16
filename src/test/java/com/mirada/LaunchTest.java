@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class LaunchTest {
 
     private static Launch parse(String... args) {
-        return Launch.parse(List.of(args), "/home/u");
+        return Launch.parse(List.of(args));
     }
 
     @Test
@@ -38,8 +38,13 @@ class LaunchTest {
     }
 
     @Test
-    void devKeepsItsOwnFolderInHome() {
-        assertEquals(Path.of("/home/u", ".mirada-dev"), parse("--dev").configDir());
+    void devAndConfigDirAreKeptApartForTheResolver() {
+        assertTrue(parse("--dev").dev());
+        assertNull(parse("--dev").configDir());
+        // Whichever comes first, both are kept: ConfigDir puts --config-dir first (SET-07).
+        Launch both = parse("--config-dir", "/tmp/c", "--dev");
+        assertEquals(Path.of("/tmp/c"), both.configDir());
+        assertTrue(both.dev());
     }
 
     @Test
@@ -56,14 +61,57 @@ class LaunchTest {
         Launch before = parse("--report", "--config-dir", "/tmp/c");
         assertEquals(Launch.Action.REPORT, before.action());
         assertEquals(Path.of("/tmp/c"), before.configDir());
-        assertEquals(
-                Path.of("/home/u", ".mirada-dev"), parse("--dev", "--report").configDir());
+        assertTrue(parse("--dev", "--report").dev());
         assertEquals(Launch.Action.HELP, parse("--report", "--help").action());
     }
 
     @Test
     void afterTheDoubleDashEverythingIsAFile() {
         assertEquals(List.of("--help"), parse("--", "--help").files());
+        assertEquals(List.of("-x.jpg", "a.jpg"), parse("--", "-x.jpg", "a.jpg").files());
+    }
+
+    /** CLI-12: an unknown option with one dash or two stops the launch; it is never a file. */
+    @Test
+    void anUnknownOptionWithOneDashOrTwoIsAMistake() {
+        for (String option : List.of("-x", "-help", "--frobnicate", "-P")) {
+            Launch launch = parse(option, "a.jpg");
+            assertEquals(Launch.Action.MISTAKE, launch.action(), option);
+            assertTrue(launch.error().contains(option), launch.error());
+            assertEquals(List.of(), launch.files());
+        }
+    }
+
+    /** CLI-12: a lone dash is a file named so. */
+    @Test
+    void aLoneDashIsAFile() {
+        assertEquals(List.of("-", "a.jpg"), parse("-", "a.jpg").files());
+    }
+
+    /** CLI-12: what a launcher leaves of the JVM's options is skipped with its value, in both forms. */
+    @Test
+    void skipsTheLaunchersJvmOptions() {
+        Launch launch = parse(
+                "--add-exports",
+                "javafx.graphics/com.sun.glass.ui=com.mirada",
+                "--add-opens=java.base/java.lang=ALL-UNNAMED",
+                "--add-exports=a/b=c",
+                "-p",
+                "/opt/mirada/mods",
+                "--add-opens",
+                "java.base/java.io=ALL-UNNAMED",
+                "a.jpg");
+        assertEquals(Launch.Action.START, launch.action());
+        assertEquals(List.of("a.jpg"), launch.files());
+    }
+
+    /** CLI-13: -h for --help, -v and -V for --version. */
+    @Test
+    void theShortFlags() {
+        assertEquals(Launch.Action.HELP, parse("-h").action());
+        assertEquals(Launch.Action.VERSION, parse("-v").action());
+        assertEquals(Launch.Action.VERSION, parse("-V").action());
+        for (String flag : List.of("-h", "-v", "-V", "[files...]")) assertTrue(Launch.USAGE.contains(flag), flag);
     }
 
     @Test

@@ -37,6 +37,7 @@ import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
+import com.mirada.os.Os;
 import com.mirada.settings.Bookmarks;
 import com.mirada.settings.Settings;
 import org.junit.jupiter.api.AfterAll;
@@ -103,7 +104,7 @@ class MenusFxTest {
         List<String> blank = new ArrayList<>();
         fx(() -> {
             // A Mac's system menu bar draws no icons (MENU-02).
-            if (!Command.MAC) {
+            if (!Os.isMac()) {
                 for (Menu menu : menuBar().getMenus())
                     unglyphed("menu bar > " + menu.getText(), menu.getItems(), blank);
             }
@@ -155,7 +156,7 @@ class MenusFxTest {
     void menusAreInterFourteenWhateverTheyOpenFrom() throws Exception {
         assertTrue(fx(Fonts::registered).contains("Inter Bold"), "Inter's faces are registered");
         fx(() -> {
-            if (!Command.MAC) {
+            if (!Os.isMac()) {
                 menuBar().getMenus().getFirst().show();
                 assertInter(showingMenu(), "menu bar");
                 closeMenus();
@@ -312,7 +313,7 @@ class MenusFxTest {
 
     /** The menu bar: in the window's title bar, or on a Mac the system's. */
     private static MenuBar menuBar() {
-        if (Command.MAC) return FxTestSupport.field(window, "macMenus");
+        if (Os.isMac()) return FxTestSupport.field(window, "macMenus");
         TitleBar titleBar = FxTestSupport.field(window, "titleBar");
         MenuBar bar = titleBar.menuBar();
         assertNotNull(bar, "the in-window menu bar");

@@ -19,6 +19,7 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
 import com.mirada.folder.Sorting;
+import com.mirada.os.Os;
 import com.mirada.settings.Settings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,7 +69,7 @@ class SettingsWindowTest {
     @AfterEach
     void close() throws Exception {
         FxToolkit.cleanupStages();
-        fx(() -> Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Command.MAC)));
+        fx(() -> Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Os.isMac())));
     }
 
     /** The control in the row titled {@code title}. */

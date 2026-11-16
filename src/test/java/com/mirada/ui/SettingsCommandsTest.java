@@ -12,6 +12,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 
+import com.mirada.os.Os;
 import com.mirada.settings.Bookmarks;
 import com.mirada.settings.ConfigImport;
 import com.mirada.settings.Settings;
@@ -43,7 +44,7 @@ class SettingsCommandsTest {
     void cleanUp() throws Exception {
         FileDialogs.answeredBy(null);
         FxToolkit.cleanupStages();
-        fx(() -> Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Command.MAC)));
+        fx(() -> Keybindings.use(Settings.DEFAULT_KEYMAP, Map.of(), Settings.defaultPaletteKeys(Os.isMac())));
     }
 
     private WindowFixture open() throws Exception {
@@ -83,7 +84,7 @@ class SettingsCommandsTest {
             Settings settings = window.settings;
             fx(() -> settings.setPaletteKeys("f3"));
             window.run(Command.RESET_PALETTE_KEYS);
-            assertEquals(Settings.defaultPaletteKeys(Command.MAC), settings.paletteKeys());
+            assertEquals(Settings.defaultPaletteKeys(Os.isMac()), settings.paletteKeys());
             assertEquals("The palette opens with its default keys again", window.lastSaid());
         }
     }

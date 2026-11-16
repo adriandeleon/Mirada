@@ -24,6 +24,7 @@ import javafx.stage.Stage;
 
 import com.mirada.diagnostics.MessageLog;
 import com.mirada.i18n.Messages;
+import com.mirada.os.Os;
 import com.mirada.settings.Bookmarks;
 import com.mirada.settings.ConfigExport;
 import com.mirada.settings.ConfigImport;
@@ -90,7 +91,7 @@ final class SettingsCommands {
                         command,
                         tr("keymap.prompt"),
                         Keymap.PRESETS,
-                        id -> Keymap.load(id, Command.MAC).name(),
+                        id -> Keymap.load(id, Os.isMac()).name(),
                         Keymap.resolve(settings.keymap()),
                         settings::setKeymap);
             case HIDE_CONTROLS_AFTER ->
@@ -133,7 +134,7 @@ final class SettingsCommands {
             }
             case PALETTE_KEYS -> settingsWindow.get().recordPaletteKey(stage);
             case RESET_PALETTE_KEYS -> {
-                settings.setPaletteKeys(Settings.defaultPaletteKeys(Command.MAC));
+                settings.setPaletteKeys(Settings.defaultPaletteKeys(Os.isMac()));
                 say(tr("viewer.paletteKeysReset"));
             }
             case EXPORT_CONFIG -> exportConfiguration();

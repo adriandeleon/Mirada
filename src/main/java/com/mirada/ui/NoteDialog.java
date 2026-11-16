@@ -14,6 +14,8 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 
+import com.mirada.os.Os;
+
 import static com.mirada.i18n.Messages.tr;
 
 /**
@@ -50,7 +52,7 @@ final class NoteDialog {
         text.setMinHeight(140);
         VBox.setVgrow(text, Priority.ALWAYS);
         text.setPromptText(tr("note.prompt"));
-        String saveKey = (Command.MAC ? "⌘" : "Ctrl+") + "Return";
+        String saveKey = (Os.isMac() ? "⌘" : "Ctrl+") + "Return";
         Label hint = new Label(tr("note.hint", saveKey));
         hint.getStyleClass().add("note-hint");
         dialog.getDialogPane().setContent(new VBox(8, text, hint));
