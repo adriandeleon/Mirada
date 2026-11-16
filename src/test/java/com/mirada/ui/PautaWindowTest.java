@@ -89,7 +89,9 @@ class PautaWindowTest {
         while (rule.find()) {
             String selector = rule.group(1).strip();
             String body = rule.group(2);
-            if (selector.endsWith(".root") || !body.contains("-state-amber")) continue;
+            // In About and the Pauta window: a warning elsewhere is amber too (ICON-07).
+            boolean aboutOrPauta = selector.contains(".about") || selector.contains(".pauta");
+            if (selector.endsWith(".root") || !aboutOrPauta || !body.matches("(?s).*-state-amber\\b(?!-).*")) continue;
             amber++;
             assertTrue(selector.endsWith(".about-update.update-available"), selector);
             assertTrue(body.contains("-fx-font-weight: bold"), selector);

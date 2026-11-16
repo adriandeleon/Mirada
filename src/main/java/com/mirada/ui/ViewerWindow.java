@@ -25,7 +25,6 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.css.PseudoClass;
 import javafx.geometry.Bounds;
-import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
@@ -43,7 +42,6 @@ import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToggleGroup;
-import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
@@ -284,7 +282,7 @@ public final class ViewerWindow {
         toast.setVisible(false);
         toast.setMouseTransparent(true);
         StackPane.setAlignment(toast, Pos.BOTTOM_CENTER);
-        StackPane.setMargin(toast, new Insets(0, 0, 72, 0));
+        UiZoom.stackMargin(toast, 0, 0, 72, 0);
         toastTimer.setOnFinished(e -> toast.setVisible(false));
         slideshow.setOnFinished(e -> slideshowStep());
         frameTimer.setOnFinished(e -> nextFrame());
@@ -1069,6 +1067,10 @@ public final class ViewerWindow {
                     PROPERTIES_AT_START,
                     HIDE_CONTROLS_AFTER,
                     SLIDESHOW_SPEED,
+                    UI_ZOOM,
+                    UI_ZOOM_IN,
+                    UI_ZOOM_OUT,
+                    UI_ZOOM_RESET,
                     PALETTE_KEYS,
                     RESET_PALETTE_KEYS,
                     CHECK_DAILY,
@@ -1232,6 +1234,10 @@ public final class ViewerWindow {
                     PROPERTIES_AT_START,
                     HIDE_CONTROLS_AFTER,
                     SLIDESHOW_SPEED,
+                    UI_ZOOM,
+                    UI_ZOOM_IN,
+                    UI_ZOOM_OUT,
+                    UI_ZOOM_RESET,
                     PALETTE_KEYS,
                     RESET_PALETTE_KEYS,
                     CHECK_DAILY,
@@ -1893,6 +1899,8 @@ public final class ViewerWindow {
         if (editing && !duringEdit(command)) return tr("viewer.finishEditingReason");
         if (command == Command.OPEN_RECENT && settings.recent().isEmpty()) return tr("viewer.noRecentFolder");
         if (command == Command.TITLE_BAR_MENUS) return TitleBar.titleBarMenusUnavailable();
+        String zoomReason = SettingsCommands.uiZoomUnavailable(command, settings.uiZoom());
+        if (zoomReason != null) return zoomReason;
         if (command == Command.GO_TO_BOOKMARK && bookmarks.all().isEmpty()) return tr("viewer.nothingBookmarkedReason");
         String folderReason = command.unavailable(folder.index(), folder.size(), !placeholder.isVisible());
         if (folderReason == null && command == Command.NEXT_BOOKMARK && bookmarkFrom(1) < 0)
@@ -1963,7 +1971,7 @@ public final class ViewerWindow {
     private Button openButton(Command command) {
         Button button = new Button(command.label(), Icons.menu(command));
         button.getStyleClass().add("open-button");
-        button.setTooltip(new Tooltip(Icons.tooltip(command)));
+        button.setTooltip(Icons.tip(Icons.tooltip(command)));
         button.setOnAction(e -> run(command));
         return button;
     }
@@ -2116,8 +2124,8 @@ public final class ViewerWindow {
         return name == null ? file.toString() : name.toString();
     }
 
+    /** {@code mirada.css} at the UI zoom in effect ({@link UiZoom}), which keeps it current on every window. */
     static String stylesheet() {
-        return Objects.requireNonNull(ViewerWindow.class.getResource("/com/mirada/styles/mirada.css"), "mirada.css")
-                .toExternalForm();
+        return UiZoom.sheet("mirada.css");
     }
 }

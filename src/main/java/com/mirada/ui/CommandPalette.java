@@ -9,6 +9,7 @@ import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.function.IntFunction;
 
+import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
@@ -81,7 +82,7 @@ final class CommandPalette {
     private final ObservableList<Row> items = FXCollections.observableArrayList();
     private final Label desc = new Label();
     private final Label hint = new Label();
-    private final VBox card = new VBox(6);
+    private final VBox card = UiZoom.vbox(6);
     private final Region backdrop = new Region();
 
     private List<Command> commands = List.of();
@@ -117,7 +118,7 @@ final class CommandPalette {
         input.getStyleClass().add("palette-input");
         input.setPromptText(tr("palette.runCommandPrompt"));
         input.textProperty().addListener((o, was, now) -> filter(now));
-        HBox inputRow = new HBox(9, prefixChip, input);
+        HBox inputRow = UiZoom.hbox(9, prefixChip, input);
         inputRow.setAlignment(Pos.CENTER_LEFT);
         inputRow.getStyleClass().add("palette-input-row");
         HBox.setHgrow(input, Priority.ALWAYS);
@@ -126,9 +127,14 @@ final class CommandPalette {
         list.getStyleClass().add("palette-list");
         list.setPlaceholder(new Label(tr("palette.noMatchingCommands")));
         // A whole number of rows: a fixed pixel height cuts the last row in half.
-        list.setFixedCellSize(ROW_HEIGHT);
-        list.setPrefHeight(listHeight(0));
-        list.insetsProperty().addListener((o, was, in) -> list.setPrefHeight(listHeight(in.getTop() + in.getBottom())));
+        // The row's height and the list's follow the UI zoom (WIN-12); the insets are the CSS's, zoomed already.
+        UiZoom.bind(list.fixedCellSizeProperty(), ROW_HEIGHT);
+        list.prefHeightProperty()
+                .bind(Bindings.createDoubleBinding(
+                        () -> listHeight(
+                                list.getInsets().getTop() + list.getInsets().getBottom(), list.getFixedCellSize()),
+                        list.insetsProperty(),
+                        list.fixedCellSizeProperty()));
         list.setCellFactory(view -> new RowCell());
         // The query field keeps the keyboard; the list is driven from it.
         list.setFocusTraversable(false);
@@ -146,8 +152,9 @@ final class CommandPalette {
 
         card.getStyleClass().add("command-palette");
         card.getChildren().addAll(inputRow, list, desc, hint);
-        card.setPrefWidth(620);
-        card.setMaxSize(620, Region.USE_PREF_SIZE); // hug the content; don't stretch to fill the overlay
+        UiZoom.bind(card.prefWidthProperty(), 620);
+        UiZoom.bind(card.maxWidthProperty(), 620);
+        card.setMaxHeight(Region.USE_PREF_SIZE); // hug the content; don't stretch to fill the overlay
         StackPane.setAlignment(card, Pos.TOP_CENTER);
 
         // On the card, so it runs before the ListView's own Up/Down and before the TextField
@@ -159,7 +166,12 @@ final class CommandPalette {
 
     /** The list height that shows exactly {@link #VISIBLE_ROWS} rows inside {@code insets} of chrome. */
     static double listHeight(double insets) {
-        return VISIBLE_ROWS * ROW_HEIGHT + insets;
+        return listHeight(insets, ROW_HEIGHT);
+    }
+
+    /** The same with rows {@code rowHeight} tall: at the UI zoom in effect. */
+    static double listHeight(double insets, double rowHeight) {
+        return VISIBLE_ROWS * rowHeight + insets;
     }
 
     boolean isShowing() {
@@ -401,7 +413,7 @@ final class CommandPalette {
     private final class RowCell extends ListCell<Row> {
         private final TextFlow title = new TextFlow();
         private final Label chord = new Label();
-        private final HBox layout = new HBox(10, title, spacer(), chord);
+        private final HBox layout = UiZoom.hbox(10, title, spacer(), chord);
 
         private static Region spacer() {
             Region region = new Region();
@@ -442,9 +454,9 @@ final class CommandPalette {
             String why = unavailable.apply(command);
             if (why != null) {
                 layout.getStyleClass().add("palette-disabled");
-                Tooltip tip = new Tooltip(why);
+                Tooltip tip = Icons.tip(why);
                 tip.setWrapText(true);
-                tip.setMaxWidth(380);
+                UiZoom.bind(tip.maxWidthProperty(), 380);
                 tip.getStyleClass().add("palette-disabled-tooltip");
                 setTooltip(tip);
             }

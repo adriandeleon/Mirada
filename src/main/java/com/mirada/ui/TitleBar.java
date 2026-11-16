@@ -149,7 +149,7 @@ final class TitleBar {
     private final Button rotate;
     private final ToggleButton info = new ToggleButton();
     /** Where the menu bar goes, on the left, once it is built ({@link #finish}). */
-    private final HBox left = new HBox(4);
+    private final HBox left = UiZoom.hbox(4);
 
     private @Nullable MenuBar menus;
     private final Region row;
@@ -191,7 +191,7 @@ final class TitleBar {
         // Icons only: their names are what a screen reader says (VoiceOver, Narrator, Orca).
         Icons.name(info, Command.INFO);
 
-        HBox right = new HBox(4, rotate, info);
+        HBox right = UiZoom.hbox(4, rotate, info);
         right.setAlignment(Pos.CENTER_RIGHT);
         left.setAlignment(Pos.CENTER_LEFT);
         Heading centre = heading;
@@ -224,7 +224,7 @@ final class TitleBar {
      *     are the system's
      */
     void finish(@Nullable MenuBar bar) {
-        Tooltip tip = new Tooltip(folderShown == null ? "" : folderShown.toString());
+        Tooltip tip = Icons.tip(folderShown == null ? "" : folderShown.toString());
         folderTip = tip;
         folder.setTooltip(tip);
         if (bar != null) {

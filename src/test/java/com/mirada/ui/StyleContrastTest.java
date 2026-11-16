@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 import javafx.scene.paint.Color;
 
 import atlantafx.base.theme.CupertinoLight;
+import com.mirada.settings.Settings;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -124,6 +125,163 @@ class StyleContrastTest {
         for (String line : rules.split("\n")) if (FIXED_COLOUR.matcher(line).find()) fixed.add(line.strip());
         assertTrue(fixed.isEmpty(), "fixed colours outside .root:\n" + String.join("\n", fixed));
         assertFalse(FIXED_COLOUR.matcher(sheet("ui-font.css")).find(), "ui-font.css names no colour");
+    }
+
+    /**
+     * The only selectors whose text may be the subtle ink, about 3:1 (ICON-09): disabled text, and a
+     * page or a bookmark the search or the disk has ruled out. Every other rule of the app's sheets
+     * that sets a text fill to it fails.
+     */
+    private static final java.util.Set<String> SUBTLE_TEXT = java.util.Set.of(
+            ".menu-item:disabled .accelerator-text", // a row that cannot run now: disabled
+            ".menu-item.unavailable .menu-item-title",
+            ".menu-item.unavailable .menu-item-chord",
+            ".settings-sidebar > .virtual-flow > .clipped-container > .sheet > .list-cell.no-match", // ruled out
+            ".bookmarks-cell:missing .bookmarks-name", // its file is gone: disabled
+            ".bookmarks-cell:missing .bookmarks-note");
+
+    /** Every rule of {@code css}: its selector list and its declarations, comments gone. */
+    private static List<String[]> allRules(String css) {
+        List<String[]> all = new ArrayList<>();
+        Matcher m = Pattern.compile("([^{}]+)\\{([^{}]*)\\}").matcher(css);
+        while (m.find()) all.add(new String[] {m.group(1).strip(), m.group(2)});
+        return all;
+    }
+
+    /** ICON-09: readable text is muted or stronger, and muted is 4.5:1 on every ground of both themes. */
+    @Test
+    void textThatMustBeReadUsesTheMutedRoleNotSubtle() throws Exception {
+        Pattern subtle = Pattern.compile("-fx-(text-)?fill\\s*:\\s*-color-fg-subtle\\b");
+        List<String> problems = new ArrayList<>();
+        for (String name : List.of("mirada.css", "ui-font.css")) {
+            for (String[] rule : allRules(sheet(name))) {
+                if (!subtle.matcher(rule[1]).find()) continue;
+                for (String selector : rule[0].split(",")) {
+                    String s = selector.strip().replaceAll("\\s+", " ");
+                    if (!SUBTLE_TEXT.contains(s))
+                        problems.add(name + ": " + s + " sets readable text in the subtle ink");
+                }
+            }
+        }
+        assertTrue(problems.isEmpty(), String.join("\n", problems));
+        for (String theme : THEMES) {
+            Map<String, String> p = palette(theme);
+            for (String ground : List.of("-color-bg-default", "-color-bg-subtle", "-color-bg-overlay")) {
+                double ratio = Accent.contrast(color(p, "-color-fg-muted"), color(p, ground));
+                assertTrue(ratio >= 4.5, theme + ": muted on " + ground + " is " + ratio);
+            }
+        }
+    }
+
+    /** ICON-07: each state's token is named once, in the .root block at the top, and chains to a role. */
+    @Test
+    void theStateTokensAreDeclaredOnceAtTheTopAndChainToARole() throws Exception {
+        String css = sheet("mirada.css");
+        List<String[]> all = allRules(css);
+        assertEquals(".root", all.getFirst()[0], "the token block is the first rule");
+        Matcher declared = Pattern.compile("(-state-[a-z-]+)\\s*:\\s*([^;]+);").matcher(all.getFirst()[1]);
+        List<String> names = new ArrayList<>();
+        while (declared.find()) {
+            assertFalse(names.contains(declared.group(1)), declared.group(1) + " is declared twice");
+            names.add(declared.group(1));
+            assertTrue(
+                    declared.group(2).strip().matches("-color-[a-z0-9-]+|ladder\\(-color-bg-default,.*"),
+                    declared.group(1) + " chains to " + declared.group(2));
+        }
+        assertTrue(
+                names.containsAll(List.of("-state-red", "-state-amber", "-state-green", "-state-accent")),
+                names::toString);
+        for (String[] rule : all.subList(1, all.size())) {
+            assertFalse(
+                    Pattern.compile("-state-[a-z-]+\\s*:").matcher(rule[1]).find(),
+                    rule[0] + " declares a state token outside the .root block");
+        }
+    }
+
+    /** ICON-07: a rule that paints an error, a warning or a success uses the state's token, never its role. */
+    @Test
+    void severityColoursComeFromTheStateTokens() throws Exception {
+        String css = sheet("mirada.css");
+        Map<String, String> expected = new LinkedHashMap<>();
+        expected.put(".status-bar .status-echo.status-echo-error", "-state-red");
+        expected.put(".status-bar .status-echo.status-echo-warn", "-state-amber");
+        expected.put(".status-bar .status-unread", "-state-red-emphasis");
+        expected.put(".message-log .list-cell .label.status-echo-error", "-state-red");
+        expected.put(".message-log .list-cell .label.status-echo-warn", "-state-amber");
+        expected.put(".menu-item.danger .menu-item-title", "-state-red");
+        expected.put(".toast:error", "-state-red-osd");
+        expected.put(".toast:warning", "-state-amber-osd");
+        expected.forEach((selector, token) -> {
+            String body = String.join(";", rules(css, selector));
+            assertTrue(body.contains(token + ";"), selector + " should use " + token + ": " + body);
+        });
+        List<String[]> all = allRules(css);
+        for (String[] rule : all.subList(1, all.size())) {
+            assertFalse(
+                    Pattern.compile("-color-(danger|warning|success)-")
+                            .matcher(rule[1])
+                            .find(),
+                    rule[0] + " paints a state with a role, not its -state-* token: " + rule[1]);
+        }
+    }
+
+    /**
+     * ICON-08: a token for the windows' own ground or ink is a role, never a fixed colour; a fixed
+     * colour stands only for what is drawn over the photo, a scrim or a shadow.
+     */
+    @Test
+    void theWindowsOwnGroundAndInkAreRoles() throws Exception {
+        Map<String, String> tokens = rootTokens(sheet("mirada.css"));
+        assertEquals("-color-fg-muted", tokens.get("-window-button-dark"));
+        assertEquals("-color-dark", tokens.get("-crop-ground"));
+        List<String> fixed = new ArrayList<>();
+        tokens.forEach((name, value) -> {
+            boolean overThePhoto = name.startsWith("-osd-")
+                    || name.startsWith("-toast-")
+                    || name.startsWith("-crop-")
+                    || name.equals("-scrim")
+                    || name.startsWith("-shadow-");
+            if (FIXED_COLOUR.matcher(": " + value).find() && !value.startsWith("ladder(") && !overThePhoto)
+                fixed.add(name + ": " + value);
+        });
+        assertTrue(fixed.isEmpty(), "fixed colours for the window's own ground or ink:\n" + String.join("\n", fixed));
+    }
+
+    /** ACC-09: high contrast is Cupertino Dark, mirada.css and high-contrast.css over both, in that order. */
+    private static Map<String, String> highContrast() throws Exception {
+        Map<String, String> tokens = palette("cupertino-dark");
+        tokens.putAll(rootTokens(sheet("high-contrast.css")));
+        return tokens;
+    }
+
+    /** ACC-09: in high contrast every ink reads at 7:1 on every ground, and every state's text too. */
+    @Test
+    void theHighContrastThemeReadsAtSevenToOne() throws Exception {
+        Map<String, String> p = highContrast();
+        List<String> problems = new ArrayList<>();
+        List<String> inks = new ArrayList<>(List.of("-color-fg-default", "-color-fg-muted"));
+        for (String role : ROLES) inks.add("-color-" + role + "-fg");
+        for (String ink : inks) {
+            for (String ground : List.of("-color-bg-default", "-color-bg-subtle", "-color-bg-overlay")) {
+                double ratio = Accent.contrast(color(p, ink), color(p, ground));
+                if (ratio < 7) problems.add(String.format("%s on %s: %.2f", ink, ground, ratio));
+            }
+        }
+        for (String role : ROLES) {
+            double ratio = Accent.contrast(color(p, "-color-fg-emphasis"), color(p, "-color-" + role + "-emphasis"));
+            if (ratio < 7) problems.add(String.format("fg-emphasis on %s-emphasis: %.2f", role, ratio));
+        }
+        assertTrue(problems.isEmpty(), String.join("\n", problems));
+    }
+
+    /** ACC-09: the OS's high-contrast mode wins while it is on, and the theme chosen comes back after. */
+    @Test
+    void theOsHighContrastModeWinsWhileItIsOn() {
+        for (Settings.ThemeChoice choice : Settings.ThemeChoice.values()) {
+            assertEquals(Settings.ThemeChoice.HIGH_CONTRAST, Theme.effective(choice, true));
+            assertEquals(choice, Theme.effective(choice, false));
+        }
+        assertTrue(Theme.dark(Settings.ThemeChoice.HIGH_CONTRAST, javafx.application.ColorScheme.LIGHT));
     }
 
     @Test

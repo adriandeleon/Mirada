@@ -8,6 +8,7 @@ import javafx.application.Application;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
+import javafx.collections.MapChangeListener;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.stage.PopupWindow;
@@ -30,6 +31,10 @@ import org.jspecify.annotations.Nullable;
  * window's frame, falling back to the platform's scheme, which is not the theme: a dark theme
  * chosen in the settings over a light system left the light buttons' dark grey glyphs on a dark
  * header bar.
+ *
+ * <p>High contrast (ACC-09) is Cupertino Dark with {@code high-contrast.css} last on every window, its
+ * roles black, white and saturated: chosen in the settings, or taken while Windows' high-contrast
+ * mode is on ({@code Windows.SPI.HighContrast}) and left as it ends.
  */
 public final class Theme {
 
@@ -40,7 +45,26 @@ public final class Theme {
     /** The scheme every window's scene is told, for the window buttons JavaFX draws. */
     private static ColorScheme scheme = ColorScheme.LIGHT;
 
+    /** Windows' own high-contrast preference (ACC-09): while it is on, the high-contrast theme. */
+    static final String WINDOWS_HIGH_CONTRAST = "Windows.SPI.HighContrast";
+
+    /** Whether the OS asks for high contrast now. */
+    private static boolean systemHighContrast;
+    /** {@code high-contrast.css}'s URL, made the first time it is needed. */
+    private static @Nullable String highContrastSheet;
+    /** Whether the high-contrast sheet is on every window now. */
+    private static boolean highContrast;
+
+    /** The control theme's own stylesheet now, before the UI zoom scales it; null before the first apply. */
+    private static @Nullable String userAgent;
+
     private Theme() {}
+
+    /** The UI zoom changed ({@link UiZoom#apply}): the control theme again, at the new zoom. */
+    static void zoomChanged() {
+        String sheet = userAgent;
+        if (sheet != null) Application.setUserAgentStylesheet(UiZoom.userAgent(sheet));
+    }
 
     public static void apply(Settings.ThemeChoice value) {
         // Called on every change of every setting: restyling every window is for the theme's own.
@@ -50,6 +74,15 @@ public final class Theme {
             following = true;
             Platform.getPreferences().colorSchemeProperty().addListener((obs, was, now) -> refresh());
             Platform.getPreferences().accentColorProperty().addListener((obs, was, now) -> refresh());
+            // ACC-09: Windows' high-contrast mode switches to the high-contrast theme, and back as it ends.
+            systemHighContrast = Boolean.TRUE.equals(Platform.getPreferences().get(WINDOWS_HIGH_CONTRAST));
+            Platform.getPreferences().addListener((MapChangeListener<String, Object>) change -> {
+                if (!WINDOWS_HIGH_CONTRAST.equals(change.getKey())) return;
+                boolean on = Boolean.TRUE.equals(change.getValueAdded());
+                if (on == systemHighContrast) return;
+                systemHighContrast = on;
+                refresh();
+            });
             // A window joins the list as it is shown, before its first frame is drawn.
             Window.getWindows().addListener((ListChangeListener<Window>) change -> {
                 while (change.next()) {
@@ -60,21 +93,30 @@ public final class Theme {
         refresh();
     }
 
+    /** The theme in effect: the high-contrast one while the OS asks for it, else the one chosen. Pure. */
+    static Settings.ThemeChoice effective(Settings.ThemeChoice choice, boolean systemHighContrast) {
+        return systemHighContrast ? Settings.ThemeChoice.HIGH_CONTRAST : choice;
+    }
+
     static boolean dark(Settings.ThemeChoice choice, ColorScheme system) {
         return switch (choice) {
-            case DARK -> true;
+            case DARK, HIGH_CONTRAST -> true;
             case LIGHT -> false;
             case SYSTEM -> system == ColorScheme.DARK;
         };
     }
 
     private static void refresh() {
-        boolean dark = dark(choice, Platform.getPreferences().getColorScheme());
+        Settings.ThemeChoice shown = effective(choice, systemHighContrast);
+        boolean dark = dark(shown, Platform.getPreferences().getColorScheme());
+        highContrast = shown == Settings.ThemeChoice.HIGH_CONTRAST;
         atlantafx.base.theme.Theme theme = dark ? new CupertinoDark() : new CupertinoLight();
-        Application.setUserAgentStylesheet(theme.getUserAgentStylesheet());
+        userAgent = theme.getUserAgentStylesheet();
+        Application.setUserAgentStylesheet(UiZoom.userAgent(userAgent));
         scheme = dark ? ColorScheme.DARK : ColorScheme.LIGHT;
         String old = accentSheet;
-        accentSheet = accent(Platform.getPreferences().getAccentColor(), dark);
+        // High contrast has its own accent; the system's would undo it.
+        accentSheet = highContrast ? null : accent(Platform.getPreferences().getAccentColor(), dark);
         for (Window window : Window.getWindows()) restyle(window, Objects.equals(old, accentSheet) ? null : old);
     }
 
@@ -95,6 +137,20 @@ public final class Theme {
         String sheet = accentSheet;
         if (sheet != null && !scene.getStylesheets().contains(sheet))
             scene.getStylesheets().add(sheet);
+        // Last, over mirada.css's roles; never made while high contrast has not been asked for.
+        String high = highContrastSheet;
+        if (high != null) scene.getStylesheets().remove(high);
+        if (highContrast) scene.getStylesheets().add(highContrastSheet());
+    }
+
+    private static String highContrastSheet() {
+        String sheet = highContrastSheet;
+        if (sheet == null) {
+            sheet = Objects.requireNonNull(Theme.class.getResource("/com/mirada/styles/high-contrast.css"))
+                    .toExternalForm();
+            highContrastSheet = sheet;
+        }
+        return sheet;
     }
 
     private static String dataUrl(String css) {

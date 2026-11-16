@@ -6,7 +6,6 @@ import java.util.function.Consumer;
 import javafx.geometry.Pos;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -39,7 +38,7 @@ final class StatusBar {
     private final MessageLog messages;
     private final UpdateCoordinator updates;
     private final Consumer<Command> run;
-    private final HBox bar = new HBox(10);
+    private final HBox bar = UiZoom.hbox(10);
 
     /** The bar's contents, made after the first paint. */
     private record Parts(Label echo, Label unread, Hyperlink update) {}
@@ -52,9 +51,9 @@ final class StatusBar {
         this.run = run;
         bar.getStyleClass().add("status-bar");
         bar.setAlignment(Pos.CENTER_LEFT);
-        bar.setMinHeight(HEIGHT);
-        bar.setPrefHeight(HEIGHT);
-        bar.setMaxHeight(HEIGHT);
+        UiZoom.bind(bar.minHeightProperty(), HEIGHT);
+        UiZoom.bind(bar.prefHeightProperty(), HEIGHT);
+        UiZoom.bind(bar.maxHeightProperty(), HEIGHT);
     }
 
     /** Adds the echo area, the unread count and the update notice: after the first paint. */
@@ -69,10 +68,10 @@ final class StatusBar {
         echo.setMinWidth(0);
         // A click runs the Message Log command, as its menu item and the palette do (WIN-01, MLOG-02).
         echo.setOnMouseClicked(e -> run.accept(Command.MESSAGE_LOG));
-        echo.setTooltip(new Tooltip(tr("status.messageLogTip")));
+        echo.setTooltip(Icons.tip(tr("status.messageLogTip")));
         unread.getStyleClass().add("status-unread");
         unread.setOnMouseClicked(e -> run.accept(Command.MESSAGE_LOG));
-        unread.setTooltip(new Tooltip(tr("status.unreadTip")));
+        unread.setTooltip(Icons.tip(tr("status.unreadTip")));
         update.getStyleClass().add("status-update");
         update.setFocusTraversable(false);
         update.setOnAction(e -> run.accept(Command.OPEN_RELEASE));

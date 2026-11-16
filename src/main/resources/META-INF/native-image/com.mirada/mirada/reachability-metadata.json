@@ -3081,7 +3081,13 @@
       "glob": "atlantafx/base/theme/cupertino-dark.bss"
     },
     {
+      "glob": "atlantafx/base/theme/cupertino-dark.css"
+    },
+    {
       "glob": "atlantafx/base/theme/cupertino-light.bss"
+    },
+    {
+      "glob": "atlantafx/base/theme/cupertino-light.css"
     },
     {
       "glob": "com/mirada/build-info.properties"
@@ -3118,6 +3124,9 @@
     },
     {
       "glob": "com/mirada/pauta.json"
+    },
+    {
+      "glob": "com/mirada/styles/high-contrast.css"
     },
     {
       "glob": "com/mirada/styles/mirada.css"

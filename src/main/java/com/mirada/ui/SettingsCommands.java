@@ -110,6 +110,17 @@ final class SettingsCommands {
                         SettingsCommands::seconds,
                         settings.slideshowSeconds(),
                         settings::setSlideshowSeconds);
+            case UI_ZOOM ->
+                choose(
+                        command,
+                        tr("settings.uiZoomPrompt"),
+                        uiZoomSteps(),
+                        SettingsCommands::percent,
+                        settings.uiZoom(),
+                        this::zoomUi);
+            case UI_ZOOM_IN -> zoomUi(UiZoom.in(settings.uiZoom()));
+            case UI_ZOOM_OUT -> zoomUi(UiZoom.out(settings.uiZoom()));
+            case UI_ZOOM_RESET -> zoomUi(Settings.DEFAULT_UI_ZOOM);
             case THUMBNAILS_AT_START -> {
                 settings.setStartWithThumbnails(!settings.startWithThumbnails());
                 say(
@@ -157,6 +168,39 @@ final class SettingsCommands {
     /** What is said once a language is chosen: it applies from the next start. */
     static String languageAtNextStart(String code) {
         return tr("settings.languageAtNextStart", SettingsWindow.languageName(code));
+    }
+
+    /** Sets the interface's zoom, which applies at once to every window (WIN-12), and says it. */
+    private void zoomUi(int percent) {
+        settings.setUiZoom(percent);
+        say(tr("settings.uiZoomNow", settings.uiZoom()));
+    }
+
+    /** The zooms the palette offers: the range in steps of {@link UiZoom#STEP}. Pure. */
+    static List<Integer> uiZoomSteps() {
+        return IntStream.iterate(Settings.MIN_UI_ZOOM, p -> p <= Settings.MAX_UI_ZOOM, p -> p + UiZoom.STEP)
+                .boxed()
+                .toList();
+    }
+
+    /** "125%" (or "125 %") in the language in use. */
+    static String percent(int value) {
+        return tr("settings.uiZoom.value", value);
+    }
+
+    /**
+     * Why a UI zoom command cannot run at {@code percent}: in at the largest, out at the smallest,
+     * reset at the default; null when it can, and for any other command. Pure.
+     */
+    static @Nullable String uiZoomUnavailable(Command command, int percent) {
+        return switch (command) {
+            case UI_ZOOM_IN ->
+                percent >= Settings.MAX_UI_ZOOM ? tr("reason.uiZoomLargest", Settings.MAX_UI_ZOOM) : null;
+            case UI_ZOOM_OUT ->
+                percent <= Settings.MIN_UI_ZOOM ? tr("reason.uiZoomSmallest", Settings.MIN_UI_ZOOM) : null;
+            case UI_ZOOM_RESET -> percent == Settings.DEFAULT_UI_ZOOM ? tr("reason.uiZoomDefault") : null;
+            default -> null;
+        };
     }
 
     /** {@code min} to {@code max}, both in. */
@@ -253,7 +297,7 @@ final class SettingsCommands {
             return;
         }
         List<CheckBox> boxes = new ArrayList<>();
-        VBox parts = new VBox(6);
+        VBox parts = UiZoom.vbox(6);
         for (ConfigImport.Part part : available) {
             CheckBox box = new CheckBox(part.label());
             box.setSelected(true);

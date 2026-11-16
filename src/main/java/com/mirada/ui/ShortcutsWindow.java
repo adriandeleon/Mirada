@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -50,9 +49,9 @@ final class ShortcutsWindow {
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         VBox root = new VBox(search, scroll);
-        VBox.setMargin(search, new Insets(12, 20, 0, 20));
+        UiZoom.vboxMargin(search, 12, 20, 0, 20);
         VBox.setVgrow(scroll, Priority.ALWAYS);
-        Scene scene = new Scene(root, WIDTH, 620);
+        Scene scene = new Scene(root, UiZoom.px(WIDTH), UiZoom.px(620));
         scene.getStylesheets().add(stylesheet);
         scene.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.ESCAPE) stage.hide();
@@ -76,8 +75,8 @@ final class ShortcutsWindow {
     }
 
     private static VBox content(String query) {
-        VBox groups = new VBox(18);
-        groups.setPadding(new Insets(20));
+        VBox groups = UiZoom.vbox(18);
+        UiZoom.pad(groups, 20);
         groups.getStyleClass().add("shortcuts");
         for (Map.Entry<String, List<Command>> group : grouped().entrySet()) {
             List<Command> kept =
@@ -86,8 +85,8 @@ final class ShortcutsWindow {
             Label heading = new Label(group.getKey());
             heading.getStyleClass().add("shortcuts-group");
             GridPane rows = new GridPane();
-            rows.setHgap(24);
-            rows.setVgap(6);
+            UiZoom.bind(rows.hgapProperty(), 24);
+            UiZoom.bind(rows.vgapProperty(), 6);
             int row = 0;
             for (Command command : kept) {
                 Label name = new Label(command.label());
@@ -97,7 +96,7 @@ final class ShortcutsWindow {
                 name.setMaxWidth(Double.MAX_VALUE);
                 rows.addRow(row++, name, key);
             }
-            groups.getChildren().add(new VBox(8, heading, rows));
+            groups.getChildren().add(UiZoom.vbox(8, heading, rows));
         }
         groups.setAlignment(Pos.TOP_LEFT);
         return groups;

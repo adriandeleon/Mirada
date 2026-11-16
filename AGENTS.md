@@ -95,6 +95,9 @@ format check is skipped, so run `spotless:apply` on a 25. CI
 - [ ] A rule is a static method with a plain test; a test that starts JavaFX is `@Tag("fx")`.
 - [ ] New chrome is built after the first paint (`ViewerWindow.afterFirstPaint`), and start-up is
       measured again if it could have moved.
+- [ ] A size the code fixes follows the UI zoom (`UiZoom.bind`, `pad`, `hbox`), and a size in a
+      stylesheet is in `px` or `em` (`UiZoomTest`); a tooltip comes from `Icons.tip`, an animation
+      starts through `Motion.play`.
 - [ ] A new package has a `package-info.java` with `@NullMarked`.
 - [ ] What bit you goes into [docs/gotchas.md](docs/gotchas.md) (or packaging's list in
       [docs/building-and-packaging.md](docs/building-and-packaging.md)), in the same change.

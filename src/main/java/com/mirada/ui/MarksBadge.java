@@ -2,7 +2,6 @@ package com.mirada.ui;
 
 import java.util.function.Consumer;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Tooltip;
@@ -35,20 +34,19 @@ final class MarksBadge {
         note = Icons.button(Command.NOTE, "osd-button", () -> run.accept(Command.NOTE));
         Tooltip noteTip = note.getTooltip();
         noteTip.setWrapText(true);
-        noteTip.setMaxWidth(360);
-        noteTip.setShowDelay(Duration.millis(250));
+        UiZoom.bind(noteTip.maxWidthProperty(), 360);
         noteTip.setShowDuration(Duration.INDEFINITE);
         relabel();
         for (Button button : new Button[] {bookmark, note})
             button.managedProperty().bind(button.visibleProperty());
-        pill = new HBox(2, bookmark, note);
+        pill = UiZoom.hbox(2, bookmark, note);
         pill.getStyleClass().addAll("osd", "marks-badge");
         pill.setAlignment(Pos.CENTER);
         pill.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         pill.setPickOnBounds(false);
         StackPane.setAlignment(pill, Pos.TOP_LEFT);
         // 18 from the edge, past the full-screen pill (a 34-pixel button in 6 of padding), 8 apart.
-        StackPane.setMargin(pill, new Insets(18, 0, 0, 18 + 46 + 8));
+        UiZoom.stackMargin(pill, 18, 0, 0, 18 + 46 + 8);
         canvas.getChildren().add(pill);
     }
 

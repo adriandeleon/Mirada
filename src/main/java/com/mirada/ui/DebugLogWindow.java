@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -56,14 +55,14 @@ final class DebugLogWindow {
         where.setMinWidth(0);
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox buttons = new HBox(6, refresh, copy, clear, export, report, spacer, where);
+        HBox buttons = UiZoom.hbox(6, refresh, copy, clear, export, report, spacer, where);
         buttons.setAlignment(Pos.CENTER_LEFT);
-        buttons.setPadding(new Insets(8));
+        UiZoom.pad(buttons, 8);
 
         BorderPane root = new BorderPane(text);
         root.setBottom(buttons);
         root.getStyleClass().add("debug-log");
-        Scene scene = new Scene(root, WIDTH, 480);
+        Scene scene = new Scene(root, UiZoom.px(WIDTH), UiZoom.px(480));
         scene.getStylesheets().add(stylesheet);
         scene.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.ESCAPE) stage.hide();

@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Mirada's settings: theme, what opens at start, how long the floating controls stay, the folder's
- * order, whether stepping keeps the zoom, the slideshow's pace, the keys that open the palette, the
+ * order, whether stepping keeps the zoom, the slideshow's pace, the interface's zoom, the keys that open the palette, the
  * keymap and the user's own keys on top of it, the status bar, and the update check. In {@code settings.properties},
  * in the config folder ({@link ConfigDir}: {@code ~/.mirada} unless the command line or {@code
  * MIRADA_CONFIG_DIR} names another), Termina's way: a plain file meant to be hand-edited, every
@@ -35,11 +35,13 @@ import org.jspecify.annotations.Nullable;
  */
 public final class Settings {
 
-    /** The control theme: the system's light or dark setting, or one of them always. */
+    /** The control theme: the system's light or dark setting, one of them always, or high contrast. */
     public enum ThemeChoice {
         SYSTEM,
         LIGHT,
-        DARK
+        DARK,
+        /** Black ground, white ink (ACC-09); also what Windows' high-contrast mode switches to. */
+        HIGH_CONTRAST
     }
 
     static final String THEME = "theme";
@@ -62,6 +64,9 @@ public final class Settings {
     public static final int MAX_RECENT = 10;
     static final String WINDOW_MAXIMIZED = "window.maximized";
     static final String SLIDESHOW_SECONDS = "slideshow.seconds";
+    /** The interface's zoom, in percent (WIN-12): the whole chrome, not the image. */
+    static final String UI_ZOOM = "ui.zoom";
+
     static final String PALETTE_KEYS = "palette.keys";
     static final String KEYMAP = "keymap";
     /** {@code keys.<command id>}: the user's keys for a command, over the keymap's; blank for none. */
@@ -85,6 +90,9 @@ public final class Settings {
     public static final int MIN_SLIDESHOW_SECONDS = 1;
     public static final int MAX_SLIDESHOW_SECONDS = 60;
     static final int DEFAULT_SLIDESHOW_SECONDS = 5;
+    public static final int DEFAULT_UI_ZOOM = 100;
+    public static final int MIN_UI_ZOOM = 80;
+    public static final int MAX_UI_ZOOM = 200;
 
     private final Path file;
     private final List<Runnable> listeners = new ArrayList<>();
@@ -102,6 +110,7 @@ public final class Settings {
     private @Nullable WindowPlace window;
     private List<Path> recent = List.of();
     private int slideshowSeconds = DEFAULT_SLIDESHOW_SECONDS;
+    private int uiZoom = DEFAULT_UI_ZOOM;
     private String paletteKeys = defaultPaletteKeys(Os.isMac());
     private String keymap = DEFAULT_KEYMAP;
     private Map<String, String> keys = Map.of();
@@ -189,6 +198,7 @@ public final class Settings {
         }
         recent = List.copyOf(folders);
         slideshowSeconds = slideshowSecondsOf(properties.getProperty(SLIDESHOW_SECONDS));
+        uiZoom = uiZoomOf(properties.getProperty(UI_ZOOM));
         paletteKeys = paletteKeysOf(properties.getProperty(PALETTE_KEYS), Os.isMac());
         keymap = keymapOf(properties.getProperty(KEYMAP));
         keys = keysOf(properties);
@@ -330,6 +340,21 @@ public final class Settings {
         } catch (NumberFormatException e) {
             return DEFAULT_SLIDESHOW_SECONDS;
         }
+    }
+
+    /** The UI zoom in a file: clamped to the range, a step of ten or not; the default for junk. */
+    static int uiZoomOf(@Nullable String value) {
+        if (value == null) return DEFAULT_UI_ZOOM;
+        try {
+            return clampUiZoom(Integer.parseInt(value.trim().replace("%", "")));
+        } catch (NumberFormatException e) {
+            return DEFAULT_UI_ZOOM;
+        }
+    }
+
+    /** {@code percent} in the UI zoom's range. Pure. */
+    public static int clampUiZoom(int percent) {
+        return Math.clamp(percent, MIN_UI_ZOOM, MAX_UI_ZOOM);
     }
 
     static ThemeChoice themeOf(@Nullable String value) {
@@ -486,6 +511,18 @@ public final class Settings {
 
     public int slideshowSeconds() {
         return slideshowSeconds;
+    }
+
+    /** The interface's zoom in percent, 100 by default (WIN-12). */
+    public int uiZoom() {
+        return uiZoom;
+    }
+
+    public void setUiZoom(int value) {
+        int next = clampUiZoom(value);
+        if (next == uiZoom) return;
+        uiZoom = next;
+        changed();
     }
 
     /** The keys that open the command palette, as chord tokens separated by spaces. */
@@ -660,6 +697,7 @@ public final class Settings {
             properties.setProperty(WINDOW_MAXIMIZED, Boolean.toString(place.maximized()));
         }
         properties.setProperty(SLIDESHOW_SECONDS, Integer.toString(slideshowSeconds));
+        properties.setProperty(UI_ZOOM, Integer.toString(uiZoom));
         properties.setProperty(PALETTE_KEYS, paletteKeys);
         properties.setProperty(KEYMAP, keymap);
         keys.forEach((id, chords) -> properties.setProperty(KEYS + id, chords));

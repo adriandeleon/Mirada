@@ -10,6 +10,16 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Added
 
+- **The whole interface can be made larger or smaller.** Settings › General › **Interface zoom**
+  (or **Interface Zoom…** in the palette) draws the menus, the header, the status bar, the palette,
+  the floating controls and every window from 80 % to 200 %, at once and in every open window, and
+  keeps it for the next start. **Zoom Interface In**, **Zoom Interface Out** and **Reset Interface
+  Zoom** are in the View menu, on Ctrl+Alt+=, Ctrl+Alt+- and Ctrl+Alt+0 (⌘⌥ on a Mac); Ctrl+=,
+  Ctrl+- and Ctrl+0 still zoom the image, now in the Emacs keymap too.
+- **A high-contrast theme**: black, white and saturated colours, every text 7:1 or better. Pick it
+  in Settings › General › Theme, or let Windows' high-contrast mode switch Mirada to it and back.
+- **Motion follows the system**: with reduced motion asked for, the floating controls appear and go
+  at once instead of fading.
 - **Several images named on the command line open together**: `mirada a.jpg b.jpg c.jpg` steps
   through just those three (a folder among them adds its images), and a second launch hands all of
   its files to the running Mirada. `-h` is `--help`, and `-v` or `-V` is `--version`.
@@ -140,6 +150,8 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
   without installing anything or needing root.
 
 ### Changed
+
+- **Every tooltip shows after the same short pause**, 0.4 seconds.
 
 - **Mirada keeps its settings in `~/.mirada` on every system.** On macOS and Windows they were in
   `~/Library/Application Support/Mirada` and `%APPDATA%\Mirada`; the first start that finds no

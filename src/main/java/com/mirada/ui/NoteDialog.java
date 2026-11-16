@@ -49,13 +49,13 @@ final class NoteDialog {
         text.setPrefColumnCount(40);
         text.setPrefRowCount(6);
         // The dialog pane sizes its content by the minimum, which a text area puts at two lines.
-        text.setMinHeight(140);
+        UiZoom.bind(text.minHeightProperty(), 140);
         VBox.setVgrow(text, Priority.ALWAYS);
         text.setPromptText(tr("note.prompt"));
         String saveKey = (Os.isMac() ? "⌘" : "Ctrl+") + "Return";
         Label hint = new Label(tr("note.hint", saveKey));
         hint.getStyleClass().add("note-hint");
-        dialog.getDialogPane().setContent(new VBox(8, text, hint));
+        dialog.getDialogPane().setContent(UiZoom.vbox(8, text, hint));
         text.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
             if (e.getCode() == KeyCode.ENTER && e.isShortcutDown()) {
                 e.consume();

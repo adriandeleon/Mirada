@@ -185,14 +185,6 @@
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
-      "rule": "ACC-04",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-04",
-      "kind": "pending",
-      "reason": "The on-screen controls fade in and out even when the system asks for reduced motion.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
       "rule": "ACC-06",
       "level": "SHOULD",
       "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-06",
@@ -214,14 +206,6 @@
       "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-08",
       "kind": "pending",
       "reason": "A screen reader is not told which row of the palette is selected.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "ACC-09",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/accessibility/#acc-09",
-      "kind": "pending",
-      "reason": "Mirada does not switch to a high-contrast theme in Windows' high-contrast mode.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
@@ -253,15 +237,7 @@
       "level": "SHOULD",
       "url": "https://pauta-project.dev/6.1.0/window-shell/#win-09",
       "kind": "pending",
-      "reason": "The Emacs keymap zooms with bare keys only, and the zoom level is not remembered.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "WIN-12",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/window-shell/#win-12",
-      "kind": "pending",
-      "reason": "There is no setting yet to make the whole interface larger or smaller.",
+      "reason": "The image's zoom level is not remembered from one start to the next.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
@@ -281,30 +257,6 @@
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
-      "rule": "ICON-07",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/icons-and-color/#icon-07",
-      "kind": "pending",
-      "reason": "Some colors for warnings and errors are named in several places instead of once.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "ICON-08",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/icons-and-color/#icon-08",
-      "kind": "pending",
-      "reason": "A few colors in the stylesheet are fixed values rather than the theme's own.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "ICON-09",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/icons-and-color/#icon-09",
-      "kind": "pending",
-      "reason": "No test yet checks that muted text stays readable on every background.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
       "rule": "TBAR-01",
       "level": "MUST",
       "url": "https://pauta-project.dev/6.1.0/toolbars-and-tooltips/#tbar-01",
@@ -318,14 +270,6 @@
       "url": "https://pauta-project.dev/6.1.0/toolbars-and-tooltips/#tbar-03",
       "kind": "pending",
       "reason": "Some buttons in the editor keep their old key in the tooltip after you change your keys.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "TBAR-14",
-      "level": "SHOULD",
-      "url": "https://pauta-project.dev/6.1.0/toolbars-and-tooltips/#tbar-14",
-      "kind": "pending",
-      "reason": "Tooltips do not all appear after the same delay.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {
@@ -350,14 +294,6 @@
       "url": "https://pauta-project.dev/6.1.0/tabs-and-panels/#tabs-15",
       "kind": "pending",
       "reason": "Which panels are open is not remembered from one start to the next.",
-      "link": "https://github.com/adriandeleon/Mirada/issues/0"
-    },
-    {
-      "rule": "MENU-16",
-      "level": "MUST",
-      "url": "https://pauta-project.dev/6.1.0/menus/#menu-16",
-      "kind": "pending",
-      "reason": "Menus do not grow and shrink with an interface zoom, since there is none yet.",
       "link": "https://github.com/adriandeleon/Mirada/issues/0"
     },
     {

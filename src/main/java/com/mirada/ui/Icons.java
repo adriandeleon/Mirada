@@ -1,5 +1,7 @@
 package com.mirada.ui;
 
+import java.util.List;
+
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Control;
@@ -8,6 +10,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.SVGPath;
+import javafx.util.Duration;
 
 import org.jspecify.annotations.Nullable;
 
@@ -49,6 +52,11 @@ final class Icons {
     static final String FOLDER_OPEN = "M3 18 V6 H9 L11 8 H18 V10.5 M3 18 L6 10.5 H21.5 L18.5 18 Z";
     static final String ROTATE_LEFT = "M4 4 V9 H9 M4 9 A8.5 8.5 0 1 1 3.5 14";
     static final String ZOOM_OUT = "M10.5 3.5 A7 7 0 1 1 10.49 3.5 Z M20.5 20.5 L15.5 15.5 M7.5 10.5 H13.5";
+    /** The interface's zoom (WIN-12): a letter with a plus or a minus, and two letters for its default. */
+    static final String UI_ZOOM_IN = "M3 19 L8 6 L13 19 M5 14.5 H11 M18.5 6.5 V13.5 M15 10 H22";
+
+    static final String UI_ZOOM_OUT = "M3 19 L8 6 L13 19 M5 14.5 H11 M15 10 H22";
+    static final String UI_ZOOM_RESET = "M3 19 L8 6 L13 19 M5 14.5 H11 M14.5 19 L18 10 L21.5 19 M15.7 16 H20.3";
     static final String FIT = "M4 9 V4 H9 M15 4 H20 V9 M20 15 V20 H15 M9 20 H4 V15";
     static final String ACTUAL_SIZE = "M5 8 L7.5 6 V18 M15 8 L17.5 6 V18 M11.5 10 V10.1 M11.5 14 V14.1";
     static final String FIRST = "M17 18 L11 12 L17 6 M7 6 V18";
@@ -134,6 +142,9 @@ final class Icons {
             case ROTATE_CLOCKWISE -> ROTATE;
             case ROTATE_COUNTERCLOCKWISE -> ROTATE_LEFT;
             case FULL_SCREEN -> fullScreen ? LEAVE_FULL_SCREEN : FULL_SCREEN;
+            case UI_ZOOM_IN -> UI_ZOOM_IN;
+            case UI_ZOOM_OUT -> UI_ZOOM_OUT;
+            case UI_ZOOM_RESET, UI_ZOOM -> UI_ZOOM_RESET;
             case EDIT -> CROP;
             case RENAME -> RENAME;
             case MOVE_TO_TRASH -> TRASH;
@@ -233,10 +244,23 @@ final class Icons {
     static <T extends Control> T name(T control, String title, KeyCombination chord) {
         String tip = tooltip(title, chord);
         Tooltip tooltip = control.getTooltip();
-        if (tooltip == null) control.setTooltip(new Tooltip(tip));
+        if (tooltip == null) control.setTooltip(tip(tip));
         else tooltip.setText(tip);
         control.setAccessibleText(title);
         return control;
+    }
+
+    /** How long the pointer rests before any tooltip shows, the same for every one (TBAR-14). */
+    static final Duration TOOLTIP_DELAY = Duration.millis(400);
+
+    /**
+     * A tooltip saying {@code text}: every tooltip Mirada makes comes from here, so each shows after
+     * {@link #TOOLTIP_DELAY} (TBAR-14); mirada.css's {@code .tooltip} rule says the same.
+     */
+    static Tooltip tip(String text) {
+        Tooltip tooltip = new Tooltip(text);
+        tooltip.setShowDelay(TOOLTIP_DELAY);
+        return tooltip;
     }
 
     /** "Title (chord)", or the title alone when there is no chord: what a tooltip says (TBAR-03). */
@@ -255,18 +279,25 @@ final class Icons {
         return label.endsWith("…") ? label.substring(0, label.length() - 1) : label;
     }
 
-    /** A 16-pixel icon from one of the paths above, centred in a box of its own size. */
+    /** The icons' size at 100 %, GNOME's symbolic icon size; the UI zoom scales it (WIN-12). */
+    static final double SIZE = 16;
+
+    /** A 16-pixel icon from one of the paths above, centred in a box of its own size, both following the UI zoom. */
     static Node of(String path) {
         SVGPath glyph = new SVGPath();
         glyph.setContent(path);
         glyph.getStyleClass().add("icon");
-        // The grid is 24 units; scaled to 16 px it matches GNOME's symbolic icon size.
-        glyph.setScaleX(16 / 24.0);
-        glyph.setScaleY(16 / 24.0);
+        // The grid is 24 units, scaled to 16 px at 100 %; the stroke scales with it.
+        UiZoom.bind(glyph.scaleXProperty(), SIZE / 24.0);
+        UiZoom.bind(glyph.scaleYProperty(), SIZE / 24.0);
         StackPane box = new StackPane(glyph);
-        box.setMinSize(16, 16);
-        box.setPrefSize(16, 16);
-        box.setMaxSize(16, 16);
+        for (var property : List.of(
+                box.minWidthProperty(),
+                box.minHeightProperty(),
+                box.prefWidthProperty(),
+                box.prefHeightProperty(),
+                box.maxWidthProperty(),
+                box.maxHeightProperty())) UiZoom.bind(property, SIZE);
         return box;
     }
 }

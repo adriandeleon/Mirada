@@ -7,7 +7,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
@@ -76,7 +75,7 @@ final class MessageLogView {
         TextInputKeys.install(filter);
 
         list.getStyleClass().add("message-log-list");
-        list.setPrefHeight(LIST_HEIGHT);
+        UiZoom.bind(list.prefHeightProperty(), LIST_HEIGHT);
         list.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         list.setPlaceholder(new Label(tr("messageLog.empty")));
         list.setCellFactory(v -> new EntryCell());
@@ -92,13 +91,13 @@ final class MessageLogView {
         hint.getStyleClass().add("message-log-hint");
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox footer = new HBox(6, copy, clear, cut, spacer, hint);
+        HBox footer = UiZoom.hbox(6, copy, clear, cut, spacer, hint);
         footer.setAlignment(Pos.CENTER_LEFT);
 
-        card = new VBox(8, title, filter, list, footer);
+        card = UiZoom.vbox(8, title, filter, list, footer);
         card.getStyleClass().add("message-log");
-        card.setPrefWidth(WIDTH);
-        card.setMaxWidth(WIDTH);
+        UiZoom.bind(card.prefWidthProperty(), WIDTH);
+        UiZoom.bind(card.maxWidthProperty(), WIDTH);
         card.setMaxHeight(Region.USE_PREF_SIZE);
         StackPane.setAlignment(card, Pos.BOTTOM_LEFT);
         // On the card, before the field and the list take the keys.
@@ -148,7 +147,7 @@ final class MessageLogView {
         refresh();
         list.getSelectionModel().clearSelection();
         list.scrollTo(0);
-        StackPane.setMargin(card, new Insets(8, 8, bottom + 6, 8));
+        UiZoom.stackMargin(card, 8, 8, bottom + 6, 8);
         if (!isShowing()) host.getChildren().addAll(backdrop, card);
         filter.requestFocus();
     }
@@ -206,7 +205,7 @@ final class MessageLogView {
             text.setMinWidth(0);
             String style = StatusBar.styleOf(entry.severity());
             if (style != null) text.getStyleClass().add(style);
-            HBox row = new HBox(10, time, text);
+            HBox row = UiZoom.hbox(10, time, text);
             row.setAlignment(Pos.TOP_LEFT);
             setText(null);
             setGraphic(row);

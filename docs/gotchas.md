@@ -155,6 +155,24 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   Cupertino's blue. The test reads Cupertino's palette from AtlantaFX's jar and the overrides from
   `mirada.css`, ladders resolved, and does the WCAG arithmetic. The keyboard's focus ring is one
   `:focus-visible` layer at the end of `mirada.css`, in `-focus-ring`; keep it last.
+- **The UI zoom scales pixels, and only pixels** (`UiZoom`, WIN-12, MENU-16). At any zoom but 100 %
+  every window gets a copy of `mirada.css`, `ui-font.css` and Cupertino with each `px` length
+  multiplied (a `data:` URL; Cupertino is read from AtlantaFX's jar, so the native image's metadata
+  lists `cupertino-*.css` beside the `.bss`). A bare number stays its size at every zoom: write a
+  size in `mirada.css` with `px` (or `em`), which `UiZoomTest` holds, and leave a border's width
+  and a shadow's radius bare on purpose. A size the code fixes goes through `UiZoom.bind`, `pad`,
+  `hbox`/`vbox` or the `…Margin` helpers, never a plain `setPrefWidth(620)`. At 100 % nothing is
+  read or scaled. A hidden tool window keeps the old sheet until it shows again, when `UiZoom`
+  swaps it; a dialog's own pane is swapped too. On the Headless platform a menu taller than the
+  1000-pixel screen loops in `FxTestSupport.moveOnScreen`: test a zoomed menu at 110 %.
+- **High contrast is a sheet, not a theme** (`high-contrast.css`, ACC-09): Cupertino Dark with the
+  roles set to black, white and saturated colours, added last on every window so it beats
+  `mirada.css`'s `.root`; the system's accent sheet is left off while it is on. `Theme` follows
+  `Windows.SPI.HighContrast` and goes back to the chosen theme as it ends.
+- **Tooltips come from `Icons.tip` and motion from `Motion.play`** (TBAR-14, ACC-04): the one
+  400 ms delay, and a fade that jumps to its end while the system asks for reduced motion.
+  `UiZoomTest` fails a `new Tooltip`, a `setShowDelay` or an animation started anywhere else. A
+  `PauseTransition` that only waits is no motion.
 
 - **Only what the first frame shows is built before it.** The header bar is; the floating controls
   are built on the first pointer movement over the image, the properties sidebar and the thumbnail

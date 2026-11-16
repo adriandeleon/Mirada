@@ -8,7 +8,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javafx.beans.binding.Bindings;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.CheckMenuItem;
@@ -92,6 +91,7 @@ final class AppMenus {
                             List.of(Command.KEEP_ZOOM),
                             List.of(Command.INFO, Command.THUMBNAILS, Command.STATUS_BAR),
                             List.of(Command.THUMBNAILS_AT_SIDE, Command.THUMBNAIL_CAPTIONS, Command.THUMBNAIL_NAMES),
+                            List.of(Command.UI_ZOOM_IN, Command.UI_ZOOM_OUT, Command.UI_ZOOM_RESET),
                             List.of(Command.FULL_SCREEN))),
             new Heading(
                     "menu.go",
@@ -238,8 +238,8 @@ final class AppMenus {
     static Row inWindowRow(Command command) {
         StackPane icon = new StackPane();
         icon.getStyleClass().add("menu-item-icon");
-        icon.setMinWidth(ICON_COLUMN);
-        icon.setPrefWidth(ICON_COLUMN);
+        UiZoom.bind(icon.minWidthProperty(), ICON_COLUMN);
+        UiZoom.bind(icon.prefWidthProperty(), ICON_COLUMN);
         Label title = new Label();
         title.getStyleClass().add("menu-item-title");
         Label chord = new Label();
@@ -247,8 +247,8 @@ final class AppMenus {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox box = new HBox(icon, title, spacer, chord);
-        HBox.setMargin(title, new Insets(0, 0, 0, TITLE_GAP));
-        HBox.setMargin(chord, new Insets(0, 0, 0, CHORD_GAP));
+        UiZoom.hboxMargin(title, 0, 0, 0, TITLE_GAP);
+        UiZoom.hboxMargin(chord, 0, 0, 0, CHORD_GAP);
         box.setAlignment(Pos.CENTER_LEFT);
         box.setMaxWidth(Double.MAX_VALUE);
         // A row drawn from nodes reads as its title and chord to a screen reader (ACC-01).
@@ -304,13 +304,13 @@ final class AppMenus {
     static Menu submenuRow(String title, @Nullable Node glyph) {
         StackPane icon = new StackPane();
         icon.getStyleClass().add("menu-item-icon");
-        icon.setMinWidth(ICON_COLUMN);
-        icon.setPrefWidth(ICON_COLUMN);
+        UiZoom.bind(icon.minWidthProperty(), ICON_COLUMN);
+        UiZoom.bind(icon.prefWidthProperty(), ICON_COLUMN);
         if (glyph != null) icon.getChildren().add(glyph);
         Label text = new Label(title);
         text.getStyleClass().add("menu-item-title");
         HBox box = new HBox(icon, text);
-        HBox.setMargin(text, new Insets(0, 0, 0, TITLE_GAP));
+        UiZoom.hboxMargin(text, 0, 0, 0, TITLE_GAP);
         box.setAlignment(Pos.CENTER_LEFT);
         box.setAccessibleText(title);
         Menu menu = new Menu("", box);
@@ -365,7 +365,7 @@ final class AppMenus {
         content.setAccessibleHelp(reason);
         if (reason == null) return;
         item.getStyleClass().add("unavailable");
-        Tooltip tip = new Tooltip(reason);
+        Tooltip tip = Icons.tip(reason);
         Tooltip.install(content, tip);
         content.getProperties().put(REASON_TIP, tip);
     }

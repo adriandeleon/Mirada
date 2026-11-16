@@ -30,7 +30,7 @@ import static com.mirada.i18n.Messages.tr;
 final class InfoPanel {
 
     private final ScrollPane node;
-    private final VBox cards = new VBox(14);
+    private final VBox cards = UiZoom.vbox(14);
     private final Consumer<Command> run;
     private @Nullable ImageDetails shown;
     private Marks shownMarks = Marks.NONE;
@@ -55,8 +55,8 @@ final class InfoPanel {
         node.getStyleClass().add("info-panel");
         node.setFitToWidth(true);
         node.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        node.setPrefWidth(320);
-        node.setMinWidth(280);
+        UiZoom.bind(node.prefWidthProperty(), 320);
+        UiZoom.bind(node.minWidthProperty(), 280);
         node.setFocusTraversable(false);
     }
 
@@ -133,19 +133,19 @@ final class InfoPanel {
      * needs and usually does not.
      */
     private static TitledPane allMetadata(ExifDetails exif) {
-        VBox sections = new VBox(12);
+        VBox sections = UiZoom.vbox(12);
         sections.getStyleClass().add("metadata-sections");
         for (ExifDetails.Section section : exif.all()) {
             Label title = new Label(section.title());
             title.getStyleClass().add("metadata-section");
-            VBox rows = new VBox(4, title);
+            VBox rows = UiZoom.vbox(4, title);
             for (ExifDetails.Row row : section.rows()) {
                 Label name = new Label(row.label());
                 name.getStyleClass().add("metadata-label");
                 Label value = new Label(row.value());
                 value.getStyleClass().add("metadata-value");
                 value.setWrapText(true);
-                rows.getChildren().add(new VBox(0, name, value));
+                rows.getChildren().add(UiZoom.vbox(0, name, value));
             }
             sections.getChildren().add(rows);
         }
@@ -170,9 +170,9 @@ final class InfoPanel {
         Label text = new Label(value);
         text.getStyleClass().add("info-value");
         text.setWrapText(true);
-        VBox words = new VBox(2, name, text);
+        VBox words = UiZoom.vbox(2, name, text);
         HBox.setHgrow(words, Priority.ALWAYS);
-        HBox row = new HBox(8, words);
+        HBox row = UiZoom.hbox(8, words);
         row.getStyleClass().add("info-row");
         row.setAlignment(Pos.CENTER_LEFT);
         if (action != null) row.getChildren().add(action);

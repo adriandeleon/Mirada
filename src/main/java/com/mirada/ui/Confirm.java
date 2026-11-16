@@ -8,7 +8,6 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
-import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 
 import org.jspecify.annotations.Nullable;
@@ -91,7 +90,7 @@ final class Confirm {
         if (extra != null) {
             Label message = new Label(question.message());
             message.setWrapText(true);
-            alert.getDialogPane().setContent(new VBox(12, message, extra));
+            alert.getDialogPane().setContent(UiZoom.vbox(12, message, extra));
         }
         if (owner != null) {
             alert.initOwner(owner);

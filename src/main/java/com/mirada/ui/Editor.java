@@ -10,13 +10,11 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import javafx.application.Platform;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelBuffer;
 import javafx.scene.image.PixelFormat;
@@ -125,9 +123,9 @@ final class Editor {
         Region right = new Region();
         HBox.setHgrow(left, Priority.ALWAYS);
         HBox.setHgrow(right, Priority.ALWAYS);
-        HBox top = new HBox(12, cancel, left, title, right, save);
+        HBox top = UiZoom.hbox(12, cancel, left, title, right, save);
         top.setAlignment(Pos.CENTER);
-        top.setPadding(new Insets(10, 14, 10, 14));
+        UiZoom.pad(top, 10, 14, 10, 14);
         top.getStyleClass().add("editor-bar");
 
         shape.getItems().addAll(AspectRatio.values());
@@ -148,7 +146,7 @@ final class Editor {
             shapeChanged();
             record();
         });
-        shape.setTooltip(new Tooltip(Icons.tooltip(tr("editor.shapeTooltip"), Command.EDITOR_NEXT_SHAPE.chord())));
+        shape.setTooltip(Icons.tip(Icons.tooltip(tr("editor.shapeTooltip"), Command.EDITOR_NEXT_SHAPE.chord())));
         // Three groups that wrap to a second row rather than cut a word, in any language (INTL-04).
         HBox shapeGroup = group(new Label(tr("editor.crop")), shape);
         HBox turnGroup = group(
@@ -157,9 +155,11 @@ final class Editor {
                 tool(tr("editor.flipHorizontally"), Command.EDITOR_FLIP_HORIZONTALLY),
                 tool(tr("editor.flipVertically"), Command.EDITOR_FLIP_VERTICALLY));
         HBox historyGroup = group(undoButton, redoButton, tool(tr("editor.reset"), Command.EDITOR_RESET));
-        FlowPane bottom = new FlowPane(28, 8, shapeGroup, turnGroup, historyGroup);
+        FlowPane bottom = new FlowPane(shapeGroup, turnGroup, historyGroup);
+        UiZoom.bind(bottom.hgapProperty(), 28);
+        UiZoom.bind(bottom.vgapProperty(), 8);
         bottom.setAlignment(Pos.CENTER);
-        bottom.setPadding(new Insets(10, 14, 10, 14));
+        UiZoom.pad(bottom, 10, 14, 10, 14);
         bottom.getStyleClass().add("editor-bar");
 
         node.setTop(top);
@@ -457,7 +457,7 @@ final class Editor {
     /** A tool's button, running its command; the tooltip names the key the keymap gives it. */
     private Button tool(String label, Command command) {
         Button button = new Button(label);
-        button.setTooltip(new Tooltip(Icons.tooltip(label, command.chord())));
+        button.setTooltip(Icons.tip(Icons.tooltip(label, command.chord())));
         button.setOnAction(e -> run(command));
         button.setFocusTraversable(false);
         return button;
@@ -466,7 +466,7 @@ final class Editor {
     /** Controls side by side, none narrower than its text. */
     private static HBox group(Node... controls) {
         for (Node control : controls) if (control instanceof Region region) region.setMinWidth(Region.USE_PREF_SIZE);
-        HBox group = new HBox(8, controls);
+        HBox group = UiZoom.hbox(8, controls);
         group.setAlignment(Pos.CENTER_LEFT);
         return group;
     }

@@ -167,6 +167,36 @@ class MenusFxTest {
         });
     }
 
+    /** MENU-16, WIN-12: the menus' 14 and 11 px are the UI zoom's, whatever opens them. */
+    @Test
+    void theUiZoomScalesEveryMenu() throws Exception {
+        try {
+            fx(() -> {
+                // 110 %: a taller menu would pass the Headless platform's 1000-pixel screen.
+                UiZoom.apply(110);
+                return null;
+            });
+            fx(() -> {
+                if (!Os.isMac()) {
+                    Menu view = menuBar().getMenus().getFirst();
+                    view.hide();
+                    view.show();
+                    assertInter(showingMenu(), "menu bar at 110 %", 1.1);
+                    view.hide();
+                    closeMenus();
+                }
+                assertInter(rightClick(viewport()), "image menu at 110 %", 1.1);
+                closeMenus();
+                return null;
+            });
+        } finally {
+            fx(() -> {
+                UiZoom.apply(Settings.DEFAULT_UI_ZOOM);
+                return null;
+            });
+        }
+    }
+
     @Test
     void oneRightClickMenuAtATimeAndThePressThatClosesItStillLands() throws Exception {
         fx(() -> {
@@ -292,6 +322,10 @@ class MenusFxTest {
     }
 
     private static void assertInter(ContextMenu menu, String where) {
+        assertInter(menu, where, 1);
+    }
+
+    private static void assertInter(ContextMenu menu, String where, double zoom) {
         Node content = menu.getSkin().getNode();
         content.applyCss();
         int rows = 0;
@@ -305,7 +339,7 @@ class MenusFxTest {
                             || label.getStyleClass().contains("menu-item-chord")
                     ? 11
                     : 14;
-            assertEquals(size, font.getSize(), where + ": " + label.getText());
+            assertEquals(size * zoom, font.getSize(), 0.01, where + ": " + label.getText());
             rows++;
         }
         assertTrue(rows > 3, where + " has rows");

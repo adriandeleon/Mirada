@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Consumer;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -52,13 +51,13 @@ final class AboutWindow {
         stage.setResizable(false);
         WindowIcon.applyTo(stage);
 
-        HBox heading = new HBox(14);
+        HBox heading = UiZoom.hbox(14);
         heading.setAlignment(Pos.CENTER_LEFT);
         Image icon = WindowIcon.image();
         if (icon != null) {
             ImageView logo = new ImageView(icon);
-            logo.setFitWidth(72);
-            logo.setFitHeight(72);
+            UiZoom.bind(logo.fitWidthProperty(), 72);
+            UiZoom.bind(logo.fitHeightProperty(), 72);
             logo.setSmooth(true);
             heading.getChildren().add(logo);
         }
@@ -69,9 +68,9 @@ final class AboutWindow {
         version.getStyleClass().add("about-version");
         Label tagline = new Label(tr("about.tagline"));
         tagline.getStyleClass().add("about-version");
-        heading.getChildren().add(new VBox(2, name, version, tagline));
+        heading.getChildren().add(UiZoom.vbox(2, name, version, tagline));
 
-        VBox details = new VBox(3);
+        VBox details = UiZoom.vbox(3);
         details.getStyleClass().add("about-details");
         details.getChildren().addAll(new Label(AppInfo.COPYRIGHT), new Label(AppInfo.LICENSE));
 
@@ -91,7 +90,7 @@ final class AboutWindow {
         // in its state's colour (ABOUT-10).
         updateLine.getStyleClass().add("about-update");
         updateLink.setOnAction(e -> run.accept(Command.OPEN_RELEASE));
-        HBox update = new HBox(4, updateLine, updateLink);
+        HBox update = UiZoom.hbox(4, updateLine, updateLink);
         update.setAlignment(Pos.CENTER_LEFT);
 
         // Version, build, commit, Pauta edition and conformance first, then the runtime, the OS and
@@ -124,11 +123,11 @@ final class AboutWindow {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox footer = new HBox(spacer, close);
 
-        VBox root = new VBox(10, heading, details, links, update, environmentBlock, copy, credits, footer);
-        root.setPadding(new Insets(20));
+        VBox root = UiZoom.vbox(10, heading, details, links, update, environmentBlock, copy, credits, footer);
+        UiZoom.pad(root, 20);
         root.getStyleClass().add("about");
-        VBox.setMargin(footer, new Insets(8, 0, 0, 0));
-        root.setPrefWidth(WIDTH);
+        UiZoom.vboxMargin(footer, 8, 0, 0, 0);
+        UiZoom.bind(root.prefWidthProperty(), WIDTH);
         Scene scene = new Scene(root);
         scene.getStylesheets().add(stylesheet);
         scene.setOnKeyPressed(e -> {

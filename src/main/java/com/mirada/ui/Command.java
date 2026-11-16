@@ -39,6 +39,13 @@ enum Command {
     ROTATE_CLOCKWISE("image.rotateRight", "turn"),
     ROTATE_COUNTERCLOCKWISE("image.rotateLeft", "turn"),
     FULL_SCREEN("view.fullScreen", "view"),
+    /**
+     * The interface's zoom (WIN-12): the whole chrome, menus and status bar included, never the
+     * image, whose zoom is {@link #ZOOM_IN} and the rest on Ctrl+=, Ctrl+- and Ctrl+0 (WIN-09).
+     */
+    UI_ZOOM_IN("view.uiZoomIn", "interface larger bigger text font size menus chrome accessibility scale"),
+    UI_ZOOM_OUT("view.uiZoomOut", "interface smaller text font size menus chrome scale"),
+    UI_ZOOM_RESET("view.uiZoomReset", "interface default normal 100 text font size menus chrome scale"),
     EDIT("image.edit", "crop rotate flip edit save"),
     RENAME("file.rename", "file name"),
     UNDO_TRASH("file.undoMoveToTrash", "restore put back undelete recover"),
@@ -77,6 +84,7 @@ enum Command {
     PROPERTIES_AT_START("settings.propertiesAtStart", "startup launch info details sidebar open"),
     HIDE_CONTROLS_AFTER("settings.hideControlsAfter", "delay fade timeout overlay buttons seconds"),
     SLIDESHOW_SPEED("settings.slideshowSpeed", "interval delay seconds play pace"),
+    UI_ZOOM("settings.uiZoom", "interface size scale larger smaller text font menus chrome accessibility zoom"),
     PALETTE_KEYS("settings.paletteKeys", "shortcut keys bindings palette"),
     /** Settings' Default button beside the palette's keys (KBD-01): the keys it opens with at first. */
     RESET_PALETTE_KEYS("settings.resetPaletteKeys", "default shortcut keys bindings palette restore"),
@@ -340,8 +348,19 @@ enum Command {
     String group() {
         return switch (this) {
             case NEXT, PREVIOUS, FIRST, LAST, GO_TO_IMAGE, SLIDESHOW -> tr("group.folder");
-            case ZOOM_IN, ZOOM_OUT, FIT, ACTUAL_SIZE, KEEP_ZOOM, PAN_LEFT, PAN_RIGHT, PAN_UP, PAN_DOWN, FULL_SCREEN ->
-                tr("group.view");
+            case ZOOM_IN,
+                    ZOOM_OUT,
+                    FIT,
+                    ACTUAL_SIZE,
+                    KEEP_ZOOM,
+                    PAN_LEFT,
+                    PAN_RIGHT,
+                    PAN_UP,
+                    PAN_DOWN,
+                    FULL_SCREEN,
+                    UI_ZOOM_IN,
+                    UI_ZOOM_OUT,
+                    UI_ZOOM_RESET -> tr("group.view");
             case ROTATE_CLOCKWISE,
                     ROTATE_COUNTERCLOCKWISE,
                     EDIT,
@@ -388,6 +407,7 @@ enum Command {
                     PROPERTIES_AT_START,
                     HIDE_CONTROLS_AFTER,
                     SLIDESHOW_SPEED,
+                    UI_ZOOM,
                     PALETTE_KEYS,
                     RESET_PALETTE_KEYS,
                     CHECK_DAILY,

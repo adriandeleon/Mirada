@@ -31,6 +31,7 @@ import com.mirada.settings.FileWrites;
 import com.mirada.settings.Settings;
 import com.mirada.ui.Fonts;
 import com.mirada.ui.Theme;
+import com.mirada.ui.UiZoom;
 import com.mirada.ui.ViewerWindow;
 import org.jspecify.annotations.Nullable;
 
@@ -241,8 +242,13 @@ public final class App extends Application {
             attach.setDaemon(true);
             attach.start();
         }
+        // The interface's zoom first, so the theme is set at it (WIN-12); at 100 % it does nothing.
+        UiZoom.apply(settings.uiZoom());
         Theme.apply(settings.theme());
-        settings.addListener(() -> Theme.apply(settings.theme()));
+        settings.addListener(() -> {
+            UiZoom.apply(settings.uiZoom());
+            Theme.apply(settings.theme());
+        });
         ViewerWindow window = new ViewerWindow(stage, settings, getHostServices()::showDocument);
         this.window = window;
         shown = window;

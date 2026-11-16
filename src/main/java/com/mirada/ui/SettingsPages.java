@@ -92,6 +92,13 @@ final class SettingsPages {
             new Row(
                     Page.GENERAL,
                     "settings.card.appearance",
+                    "settings.uiZoom.title",
+                    "settings.uiZoom.description",
+                    "interface size scale larger smaller text font menus accessibility zoom",
+                    Command.UI_ZOOM),
+            new Row(
+                    Page.GENERAL,
+                    "settings.card.appearance",
                     "settings.titleBarMenus.title",
                     "settings.titleBarMenus.description",
                     "menu bar header title frame decorated chrome",

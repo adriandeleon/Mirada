@@ -5,7 +5,6 @@ import java.util.function.Consumer;
 
 import javafx.animation.FadeTransition;
 import javafx.animation.PauseTransition;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -77,9 +76,9 @@ final class OnScreenControls {
         StackPane.setAlignment(navigation, Pos.BOTTOM_LEFT);
         StackPane.setAlignment(zooming, Pos.BOTTOM_RIGHT);
         StackPane.setAlignment(screen, Pos.TOP_LEFT);
-        StackPane.setMargin(navigation, new Insets(0, 0, 18, 18));
-        StackPane.setMargin(zooming, new Insets(0, 18, 18, 0));
-        StackPane.setMargin(screen, new Insets(18, 0, 0, 18));
+        UiZoom.stackMargin(navigation, 0, 0, 18, 18);
+        UiZoom.stackMargin(zooming, 0, 18, 18, 0);
+        UiZoom.stackMargin(screen, 18, 0, 0, 18);
         canvas.getChildren().addAll(navigation, zooming, screen);
 
         idle.setOnFinished(e -> {
@@ -180,7 +179,8 @@ final class OnScreenControls {
                     if (pill.getOpacity() == 0) setVisible(pill, false);
                 });
             }
-            transition.play();
+            // A jump to the end while the system asks for reduced motion (ACC-04).
+            Motion.play(transition);
         }
     }
 
@@ -190,7 +190,7 @@ final class OnScreenControls {
     }
 
     private static HBox pill(Node... buttons) {
-        HBox pill = new HBox(2, buttons);
+        HBox pill = UiZoom.hbox(2, buttons);
         pill.getStyleClass().add("osd");
         pill.setAlignment(Pos.CENTER);
         pill.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);

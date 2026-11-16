@@ -13,7 +13,6 @@ import java.util.function.Function;
 import javafx.application.Platform;
 import javafx.css.PseudoClass;
 import javafx.geometry.Bounds;
-import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -152,9 +151,9 @@ final class BookmarksWindow {
             }
         });
 
-        HBox top = new HBox(8, filter, kinds);
+        HBox top = UiZoom.hbox(8, filter, kinds);
         top.setAlignment(Pos.CENTER_LEFT);
-        top.setPadding(new Insets(12, 12, 8, 12));
+        UiZoom.pad(top, 12, 12, 8, 12);
 
         list.getStyleClass().add("bookmarks-list");
         // The filter keeps the keys; a click selects without taking them from it.
@@ -172,16 +171,16 @@ final class BookmarksWindow {
         HBox.setHgrow(gap, Priority.ALWAYS);
         count.getStyleClass().add("bookmarks-hint");
         count.setMinWidth(Region.USE_PREF_SIZE);
-        HBox bottom = new HBox(8, hint, gap, count);
+        HBox bottom = UiZoom.hbox(8, hint, gap, count);
         bottom.setAlignment(Pos.CENTER_LEFT);
-        bottom.setPadding(new Insets(6, 12, 8, 12));
+        UiZoom.pad(bottom, 6, 12, 8, 12);
 
         BorderPane content = new BorderPane(list, top, null, bottom, null);
         content.getStyleClass().add("bookmarks-window");
         // A root the palette can lie over, as the viewer's does.
         StackPane root = new StackPane(content);
         palette = new CommandPalette(root, runner);
-        Scene scene = new Scene(root, WIDTH, 640);
+        Scene scene = new Scene(root, UiZoom.px(WIDTH), UiZoom.px(640));
         scene.getStylesheets().add(stylesheet);
         scene.addEventFilter(KeyEvent.KEY_PRESSED, this::onKey);
         Popups.closeOnPressOutside(stage, scene);
@@ -512,9 +511,9 @@ final class BookmarksWindow {
         private final Label where = new Label();
         private final Label note = new Label();
         private final Node bookmarkIcon = Icons.of(Icons.BOOKMARK);
-        private final HBox title = new HBox(6);
-        private final VBox text = new VBox(2);
-        private final HBox row = new HBox(10);
+        private final HBox title = UiZoom.hbox(6);
+        private final VBox text = UiZoom.vbox(2);
+        private final HBox row = UiZoom.hbox(10);
         /** The file whose thumbnail this cell asked for, until it shows another. */
         private @Nullable Path asked;
 
@@ -537,7 +536,7 @@ final class BookmarksWindow {
             note.setWrapText(true);
             note.setMinWidth(0);
             // A long note shows its start; the note window shows all of it.
-            note.setMaxHeight(60);
+            UiZoom.bind(note.maxHeightProperty(), 60);
             bookmarkIcon.getStyleClass().add("thumbnail-mark");
             title.setAlignment(Pos.CENTER_LEFT);
             text.setMinWidth(0);
@@ -596,11 +595,11 @@ final class BookmarksWindow {
                 if (!where.getText().isEmpty()) text.getChildren().add(where);
                 if (!said.isEmpty()) text.getChildren().add(note);
                 row.getChildren().setAll(folderIcon, text);
-                row.setPadding(new Insets(6, 0, 2, 0));
+                UiZoom.pad(row, 6, 0, 2, 0);
             } else {
                 if (!said.isEmpty()) text.getChildren().add(note);
                 row.getChildren().setAll(frame, text);
-                row.setPadding(new Insets(0, 0, 0, 22));
+                UiZoom.pad(row, 0, 0, 0, 22);
                 if (!gone) {
                     Path file = item.path();
                     asked = file;

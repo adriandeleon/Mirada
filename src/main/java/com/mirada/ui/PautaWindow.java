@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.StringJoiner;
 import java.util.function.Consumer;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -45,7 +44,7 @@ final class PautaWindow {
     private static final double WIDTH = 620;
 
     private final Stage stage = new Stage();
-    private final VBox list = new VBox(4);
+    private final VBox list = UiZoom.vbox(4);
     private final Button copy = new Button(tr("pauta.copy"));
 
     /**
@@ -65,21 +64,21 @@ final class PautaWindow {
         Label meaning = new Label(meaning(conformance, exceptions));
         meaning.getStyleClass().add("pauta-meaning");
         meaning.setWrapText(true);
-        VBox titles = new VBox(6, edition, new HBox(pill), meaning);
+        VBox titles = UiZoom.vbox(6, edition, new HBox(pill), meaning);
         HBox.setHgrow(titles, Priority.ALWAYS);
-        HBox heading = new HBox(14);
+        HBox heading = UiZoom.hbox(14);
         heading.setAlignment(Pos.CENTER_LEFT);
         Image icon = WindowIcon.image();
         if (icon != null) {
             ImageView logo = new ImageView(icon);
-            logo.setFitWidth(64);
-            logo.setFitHeight(64);
+            UiZoom.bind(logo.fitWidthProperty(), 64);
+            UiZoom.bind(logo.fitHeightProperty(), 64);
             logo.setSmooth(true);
             heading.getChildren().add(logo);
         }
         heading.getChildren().add(titles);
 
-        VBox root = new VBox(12, heading);
+        VBox root = UiZoom.vbox(12, heading);
         String counts = counts(exceptions);
         if (!counts.isEmpty()) {
             Label countsLabel = new Label(counts);
@@ -87,7 +86,7 @@ final class PautaWindow {
             root.getChildren().add(countsLabel);
         }
         fill(PautaConformance.sorted(exceptions), openLink);
-        list.setPadding(new Insets(0, 8, 0, 0));
+        UiZoom.pad(list, 0, 8, 0, 0);
         ScrollPane scroll = new ScrollPane(list);
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
@@ -113,12 +112,12 @@ final class PautaWindow {
         close.setOnAction(e -> stage.hide());
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox footer = new HBox(8, copy, spacer, close);
+        HBox footer = UiZoom.hbox(8, copy, spacer, close);
         footer.setAlignment(Pos.CENTER_LEFT);
         root.getChildren().addAll(links, footer);
-        root.setPadding(new Insets(20));
+        UiZoom.pad(root, 20);
         root.getStyleClass().add("pauta");
-        root.setPrefWidth(WIDTH);
+        UiZoom.bind(root.prefWidthProperty(), WIDTH);
 
         Scene scene = new Scene(root);
         scene.getStylesheets().add(stylesheet);
@@ -153,10 +152,10 @@ final class PautaWindow {
         Hyperlink id = new Hyperlink(entry.rule());
         id.getStyleClass().add("pauta-rule");
         id.setOnAction(e -> openLink.accept(entry.url()));
-        id.setMinWidth(84);
+        UiZoom.bind(id.minWidthProperty(), 84);
         Label level = new Label(entry.level());
         level.getStyleClass().add("pauta-level");
-        level.setMinWidth(60);
+        UiZoom.bind(level.minWidthProperty(), 60);
         TextFlow reason = new TextFlow(new Text(entry.reason()));
         reason.getStyleClass().add("pauta-reason");
         String target = entry.link();
@@ -166,7 +165,7 @@ final class PautaWindow {
             reason.getChildren().addAll(new Text(" "), link);
         }
         HBox.setHgrow(reason, Priority.ALWAYS);
-        HBox row = new HBox(8, id, level, reason);
+        HBox row = UiZoom.hbox(8, id, level, reason);
         row.setAlignment(Pos.TOP_LEFT);
         row.getStyleClass().add("pauta-row");
         return row;
