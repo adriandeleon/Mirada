@@ -876,7 +876,7 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
-                        <version>3.6.4</version>
+                        <version>3.7.0</version>
                         <executions>
                             <!-- PERF-17: the stylesheets precompiled to .bss beside the .css in the
                                  classes jlink and the native image read (ui/StyleCompiler). -->
