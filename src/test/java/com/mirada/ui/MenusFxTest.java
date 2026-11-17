@@ -284,6 +284,8 @@ class MenusFxTest {
             Menu sort = menu.getItems().stream()
                     .filter(Menu.class::isInstance)
                     .map(Menu.class::cast)
+                    .filter(m -> com.mirada.i18n.Messages.tr("viewer.sortMenu")
+                            .equals(m.getGraphic().getAccessibleText()))
                     .findFirst()
                     .orElseThrow();
             assertTrue(sort.getStyleClass().contains("unavailable"));

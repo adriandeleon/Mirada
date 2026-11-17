@@ -196,8 +196,13 @@ class CommandSweepTest {
             // The context menu greys exactly what cannot run, and says why (KBD-04).
             ContextMenu menu =
                     call(() -> (ContextMenu) FxTestSupport.invoke(window.window, "contextMenu", new Class<?>[0]));
+            // Its submenus' command rows too; Sort's radio rows are greyed as one, not row by row.
+            List<MenuItem> rows = new ArrayList<>(menu.getItems());
             for (MenuItem item : menu.getItems()) {
-                if (item.getText() == null || item instanceof javafx.scene.control.Menu) continue;
+                if (item instanceof javafx.scene.control.Menu submenu) rows.addAll(submenu.getItems());
+            }
+            for (MenuItem item : rows) {
+                if (item.getText() == null || !(item instanceof javafx.scene.control.CustomMenuItem)) continue;
                 Command command = Command.inPalette(Command.Context.VIEWER).stream()
                         .filter(c -> item.getText().equals(c.label())
                                 || item.getText().equals("Leave Full Screen"))

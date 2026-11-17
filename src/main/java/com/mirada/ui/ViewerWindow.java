@@ -2120,37 +2120,47 @@ public final class ViewerWindow {
         e.consume();
     }
 
+    /**
+     * The image's right-click menu: what acts on the image at the top, its families (bookmarks, the
+     * order, the thumbnails) one submenu each. Open and Open Folder only in an empty window, where
+     * there is no image to act on; the header's menu and their keys reach them always.
+     */
     private ContextMenu contextMenu() {
-        ContextMenu menu = AppMenus.aligned(new ContextMenu(
-                item(Command.PALETTE),
-                new SeparatorMenuItem(),
-                item(Command.OPEN),
-                item(Command.OPEN_FOLDER),
-                new SeparatorMenuItem(),
-                item(Command.FIT),
-                item(Command.ACTUAL_SIZE),
-                item(Command.ROTATE_CLOCKWISE),
-                item(Command.ROTATE_COUNTERCLOCKWISE),
-                new SeparatorMenuItem(),
-                item(Command.COPY),
-                item(Command.SHOW_IN_FOLDER),
-                new SeparatorMenuItem(),
-                item(Command.BOOKMARK),
-                item(Command.NOTE),
-                item(Command.GO_TO_BOOKMARK),
-                item(Command.BOOKMARKS),
-                new SeparatorMenuItem(),
-                item(Command.RENAME),
-                item(Command.MOVE_TO_TRASH),
-                new SeparatorMenuItem(),
-                sortMenu(),
-                item(Command.INFO),
-                item(Command.THUMBNAILS),
-                item(Command.THUMBNAILS_AT_SIDE),
-                item(Command.THUMBNAIL_CAPTIONS),
-                item(Command.THUMBNAIL_NAMES),
-                item(Command.FULL_SCREEN),
-                item(Command.SLIDESHOW)));
+        ContextMenu menu = AppMenus.aligned(new ContextMenu(item(Command.PALETTE), new SeparatorMenuItem()));
+        if (folder.current() == null) {
+            menu.getItems().addAll(item(Command.OPEN), item(Command.OPEN_FOLDER), new SeparatorMenuItem());
+        }
+        menu.getItems()
+                .addAll(
+                        item(Command.FIT),
+                        item(Command.ACTUAL_SIZE),
+                        item(Command.ROTATE_CLOCKWISE),
+                        item(Command.ROTATE_COUNTERCLOCKWISE),
+                        new SeparatorMenuItem(),
+                        item(Command.COPY),
+                        item(Command.SHOW_IN_FOLDER),
+                        item(Command.RENAME),
+                        item(Command.MOVE_TO_TRASH),
+                        new SeparatorMenuItem(),
+                        item(Command.BOOKMARK),
+                        AppMenus.submenuRow(
+                                tr("menu.bookmarks"),
+                                Icons.of(Icons.BOOKMARKS),
+                                List.of(item(Command.NOTE), item(Command.GO_TO_BOOKMARK), item(Command.BOOKMARKS))),
+                        new SeparatorMenuItem(),
+                        sortMenu(),
+                        AppMenus.submenuRow(
+                                tr("viewer.thumbnailsMenu"),
+                                Icons.of(Icons.STRIP),
+                                List.of(
+                                        item(Command.THUMBNAILS),
+                                        new SeparatorMenuItem(),
+                                        item(Command.THUMBNAILS_AT_SIDE),
+                                        item(Command.THUMBNAIL_CAPTIONS),
+                                        item(Command.THUMBNAIL_NAMES))),
+                        item(Command.INFO),
+                        item(Command.FULL_SCREEN),
+                        item(Command.SLIDESHOW));
         Popups.closedByWindow(menu);
         return menu;
     }
