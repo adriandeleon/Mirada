@@ -1,0 +1,18 @@
+/*
+ * Over mirada.css on every window while an Editora theme is on (Theme): mirada.css moves
+ * Cupertino's tinted text and emphasis fills the least they need to read, and those moves are
+ * Cupertino's colours, so here Editora's own come back, the values of its editora-light.css and
+ * editora-dark.css. Each is a ladder of -color-bg-default, as mirada.css's are: the dark theme's
+ * below 50 %, the light theme's above. Editora's pair already meet the contrast rules
+ * (StyleContrastTest checks them through this sheet).
+ */
+.root {
+    -color-accent-fg: ladder(-color-bg-default, #43dec5 49%, #0d786b 50%);
+    -color-accent-emphasis: ladder(-color-bg-default, #43dec5 49%, #0e8577 50%);
+    -color-warning-fg: ladder(-color-bg-default, #e3a93c 49%, #8d6309 50%);
+    -color-warning-emphasis: ladder(-color-bg-default, #e3a93c 49%, #96690a 50%);
+    -color-success-fg: ladder(-color-bg-default, #5bc98a 49%, #2c784c 50%);
+    -color-success-emphasis: ladder(-color-bg-default, #5bc98a 49%, #2e7d4f 50%);
+    -color-danger-fg: ladder(-color-bg-default, #ee7a6e 49%, #c03434 50%);
+    -color-danger-emphasis: ladder(-color-bg-default, #ee7a6e 49%, #c03434 50%);
+}

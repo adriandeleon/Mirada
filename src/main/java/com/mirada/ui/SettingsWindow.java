@@ -428,6 +428,8 @@ final class SettingsWindow {
             case LIGHT -> tr("theme.light");
             case DARK -> tr("theme.dark");
             case HIGH_CONTRAST -> tr("theme.highContrast");
+            case EDITORA_LIGHT -> tr("theme.editoraLight");
+            case EDITORA_DARK -> tr("theme.editoraDark");
         };
     }
 

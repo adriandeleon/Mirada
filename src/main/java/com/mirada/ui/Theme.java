@@ -21,7 +21,9 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * AtlantaFX's Cupertino pair: the system's light or dark setting, followed as it changes, or one of
- * them always, as the settings say. The accent is the system's too ({@link Accent}), on every OS alike
+ * them always, as the settings say; or Editora's "Caret & Ink" pair ({@code editora-light.css},
+ * {@code editora-dark.css}), which keep their own teal accent and roles ({@code editora-roles.css},
+ * over {@code mirada.css}) in place of the system's accent. The accent is the system's too ({@link Accent}), on every OS alike
  * (OS-04), followed as it changes: a stylesheet of its own, a data URL, kept on every window's scene.
  * Popups copy their owner's stylesheets as they open. On Linux JavaFX reads the GTK theme's selection
  * colour; where the platform reports none, Cupertino's blue stays.
@@ -50,10 +52,15 @@ public final class Theme {
 
     /** Whether the OS asks for high contrast now. */
     private static boolean systemHighContrast;
-    /** {@code high-contrast.css}'s URL, made the first time it is needed. */
-    private static @Nullable String highContrastSheet;
-    /** Whether the high-contrast sheet is on every window now. */
-    private static boolean highContrast;
+    /** The overlay sheets' URLs ({@link #overlay}), each made the first time it is needed. */
+    private static final java.util.Map<String, String> overlaySheets = new java.util.HashMap<>();
+    /** The overlay sheet on every window now, by name, or null for none. */
+    private static @Nullable String overlay;
+
+    /** Editora's control themes, Mirada's copies, as {@link UiZoom#userAgent} takes them. */
+    static final String EDITORA_LIGHT_SHEET = "/com/mirada/styles/editora-light.css";
+
+    static final String EDITORA_DARK_SHEET = "/com/mirada/styles/editora-dark.css";
 
     /** The control theme's own stylesheet now, before the UI zoom scales it; null before the first apply. */
     private static @Nullable String userAgent;
@@ -100,23 +107,44 @@ public final class Theme {
 
     static boolean dark(Settings.ThemeChoice choice, ColorScheme system) {
         return switch (choice) {
-            case DARK, HIGH_CONTRAST -> true;
-            case LIGHT -> false;
+            case DARK, HIGH_CONTRAST, EDITORA_DARK -> true;
+            case LIGHT, EDITORA_LIGHT -> false;
             case SYSTEM -> system == ColorScheme.DARK;
+        };
+    }
+
+    /** The control theme's own stylesheet for the theme shown: Cupertino's, or Mirada's copy of Editora's. Pure. */
+    static String controlSheet(Settings.ThemeChoice shown, boolean dark) {
+        return switch (shown) {
+            case EDITORA_LIGHT -> EDITORA_LIGHT_SHEET;
+            case EDITORA_DARK -> EDITORA_DARK_SHEET;
+            default -> (dark ? new CupertinoDark() : new CupertinoLight()).getUserAgentStylesheet();
+        };
+    }
+
+    /**
+     * The sheet put last on every window for the theme shown, over {@code mirada.css}'s roles:
+     * high contrast's, Editora's own roles, or none. The themes with one keep their own accent, so
+     * the system's is left off. Pure.
+     */
+    static @Nullable String overlay(Settings.ThemeChoice shown) {
+        return switch (shown) {
+            case HIGH_CONTRAST -> "high-contrast.css";
+            case EDITORA_LIGHT, EDITORA_DARK -> "editora-roles.css";
+            default -> null;
         };
     }
 
     private static void refresh() {
         Settings.ThemeChoice shown = effective(choice, systemHighContrast);
         boolean dark = dark(shown, Platform.getPreferences().getColorScheme());
-        highContrast = shown == Settings.ThemeChoice.HIGH_CONTRAST;
-        atlantafx.base.theme.Theme theme = dark ? new CupertinoDark() : new CupertinoLight();
-        userAgent = theme.getUserAgentStylesheet();
+        overlay = overlay(shown);
+        userAgent = controlSheet(shown, dark);
         Application.setUserAgentStylesheet(UiZoom.userAgent(userAgent));
         scheme = dark ? ColorScheme.DARK : ColorScheme.LIGHT;
         String old = accentSheet;
-        // High contrast has its own accent; the system's would undo it.
-        accentSheet = highContrast ? null : accent(Platform.getPreferences().getAccentColor(), dark);
+        // High contrast and Editora's pair have their own accent; the system's would undo it.
+        accentSheet = overlay != null ? null : accent(Platform.getPreferences().getAccentColor(), dark);
         for (Window window : Window.getWindows()) restyle(window, Objects.equals(old, accentSheet) ? null : old);
     }
 
@@ -137,19 +165,10 @@ public final class Theme {
         String sheet = accentSheet;
         if (sheet != null && !scene.getStylesheets().contains(sheet))
             scene.getStylesheets().add(sheet);
-        // Last, over mirada.css's roles; never made while high contrast has not been asked for.
-        String high = highContrastSheet;
-        if (high != null) scene.getStylesheets().remove(high);
-        if (highContrast) scene.getStylesheets().add(highContrastSheet());
-    }
-
-    private static String highContrastSheet() {
-        String sheet = highContrastSheet;
-        if (sheet == null) {
-            sheet = UiZoom.bundled("high-contrast.css");
-            highContrastSheet = sheet;
-        }
-        return sheet;
+        // Last, over mirada.css's roles; each made only once its theme has been asked for.
+        scene.getStylesheets().removeAll(overlaySheets.values());
+        String name = overlay;
+        if (name != null) scene.getStylesheets().add(overlaySheets.computeIfAbsent(name, UiZoom::bundled));
     }
 
     private static String dataUrl(String css) {

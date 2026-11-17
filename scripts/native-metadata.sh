@@ -75,7 +75,10 @@ if any(str(r.get("glob", "")).startswith(themes) for r in resources):
 globs = {r.get("glob") for r in resources}
 # Mirada's own stylesheets precompiled (PERF-17, -Pdist), which a run from the plain classes never reads.
 for theme in ("atlantafx/base/theme/cupertino-light.bss", "atlantafx/base/theme/cupertino-dark.bss",
-              "com/mirada/styles/*.bss"):
+              "com/mirada/styles/*.bss",
+              # The Editora themes' sheets, read only at a UI zoom other than 100 % or with no .bss.
+              "com/mirada/styles/editora-light.css", "com/mirada/styles/editora-dark.css",
+              "com/mirada/styles/editora-roles.css"):
     if theme not in globs:
         resources.append({"glob": theme})
 data["resources"] = resources
