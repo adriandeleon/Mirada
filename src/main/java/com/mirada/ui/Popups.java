@@ -10,6 +10,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -28,8 +30,9 @@ import org.jspecify.annotations.Nullable;
  * press in the window's scene is outside every menu (a menu is a window of its own, so a press on
  * one never reaches this scene), so it closes them and goes on to do what it does (Pauta MENU-07):
  * a click on a thumbnail still shows that image, and a right-click opens a fresh menu where it was
- * pressed, the request being its own event. The menu buttons' menus keep auto-hide, and are closed
- * here too when it fails. One menu at a time (MENU-06): {@link #show} closes the others first, for a
+ * pressed, the request being its own event. A press inside a menu but on none of its rows, on its
+ * padding or a separator, closes it as well ({@link #onItem}). The menu buttons' menus keep
+ * auto-hide, and are closed here too when it fails. One menu at a time (MENU-06): {@link #show} closes the others first, for a
  * menu the keyboard opens too.
  *
  * <p>The keyboard's right-click is the Menu key or Shift+F10 (MENU-09, {@link #isMenuKey}): the
@@ -66,6 +69,45 @@ final class Popups {
      */
     static void closedByWindow(ContextMenu menu) {
         menu.setAutoHide(false);
+        closeOnPressOffItems(menu, menu);
+    }
+
+    private static final String CLOSES_OFF_ITEMS = Popups.class.getName() + ".closesOffItems";
+
+    /**
+     * Closes {@code root} on a press in {@code shown} (the menu itself, or one of its submenus) that
+     * is on none of its rows: its padding, a separator. A submenu is a window JavaFX makes as it first
+     * opens, so it is caught as it shows.
+     */
+    private static void closeOnPressOffItems(ContextMenu root, ContextMenu shown) {
+        if (shown.getProperties().putIfAbsent(CLOSES_OFF_ITEMS, Boolean.TRUE) != null) return;
+        Scene scene = shown.getScene();
+        if (scene != null) {
+            scene.addEventFilter(MouseEvent.MOUSE_PRESSED, e -> {
+                if (!onItem(e.getTarget() instanceof Node n ? n : null)) root.hide();
+            });
+        }
+        for (MenuItem item : shown.getItems()) {
+            if (item instanceof Menu sub) {
+                sub.addEventHandler(
+                        Menu.ON_SHOWN,
+                        e -> Window.getWindows().stream()
+                                .filter(w -> w instanceof ContextMenu m && m.isShowing() && m.getOwnerWindow() == shown)
+                                .forEach(w -> closeOnPressOffItems(root, (ContextMenu) w)));
+            }
+        }
+    }
+
+    /**
+     * Whether {@code node} is on one of a menu's rows (or its scroll arrows), not on its padding or a
+     * separator.
+     */
+    static boolean onItem(@Nullable Node node) {
+        for (Node at = node; at != null; at = at.getParent()) {
+            List<String> classes = at.getStyleClass();
+            if (classes.contains("menu-item") || classes.contains("scroll-arrow")) return true;
+        }
+        return false;
     }
 
     /**

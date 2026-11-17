@@ -328,6 +328,8 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Fixed
 
+- **A click inside a right-click menu but on none of its items closes it**, as a click outside it
+  does: on its edge, its padding or a separator, in a submenu too.
 - **An image too large for the memory left is refused with a message** naming its size, how much
   memory it needs and how much is free, read from its header before it is decoded, instead of
   running out of memory and leaving the window stuck; an animation too long to hold shows as a still,
