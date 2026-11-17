@@ -41,6 +41,11 @@ public final class FxTestSupport {
         // Closing a test's last window must not end the toolkit for the tests after it.
         Platform.setImplicitExit(false);
         fx(FxTestSupport::keepWindowsOnScreen);
+        // No test reaches a printer: under the tests' headless AWT, javafx.print skips its dialog and
+        // prints at once. A test of Print puts its own stand-in in.
+        ViewerWindow.printWith((image, job, owner) -> {
+            throw new java.io.IOException("tests never print");
+        });
         started = true;
     }
 

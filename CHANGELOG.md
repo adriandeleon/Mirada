@@ -12,6 +12,11 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Added
 
+- **Print.** **Print…** in the File menu and the palette prints the image as it stands on screen,
+  turned as you turned it, through your desktop's own print dialog: GTK's on Linux, the system's on
+  macOS and Windows, with their printers, paper, copies and Print to File. The image fills the page,
+  centred, and a wide image starts on a landscape page. It has no key of its own (Ctrl+P is Go to
+  Image); `keys.file.print=…` in the settings file gives it one.
 - **Editora Light and Editora Dark themes.** Settings → Theme and **Theme…** in the palette offer
   Editora's "Caret & Ink" pair beside light, dark and high contrast: its grounds, its controls and
   its teal accent, which stays teal whatever accent colour the system has.

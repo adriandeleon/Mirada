@@ -51,6 +51,8 @@ enum Command {
     UNDO_TRASH("file.undoMoveToTrash", "restore put back undelete recover"),
     COPY("image.copy", "clipboard"),
     SHOW_IN_FOLDER("file.showInFolder", "reveal finder explorer files locate open containing"),
+    /** File → Print: the image as it stands on screen, through the desktop's own print dialog. */
+    PRINT("file.print", "printer paper page photo hard copy"),
     MOVE_TO_TRASH("file.moveToTrash", "delete remove bin recycle trash"),
     BOOKMARK("bookmark.image", "favourite favorite star flag mark pick keep"),
     BOOKMARK_FOLDER("bookmark.folder", "favourite favorite star flag mark directory"),
@@ -341,6 +343,7 @@ enum Command {
                     RENAME,
                     MOVE_TO_TRASH,
                     COPY,
+                    PRINT,
                     SHOW_IN_FOLDER -> imageShowing ? null : tr("reason.noImage");
             case BOOKMARK, BOOKMARK_FOLDER, NOTE, FOLDER_NOTE, NEXT_BOOKMARK, PREVIOUS_BOOKMARK ->
                 size == 0 ? tr("reason.noFolder") : null;
@@ -389,6 +392,7 @@ enum Command {
                     MOVE_TO_TRASH,
                     UNDO_TRASH,
                     COPY,
+                    PRINT,
                     SHOW_IN_FOLDER -> tr("group.image");
             case BOOKMARK,
                     BOOKMARK_FOLDER,

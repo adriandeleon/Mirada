@@ -15,10 +15,10 @@ import com.mirada.diagnostics.DebugLog;
 import com.mirada.diagnostics.MessageLog;
 import com.mirada.i18n.Messages;
 import com.mirada.image.HeadStart;
+import com.mirada.os.Awt;
 import com.mirada.os.MacOpenFiles;
 import com.mirada.os.Os;
 import com.mirada.os.SingleInstance;
-import com.mirada.os.Trash;
 import com.mirada.os.WindowsConsole;
 import com.mirada.perf.FxSampler;
 import com.mirada.perf.Startup;
@@ -66,9 +66,9 @@ public final class App extends Application {
         // exception and log record goes to the Debug Log, and the first to the window (DIAG-04).
         DebugLog.install();
         DebugLog.onUncaught(App::uncaught);
-        // Before any AWT class can load. ImageIO and BufferedImage are java.desktop and need no
-        // display, so AWT is headless — except on macOS, where Move to Trash is AWT's Desktop (Trash).
-        System.setProperty("java.awt.headless", String.valueOf(Trash.headless(Os.host())));
+        // Before any AWT class can load: headless on Linux, headful on the Mac and Windows, where
+        // printing (and the Mac's Move to Trash) goes through AWT (Awt).
+        System.setProperty("java.awt.headless", String.valueOf(Awt.headless(Os.host())));
         Startup.mark("main");
         // --help and --version print and exit before anything starts (CLI-01); --config-dir and --dev
         // are settled before anything reads the config folder (CLI-02).

@@ -31,6 +31,7 @@ import com.mirada.diagnostics.DebugLog;
 import com.mirada.folder.FolderImages;
 import com.mirada.folder.Sorting;
 import com.mirada.os.Os;
+import com.mirada.print.Printing;
 import com.mirada.settings.Bookmarks;
 import com.mirada.settings.Settings;
 import org.jspecify.annotations.Nullable;
@@ -400,6 +401,39 @@ class ViewerWindowTest {
             waitUntil("the turned copy", () -> Clipboard.getSystemClipboard().hasImage());
             assertEquals(
                     48.0, call(() -> Clipboard.getSystemClipboard().getImage().getWidth()));
+        }
+    }
+
+    @Test
+    void printSendsThePictureAsItStandsToThePrinter() throws Exception {
+        List<String> printed = new java.util.concurrent.CopyOnWriteArrayList<>();
+        java.util.concurrent.atomic.AtomicReference<Printing.Outcome> outcome =
+                new java.util.concurrent.atomic.AtomicReference<>(Printing.Outcome.SENT);
+        fx(() -> ViewerWindow.printWith((image, job, owner) -> {
+            printed.add(job + " " + image.width() + "x" + image.height());
+            return outcome.get();
+        }));
+        try (WindowFixture window = open("a.png")) {
+            window.run(Command.PRINT);
+            window.waitToSay("Sent a.png to the printer");
+            // Turned on screen, it prints turned.
+            window.run(Command.ROTATE_CLOCKWISE);
+            outcome.set(Printing.Outcome.CANCELLED);
+            window.run(Command.PRINT);
+            waitUntil("the turned print", () -> printed.size() == 2);
+            assertEquals(List.of("a.png 64x48", "a.png 48x64"), printed);
+            outcome.set(Printing.Outcome.NO_PRINTER);
+            window.run(Command.PRINT);
+            window.waitToSay("No printer is set up. Add one in the system's settings, then print again.");
+            fx(() -> ViewerWindow.printWith((image, job, owner) -> {
+                throw new java.io.IOException("out of paper");
+            }));
+            window.run(Command.PRINT);
+            window.waitToSay("Couldn't print a.png: out of paper");
+        } finally {
+            fx(() -> ViewerWindow.printWith((image, job, owner) -> {
+                throw new java.io.IOException("tests never print");
+            }));
         }
     }
 

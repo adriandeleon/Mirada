@@ -3345,6 +3345,17 @@
           "void*",
           "void*"
         ]
+      },
+      {
+        "class": "com.mirada.print.GtkPrint",
+        "method": "drawPage",
+        "returnType": "void",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "jint",
+          "void*"
+        ]
       }
     ],
     "upcalls": [
@@ -3353,6 +3364,15 @@
         "parameterTypes": [
           "void*",
           "void*",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "void",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "jint",
           "void*"
         ]
       }
@@ -3570,6 +3590,66 @@
         "returnType": "jint",
         "parameterTypes": [
           "jint"
+        ]
+      },
+      {
+        "returnType": "void",
+        "parameterTypes": [
+          "void*",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "jlong",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "void*",
+          "void*",
+          "void*",
+          "jint"
+        ]
+      },
+      {
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*",
+          "jint",
+          "void*",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "jdouble",
+        "parameterTypes": [
+          "void*"
+        ]
+      },
+      {
+        "returnType": "void*",
+        "parameterTypes": [
+          "void*",
+          "jint",
+          "jint",
+          "jint",
+          "jint"
+        ]
+      },
+      {
+        "returnType": "void",
+        "parameterTypes": [
+          "void*",
+          "jdouble",
+          "jdouble"
+        ]
+      },
+      {
+        "returnType": "void",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "jdouble",
+          "jdouble"
         ]
       }
     ]

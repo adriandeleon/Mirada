@@ -11,3 +11,4 @@ costs. Numbered in order; a record is not edited once accepted, only superseded 
 | [0004](0004-properties-config.md) | Settings and bookmarks in `.properties` files |
 | [0005](0005-no-testfx-yet.md) | No TestFX yet: plain JUnit, JavaFX's Headless platform and our own driver (superseded by 0006) |
 | [0006](0006-testfx-and-coverage-gate.md) | TestFX over the Headless glass, and a coverage gate at `verify` |
+| [0007](0007-print-through-the-desktops-dialog.md) | Print through the desktop's own dialog: GTK on Linux, AWT headful on Windows |

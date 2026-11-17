@@ -74,6 +74,7 @@ final class AppMenus {
                     List.of(
                             List.of(Command.OPEN, Command.OPEN_FOLDER, Command.OPEN_RECENT),
                             List.of(Command.SHOW_IN_FOLDER),
+                            List.of(Command.PRINT),
                             List.of(Command.EXPORT_CONFIG, Command.IMPORT_CONFIG),
                             List.of(Command.SETTINGS),
                             List.of(Command.CLOSE, Command.QUIT))),
