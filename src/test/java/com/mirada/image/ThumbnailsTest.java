@@ -36,9 +36,12 @@ class ThumbnailsTest {
     void pastItsCapTheOldestThumbnailIsDroppedAndTheNewestKept() {
         Thumbnails thumbnails = new Thumbnails();
         try {
-            // Files that are not there: each is a request, made or failed, and counts the same.
+            // Files that are not there: each is a request, made or failed, and counts the same. Not
+            // images, so each fails before any decoder: a missing .jpg falls through to JavaFX's
+            // Image, which starts the toolkit on a worker that close() then interrupts mid-start,
+            // and every FX test after it fails (docs/testing.md).
             List<Path> files = new ArrayList<>();
-            for (int i = 0; i <= Thumbnails.CAPACITY; i++) files.add(folder.resolve("missing-" + i + ".jpg"));
+            for (int i = 0; i <= Thumbnails.CAPACITY; i++) files.add(folder.resolve("missing-" + i + ".txt"));
             CompletableFuture<Thumbnails.Thumbnail> first = thumbnails.get(files.getFirst());
             CompletableFuture<Thumbnails.Thumbnail> second = thumbnails.get(files.get(1));
             for (Path file : files.subList(2, files.size())) thumbnails.get(file);
