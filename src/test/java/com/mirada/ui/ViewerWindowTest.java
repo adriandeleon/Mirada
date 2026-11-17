@@ -903,8 +903,27 @@ class ViewerWindowTest {
             assertTrue(
                     tick instanceof javafx.scene.control.Label l && AppMenus.TICK.equals(l.getText()),
                     "the sidebar is open: ticked");
-            Menu sort = (Menu)
-                    items.stream().filter(i -> i instanceof Menu).findFirst().orElseThrow();
+            // The image's actions stay at the top; bookmarks, the order and the thumbnails are a
+            // submenu each, so the menu stays short.
+            List<String> submenus = items.stream()
+                    .filter(i -> i instanceof Menu)
+                    .map(i -> i.getGraphic().getAccessibleText())
+                    .toList();
+            assertEquals(List.of("Bookmarks", "Sort", "Thumbnails"), submenus);
+            assertTrue(
+                    items.stream().noneMatch(i -> i.getUserData() == Command.OPEN),
+                    "Open is in an empty window's menu, not an image's");
+            Menu thumbnails = (Menu) items.stream()
+                    .filter(i -> i instanceof Menu
+                            && "Thumbnails".equals(i.getGraphic().getAccessibleText()))
+                    .findFirst()
+                    .orElseThrow();
+            assertTrue(thumbnails.getItems().stream().anyMatch(i -> i.getUserData() == Command.THUMBNAIL_NAMES));
+            Menu sort = (Menu) items.stream()
+                    .filter(i ->
+                            i instanceof Menu && "Sort".equals(i.getGraphic().getAccessibleText()))
+                    .findFirst()
+                    .orElseThrow();
             assertFalse(sort.isDisable());
             fx(() -> sort.getItems().get(2).fire());
             assertEquals(Sorting.By.SIZE, window.settings.sorting().by(), "the menu's item runs its command");

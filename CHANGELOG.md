@@ -190,6 +190,10 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Changed
 
+- **The image's right-click menu is shorter.** What acts on the image (fit, rotate, copy, rename,
+  trash, bookmark) stays at the top; the other bookmark commands, the order and the thumbnail
+  options are in Bookmarks, Sort and Thumbnails submenus. Open and Open Folder show only in an
+  empty window; with an image open they stay in the header's menu and on their keys.
 - **Default Command Palette Keys asks first** when the palette has keys of your own, and only then
   puts its default keys back.
 - **The Debug Log's find bar searches once typing pauses**, not on the first key.

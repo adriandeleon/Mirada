@@ -320,14 +320,30 @@ final class AppMenus {
         return menu;
     }
 
+    /**
+     * A {@link #submenuRow} holding {@code items}, its chords lined up each time it opens: a
+     * right-click menu's family of rows, one hover away.
+     */
+    static Menu submenuRow(String title, @Nullable Node glyph, List<? extends MenuItem> items) {
+        Menu menu = submenuRow(title, glyph);
+        menu.getItems().setAll(items);
+        menu.setOnShown(e -> alignChords(rows(menu.getItems())));
+        return menu;
+    }
+
     /** Lines up the chords of {@code menu}'s rows each time it is shown ({@link #alignChords}). */
     static <T extends javafx.scene.control.ContextMenu> T aligned(T menu) {
-        menu.setOnShown(e -> alignChords(menu.getItems().stream()
+        menu.setOnShown(e -> alignChords(rows(menu.getItems())));
+        return menu;
+    }
+
+    /** The rows among {@code items} that {@link #inWindowRow} drew. */
+    private static List<Row> rows(List<MenuItem> items) {
+        return items.stream()
                 .map(item -> item.getProperties().get(ROW))
                 .filter(Row.class::isInstance)
                 .map(Row.class::cast)
-                .toList()));
-        return menu;
+                .toList();
     }
 
     static final String ROW = AppMenus.class.getName() + ".row";
