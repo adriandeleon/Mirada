@@ -17,6 +17,12 @@ glass: no display, no xvfb, no Monocle) and is `@Tag("fx")`, which `BuildHygiene
 `FxTestSupport` also keeps every window inside the headless screen, which is 1000 pixels square and
 throws on a window drawn past its edge. Why TestFX: [decision 0006](decisions/0006-testfx-and-coverage-gate.md).
 
+A test that is not `fx` must not start the toolkit by the back door either: a `new Image(...)`
+(`Thumbnails`' fallback for a JPEG libjpeg-turbo refuses, say) starts it on whatever thread asks.
+Interrupted mid-start, by an executor's `shutdownNow()`, it is left half made ("pipeline already
+created"): every FX test after it in that JVM fails, and one of them can hang until the job's
+timeout, as the 0.4.0 dry run's linux-arm64 leg did.
+
 No test reaches the desktop. Surefire points Linux's trash at `target/test-data-home`
 (`XDG_DATA_HOME`) and unsets `DISPLAY`, `WAYLAND_DISPLAY` and the session bus; the update check is
 off and Check for Updates asks a closed local port.
