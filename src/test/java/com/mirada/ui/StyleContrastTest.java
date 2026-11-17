@@ -29,7 +29,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class StyleContrastTest {
 
     private static final List<String> ROLES = List.of("accent", "warning", "success", "danger");
-    private static final List<String> THEMES = List.of("cupertino-light", "cupertino-dark");
+    private static final List<String> CUPERTINO = List.of("cupertino-light", "cupertino-dark");
+    /** Every control theme: Cupertino's pair, then Editora's, whose roles come back over mirada.css. */
+    private static final List<String> THEMES =
+            List.of("cupertino-light", "cupertino-dark", "editora-light", "editora-dark");
 
     private static String uncommented(String css) {
         return css.replaceAll("(?s)/\\*.*?\\*/", "");
@@ -56,11 +59,18 @@ class StyleContrastTest {
         return tokens;
     }
 
-    /** A theme's tokens: Cupertino's, then mirada.css's over them, as the cascade has them. */
+    /**
+     * A theme's tokens as the cascade has them: the control theme's (Cupertino's from AtlantaFX's jar,
+     * Editora's from Mirada's copy), then mirada.css's over them, then Editora's roles over those.
+     */
     private static Map<String, String> palette(String theme) throws Exception {
-        InputStream in = CupertinoLight.class.getResourceAsStream("/atlantafx/base/theme/" + theme + ".css");
-        Map<String, String> tokens = rootTokens(read(Objects.requireNonNull(in, theme)));
+        boolean editora = theme.startsWith("editora-");
+        Map<String, String> tokens = editora
+                ? rootTokens(sheet(theme + ".css"))
+                : rootTokens(read(Objects.requireNonNull(
+                        CupertinoLight.class.getResourceAsStream("/atlantafx/base/theme/" + theme + ".css"), theme)));
         tokens.putAll(rootTokens(sheet("mirada.css")));
+        if (editora) tokens.putAll(rootTokens(sheet("editora-roles.css")));
         return tokens;
     }
 
@@ -391,7 +401,7 @@ class StyleContrastTest {
     /** What mirada.css sets for the accent is what Accent makes of Cupertino's own blue. */
     @Test
     void theStylesheetsAccentIsAccentsOwnForCupertinosBlue() throws Exception {
-        for (String theme : THEMES) {
+        for (String theme : CUPERTINO) {
             Map<String, String> cupertino = rootTokens(read(Objects.requireNonNull(
                     CupertinoLight.class.getResourceAsStream("/atlantafx/base/theme/" + theme + ".css"))));
             boolean dark = theme.endsWith("dark");
@@ -401,5 +411,37 @@ class StyleContrastTest {
             assertEquals(
                     Accent.hex(Accent.emphasis(blue, dark)), Accent.hex(color(p, "-color-accent-emphasis")), theme);
         }
+    }
+
+    /** Editora's pair keep their own roles: editora-roles.css gives back each sheet's own values. */
+    @Test
+    void editorasThemesKeepTheirOwnRoles() throws Exception {
+        for (String theme : List.of("editora-light", "editora-dark")) {
+            Map<String, String> own = rootTokens(sheet(theme + ".css"));
+            Map<String, String> p = palette(theme);
+            for (String role : ROLES) {
+                for (String part : List.of("-fg", "-emphasis")) {
+                    String token = "-color-" + role + part;
+                    assertEquals(
+                            Accent.hex(Color.web(own.get(token))), Accent.hex(color(p, token)), theme + " " + token);
+                }
+            }
+        }
+    }
+
+    /** Which control theme, overlay and darkness each choice gets; the system's accent only without an overlay. */
+    @Test
+    void eachThemeChoiceHasItsSheets() {
+        assertEquals(Theme.EDITORA_LIGHT_SHEET, Theme.controlSheet(Settings.ThemeChoice.EDITORA_LIGHT, false));
+        assertEquals(Theme.EDITORA_DARK_SHEET, Theme.controlSheet(Settings.ThemeChoice.EDITORA_DARK, true));
+        assertTrue(Theme.controlSheet(Settings.ThemeChoice.DARK, true).endsWith("cupertino-dark.css"));
+        assertTrue(Theme.controlSheet(Settings.ThemeChoice.HIGH_CONTRAST, true).endsWith("cupertino-dark.css"));
+        assertTrue(Theme.controlSheet(Settings.ThemeChoice.SYSTEM, false).endsWith("cupertino-light.css"));
+        assertEquals("editora-roles.css", Theme.overlay(Settings.ThemeChoice.EDITORA_LIGHT));
+        assertEquals("editora-roles.css", Theme.overlay(Settings.ThemeChoice.EDITORA_DARK));
+        assertEquals("high-contrast.css", Theme.overlay(Settings.ThemeChoice.HIGH_CONTRAST));
+        assertEquals(null, Theme.overlay(Settings.ThemeChoice.LIGHT));
+        assertTrue(Theme.dark(Settings.ThemeChoice.EDITORA_DARK, javafx.application.ColorScheme.LIGHT));
+        assertFalse(Theme.dark(Settings.ThemeChoice.EDITORA_LIGHT, javafx.application.ColorScheme.DARK));
     }
 }

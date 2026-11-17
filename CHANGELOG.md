@@ -10,6 +10,9 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ### Added
 
+- **Editora Light and Editora Dark themes.** Settings → Theme and **Theme…** in the palette offer
+  Editora's "Caret & Ink" pair beside light, dark and high contrast: its grounds, its controls and
+  its teal accent, which stays teal whatever accent colour the system has.
 - **All Metadata opens from the keyboard.** **All Metadata** in the View menu and the palette opens
   the properties sidebar with every tag the file carries unfolded, and folds them away again; it
   stays unfolded from image to image. The list shows its first 300 tags and says how many more the

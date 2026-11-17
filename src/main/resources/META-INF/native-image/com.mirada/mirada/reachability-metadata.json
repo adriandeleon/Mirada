@@ -3323,6 +3323,15 @@
     },
     {
       "bundle": "sun.util.logging.resources.logging"
+    },
+    {
+      "glob": "com/mirada/styles/editora-dark.css"
+    },
+    {
+      "glob": "com/mirada/styles/editora-light.css"
+    },
+    {
+      "glob": "com/mirada/styles/editora-roles.css"
     }
   ],
   "foreign": {

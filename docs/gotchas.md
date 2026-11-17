@@ -169,6 +169,15 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   roles set to black, white and saturated colours, added last on every window so it beats
   `mirada.css`'s `.root`; the system's accent sheet is left off while it is on. `Theme` follows
   `Windows.SPI.HighContrast` and goes back to the chosen theme as it ends.
+- **Editora's themes are Editora's sheets, with Editora's roles put back** (`editora-light.css`,
+  `editora-dark.css`, copied from Editora with their rules unchanged): `mirada.css`'s `.root` moves
+  Cupertino's accent, warning, success and danger fills, so `editora-roles.css` goes last on every
+  window while either is on, as `high-contrast.css` does, and gives Editora's own back as ladders of
+  `-color-bg-default`. The system's accent is left off, so the teal stays. `StyleContrastTest` runs
+  every contrast rule over both. They are Mirada's resources, not AtlantaFX's: `UiZoom.userAgent`
+  hands their bundled URL (the `.bss` in a release) at 100 % and reads them from Mirada's module to
+  scale them; the native image's metadata lists the three `.css`. A newer Editora palette is copied
+  over both files and the ladders in `editora-roles.css` follow it.
 - **Tooltips come from `Icons.tip` and motion from `Motion.play`** (TBAR-14, ACC-04): the one
   400 ms delay, and a fade that jumps to its end while the system asks for reduced motion.
   `UiZoomTest` fails a `new Tooltip`, a `setShowDelay` or an animation started anywhere else. A

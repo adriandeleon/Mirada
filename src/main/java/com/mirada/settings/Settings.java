@@ -41,7 +41,10 @@ public final class Settings {
         LIGHT,
         DARK,
         /** Black ground, white ink (ACC-09); also what Windows' high-contrast mode switches to. */
-        HIGH_CONTRAST
+        HIGH_CONTRAST,
+        /** Editora's "Caret & Ink" pair: its own controls, grounds and teal accent. */
+        EDITORA_LIGHT,
+        EDITORA_DARK
     }
 
     static final String THEME = "theme";

@@ -158,12 +158,19 @@ public final class UiZoom {
     }
 
     /**
-     * The control theme's stylesheet ({@code atlantafx.base.theme.Theme#getUserAgentStylesheet}) at the
-     * zoom in effect: as given at 100 %, else a scaled copy.
+     * The control theme's stylesheet at the zoom in effect: AtlantaFX's resource path
+     * ({@code atlantafx.base.theme.Theme#getUserAgentStylesheet}) as given at 100 %, one of Mirada's
+     * own ({@link Theme#EDITORA_LIGHT_SHEET}) as its bundled URL; else a scaled copy.
      */
     static String userAgent(String path) {
-        if (percent == Settings.DEFAULT_UI_ZOOM) return path;
-        return scaled(path, path, atlantafx.base.theme.Theme.class);
+        boolean ours = path.startsWith(STYLES);
+        if (percent == Settings.DEFAULT_UI_ZOOM) return ours ? bundled(path.substring(STYLES.length())) : path;
+        return scaled(path, path, ownerOf(path));
+    }
+
+    /** The class whose module holds a control theme's sheet: Mirada's or AtlantaFX's. */
+    private static Class<?> ownerOf(String path) {
+        return path.startsWith(STYLES) ? UiZoom.class : atlantafx.base.theme.Theme.class;
     }
 
     private static String scaled(String name, String resource, Class<?> owner) {
@@ -174,11 +181,13 @@ public final class UiZoom {
         return SCALED.computeIfAbsent(name + "@" + at, k -> dataUrl(scale(text(resource, owner), at)));
     }
 
-    /** The control theme's two sheets, light and dark: the ones {@link Theme} hands {@link #userAgent}. */
+    /** The control themes' sheets, Cupertino's and Editora's: the ones {@link Theme} hands {@link #userAgent}. */
     private static List<String> themeSheets() {
         return List.of(
                 new atlantafx.base.theme.CupertinoLight().getUserAgentStylesheet(),
-                new atlantafx.base.theme.CupertinoDark().getUserAgentStylesheet());
+                new atlantafx.base.theme.CupertinoDark().getUserAgentStylesheet(),
+                Theme.EDITORA_LIGHT_SHEET,
+                Theme.EDITORA_DARK_SHEET);
     }
 
     /**
@@ -190,7 +199,7 @@ public final class UiZoom {
         int at = Settings.clampUiZoom(value);
         if (at == Settings.DEFAULT_UI_ZOOM) return;
         for (String name : SHEETS) scaledAt(name, STYLES + name, UiZoom.class, at);
-        for (String sheet : themeSheets()) scaledAt(sheet, sheet, atlantafx.base.theme.Theme.class, at);
+        for (String sheet : themeSheets()) scaledAt(sheet, sheet, ownerOf(sheet), at);
     }
 
     /** Whether {@link #prepare} has been done for {@code value}: {@link #apply} then reads nothing. */
