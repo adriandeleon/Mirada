@@ -282,6 +282,11 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
 
 ## Keys, commands and the palette
 
+- **The keys in force are global (`Keybindings.use`), and every window follows its settings into
+  them.** A closed window's settings can still change, as an update check that answers late writes
+  when it asked, and its listener would put its keymap back over everyone's: in the tests, over the
+  Emacs keymap `PaletteKeyboardTest` had just set, so C-n did nothing now and then on macOS. A
+  closed window follows nothing (`ViewerWindow.followKeys`).
 - **The in-window menu bar takes F10 and a lone Alt, and then the arrows, without the focus.**
   `MenuBarSkin` opens its menu mode from a scene accelerator (F10) and a scene handler (Alt), so the
   window's key filter, which runs first, must leave both alone (no keymap binds them;
