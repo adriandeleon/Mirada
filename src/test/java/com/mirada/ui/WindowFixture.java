@@ -141,10 +141,15 @@ final class WindowFixture implements AutoCloseable {
 
     /** Waits until the window has said something starting with {@code start}. */
     void waitToSay(String start) throws Exception {
-        waitUntil("\"" + start + "…\" said", () -> {
-            MessageLog messages = field("messages");
-            return messages.entries().stream().anyMatch(e -> e.text().startsWith(start));
-        });
+        MessageLog messages = field("messages");
+        try {
+            waitUntil(
+                    "\"" + start + "…\" said",
+                    () -> messages.entries().stream().anyMatch(e -> e.text().startsWith(start)));
+        } catch (AssertionError timedOut) {
+            // What it said instead, newest first: the reason, when the window said one.
+            throw new AssertionError(timedOut.getMessage() + "; said instead: " + call(messages::entries), timedOut);
+        }
     }
 
     /** The windows showing other than this one's stage: dialogs, tool windows, popups. */
