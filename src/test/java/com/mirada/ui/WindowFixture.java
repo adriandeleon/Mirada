@@ -141,10 +141,22 @@ final class WindowFixture implements AutoCloseable {
 
     /** Waits until the window has said something starting with {@code start}. */
     void waitToSay(String start) throws Exception {
-        waitUntil("\"" + start + "…\" said", () -> {
-            MessageLog messages = field("messages");
-            return messages.entries().stream().anyMatch(e -> e.text().startsWith(start));
-        });
+        MessageLog messages = field("messages");
+        try {
+            waitUntil(
+                    "\"" + start + "…\" said",
+                    () -> messages.entries().stream().anyMatch(e -> e.text().startsWith(start)));
+        } catch (AssertionError timedOut) {
+            // What it said instead, newest first, and what was thrown where only the Debug Log
+            // hears it (DebugLog.uncaught): the reason, either way.
+            String uncaught = com.mirada.diagnostics.DebugLog.text()
+                    .lines()
+                    .dropWhile(line -> !line.contains("UNCAUGHT"))
+                    .limit(40)
+                    .collect(java.util.stream.Collectors.joining("\n"));
+            throw new AssertionError(
+                    timedOut.getMessage() + "; said instead: " + call(messages::entries) + "\n" + uncaught, timedOut);
+        }
     }
 
     /** The windows showing other than this one's stage: dialogs, tool windows, popups. */

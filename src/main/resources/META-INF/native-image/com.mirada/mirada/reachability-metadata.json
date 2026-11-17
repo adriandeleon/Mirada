@@ -1771,6 +1771,20 @@
     {
       "type": "java.awt.Insets",
       "jniAccessible": true,
+      "fields": [
+        {
+          "name": "bottom"
+        },
+        {
+          "name": "left"
+        },
+        {
+          "name": "right"
+        },
+        {
+          "name": "top"
+        }
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -3123,16 +3137,34 @@
       "glob": "com/mirada/keymaps/emacs.json"
     },
     {
+      "glob": "com/mirada/keymaps/emacs.mac.json"
+    },
+    {
       "glob": "com/mirada/pauta.json"
     },
     {
       "glob": "com/mirada/styles/*.bss"
     },
     {
+      "glob": "com/mirada/styles/editora-dark.css"
+    },
+    {
+      "glob": "com/mirada/styles/editora-light.css"
+    },
+    {
+      "glob": "com/mirada/styles/editora-roles.css"
+    },
+    {
       "glob": "com/mirada/styles/high-contrast.css"
     },
     {
+      "glob": "com/mirada/styles/mirada.bss"
+    },
+    {
       "glob": "com/mirada/styles/mirada.css"
+    },
+    {
+      "glob": "com/mirada/styles/ui-font.bss"
     },
     {
       "glob": "com/mirada/styles/ui-font.css"
@@ -3323,18 +3355,28 @@
     },
     {
       "bundle": "sun.util.logging.resources.logging"
-    },
-    {
-      "glob": "com/mirada/styles/editora-dark.css"
-    },
-    {
-      "glob": "com/mirada/styles/editora-light.css"
-    },
-    {
-      "glob": "com/mirada/styles/editora-roles.css"
     }
   ],
   "foreign": {
+    "upcalls": [
+      {
+        "returnType": "void",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "jint",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "void",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "void*"
+        ]
+      }
+    ],
     "directUpcalls": [
       {
         "class": "com.mirada.os.MacOpenFiles$Observer",
@@ -3358,26 +3400,34 @@
         ]
       }
     ],
-    "upcalls": [
+    "downcalls": [
       {
-        "returnType": "void",
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*",
+          "void*",
+          "jlong",
+          "void*",
+          "jint",
+          "jint"
+        ]
+      },
+      {
+        "returnType": "void*",
+        "parameterTypes": [
+          "void*",
+          "jint",
+          "void*"
+        ]
+      },
+      {
+        "returnType": "jint",
         "parameterTypes": [
           "void*",
           "void*",
           "void*"
         ]
       },
-      {
-        "returnType": "void",
-        "parameterTypes": [
-          "void*",
-          "void*",
-          "jint",
-          "void*"
-        ]
-      }
-    ],
-    "downcalls": [
       {
         "returnType": "void*",
         "parameterTypes": [
@@ -3389,27 +3439,6 @@
       {
         "returnType": "jint",
         "parameterTypes": [
-          "void*",
-          "void*",
-          "void*"
-        ]
-      },
-      {
-        "returnType": "void*",
-        "parameterTypes": [
-          "void*",
-          "jint",
-          "void*"
-        ]
-      },
-      {
-        "returnType": "jint",
-        "parameterTypes": [
-          "void*",
-          "void*",
-          "jlong",
-          "void*",
-          "jint",
           "jint"
         ]
       },
@@ -3433,10 +3462,12 @@
         ]
       },
       {
-        "returnType": "jint",
+        "returnType": "void",
         "parameterTypes": [
           "void*",
-          "jint"
+          "void*",
+          "jdouble",
+          "jdouble"
         ]
       },
       {
@@ -3444,6 +3475,13 @@
         "parameterTypes": [
           "void*",
           "struct(jint,jint)"
+        ]
+      },
+      {
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*",
+          "jint"
         ]
       },
       {
@@ -3498,6 +3536,15 @@
         ]
       },
       {
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*",
+          "jint",
+          "void*",
+          "void*"
+        ]
+      },
+      {
         "returnType": "void*",
         "parameterTypes": [
           "void*"
@@ -3515,6 +3562,12 @@
         "parameterTypes": [
           "void*",
           "jlong"
+        ]
+      },
+      {
+        "returnType": "jdouble",
+        "parameterTypes": [
+          "void*"
         ]
       },
       {
@@ -3581,48 +3634,11 @@
         ]
       },
       {
-        "returnType": "struct(jint,jint,void*)",
-        "parameterTypes": [
-          "void*"
-        ]
-      },
-      {
-        "returnType": "jint",
-        "parameterTypes": [
-          "jint"
-        ]
-      },
-      {
         "returnType": "void",
         "parameterTypes": [
           "void*",
-          "void*"
-        ]
-      },
-      {
-        "returnType": "jlong",
-        "parameterTypes": [
-          "void*",
-          "void*",
-          "void*",
-          "void*",
-          "void*",
-          "jint"
-        ]
-      },
-      {
-        "returnType": "jint",
-        "parameterTypes": [
-          "void*",
-          "jint",
-          "void*",
-          "void*"
-        ]
-      },
-      {
-        "returnType": "jdouble",
-        "parameterTypes": [
-          "void*"
+          "jdouble",
+          "jdouble"
         ]
       },
       {
@@ -3639,17 +3655,24 @@
         "returnType": "void",
         "parameterTypes": [
           "void*",
-          "jdouble",
-          "jdouble"
+          "void*"
         ]
       },
       {
-        "returnType": "void",
+        "returnType": "struct(jint,jint,void*)",
+        "parameterTypes": [
+          "void*"
+        ]
+      },
+      {
+        "returnType": "jlong",
         "parameterTypes": [
           "void*",
           "void*",
-          "jdouble",
-          "jdouble"
+          "void*",
+          "void*",
+          "void*",
+          "jint"
         ]
       }
     ]

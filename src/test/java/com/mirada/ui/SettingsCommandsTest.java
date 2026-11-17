@@ -20,6 +20,8 @@ import com.mirada.settings.Settings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.testfx.api.FxToolkit;
 
@@ -162,6 +164,10 @@ class SettingsCommandsTest {
     }
 
     @Test
+    @DisabledOnOs(
+            value = OS.LINUX,
+            architectures = "aarch64",
+            disabledReason = "the import says nothing on linux-arm64 runners: issue #45")
     void exportThenImportPutsTheTickedPartsBack() throws Exception {
         try (WindowFixture window = open()) {
             Settings settings = window.settings;

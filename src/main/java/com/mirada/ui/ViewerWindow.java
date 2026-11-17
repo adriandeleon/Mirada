@@ -180,6 +180,11 @@ public final class ViewerWindow {
     private final MessageLog messages = new MessageLog();
     /** The update check, once this run (DIAG-05). */
     private final UpdateCoordinator updates;
+    /**
+     * Set as the window closes: its settings may still change after (an update check that answers
+     * late writes when it asked), and a closed window no longer sets the app's keys.
+     */
+    private boolean closed;
     /** Along the bottom, under the strip when that is there too (WIN-01). */
     private final StatusBar statusBar;
     /** The strip, when it runs along the bottom, then the status bar. */
@@ -333,6 +338,7 @@ public final class ViewerWindow {
             quit();
         });
         stage.setOnHidden(e -> {
+            closed = true;
             slideshow.stop();
             rememberPlace();
             release();
@@ -492,6 +498,7 @@ public final class ViewerWindow {
 
     /** Follows the settings' keys: the keymap, the user's, the palette's; what shows them reads them again. */
     private void followKeys() {
+        if (closed) return;
         if (!Keybindings.use(settings.keymap(), settings.keys(), settings.paletteKeys())) return;
         palette.refreshKeys();
         BookmarksWindow marks = bookmarksWindow;
