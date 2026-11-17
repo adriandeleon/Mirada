@@ -147,8 +147,15 @@ final class WindowFixture implements AutoCloseable {
                     "\"" + start + "…\" said",
                     () -> messages.entries().stream().anyMatch(e -> e.text().startsWith(start)));
         } catch (AssertionError timedOut) {
-            // What it said instead, newest first: the reason, when the window said one.
-            throw new AssertionError(timedOut.getMessage() + "; said instead: " + call(messages::entries), timedOut);
+            // What it said instead, newest first, and what was thrown where only the Debug Log
+            // hears it (DebugLog.uncaught): the reason, either way.
+            String uncaught = com.mirada.diagnostics.DebugLog.text()
+                    .lines()
+                    .dropWhile(line -> !line.contains("UNCAUGHT"))
+                    .limit(40)
+                    .collect(java.util.stream.Collectors.joining("\n"));
+            throw new AssertionError(
+                    timedOut.getMessage() + "; said instead: " + call(messages::entries) + "\n" + uncaught, timedOut);
         }
     }
 
