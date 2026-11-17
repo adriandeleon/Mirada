@@ -38,6 +38,9 @@ that needs it is opened. It is recorded by `scripts/native-metadata.sh` into
 `src/main/resources/META-INF/native-image`, on Linux locally and on macOS and Windows by the
 **Native metadata** workflow, then joined (the workflow's header says how). Re-record after anything
 that reflects, loads resources, or adds an FFM downcall: each platform's AWT reaches its own JNI.
+Making AWT headful counts: Print turned it on for Windows, whose headful `awt.dll` reads
+`java.awt.Insets`' fields, and the image then failed on every PSD and TIFF until re-recorded. The
+**Package** check in CI catches this, but branch protection does not require it: look at it.
 
 **GraalVM 25.4, not the 25.0 LTS.** 25.0 has no AWT on macOS: the image builds and opens JPEG, PNG,
 HEIC and JPEG XL, then fails on WebP, TIFF and PSD with `Could not initialize class java.awt.Toolkit`,
