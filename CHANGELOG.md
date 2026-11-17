@@ -8,6 +8,8 @@ moves for anything user-visible. Each entry opens with a bold one-line summary w
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-16
+
 ### Added
 
 - **Editora Light and Editora Dark themes.** Settings → Theme and **Theme…** in the palette offer
