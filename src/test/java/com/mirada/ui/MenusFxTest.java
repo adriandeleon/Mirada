@@ -214,6 +214,63 @@ class MenusFxTest {
         });
     }
 
+    /** A press inside a menu on none of its rows, on a separator or its padding, closes it. */
+    @Test
+    void aPressInAMenuOffItsRowsClosesIt() throws Exception {
+        fx(() -> {
+            ContextMenu menu = rightClick(viewport());
+            Node root = menu.getScene().getRoot();
+            Node row = root.lookup(".menu-item");
+            assertNotNull(row, "a row");
+            Event.fireEvent(row, press(row, MouseButton.PRIMARY));
+            assertEquals(1, showingMenus().size(), "a press on a row leaves the menu up");
+
+            Node separator = root.lookup(".separator");
+            assertNotNull(separator, "a separator");
+            Event.fireEvent(separator, press(separator, MouseButton.PRIMARY));
+            assertTrue(showingMenus().isEmpty(), "a press on a separator closes the menu");
+
+            menu = rightClick(viewport());
+            Node padding = menu.getScene().getRoot().lookup(".context-menu");
+            assertNotNull(padding, "the menu's own region");
+            Event.fireEvent(padding, press(padding, MouseButton.PRIMARY));
+            assertTrue(showingMenus().isEmpty(), "a press on the menu's padding closes it");
+
+            menu = rightClick(viewport());
+            Node sortRow = menu.getScene().getRoot().lookup(".menu");
+            Event.fireEvent(
+                    sortRow,
+                    new MouseEvent(
+                            MouseEvent.MOUSE_ENTERED,
+                            1,
+                            1,
+                            1,
+                            1,
+                            MouseButton.NONE,
+                            0,
+                            false,
+                            false,
+                            false,
+                            false,
+                            false,
+                            false,
+                            false,
+                            false,
+                            false,
+                            false,
+                            null));
+            ContextMenu owner = menu;
+            ContextMenu submenu = showingMenus().stream()
+                    .filter(m -> m.getOwnerWindow() == owner)
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("the sort submenu shows"));
+            Node subPadding = submenu.getScene().getRoot().lookup(".context-menu");
+            Event.fireEvent(subPadding, press(subPadding, MouseButton.PRIMARY));
+            assertTrue(showingMenus().isEmpty(), "a press on a submenu's padding closes the whole menu");
+            return null;
+        });
+    }
+
     /** MENU-06, MENU-07, MENU-09 in the Debug Log's window: one menu, closed by a press, opened by key. */
     @Test
     void theDebugLogsMenuIsOneAtATimeClosedByAPressAndOpenedByTheMenuKey() throws Exception {
