@@ -1,6 +1,14 @@
 {
   "exceptions": [
     {
+      "rule": "CLI-09",
+      "level": "SHOULD",
+      "url": "https://pauta-project.dev/6.1.0/command-line/#cli-09",
+      "kind": "deviation",
+      "reason": "On Windows the printing toolkit stays available, so Print can show the system's own print dialog.",
+      "link": "https://github.com/adriandeleon/Mirada/blob/main/docs/decisions/0007-print-through-the-desktops-dialog.md"
+    },
+    {
       "rule": "PLAT-14",
       "level": "SHOULD",
       "url": "https://pauta-project.dev/6.1.0/platform/#plat-14",

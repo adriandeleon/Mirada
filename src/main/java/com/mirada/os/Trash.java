@@ -40,7 +40,7 @@ import static java.lang.foreign.ValueLayout.JAVA_SHORT;
  *       moved, never copied. A file on another file system than home goes through {@code gio
  *       trash}, which knows each volume's own trash folder.
  *   <li><b>Windows</b>: the Recycle Bin, through the shell's {@code SHFileOperationW} with undo.
- *   <li><b>macOS</b>: AWT's {@code Desktop.moveToTrash}, AWT being headful there ({@link #headless}).
+ *   <li><b>macOS</b>: AWT's {@code Desktop.moveToTrash}, AWT being headful there ({@link Awt#headless}).
  * </ul>
  *
  * <p>Only Linux's own trash can be put back from here ({@link #restore}): Mirada wrote the info file
@@ -50,15 +50,6 @@ import static java.lang.foreign.ValueLayout.JAVA_SHORT;
 public final class Trash {
 
     private Trash() {}
-
-    /**
-     * Whether AWT must be headless on {@code os}: everywhere but macOS, where {@code
-     * Desktop.moveToTrash} needs it headful. Decided in {@code App.main} before any AWT class loads;
-     * headful, AWT still loads only when a file is first trashed.
-     */
-    public static boolean headless(Os.Kind os) {
-        return os != Os.Kind.MAC;
-    }
 
     /**
      * A file moved to the trash: where it was, and, when Mirada can put it back, where it is now

@@ -523,9 +523,22 @@ looking at the UI without the desktop in [testing.md](testing.md#looking-at-the-
   `Application` class, not the main class. `--help` and `--version` still `System.exit`, for a
   launch from `App` itself.
 - **`java.awt.headless` is decided in `App.main`, as the first statement**, before `HeadStart` can
-  touch ImageIO: headless everywhere but macOS, where Move to Trash is AWT's `Desktop`
-  (`Trash.headless`); AWT itself loads only when a file is first trashed. ImageIO and `BufferedImage` are `java.desktop` and need no display; tests are
+  touch ImageIO: headless on Linux only (`Awt.headless`). macOS needs AWT for Move to Trash
+  (`Desktop`) and printing, Windows for printing ([decision 0007](decisions/0007-print-through-the-desktops-dialog.md));
+  AWT's toolkit itself loads only when a file is first trashed or printed. ImageIO and `BufferedImage` are `java.desktop` and need no display; tests are
   headless on every platform through surefire's `java.awt.headless`.
+- **Printing never runs in a test, and must not.** Under a headless AWT, `javafx.print`'s
+  `showPrintDialog` shows nothing and answers yes, so the page goes straight to the default
+  printer: the tests' AWT is headless on every OS. `FxTestSupport.start` puts a printer that throws
+  in place (`ViewerWindow.printWith`), `CommandSweepTest` leaves Print out, and
+  `ViewerWindowTest` prints into a stand-in. GTK's own path is tested through its export action
+  (`GtkPrint.run` with a file), which writes the PDF with no dialog and needs no display; never use
+  `GTK_PRINT_OPERATION_ACTION_PRINT`, which prints at once.
+- **GTK's print operation runs on the FX thread**, which is GTK's main thread under glass, and
+  blocks there in a nested main loop until the dialog closes and the page is drawn; JavaFX keeps
+  painting meanwhile. Its `draw-page` upcall must never throw (an exception in an FFM upcall ends
+  the process), so `GtkPrint.drawPage` keeps the failure for `print` to report. The dialog has no
+  parent window: glass does not hand out its `GtkWindow`.
 - **Move to Trash is three implementations.** Linux follows the freedesktop.org spec itself (info
   file first, created exclusively to reserve the name, then an atomic move) and leaves a file on
   another drive to `gio trash`; Windows calls `SHFileOperationW` through FFM with undo; macOS uses

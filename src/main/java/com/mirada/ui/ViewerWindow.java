@@ -76,12 +76,15 @@ import com.mirada.folder.Sorting;
 import com.mirada.image.Animation;
 import com.mirada.image.ImageCache;
 import com.mirada.image.Orientation;
+import com.mirada.image.Shrink;
 import com.mirada.os.MacAppMenu;
 import com.mirada.os.Os;
 import com.mirada.os.Reveal;
 import com.mirada.os.Trash;
 import com.mirada.perf.Startup;
 import com.mirada.perf.Tour;
+import com.mirada.print.PrintLayout;
+import com.mirada.print.Printing;
 import com.mirada.report.Redactor;
 import com.mirada.settings.Bookmarks;
 import com.mirada.settings.FileWrites;
@@ -112,6 +115,18 @@ public final class ViewerWindow {
      */
     static final Executor FILES = Executors.newThreadPerTaskExecutor(
             Thread.ofVirtual().name("window-files-", 0).factory());
+
+    /** What prints: the desktop's dialog ({@link Printing#print}), or a test's stand-in, which never reaches a printer. */
+    interface Printer {
+        Printing.Outcome print(Raster image, String jobName, Window owner) throws IOException;
+    }
+
+    private static Printer printer = Printing::print;
+
+    /** Prints through {@code use} from now on; a test's, so no test ever reaches a real printer. FX thread. */
+    static void printWith(Printer use) {
+        printer = use;
+    }
 
     private final Stage stage;
     private final ImageViewport viewport = new ImageViewport();
@@ -1163,6 +1178,7 @@ public final class ViewerWindow {
             case MOVE_TO_TRASH -> moveToTrash();
             case UNDO_TRASH -> undoTrash();
             case COPY -> copy();
+            case PRINT -> print();
             case SHOW_IN_FOLDER -> showInFolder();
             case SORT_BY_NAME -> sort(settings.sorting().by(Sorting.By.NAME));
             case SORT_BY_DATE -> sort(settings.sorting().by(Sorting.By.DATE));
@@ -1767,6 +1783,44 @@ public final class ViewerWindow {
                         say(tr("viewer.couldNotCopy", fileName(file), e.getMessage()), MessageLog.Severity.ERROR));
             }
         });
+    }
+
+    /**
+     * Prints the image showing as it stands on screen, upright by the file's orientation and the
+     * user's turns, through the desktop's own print dialog. Shrinking and turning a large photo takes
+     * a moment, so they run off the FX thread; the dialog runs on it.
+     */
+    private void print() {
+        Image image = shownImage;
+        Path file = folder.current();
+        if (image == null || file == null) {
+            say(tr("viewer.stillLoading"));
+            return;
+        }
+        Orientation orientation = shownOrientation;
+        int turns = viewport.turns();
+        Thread.ofVirtual().name("print").start(() -> {
+            try {
+                Raster upright = Edit.upright(Editor.raster(Shrink.toFit(image, PrintLayout.LONGEST_SIDE)), orientation)
+                        .turned(turns);
+                Platform.runLater(() -> print(upright, file));
+            } catch (RuntimeException | OutOfMemoryError e) {
+                Platform.runLater(() ->
+                        say(tr("viewer.couldNotPrint", fileName(file), e.getMessage()), MessageLog.Severity.ERROR));
+            }
+        });
+    }
+
+    private void print(Raster upright, Path file) {
+        try {
+            switch (printer.print(upright, fileName(file), stage)) {
+                case SENT -> say(tr("viewer.printed", fileName(file)));
+                case CANCELLED -> {}
+                case NO_PRINTER -> say(tr("viewer.noPrinter"), MessageLog.Severity.WARNING);
+            }
+        } catch (IOException | RuntimeException e) {
+            say(tr("viewer.couldNotPrint", fileName(file), e.getMessage()), MessageLog.Severity.ERROR);
+        }
     }
 
     private void putOnClipboard(Image image, Path file) {

@@ -38,14 +38,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * palette would, and nothing is written outside the test's folders (QUAL-08): Mirada's own settings
  * folder and the desktop's trash are as they were.
  *
- * <p>Not run here: Show in Folder (it asks the desktop's file manager) and Move to Trash, which
- * {@code TrashUndoTest} runs against a trash of its own. Dialogs are cancelled and file dialogs
+ * <p>Not run here: Show in Folder (it asks the desktop's file manager), Print, which {@code
+ * ViewerWindowTest} runs into a stand-in printer, and Move to Trash, which {@code TrashUndoTest}
+ * runs against a trash of its own. Dialogs are cancelled and file dialogs
  * chosen nothing, as a user who changed their mind.
  */
 @Tag("fx")
 class CommandSweepTest {
 
-    private static final Set<Command> NOT_HERE = Set.of(Command.SHOW_IN_FOLDER, Command.MOVE_TO_TRASH);
+    private static final Set<Command> NOT_HERE = Set.of(Command.SHOW_IN_FOLDER, Command.MOVE_TO_TRASH, Command.PRINT);
 
     @TempDir
     Path dir;

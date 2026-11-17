@@ -17,10 +17,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MacOpenFilesTest {
 
     @Test
-    void onlyMacOsNeedsAwt() {
-        assertFalse(Trash.headless(Os.Kind.MAC));
-        assertTrue(Trash.headless(Os.Kind.LINUX));
-        assertTrue(Trash.headless(Os.Kind.WINDOWS));
+    void onlyLinuxRunsAwtHeadless() {
+        assertFalse(Awt.headless(Os.Kind.MAC));
+        assertTrue(Awt.headless(Os.Kind.LINUX));
+        assertFalse(Awt.headless(Os.Kind.WINDOWS));
     }
 
     @Test

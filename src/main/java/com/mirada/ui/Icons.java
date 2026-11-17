@@ -65,6 +65,9 @@ final class Icons {
     static final String UNDO = "M9 14 L4 9 L9 4 M4 9 H15 A5 5 0 0 1 15 19 H11";
     static final String RENAME = "M4 20 L4.5 16 L16 4.5 L19.5 8 L8 19.5 Z M13.5 7 L17 10.5";
     static final String COPY = "M8 8 H20 V20 H8 Z M16 8 V4 H4 V16 H8";
+    /** A printer: its body, the sheet fed in at the top and the printed one coming out. */
+    static final String PRINT = "M7 9 V3 H17 V9 M7 17 H4 V9 H20 V17 H17 M7 14 H17 V21 H7 Z";
+
     static final String CROP = "M7 3 V17 H21 M3 7 H17 V21";
     static final String PLAY = "M7 4 L19 12 L7 20 Z";
     static final String STRIP = "M3 6 H21 V18 H3 Z M9 6 V18 M15 6 V18";
@@ -152,6 +155,7 @@ final class Icons {
             case UNDO_TRASH -> UNDO;
             case COPY -> COPY;
             case SHOW_IN_FOLDER -> FOLDER;
+            case PRINT -> PRINT;
             case BOOKMARK, BOOKMARK_FOLDER, GO_TO_BOOKMARK -> BOOKMARK;
             case BOOKMARKS -> BOOKMARKS;
             case NOTE, FOLDER_NOTE -> NOTE;
