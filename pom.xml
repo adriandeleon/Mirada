@@ -47,7 +47,7 @@
         <palantir.version>2.92.0</palantir.version>
         <javafx.plugin.version>0.0.8</javafx.plugin.version>
         <junit.version>5.14.4</junit.version>
-        <junit.platform.version>1.14.4</junit.platform.version>
+        <junit.platform.version>6.1.3</junit.platform.version>
         <!-- Test scope only: TestFX starts and stops the toolkit and its windows over JavaFX's
              own Headless glass (docs/testing.md); JaCoCo measures the tests and gates `verify`. -->
         <testfx.version>4.0.18</testfx.version>
